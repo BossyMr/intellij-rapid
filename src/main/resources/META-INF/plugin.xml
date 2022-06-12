@@ -1,0 +1,19 @@
+<idea-plugin>
+    <id>io.github.bossymr.Rapid</id>
+    <name>Rapid</name>
+    <vendor email="bossymr.bossy@gmail.com">BossyMr</vendor>
+
+    <description>The Rapid plugin provides language support in Intellij IDEA.</description>
+
+    <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+    </actions>
+</idea-plugin>
