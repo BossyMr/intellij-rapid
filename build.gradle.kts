@@ -18,6 +18,7 @@ dependencies {
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
     version.set("2021.3.2")
+    plugins.set(listOf("com.intellij.java"))
 }
 tasks {
     patchPluginXml {
