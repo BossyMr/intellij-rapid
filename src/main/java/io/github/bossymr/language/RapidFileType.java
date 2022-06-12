@@ -2,6 +2,7 @@ package io.github.bossymr.language;
 
 import com.intellij.openapi.fileTypes.LanguageFileType;
 import com.intellij.openapi.vfs.VirtualFile;
+import io.github.bossymr.RapidBundle;
 import io.github.bossymr.RapidIcons;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +29,7 @@ public class RapidFileType extends LanguageFileType {
 
     @Override
     public @NotNull String getDescription() {
-        return "Rapid"; // TODO: 2022-06-12 Add description to RapidBundle
+        return RapidBundle.message("filetype.rapid.description");
     }
 
     @Override

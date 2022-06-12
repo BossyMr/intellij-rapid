@@ -1,6 +1,7 @@
 package io.github.bossymr.language;
 
 import com.intellij.lang.Language;
+import io.github.bossymr.RapidBundle;
 import org.jetbrains.annotations.NotNull;
 
 public class RapidLanguage extends Language {
@@ -13,7 +14,7 @@ public class RapidLanguage extends Language {
 
     @Override
     public @NotNull String getDisplayName() {
-        return "Rapid";
+        return RapidBundle.message("language.rapid.display.name");
     }
 
     @Override
