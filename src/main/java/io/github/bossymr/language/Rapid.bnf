@@ -1,0 +1,153 @@
+{
+    tokens = [
+        WHITE_SPACE = 'regexp:\s'
+
+        ALIAS = 'ALIAS'
+        AND = 'AND'
+        BACKWARD = 'BACKWARD'
+        CASE = 'CASE'
+        CONNECT = 'CONNECT'
+        CONST = 'CONST'
+        DEFAULT = 'DEFAULT'
+        DIV = 'DIV'
+        DO = 'DO'
+        ELSE = 'ELSE'
+        ELSEIF = 'ELSEIF'
+        ENDFOR = 'ENDFOR'
+        ENDFUNC = 'ENDFUNC'
+        ENDIF = 'ENDIF'
+        ENDMODULE = 'ENDMODULE'
+        ENDPROC = 'ENDPROC'
+        ENDRECORD = 'ENDRECORD'
+        ENDTEST = 'ENDTEST'
+        ENDTRAP = 'ENDTRAP'
+        ENDWHILE = 'ENDWHILE'
+        ERROR = 'ERROR'
+        EXIT = 'EXIT'
+        FALSE = 'FALSE'
+        FOR = 'FOR'
+        FROM = 'FROM'
+        FUNC = 'FUNC'
+        GOTO = 'GOTO'
+        IF = 'IF'
+        INOUT = 'INOUT'
+        LOCAL = 'LOCAL'
+        MOD = 'MOD'
+        MODULE = 'MODULE'
+        NOSTEPIN = 'NOSTEPIN'
+        NOT = 'NOT'
+        NOVIEW = 'NOVIEW'
+        OR = 'OR'
+        PERS = 'PERS'
+        PROC = 'PROC'
+        RAISE = 'RAISE'
+        READONLY = 'READONLY'
+        RECORD = 'RECORD'
+        RETRY = 'RETRY'
+        RETURN = 'RETURN'
+        STEP = 'STEP'
+        SYSMODULE = 'SYSMODULE'
+        TASK = 'TASK'
+        TEST = 'TEST'
+        THEN = 'THEN'
+        TO = 'TO'
+        TRAP = 'TRAP'
+        TRUE = 'TRUE'
+        TRYNEXT = 'TRYNEXT'
+        UNDO = 'UNDO'
+        VAR = 'VAR'
+        VIEWONLY = 'VIEWONLY'
+        WHILE = 'WHILE'
+        WITH = 'WITH'
+        XOR = 'XOR'
+
+        TDN = '<TDN>'
+        DDN = '<DDN>'
+        RDN = '<RDN>'
+        PAR = '<PAR>'
+        ALT = '<ALT>'
+        DIM = '<DIM>'
+        SMT = '<SMT>'
+        VAR = '<VAR>'
+        EIT = '<EIT>'
+        CSE = '<CSE>'
+        EXP = '<EXP>'
+        ARG = '<ARG>'
+        ID = '<ID>'
+
+        LBRACE = '{'
+        RBRACE = '}'
+        LPARENTH = '('
+        RPARENTH = ')'
+        LBRACKET = '['
+        RBRACKET = ']'
+        COMMA = ','
+        DOT = '.'
+        EQ = '='
+        LT = '<'
+        GT = '>'
+        PLUS = '+'
+        MINUS = '-'
+        ASTERISK = '*'
+        DIV = '/'
+        COLON = ':'
+        SEMICOLON = ';'
+        EXLAMATION = '!'
+        BACKSLASH = '\'
+        QUESTION = '?'
+
+        CEQ = ':='
+        LTGT = '<>'
+        GE = '>='
+        LE = '<='
+
+        IDENTIFIER = 'regexp:[a-zA-Z](\w)*'
+        INTEGER_LITERAL = 'regexp:(\d)*'
+        STRING_LITERAL = 'regexp:"((\w)*)\"'
+        COMMENT = 'regexp:!(\w)*(\n)'
+    ]
+}
+
+file ::= !(<<eof>>) module {pin=1}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Modules
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+module ::= 'MODULE' identifier attribute_list? module_body 'ENDMODULE' {pin=1}
+
+attribute_list ::= '(' attribute_list_body ')' {pin=1}
+
+private attribute_list_body ::= attribute (attribute_list_tail)*
+
+private attribute_list_tail ::= ',' attribute {pin=1}
+
+private attribute ::= () ('SYSMODULE' | 'NOVIEW' | 'NOSTEPIN' | 'VIEWONLY' | 'READONLY') {pin=1 recoverWhile=attribute_recovery}
+
+private attribute_recovery ::= !(',' | ')')
+
+private module_body ::= (symbol)*
+
+private symbol ::= structure_symbol | field_symbol | routine_symbol {recoverWhile=symbol_recovery}
+
+private symbol_recovery ::= !('ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>')
+
+private identifier ::= IDENTIFIER | '<ID>'
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Structures
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+private structure_symbol ::= '<TDN>'
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Fields
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+private field_symbol ::= '<DDN>'
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Routines
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+private routine_symbol ::= '<RDN>'
