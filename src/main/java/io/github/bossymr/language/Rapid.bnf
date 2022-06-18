@@ -61,19 +61,19 @@
         WITH = 'WITH'
         XOR = 'XOR'
 
-        TDN = '<TDN>'
-        DDN = '<DDN>'
-        RDN = '<RDN>'
-        PAR = '<PAR>'
-        ALT = '<ALT>'
-        DIM = '<DIM>'
-        SMT = '<SMT>'
-        VAR = '<VAR>'
-        EIT = '<EIT>'
-        CSE = '<CSE>'
-        EXP = '<EXP>'
-        ARG = '<ARG>'
-        ID = '<ID>'
+        TDN_PLACEHOLDER = '<TDN>'
+        DDN_PLACEHOLDER = '<DDN>'
+        RDN_PLACEHOLDER = '<RDN>'
+        PAR_PLACEHOLDER = '<PAR>'
+        ALT_PLACEHOLDER = '<ALT>'
+        DIM_PLACEHOLDER = '<DIM>'
+        SMT_PLACEHOLDER = '<SMT>'
+        VAR_PLACEHOLDER = '<VAR>'
+        EIT_PLACEHOLDER = '<EIT>'
+        CSE_PLACEHOLDER = '<CSE>'
+        EXP_PLACEHOLDER = '<EXP>'
+        ARG_PLACEHOLDER = '<ARG>'
+        ID_PLACEHOLDER = '<ID>'
 
         LBRACE = '{'
         RBRACE = '}'
@@ -130,13 +130,13 @@ private module_body ::= (symbol_entry)*
 
 private symbol_entry ::= !(<<eof>> | 'ENDMODULE') symbol {pin=1 recoverWhile=symbol_recovery}
 
-private symbol ::= '<TDN>' | '<DDN>' | '<RDN>' | alias | record
+private symbol ::= '<TDN>' | '<DDN>' | '<RDN>' | alias | record | field
 
-private symbol_recovery ::= !('ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>' | 'LOCAL' | 'TASK' | 'ALIAS' | 'RECORD')
+private symbol_recovery ::= !('ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>' | 'LOCAL' | 'TASK' | 'ALIAS' | 'RECORD' | 'VAR' | 'PERS' | 'CONST')
 
-type ::= identifier
+type_element ::= identifier
 
-private visibility ::= 'LOCAL' | 'TASK' {recoverWhile=symbol_recovery}
+private visibility ::= 'LOCAL' | 'TASK'
 
 private identifier ::= IDENTIFIER | '<ID>'
 
@@ -144,18 +144,36 @@ private identifier ::= IDENTIFIER | '<ID>'
 // Structures
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-alias ::= visibility? 'ALIAS' type identifier ';' {pin=2}
+alias ::= visibility? 'ALIAS' type_element identifier ';' {pin=2}
 
 record ::= visibility? 'RECORD' identifier component_list 'ENDRECORD' {pin=2}
 
 component_list ::= (component)*
 
-component ::= !(<<eof>> | 'ENDMODULE' | 'ENDRECORD') type identifier ';' {pin=1}
+component ::= !(<<eof>> | 'ENDMODULE' | 'ENDRECORD') type_element identifier ';' {pin=1}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Fields
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+field ::= visibility? ('VAR' | 'PERS' | 'CONST') type_element identifier array? [':=' expression] ';' {pin=2}
+
+array ::= '{' array_body '}' {pin=1}
+
+private array_body ::= array_expression (array_tail)*
+
+private array_tail ::= ',' array_expression {pin=1}
+
+private array_expression ::= () expression {pin=1 recoverWhile=array_expression_recovery}
+
+private array_expression_recovery ::= !(',' | '}' | ':=' | ';') symbol_recovery
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Routines
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Expressions
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+expression ::= '<EXP>'
