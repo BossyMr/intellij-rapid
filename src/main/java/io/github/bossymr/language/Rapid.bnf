@@ -116,7 +116,7 @@ file ::= !(<<eof>>) module {pin=1}
 
 module ::= 'MODULE' identifier attribute_list? module_body 'ENDMODULE' {pin=1}
 
-attribute_list ::= '(' attribute_list_body ')' {pin=1}
+attribute_list ::= !(<<eof>>) '(' attribute_list_body ')' {pin=2}
 
 private attribute_list_body ::= attribute (attribute_list_tail)*
 
@@ -124,13 +124,19 @@ private attribute_list_tail ::= ',' attribute {pin=1}
 
 private attribute ::= () ('SYSMODULE' | 'NOVIEW' | 'NOSTEPIN' | 'VIEWONLY' | 'READONLY') {pin=1 recoverWhile=attribute_recovery}
 
-private attribute_recovery ::= !(',' | ')')
+private attribute_recovery ::= !(',' | ')') symbol_recovery
 
-private module_body ::= (symbol)*
+private module_body ::= (symbol_entry)*
 
-private symbol ::= structure_symbol | field_symbol | routine_symbol {recoverWhile=symbol_recovery}
+private symbol_entry ::= !(<<eof>> | 'ENDMODULE') ('<TDN>' | '<DDN>' | '<RDN>' | symbol) {pin=1 recoverWhile=symbol_recovery}
 
-private symbol_recovery ::= !('ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>')
+symbol ::= visibility? (alias | record)
+
+private symbol_recovery ::= !('ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>' | 'LOCAL' | 'TASK' | 'ALIAS' | 'RECORD')
+
+type ::= identifier
+
+private visibility ::= 'LOCAL' | 'TASK' {recoverWhile=symbol_recovery}
 
 private identifier ::= IDENTIFIER | '<ID>'
 
@@ -138,16 +144,18 @@ private identifier ::= IDENTIFIER | '<ID>'
 // Structures
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-private structure_symbol ::= '<TDN>'
+upper alias ::= 'ALIAS' type identifier ';' {pin=1}
+
+upper record ::= 'RECORD' identifier component_list 'ENDRECORD' {pin=1}
+
+component_list ::= (component)*
+
+component ::= !('ENDRECORD') type identifier ';' {pin=1}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Fields
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-private field_symbol ::= '<DDN>'
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Routines
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-private routine_symbol ::= '<RDN>'
