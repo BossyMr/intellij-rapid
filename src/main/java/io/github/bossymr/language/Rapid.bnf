@@ -128,9 +128,9 @@ private attribute_recovery ::= !(',' | ')') symbol_recovery
 
 private module_body ::= (symbol_entry)*
 
-private symbol_entry ::= !(<<eof>> | 'ENDMODULE') ('<TDN>' | '<DDN>' | '<RDN>' | symbol) {pin=1 recoverWhile=symbol_recovery}
+private symbol_entry ::= !(<<eof>> | 'ENDMODULE') symbol {pin=1 recoverWhile=symbol_recovery}
 
-symbol ::= visibility? (alias | record)
+private symbol ::= '<TDN>' | '<DDN>' | '<RDN>' | alias | record
 
 private symbol_recovery ::= !('ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>' | 'LOCAL' | 'TASK' | 'ALIAS' | 'RECORD')
 
@@ -144,9 +144,9 @@ private identifier ::= IDENTIFIER | '<ID>'
 // Structures
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-upper alias ::= 'ALIAS' type identifier ';' {pin=1}
+alias ::= visibility? 'ALIAS' type identifier ';' {pin=2}
 
-upper record ::= 'RECORD' identifier component_list 'ENDRECORD' {pin=1}
+record ::= visibility? 'RECORD' identifier component_list 'ENDRECORD' {pin=2}
 
 component_list ::= (component)*
 
