@@ -116,7 +116,7 @@ file ::= !(<<eof>>) module {pin=1}
 
 module ::= 'MODULE' identifier attribute_list? module_body 'ENDMODULE' {pin=1}
 
-attribute_list ::= !(<<eof>>) '(' attribute_list_body ')' {pin=2}
+attribute_list ::= !(<<eof>> | 'ENDMODULE') '(' attribute_list_body ')' {pin=2}
 
 private attribute_list_body ::= attribute (attribute_list_tail)*
 
@@ -150,7 +150,7 @@ upper record ::= 'RECORD' identifier component_list 'ENDRECORD' {pin=1}
 
 component_list ::= (component)*
 
-component ::= !('ENDRECORD') type identifier ';' {pin=1}
+component ::= !(<<eof>> | 'ENDMODULE' | 'ENDRECORD') type identifier ';' {pin=1}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Fields
