@@ -1,4 +1,4 @@
-package io.github.bossymr.language;
+package io.github.bossymr.language.core.parser;
 
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LanguageUtil;
@@ -11,8 +11,8 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.tree.IFileElementType;
 import com.intellij.psi.tree.TokenSet;
+import io.github.bossymr.language.RapidLanguage;
 import io.github.bossymr.language.core.lexer.RapidLexer;
-import io.github.bossymr.language.core.parser.RapidParser;
 import io.github.bossymr.language.core.psi.RapidElementTypes;
 import io.github.bossymr.language.core.psi.RapidFile;
 import io.github.bossymr.language.core.psi.RapidTokenType;

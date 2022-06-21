@@ -13,7 +13,11 @@
     <extensions defaultExtensionNs="com.intellij">
         <fileType extensions="mod" name="RAPID" language="RAPID" fieldName="INSTANCE"
                   implementationClass="io.github.bossymr.language.RapidFileType"/>
-        <lang.parserDefinition language="RAPID" implementationClass="io.github.bossymr.language.RapidParserDefinition"/>
+        <lang.parserDefinition language="RAPID"
+                               implementationClass="io.github.bossymr.language.core.parser.RapidParserDefinition"/>
+
+        <lang.syntaxHighlighter language="RAPID"
+                                implementationClass="io.github.bossymr.ide.highlight.RapidHighlighter"/>
     </extensions>
 
     <actions>
