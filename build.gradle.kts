@@ -3,6 +3,8 @@ plugins {
     java
 }
 
+sourceSets["main"].java.srcDirs("src/main/gen")
+
 group = "io.github.bossymr"
 version = "1.0-SNAPSHOT"
 

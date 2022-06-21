@@ -2,8 +2,8 @@
     parserClass='io.github.bossymr.language.RapidParser'
     parserUtilClass='io.github.bossymr.language.RapidParserUtil'
 
-    implements='io.github.bossymr.psi.RapidElement'
-    extends='io.github.bossymr.psi.RapidElementImpl'
+    implements='com.intellij.psi.PsiElement'
+    extends='com.intellij.extapi.psi.ASTWrapperPsiElement'
 
     elementTypeHolderClass='io.github.bossymr.psi.RapidElementTypes'
 
@@ -18,64 +18,64 @@
     tokens = [
         WHITE_SPACE = 'regexp:\s'
 
-        ALIAS = 'ALIAS'
-        AND = 'AND'
-        BACKWARD = 'BACKWARD'
-        CASE = 'CASE'
-        CONNECT = 'CONNECT'
-        CONST = 'CONST'
-        DEFAULT = 'DEFAULT'
-        DIV = 'DIV'
-        DO = 'DO'
-        ELSE = 'ELSE'
-        ELSEIF = 'ELSEIF'
-        ENDFOR = 'ENDFOR'
-        ENDFUNC = 'ENDFUNC'
-        ENDIF = 'ENDIF'
-        ENDMODULE = 'ENDMODULE'
-        ENDPROC = 'ENDPROC'
-        ENDRECORD = 'ENDRECORD'
-        ENDTEST = 'ENDTEST'
-        ENDTRAP = 'ENDTRAP'
-        ENDWHILE = 'ENDWHILE'
-        ERROR = 'ERROR'
-        EXIT = 'EXIT'
-        FALSE = 'FALSE'
-        FOR = 'FOR'
-        FROM = 'FROM'
-        FUNC = 'FUNC'
-        GOTO = 'GOTO'
-        IF = 'IF'
-        INOUT = 'INOUT'
-        LOCAL = 'LOCAL'
-        MOD = 'MOD'
-        MODULE = 'MODULE'
-        NOSTEPIN = 'NOSTEPIN'
-        NOT = 'NOT'
-        NOVIEW = 'NOVIEW'
-        OR = 'OR'
-        PERS = 'PERS'
-        PROC = 'PROC'
-        RAISE = 'RAISE'
-        READONLY = 'READONLY'
-        RECORD = 'RECORD'
-        RETRY = 'RETRY'
-        RETURN = 'RETURN'
-        STEP = 'STEP'
-        SYSMODULE = 'SYSMODULE'
-        TASK = 'TASK'
-        TEST = 'TEST'
-        THEN = 'THEN'
-        TO = 'TO'
-        TRAP = 'TRAP'
-        TRUE = 'TRUE'
-        TRYNEXT = 'TRYNEXT'
-        UNDO = 'UNDO'
-        VAR = 'VAR'
-        VIEWONLY = 'VIEWONLY'
-        WHILE = 'WHILE'
-        WITH = 'WITH'
-        XOR = 'XOR'
+        ALIAS_KEYWORD = 'ALIAS'
+        AND_KEYWORD = 'AND'
+        BACKWARD_KEYWORD = 'BACKWARD'
+        CASE_KEYWORD = 'CASE'
+        CONNECT_KEYWORD = 'CONNECT'
+        CONST_KEYWORD = 'CONST'
+        DEFAULT_KEYWORD = 'DEFAULT'
+        DIV_KEYWORD = 'DIV'
+        DO_KEYWORD = 'DO'
+        ELSE_KEYWORD = 'ELSE'
+        ELSEIF_KEYWORD = 'ELSEIF'
+        ENDFOR_KEYWORD = 'ENDFOR'
+        ENDFUNC_KEYWORD = 'ENDFUNC'
+        ENDIF_KEYWORD = 'ENDIF'
+        ENDMODULE_KEYWORD = 'ENDMODULE'
+        ENDPROC_KEYWORD = 'ENDPROC'
+        ENDRECORD_KEYWORD = 'ENDRECORD'
+        ENDTEST_KEYWORD = 'ENDTEST'
+        ENDTRAP_KEYWORD = 'ENDTRAP'
+        ENDWHILE_KEYWORD = 'ENDWHILE'
+        ERROR_KEYWORD = 'ERROR'
+        EXIT_KEYWORD = 'EXIT'
+        FALSE_KEYWORD = 'FALSE'
+        FOR_KEYWORD = 'FOR'
+        FROM_KEYWORD = 'FROM'
+        FUNC_KEYWORD = 'FUNC'
+        GOTO_KEYWORD = 'GOTO'
+        IF_KEYWORD = 'IF'
+        INOUT_KEYWORD = 'INOUT'
+        LOCAL_KEYWORD = 'LOCAL'
+        MOD_KEYWORD = 'MOD'
+        MODULE_KEYWORD = 'MODULE'
+        NOSTEPIN_KEYWORD = 'NOSTEPIN'
+        NOT_KEYWORD = 'NOT'
+        NOVIEW_KEYWORD = 'NOVIEW'
+        OR_KEYWORD = 'OR'
+        PERS_KEYWORD = 'PERS'
+        PROC_KEYWORD = 'PROC'
+        RAISE_KEYWORD = 'RAISE'
+        READONLY_KEYWORD = 'READONLY'
+        RECORD_KEYWORD = 'RECORD'
+        RETRY_KEYWORD = 'RETRY'
+        RETURN_KEYWORD = 'RETURN'
+        STEP_KEYWORD = 'STEP'
+        SYSMODULE_KEYWORD = 'SYSMODULE'
+        TASK_KEYWORD = 'TASK'
+        TEST_KEYWORD = 'TEST'
+        THEN_KEYWORD = 'THEN'
+        TO_KEYWORD = 'TO'
+        TRAP_KEYWORD = 'TRAP'
+        TRUE_KEYWORD = 'TRUE'
+        TRYNEXT_KEYWORD = 'TRYNEXT'
+        UNDO_KEYWORD = 'UNDO'
+        VAR_KEYWORD = 'VAR'
+        VIEWONLY_KEYWORD = 'VIEWONLY'
+        WHILE_KEYWORD = 'WHILE'
+        WITH_KEYWORD = 'WITH'
+        XOR_KEYWORD = 'XOR'
 
         TDN_PLACEHOLDER = '<TDN>'
         DDN_PLACEHOLDER = '<DDN>'
@@ -121,7 +121,7 @@
 
         IDENTIFIER = 'regexp:[a-zA-Z](\w)*'
         INTEGER_LITERAL = 'regexp:(\d)*'
-        STRING_LITERAL = 'regexp:"((\w)*)\"'
+        STRING_LITERAL = 'regexp:"([^"]*)"'
         COMMENT = 'regexp:!(\w)*(\n)'
     ]
 
@@ -130,7 +130,8 @@
 
     elementType("binary_.*_expression")=binary_expression
     elementType("unary_.*_expression")=unary_expression
-    elementType(".*reference_expression")=reference_expression
+
+    // hooks('alias|record|component|function|procedure|trap|field') = [ leftBinder = "ADJACENT_LINE_COMMENTS" ]
 }
 
 file ::= !(<<eof>>) (module_with_recovery)* {pin=1}
@@ -159,9 +160,7 @@ private symbol_entry ::= !(<<eof>> | 'ENDMODULE') symbol {pin=1 recoverWhile=sym
 
 private symbol ::= '<TDN>' | '<DDN>' | '<RDN>' | alias | record | field | procedure | function | trap
 
-private symbol_recovery ::= !('ENDMODULE' | symbol_start)
-
-private symbol_start ::= '<TDN>' | '<DDN>' | '<RDN>' | 'LOCAL' | 'TASK' | 'ALIAS' | 'RECORD' | 'VAR' | 'PERS' | 'CONST' | 'FUNC' | 'PROC' | TRAP
+private symbol_recovery ::= !('ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>' | 'LOCAL' | 'TASK' | 'ALIAS' | 'RECORD' | 'VAR' | 'PERS' | 'CONST' | 'FUNC' | 'PROC' | 'TRAP')
 
 type_element ::= identifier
 
@@ -201,7 +200,7 @@ private array_expression_recovery ::= !(',' | '}' | ':=' | ';') symbol_recovery
 
 procedure ::= visibility? 'PROC' identifier parameter_list field_list statement_list [backward_statement_list] [error_statement_list] [undo_statement_list] 'ENDPROC' {pin=2}
 
-function ::= visibility? 'FUNC' identifier parameter_list field_list statement_list [error_statement_list] [undo_statement_list] 'ENDFUNC' {pin=2}
+function ::= visibility? 'FUNC' type_element identifier parameter_list field_list statement_list [error_statement_list] [undo_statement_list] 'ENDFUNC' {pin=2}
 
 trap ::= visibility? 'TRAP' identifier field_list statement_list [error_statement_list] [undo_statement_list] 'ENDTRAP' {pin=2}
 
@@ -213,7 +212,7 @@ error_list ::= '(' error (error_tail)* ')' {pin=1}
 
 private error_tail ::= ',' error {pin=1}
 
-error ::= () INTEGER_LITERAL | unqualified_reference_expression {pin=1 recoverWhile=error_recovery}
+error ::= () (INTEGER_LITERAL | unqualified_reference_expression) {pin=1 recoverWhile=error_recovery}
 
 private error_recovery ::= !(',' | ')') statement_recovery
 
@@ -239,7 +238,7 @@ parameter_group ::= ['\'] ('<DIM>' | parameter) (parameter_group_tail)*
 
 private parameter_group_tail ::= '|' ('<DIM>' | parameter) {pin=1}
 
-parameter ::= ['VAR' | 'PERS' | 'INOUT'] type_element identifier {pin=1 recoverWhile=parameter_recovery}
+parameter ::= ['VAR' | 'PERS' | 'INOUT'] type_element identifier ['{' '*' (',' '*')* '}']{pin=1 recoverWhile=parameter_recovery}
 
 private parameter_recovery ::= !(')' | '|' | ',' | '\')
 
@@ -298,11 +297,9 @@ unary_additive_expression ::= ('+' | '-') expression
 
 unary_not_expression ::= 'NOT' expression
 
-private symbol_reference ::= qualified_reference_expression | index_expression | unqualified_reference_expression
+unqualified_reference_expression ::= IDENTIFIER {elementType=reference_expression}
 
-unqualified_reference_expression ::= IDENTIFIER
-
-qualified_reference_expression ::= expression '.' IDENTIFIER
+qualified_reference_expression ::= expression '.' IDENTIFIER {elementType=reference_expression}
 
 index_expression ::= expression array
 
@@ -322,9 +319,9 @@ parenthesised_expression ::= '(' expression ')' {pin=1}
 
 statement_list ::= (statement_with_recovery)*
 
-private statement_with_recovery ::= !('ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT') statement {pin=1 recoverWhile=statement_recovery}
+private statement_with_recovery ::= !('ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'UNDO' | 'ERROR' | 'BACKWARD' | 'DEFAULT') statement {pin=1 recoverWhile=statement_recovery}
 
-private statement_recovery ::= !('<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | IDENTIFIER | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT') symbol_recovery
+private statement_recovery ::= !('<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | IDENTIFIER | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD') symbol_recovery
 
 statement ::= '<SMT>' | simple_statement | compound_statement | label_statement {recoverWhile=statement_recovery}
 
@@ -351,7 +348,7 @@ private variable_target ::= '<VAR>' | expression {recoverWhile=variable_target_r
 
 private variable_target_recovery ::= !(':=' | ';') statement_recovery
 
-procedure_call_statement ::= procedure_target procedure_call_argument_list ';' {pin=1}
+procedure_call_statement ::= procedure_target procedure_call_argument_list ';'
 
 procedure_call_argument_list ::= argument_list_body {elementType=argument_list}
 
@@ -423,4 +420,4 @@ required_argument ::= [unqualified_reference_expression ':='] expression
 
 optional_argument ::= '\' unqualified_reference_expression [':=' expression]
 
-conditional_argument ::= '\' unqualified_reference_expression '?' (symbol_reference | '<VAR>')
+conditional_argument ::= '\' unqualified_reference_expression '?' ('<VAR>' | expression)

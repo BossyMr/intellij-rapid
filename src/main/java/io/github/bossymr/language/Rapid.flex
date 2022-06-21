@@ -7,7 +7,13 @@ import com.intellij.lexer.FlexLexer;
 
 %%
 
-%class RapidLexer
+%{
+    public _RapidLexer() {
+      this((java.io.Reader) null);
+    }
+%}
+
+%class _RapidLexer
 %implements FlexLexer
 %function advance
 %type IElementType
@@ -54,63 +60,63 @@ COMMENT = \! {CHARACTER}*
 <YYINITIAL> {
   {WHITESPACE}           { return TokenType.WHITE_SPACE; }
 
-  "ALIAS"                { return RapidElementTypes.ALIAS; }
-  "AND"                  { return RapidElementTypes.AND; }
-  "BACKWARD"             { return RapidElementTypes.BACKWARD; }
-  "CASE"                 { return RapidElementTypes.CASE; }
-  "CONNECT"              { return RapidElementTypes.CONNECT; }
-  "CONST"                { return RapidElementTypes.CONST; }
-  "DEFAULT"              { return RapidElementTypes.DEFAULT; }
-  "DO"                   { return RapidElementTypes.DO; }
-  "ELSE"                 { return RapidElementTypes.ELSE; }
-  "ELSEIF"               { return RapidElementTypes.ELSEIF; }
-  "ENDFOR"               { return RapidElementTypes.ENDFOR; }
-  "ENDFUNC"              { return RapidElementTypes.ENDFUNC; }
-  "ENDIF"                { return RapidElementTypes.ENDIF; }
-  "ENDMODULE"            { return RapidElementTypes.ENDMODULE; }
-  "ENDPROC"              { return RapidElementTypes.ENDPROC; }
-  "ENDRECORD"            { return RapidElementTypes.ENDRECORD; }
-  "ENDTEST"              { return RapidElementTypes.ENDTEST; }
-  "ENDTRAP"              { return RapidElementTypes.ENDTRAP; }
-  "ENDWHILE"             { return RapidElementTypes.ENDWHILE; }
-  "ERROR"                { return RapidElementTypes.ERROR; }
-  "EXIT"                 { return RapidElementTypes.EXIT; }
-  "FALSE"                { return RapidElementTypes.FALSE; }
-  "FOR"                  { return RapidElementTypes.FOR; }
-  "FROM"                 { return RapidElementTypes.FROM; }
-  "FUNC"                 { return RapidElementTypes.FUNC; }
-  "GOTO"                 { return RapidElementTypes.GOTO; }
-  "IF"                   { return RapidElementTypes.IF; }
-  "INOUT"                { return RapidElementTypes.INOUT; }
-  "LOCAL"                { return RapidElementTypes.LOCAL; }
-  "MOD"                  { return RapidElementTypes.MOD; }
-  "MODULE"               { return RapidElementTypes.MODULE; }
-  "NOSTEPIN"             { return RapidElementTypes.NOSTEPIN; }
-  "NOT"                  { return RapidElementTypes.NOT; }
-  "NOVIEW"               { return RapidElementTypes.NOVIEW; }
-  "OR"                   { return RapidElementTypes.OR; }
-  "PERS"                 { return RapidElementTypes.PERS; }
-  "PROC"                 { return RapidElementTypes.PROC; }
-  "RAISE"                { return RapidElementTypes.RAISE; }
-  "READONLY"             { return RapidElementTypes.READONLY; }
-  "RECORD"               { return RapidElementTypes.RECORD; }
-  "RETRY"                { return RapidElementTypes.RETRY; }
-  "RETURN"               { return RapidElementTypes.RETURN; }
-  "STEP"                 { return RapidElementTypes.STEP; }
-  "SYSMODULE"            { return RapidElementTypes.SYSMODULE; }
-  "TASK"                 { return RapidElementTypes.TASK; }
-  "TEST"                 { return RapidElementTypes.TEST; }
-  "THEN"                 { return RapidElementTypes.THEN; }
-  "TO"                   { return RapidElementTypes.TO; }
-  "TRAP"                 { return RapidElementTypes.TRAP; }
-  "TRUE"                 { return RapidElementTypes.TRUE; }
-  "TRYNEXT"              { return RapidElementTypes.TRYNEXT; }
-  "UNDO"                 { return RapidElementTypes.UNDO; }
-  "VAR"                  { return RapidElementTypes.VAR; }
-  "VIEWONLY"             { return RapidElementTypes.VIEWONLY; }
-  "WHILE"                { return RapidElementTypes.WHILE; }
-  "WITH"                 { return RapidElementTypes.WITH; }
-  "XOR"                  { return RapidElementTypes.XOR; }
+  "ALIAS"                { return RapidElementTypes.ALIAS_KEYWORD; }
+  "AND"                  { return RapidElementTypes.AND_KEYWORD; }
+  "BACKWARD"             { return RapidElementTypes.BACKWARD_KEYWORD; }
+  "CASE"                 { return RapidElementTypes.CASE_KEYWORD; }
+  "CONNECT"              { return RapidElementTypes.CONNECT_KEYWORD; }
+  "CONST"                { return RapidElementTypes.CONST_KEYWORD; }
+  "DEFAULT"              { return RapidElementTypes.DEFAULT_KEYWORD; }
+  "DO"                   { return RapidElementTypes.DO_KEYWORD; }
+  "ELSE"                 { return RapidElementTypes.ELSE_KEYWORD; }
+  "ELSEIF"               { return RapidElementTypes.ELSEIF_KEYWORD; }
+  "ENDFOR"               { return RapidElementTypes.ENDFOR_KEYWORD; }
+  "ENDFUNC"              { return RapidElementTypes.ENDFUNC_KEYWORD; }
+  "ENDIF"                { return RapidElementTypes.ENDIF_KEYWORD; }
+  "ENDMODULE"            { return RapidElementTypes.ENDMODULE_KEYWORD; }
+  "ENDPROC"              { return RapidElementTypes.ENDPROC_KEYWORD; }
+  "ENDRECORD"            { return RapidElementTypes.ENDRECORD_KEYWORD; }
+  "ENDTEST"              { return RapidElementTypes.ENDTEST_KEYWORD; }
+  "ENDTRAP"              { return RapidElementTypes.ENDTRAP_KEYWORD; }
+  "ENDWHILE"             { return RapidElementTypes.ENDWHILE_KEYWORD; }
+  "ERROR"                { return RapidElementTypes.ERROR_KEYWORD; }
+  "EXIT"                 { return RapidElementTypes.EXIT_KEYWORD; }
+  "FALSE"                { return RapidElementTypes.FALSE_KEYWORD; }
+  "FOR"                  { return RapidElementTypes.FOR_KEYWORD; }
+  "FROM"                 { return RapidElementTypes.FROM_KEYWORD; }
+  "FUNC"                 { return RapidElementTypes.FUNC_KEYWORD; }
+  "GOTO"                 { return RapidElementTypes.GOTO_KEYWORD; }
+  "IF"                   { return RapidElementTypes.IF_KEYWORD; }
+  "INOUT"                { return RapidElementTypes.INOUT_KEYWORD; }
+  "LOCAL"                { return RapidElementTypes.LOCAL_KEYWORD; }
+  "MOD"                  { return RapidElementTypes.MOD_KEYWORD; }
+  "MODULE"               { return RapidElementTypes.MODULE_KEYWORD; }
+  "NOSTEPIN"             { return RapidElementTypes.NOSTEPIN_KEYWORD; }
+  "NOT"                  { return RapidElementTypes.NOT_KEYWORD; }
+  "NOVIEW"               { return RapidElementTypes.NOVIEW_KEYWORD; }
+  "OR"                   { return RapidElementTypes.OR_KEYWORD; }
+  "PERS"                 { return RapidElementTypes.PERS_KEYWORD; }
+  "PROC"                 { return RapidElementTypes.PROC_KEYWORD; }
+  "RAISE"                { return RapidElementTypes.RAISE_KEYWORD; }
+  "READONLY"             { return RapidElementTypes.READONLY_KEYWORD; }
+  "RECORD"               { return RapidElementTypes.RECORD_KEYWORD; }
+  "RETRY"                { return RapidElementTypes.RETRY_KEYWORD; }
+  "RETURN"               { return RapidElementTypes.RETURN_KEYWORD; }
+  "STEP"                 { return RapidElementTypes.STEP_KEYWORD; }
+  "SYSMODULE"            { return RapidElementTypes.SYSMODULE_KEYWORD; }
+  "TASK"                 { return RapidElementTypes.TASK_KEYWORD; }
+  "TEST"                 { return RapidElementTypes.TEST_KEYWORD; }
+  "THEN"                 { return RapidElementTypes.THEN_KEYWORD; }
+  "TO"                   { return RapidElementTypes.TO_KEYWORD; }
+  "TRAP"                 { return RapidElementTypes.TRAP_KEYWORD; }
+  "TRUE"                 { return RapidElementTypes.TRUE_KEYWORD; }
+  "TRYNEXT"              { return RapidElementTypes.TRYNEXT_KEYWORD; }
+  "UNDO"                 { return RapidElementTypes.UNDO_KEYWORD; }
+  "VAR"                  { return RapidElementTypes.VAR_KEYWORD; }
+  "VIEWONLY"             { return RapidElementTypes.VIEWONLY_KEYWORD; }
+  "WHILE"                { return RapidElementTypes.WHILE_KEYWORD; }
+  "WITH"                 { return RapidElementTypes.WITH_KEYWORD; }
+  "XOR"                  { return RapidElementTypes.XOR_KEYWORD; }
 
   "<TDN>"                { return RapidElementTypes.TDN_PLACEHOLDER; }
   "<DDN>"                { return RapidElementTypes.DDN_PLACEHOLDER; }
