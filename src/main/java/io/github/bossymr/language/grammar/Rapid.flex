@@ -1,4 +1,4 @@
-package io.github.bossymr.language;
+package io.github.bossymr.language.core.lexer;
 
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.TokenType;

@@ -131,7 +131,7 @@
     elementType("binary_.*_expression")=binary_expression
     elementType("unary_.*_expression")=unary_expression
 
-    // hooks('alias|record|component|function|procedure|trap|field') = [ leftBinder = "ADJACENT_LINE_COMMENTS" ]
+    hooks('alias|record|component|function|procedure|trap|field') = [ leftBinder = "ADJACENT_LINE_COMMENTS" ]
 }
 
 file ::= !(<<eof>>) (module_with_recovery)* {pin=1}
