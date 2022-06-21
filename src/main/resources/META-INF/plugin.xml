@@ -11,9 +11,9 @@
     <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Add your extensions here -->
         <fileType extensions="mod" name="RAPID" language="RAPID" fieldName="INSTANCE"
                   implementationClass="io.github.bossymr.language.RapidFileType"/>
+        <lang.parserDefinition language="RAPID" implementationClass="io.github.bossymr.language.RapidParserDefinition"/>
     </extensions>
 
     <actions>
