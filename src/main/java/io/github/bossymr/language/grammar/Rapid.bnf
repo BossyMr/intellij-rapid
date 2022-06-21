@@ -1,19 +1,19 @@
 {
-    parserClass='io.github.bossymr.language.RapidParser'
-    parserUtilClass='io.github.bossymr.language.RapidParserUtil'
+    parserClass='io.github.bossymr.language.core.parser.RapidParser'
+    parserUtilClass='io.github.bossymr.language.core.parser.RapidParserUtil'
 
     implements='com.intellij.psi.PsiElement'
     extends='com.intellij.extapi.psi.ASTWrapperPsiElement'
 
-    elementTypeHolderClass='io.github.bossymr.psi.RapidElementTypes'
+    elementTypeHolderClass='io.github.bossymr.language.core.psi.RapidElementTypes'
 
-    elementTypeClass='io.github.bossymr.psi.RapidElementType'
-    tokenTypeClass='io.github.bossymr.psi.RapidTokenType'
+    elementTypeClass='io.github.bossymr.language.core.psi.RapidElementType'
+    tokenTypeClass='io.github.bossymr.language.core.psi.RapidTokenType'
 
     psiClassPrefix='Rapid'
     psiImplClassSuffix='Impl'
-    psiPackage='io.github.bossymr.psi'
-    psiImplPackage='io.github.bossymr.psi.impl'
+    psiPackage='io.github.bossymr.language.core.psi'
+    psiImplPackage='io.github.bossymr.language.core.psi.impl'
 
     tokens = [
         WHITE_SPACE = 'regexp:\s'
@@ -108,7 +108,6 @@
         DIV = '/'
         COLON = ':'
         SEMICOLON = ';'
-        EXLAMATION = '!'
         BACKSLASH = '\'
         QUESTION = '?'
         PERCENT = '%'
@@ -130,6 +129,8 @@
 
     elementType("binary_.*_expression")=binary_expression
     elementType("unary_.*_expression")=unary_expression
+
+    consumeTokenMethod(".*_recovery|.*expression") = 'consumeTokenFast'
 
     hooks('alias|record|component|function|procedure|trap|field') = [ leftBinder = "ADJACENT_LINE_COMMENTS" ]
 }

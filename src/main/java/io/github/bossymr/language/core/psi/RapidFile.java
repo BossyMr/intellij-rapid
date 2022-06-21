@@ -1,4 +1,4 @@
-package io.github.bossymr.psi;
+package io.github.bossymr.language.core.psi;
 
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.openapi.fileTypes.FileType;

@@ -1,11 +1,11 @@
-package io.github.bossymr.language;
+package io.github.bossymr.language.core.parser;
 
 import com.intellij.lang.WhitespacesAndCommentsBinder;
 import com.intellij.lang.parser.GeneratedParserUtilBase;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
-import io.github.bossymr.psi.RapidElementTypes;
+import io.github.bossymr.language.core.psi.RapidElementTypes;
 
 /**
  * Utility methods used to parse language.

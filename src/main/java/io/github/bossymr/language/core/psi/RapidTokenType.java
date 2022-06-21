@@ -1,4 +1,4 @@
-package io.github.bossymr.psi;
+package io.github.bossymr.language.core.psi;
 
 import com.intellij.psi.TokenType;
 import com.intellij.psi.tree.IElementType;
@@ -7,7 +7,7 @@ import io.github.bossymr.language.RapidLanguage;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 
-import static io.github.bossymr.psi.RapidElementTypes.*;
+import static io.github.bossymr.language.core.psi.RapidElementTypes.*;
 
 public class RapidTokenType extends IElementType {
 
