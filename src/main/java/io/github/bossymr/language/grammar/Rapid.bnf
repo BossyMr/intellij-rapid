@@ -2,8 +2,8 @@
     parserClass='io.github.bossymr.language.core.parser.RapidParser'
     parserUtilClass='io.github.bossymr.language.core.parser.RapidParserUtil'
 
-    implements='com.intellij.psi.PsiElement'
-    extends='com.intellij.extapi.psi.ASTWrapperPsiElement'
+    implements='io.github.bossymr.language.core.psi.RapidElement'
+    extends='io.github.bossymr.language.core.psi.impl.RapidElementImpl'
 
     elementTypeHolderClass='io.github.bossymr.language.core.psi.RapidElementTypes'
 
