@@ -39,7 +39,7 @@ public class RapidFileType extends LanguageFileType {
 
     @Override
     public @Nullable Icon getIcon() {
-        return RapidIcons.FileTypes.Rapid;
+        return RapidIcons.RAPID_FILE;
     }
 
     @Override

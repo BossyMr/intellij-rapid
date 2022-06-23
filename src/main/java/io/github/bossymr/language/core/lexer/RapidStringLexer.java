@@ -76,7 +76,7 @@ public class RapidStringLexer extends LexerBase {
             int i = this.tokenStart + 1;
             if (i >= bufferEnd) return bufferEnd;
             if (i + 2 < bufferEnd && sequence.charAt(i) != '\\') return i + 2;
-            return i + 1 < bufferEnd ? i : bufferEnd;
+            return Math.min(i + 1, bufferEnd);
         } else {
             int i = CharArrayUtil.indexOf(sequence, "\\", tokenStart + 1, bufferEnd);
             return i != -1 ? i : bufferEnd;
