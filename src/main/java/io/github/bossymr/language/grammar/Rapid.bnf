@@ -1,19 +1,19 @@
 {
-    parserClass='io.github.bossymr.language.core.parser.RapidParser'
-    parserUtilClass='io.github.bossymr.language.core.parser.RapidParserUtil'
+    parserClass='io.github.bossymr.language.parser.RapidParser'
+    parserUtilClass='io.github.bossymr.language.parser.RapidParserUtil'
 
-    implements='io.github.bossymr.language.core.psi.RapidElement'
-    extends='io.github.bossymr.language.core.psi.impl.RapidElementImpl'
+    implements='io.github.bossymr.language.psi.RapidElement'
+    extends='io.github.bossymr.language.psi.impl.RapidElementImpl'
 
-    elementTypeHolderClass='io.github.bossymr.language.core.psi.RapidElementTypes'
+    elementTypeHolderClass='io.github.bossymr.language.psi.RapidElementTypes'
 
-    elementTypeClass='io.github.bossymr.language.core.psi.RapidElementType'
-    tokenTypeClass='io.github.bossymr.language.core.psi.RapidTokenType'
+    elementTypeClass='io.github.bossymr.language.psi.RapidElementType'
+    tokenTypeClass='io.github.bossymr.language.psi.RapidTokenType'
 
     psiClassPrefix='Rapid'
     psiImplClassSuffix='Impl'
-    psiPackage='io.github.bossymr.language.core.psi'
-    psiImplPackage='io.github.bossymr.language.core.psi.impl'
+    psiPackage='io.github.bossymr.language.psi'
+    psiImplPackage='io.github.bossymr.language.psi.impl'
 
     tokens = [
         WHITE_SPACE = 'regexp:\s'

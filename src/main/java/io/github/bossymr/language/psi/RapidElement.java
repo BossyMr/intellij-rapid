@@ -1,4 +1,4 @@
-package io.github.bossymr.language.core.psi;
+package io.github.bossymr.language.psi;
 
 import com.intellij.psi.PsiElement;
 

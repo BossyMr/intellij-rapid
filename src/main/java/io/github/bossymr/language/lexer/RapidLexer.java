@@ -1,4 +1,4 @@
-package io.github.bossymr.language.core.lexer;
+package io.github.bossymr.language.lexer;
 
 import com.intellij.lexer.FlexAdapter;
 

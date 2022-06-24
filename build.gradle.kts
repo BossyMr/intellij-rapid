@@ -36,7 +36,7 @@ tasks {
 
     generateLexer {
         source.set("src/main/java/io/github/bossymr/language/grammar/Rapid.flex")
-        targetDir.set("src/main/gen/io/github/bossymr/language/core/lexer")
+        targetDir.set("src/main/gen/io/github/bossymr/language/lexer")
         targetClass.set("_RapidLexer")
         purgeOldFiles.set(true)
     }
@@ -44,8 +44,8 @@ tasks {
     generateParser {
         source.set("src/main/java/io/github/bossymr/language/grammar/Rapid.bnf")
         targetRoot.set("src/main/gen")
-        pathToParser.set("/io/github/bossymr/language/core/parser/RustParser.java")
-        pathToPsiRoot.set("/io/github/bossymr/language/core/psi")
+        pathToParser.set("/io/github/bossymr/language/parser/RustParser.java")
+        pathToPsiRoot.set("/io/github/bossymr/language/psi")
         purgeOldFiles.set(true)
     }
 }

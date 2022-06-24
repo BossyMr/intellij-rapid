@@ -1,13 +1,18 @@
-package io.github.bossymr.language.core.lexer;
+package io.github.bossymr.language.lexer;
 
 import com.intellij.lexer.LexerBase;
 import com.intellij.psi.StringEscapesTokenTypes;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.util.text.CharArrayUtil;
-import io.github.bossymr.language.core.psi.RapidElementTypes;
+import io.github.bossymr.language.psi.RapidElementTypes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Lexer used to highlight valid and invalid character escapes inside of strings (and should only be run inside of
+ * string literals). Character escapes in Rapid are comprised of either {@code \\} to escape a {@code \} character, or
+ * {@code \[a-fA-F0-9]} ({@code \} followed by two hexadecimal characters).
+ */
 public class RapidStringLexer extends LexerBase {
 
     private int state = 0;
@@ -49,17 +54,24 @@ public class RapidStringLexer extends LexerBase {
     }
 
     private @Nullable IElementType determineTokenType() {
-        if (tokenStart >= tokenEnd) return null;
+        if (tokenStart >= tokenEnd) {
+            // This string is finished.
+            return null;
+        }
         if (sequence.charAt(tokenStart) != '\\') {
+            // This token isn't an escape sequence.
             return RapidElementTypes.STRING_LITERAL;
         }
         if (tokenStart + 1 >= tokenEnd) {
+            // '\' is at the end of the string.
             return StringEscapesTokenTypes.INVALID_CHARACTER_ESCAPE_TOKEN;
         }
         if (sequence.charAt(tokenStart + 1) == '\\') {
+            // '\' is followed by another '\'.
             return StringEscapesTokenTypes.VALID_STRING_ESCAPE_TOKEN;
         }
         if (tokenStart + 2 >= tokenEnd) {
+            // '\' is only followed by only a single character.
             return StringEscapesTokenTypes.INVALID_CHARACTER_ESCAPE_TOKEN;
         }
         return isValid(sequence.charAt(tokenStart + 1)) && isValid(sequence.charAt(tokenStart + 2)) ?
@@ -71,13 +83,25 @@ public class RapidStringLexer extends LexerBase {
     }
 
     private int determineTokenEnd() {
-        if (tokenStart >= bufferEnd) return tokenStart;
+        if (tokenStart >= bufferEnd) {
+            // This string is finished.
+            return tokenStart;
+        }
         if (sequence.charAt(tokenStart) == '\\') {
+            // Find the end of the escape sequence.
             int i = this.tokenStart + 1;
-            if (i >= bufferEnd) return bufferEnd;
-            if (i + 2 < bufferEnd && sequence.charAt(i) != '\\') return i + 2;
-            return Math.min(i + 1, bufferEnd);
+            if (tokenStart + 1 >= bufferEnd) {
+                // The next character is the last character in the string: \".
+                return bufferEnd;
+            }
+            if (tokenStart + 3 < bufferEnd && sequence.charAt(i) != '\\') {
+                // The next character isn't '\' and a complete escape sequence is available: \xx.
+                return tokenStart + 3;
+            }
+            // The escape sequence contains one additional character: \x or \\.
+            return Math.min(tokenStart + 2, bufferEnd);
         } else {
+            // Find the next '\' character.
             int i = CharArrayUtil.indexOf(sequence, "\\", tokenStart + 1, bufferEnd);
             return i != -1 ? i : bufferEnd;
         }

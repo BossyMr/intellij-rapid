@@ -1,8 +1,8 @@
-package io.github.bossymr.language.core.lexer;
+package io.github.bossymr.language.lexer;
 
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.TokenType;
-import io.github.bossymr.language.core.psi.RapidElementTypes;
+import io.github.bossymr.language.psi.RapidElementTypes;
 import com.intellij.lexer.FlexLexer;
 
 %%

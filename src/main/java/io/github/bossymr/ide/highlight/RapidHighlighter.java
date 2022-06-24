@@ -6,9 +6,9 @@ import com.intellij.openapi.fileTypes.SyntaxHighlighterBase;
 import com.intellij.psi.StringEscapesTokenTypes;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
-import io.github.bossymr.language.core.lexer.RapidHighlightingLexer;
-import io.github.bossymr.language.core.psi.RapidElementTypes;
-import io.github.bossymr.language.core.psi.RapidTokenType;
+import io.github.bossymr.language.lexer.RapidHighlightingLexer;
+import io.github.bossymr.language.psi.RapidElementTypes;
+import io.github.bossymr.language.psi.RapidTokenType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;

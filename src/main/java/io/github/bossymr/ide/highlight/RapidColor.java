@@ -31,7 +31,6 @@ public enum RapidColor {
     INVALID_STRING_ESCAPE(RapidBundle.messagePointer("settings.rapid.invalid.escape.sequence"), DefaultLanguageHighlighterColors.INVALID_STRING_ESCAPE);
 
     public final @NotNull TextAttributesKey textAttributesKey;
-
     public final @NotNull AttributesDescriptor attributesDescriptor;
 
     RapidColor(Supplier<String> name, TextAttributesKey fallback) {

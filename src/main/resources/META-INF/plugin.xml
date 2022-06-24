@@ -20,7 +20,7 @@
         <!-- Syntax -->
 
         <lang.parserDefinition language="RAPID"
-                               implementationClass="io.github.bossymr.language.core.parser.RapidParserDefinition"/>
+                               implementationClass="io.github.bossymr.language.parser.RapidParserDefinition"/>
 
         <!-- Syntax Highlighter -->
 

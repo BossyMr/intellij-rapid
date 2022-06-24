@@ -1,4 +1,4 @@
-package io.github.bossymr.language.core.parser;
+package io.github.bossymr.language.parser;
 
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LanguageUtil;
@@ -12,10 +12,10 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.tree.IFileElementType;
 import com.intellij.psi.tree.TokenSet;
 import io.github.bossymr.language.RapidLanguage;
-import io.github.bossymr.language.core.lexer.RapidLexer;
-import io.github.bossymr.language.core.psi.RapidElementTypes;
-import io.github.bossymr.language.core.psi.RapidFile;
-import io.github.bossymr.language.core.psi.RapidTokenType;
+import io.github.bossymr.language.lexer.RapidLexer;
+import io.github.bossymr.language.psi.RapidElementTypes;
+import io.github.bossymr.language.psi.RapidFile;
+import io.github.bossymr.language.psi.RapidTokenType;
 import org.jetbrains.annotations.NotNull;
 
 public class RapidParserDefinition implements ParserDefinition {
