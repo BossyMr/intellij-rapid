@@ -21,7 +21,7 @@ public class RapidHighlighter extends SyntaxHighlighterBase {
     static {
         fillMap(RapidTokenType.KEYWORDS, RapidColor.KEYWORD);
         fillMap(RapidTokenType.LITERALS, RapidColor.KEYWORD);
-        fillMap(RapidTokenType.OPERATIONS, RapidColor.OPERATION_SIGN);
+        fillMap(RapidTokenType.OPERATIONS, RapidColor.OPERATOR_SIGN);
 
         HIGHLIGHTS.put(RapidElementTypes.INTEGER_LITERAL, RapidColor.NUMBER);
         HIGHLIGHTS.put(RapidElementTypes.STRING_LITERAL, RapidColor.STRING);
@@ -41,6 +41,7 @@ public class RapidHighlighter extends SyntaxHighlighterBase {
         HIGHLIGHTS.put(RapidElementTypes.COMMA, RapidColor.COMMA);
         HIGHLIGHTS.put(RapidElementTypes.DOT, RapidColor.DOT);
         HIGHLIGHTS.put(RapidElementTypes.SEMICOLON, RapidColor.SEMICOLON);
+        HIGHLIGHTS.put(RapidElementTypes.LINE, RapidColor.LINE);
 
         HIGHLIGHTS.put(RapidElementTypes.COMMENT, RapidColor.COMMENT);
     }

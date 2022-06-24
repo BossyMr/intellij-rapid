@@ -27,7 +27,7 @@ public class RapidTokenType extends IElementType {
 
     public static final TokenSet LITERALS = TokenSet.create(TRUE_KEYWORD, FALSE_KEYWORD);
 
-    public static final TokenSet OPERATIONS = TokenSet.create(LT, LE, EQ, GE, GT, PLUS, MINUS, ASTERISK, DIV, COLON, LINE, QUESTION, PERCENT, LTGT, CEQ);
+    public static final TokenSet OPERATIONS = TokenSet.create(LT, LE, EQ, GE, GT, PLUS, MINUS, ASTERISK, DIV, COLON, QUESTION, PERCENT, LTGT, CEQ);
 
     public static final TokenSet MODIFIERS = TokenSet.create(LOCAL_KEYWORD, TASK_KEYWORD);
 
