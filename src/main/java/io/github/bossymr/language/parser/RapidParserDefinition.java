@@ -14,8 +14,8 @@ import com.intellij.psi.tree.TokenSet;
 import io.github.bossymr.language.RapidLanguage;
 import io.github.bossymr.language.lexer.RapidLexer;
 import io.github.bossymr.language.psi.RapidElementTypes;
-import io.github.bossymr.language.psi.RapidFile;
 import io.github.bossymr.language.psi.RapidTokenType;
+import io.github.bossymr.language.psi.impl.RapidFileImpl;
 import org.jetbrains.annotations.NotNull;
 
 public class RapidParserDefinition implements ParserDefinition {
@@ -54,12 +54,12 @@ public class RapidParserDefinition implements ParserDefinition {
 
     @Override
     public @NotNull PsiElement createElement(ASTNode node) {
-        return RapidElementTypes.Factory.createElement(node);
+        return null; // TODO: 2022-07-02 Update 
     }
 
     @Override
     public @NotNull PsiFile createFile(@NotNull FileViewProvider viewProvider) {
-        return new RapidFile(viewProvider);
+        return new RapidFileImpl(viewProvider);
     }
 
     @Override

@@ -1,20 +1,19 @@
 package io.github.bossymr.language.psi;
 
-import com.intellij.extapi.psi.PsiFileBase;
-import com.intellij.openapi.fileTypes.FileType;
-import com.intellij.psi.FileViewProvider;
-import io.github.bossymr.language.RapidFileType;
-import io.github.bossymr.language.RapidLanguage;
+import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 
-public class RapidFile extends PsiFileBase {
+import java.util.List;
 
-    public RapidFile(@NotNull FileViewProvider viewProvider) {
-        super(viewProvider, RapidLanguage.INSTANCE);
-    }
+/**
+ * Represents a Rapid file.
+ */
+public interface RapidFile extends PsiFile {
 
-    @Override
-    public @NotNull FileType getFileType() {
-        return RapidFileType.INSTANCE;
-    }
+    /**
+     * Returns modules declared in this file.
+     *
+     * @return a list of modules declared in this file.
+     */
+    @NotNull List<@NotNull RapidModule> getModules();
 }
