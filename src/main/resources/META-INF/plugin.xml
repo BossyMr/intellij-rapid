@@ -19,6 +19,8 @@
 
         <stubElementTypeHolder externalIdPrefix="rapid." class="io.github.bossymr.language.psi.RapidStubElementTypes" />
 
+        <stubIndex implementation="io.github.bossymr.language.psi.stubs.RapidSymbolIndex" />
+
         <!-- Syntax -->
 
         <lang.parserDefinition language="Rapid"

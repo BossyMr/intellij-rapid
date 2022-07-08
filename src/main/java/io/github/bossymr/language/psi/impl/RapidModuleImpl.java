@@ -1,13 +1,10 @@
 package io.github.bossymr.language.psi.impl;
 
 import com.intellij.lang.ASTNode;
-import com.intellij.openapi.util.NlsSafe;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.tree.TokenSet;
 import com.intellij.util.IncorrectOperationException;
 import io.github.bossymr.language.psi.*;
 import io.github.bossymr.language.psi.stubs.RapidModuleStub;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,7 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-public class RapidModuleImpl extends RapidStubPsiElement<RapidModuleStub> implements RapidModule {
+public class RapidModuleImpl extends RapidStubElementImpl<RapidModuleStub> implements RapidModule {
 
     public RapidModuleImpl(@NotNull RapidModuleStub stub) {
         super(stub, RapidStubElementTypes.MODULE);
@@ -85,5 +82,10 @@ public class RapidModuleImpl extends RapidStubPsiElement<RapidModuleStub> implem
             PsiElement identifier = getNameIdentifier();
             return identifier != null ? identifier.getText() : null;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "RapidModule:" + getName();
     }
 }

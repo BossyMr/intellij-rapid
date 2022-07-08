@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 
-public class RapidSymbolNameIndex extends StringStubIndexExtension<RapidSymbol> {
+public final class RapidSymbolIndex extends StringStubIndexExtension<RapidSymbol> {
     public static final StubIndexKey<String, RapidSymbol> KEY = StubIndexKey.createIndexKey("rapid.symbol.name");
 
     @Override

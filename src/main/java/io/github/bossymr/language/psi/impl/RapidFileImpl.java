@@ -34,4 +34,9 @@ public class RapidFileImpl extends PsiFileBase implements RapidFile {
     public @NotNull FileType getFileType() {
         return RapidFileType.INSTANCE;
     }
+
+    @Override
+    public String toString() {
+        return "RapidFile:" + getName();
+    }
 }

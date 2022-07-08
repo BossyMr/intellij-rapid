@@ -11,7 +11,7 @@ import io.github.bossymr.language.psi.RapidModule;
 import io.github.bossymr.language.psi.RapidStubElementType;
 import io.github.bossymr.language.psi.impl.RapidModuleImpl;
 import io.github.bossymr.language.psi.stubs.RapidModuleStub;
-import io.github.bossymr.language.psi.stubs.RapidSymbolNameIndex;
+import io.github.bossymr.language.psi.stubs.RapidSymbolIndex;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -52,7 +52,7 @@ public class RapidModuleElementType extends RapidStubElementType<RapidModuleStub
     public void indexStub(@NotNull RapidModuleStub stub, @NotNull IndexSink sink) {
         final String name = stub.getName();
         if(name != null) {
-            sink.occurrence(RapidSymbolNameIndex.KEY, StringUtil.toLowerCase(name));
+            sink.occurrence(RapidSymbolIndex.KEY, StringUtil.toLowerCase(name));
         }
 
     }

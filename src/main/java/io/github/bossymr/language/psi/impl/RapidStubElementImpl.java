@@ -9,13 +9,13 @@ import com.intellij.psi.stubs.StubElement;
 import io.github.bossymr.language.RapidLanguage;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class RapidStubPsiElement<T extends StubElement<?>> extends StubBasedPsiElementBase<T> implements StubBasedPsiElement<T> {
+public abstract class RapidStubElementImpl<T extends StubElement<?>> extends StubBasedPsiElementBase<T> implements StubBasedPsiElement<T> {
 
-    public RapidStubPsiElement(@NotNull T stub, @NotNull IStubElementType<?, ?> nodeType) {
+    public RapidStubElementImpl(@NotNull T stub, @NotNull IStubElementType<?, ?> nodeType) {
         super(stub, nodeType);
     }
 
-    public RapidStubPsiElement(@NotNull ASTNode node) {
+    public RapidStubElementImpl(@NotNull ASTNode node) {
         super(node);
     }
 
