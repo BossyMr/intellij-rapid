@@ -1,60 +1,67 @@
 package io.github.bossymr.language.psi;
 
-import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Set;
 
 /**
- * Represents a module.
- *
- * @see RapidFile#getModules()
+ * Represents a symbol which is a module.
  */
-public interface RapidModule extends RapidNamedElement {
+public interface RapidModule extends RapidSymbol {
 
     /**
-     * Returns the attributes set by this module.
+     * Returns the attribute list, containing the attributes which this module is declared with.
      *
-     * @return a set of unique module attributes.
+     * @return the attribute list of this module, or {@code null} if no attributes are declared.
+     * @see #getAttributes()
+     */
+    @NotNull RapidAttributeList getAttributeList();
+
+    /**
+     * Returns the attributes which this module is declared with, effectively the same as
+     * {@link RapidAttributeList#getAttributes()}.
+     *
+     * @return the attributes which this module is declared with.
      */
     @NotNull Set<ModuleAttribute> getAttributes();
 
     /**
-     * Checks if the specified attribute is set by this module.
+     * Checks if the specified attribute is declared by this module, effectively the same as
+     * {@link RapidAttributeList#hasAttribute(ModuleAttribute)}.
      *
-     * @return if the specified attribute is set by this module.
+     * @return if the specified attribute is declared by this module.
      */
-    boolean hasAttribute(@NotNull ModuleAttribute attribute);
+    boolean hasAttribute(ModuleAttribute attribute);
 
     /**
-     * Adds, or removes, the specified attribute for this module.
+     * Attempts to add or remove the specified attribute to this attribute list, effectively the same as
+     * {@link RapidAttributeList#setAttribute(ModuleAttribute, boolean)}.
      *
      * @param attribute the attribute to add or remove.
-     * @param value     {@code true} to set the attribute, {@code false} to remove the attribute.
-     * @throws IncorrectOperationException if the attribute could not be modified.
+     * @param value     {@code true} to add the attribute, and {@code false} to remove the attribute.
+     * @throws UnsupportedOperationException if the attribute list could not be modified.
      */
-    void setAttribute(@NotNull ModuleAttribute attribute, boolean value) throws IncorrectOperationException;
+    void setAttribute(ModuleAttribute attribute, boolean value) throws UnsupportedOperationException;
 
     /**
      * Returns the structures declared in this module.
      *
-     * @return a list of structures declared in this module.
+     * @return a list of structures.
      */
     @NotNull List<RapidStructure> getStructures();
 
     /**
      * Returns the fields declared in this module.
      *
-     * @return a list of fields declared in this module.
+     * @return a list of fields.
      */
     @NotNull List<RapidField> getFields();
 
     /**
-     * Returns the routines declared in this module.
+     * Returns the fields declared in this module.
      *
-     * @return a list of routines declared in this module.
+     * @return a list of routines.
      */
     @NotNull List<RapidRoutine> getRoutines();
-
 }

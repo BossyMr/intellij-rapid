@@ -1,7 +1,7 @@
 package io.github.bossymr.language.psi;
 
 /**
- * Represents the different attributes which a module can declare.
+ * Represents the possible attributes which can be declared on a module.
  */
 public enum ModuleAttribute {
     /**
@@ -25,7 +25,7 @@ public enum ModuleAttribute {
     VIEW_ONLY,
 
     /**
-     * The module cannot be modified, but the attribute can be removed.
+     * The module cannot be modified, but this attribute can be removed.
      */
     READ_ONLY
 }

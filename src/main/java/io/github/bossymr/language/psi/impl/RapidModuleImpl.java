@@ -1,46 +1,89 @@
 package io.github.bossymr.language.psi.impl;
 
+import com.intellij.lang.ASTNode;
+import com.intellij.openapi.util.NlsSafe;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.tree.TokenSet;
 import com.intellij.util.IncorrectOperationException;
 import io.github.bossymr.language.psi.*;
-import io.github.bossymr.language.psi.node.RapidElementTypes;
+import io.github.bossymr.language.psi.stubs.RapidModuleStub;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-public class RapidModuleImpl extends RapidNamedElementImpl implements RapidModule {
+public class RapidModuleImpl extends RapidStubPsiElement<RapidModuleStub> implements RapidModule {
 
-    public RapidModuleImpl() {
-        super(RapidElementTypes.MODULE);
+    public RapidModuleImpl(@NotNull RapidModuleStub stub) {
+        super(stub, RapidStubElementTypes.MODULE);
+    }
+
+    public RapidModuleImpl(@NotNull ASTNode node) {
+        super(node);
+    }
+
+    @Override
+    public @NotNull RapidAttributeList getAttributeList() {
+        return findNotNullChildByClass(RapidAttributeList.class);
     }
 
     @Override
     public @NotNull Set<ModuleAttribute> getAttributes() {
-        return null;
+        return getAttributeList().getAttributes();
     }
 
     @Override
-    public boolean hasAttribute(@NotNull ModuleAttribute attribute) {
-        return false;
+    public boolean hasAttribute(ModuleAttribute attribute) {
+        return getAttributeList().hasAttribute(attribute);
     }
 
     @Override
-    public void setAttribute(@NotNull ModuleAttribute attribute, boolean value) throws IncorrectOperationException {
-
+    public void setAttribute(ModuleAttribute attribute, boolean value) throws UnsupportedOperationException {
+        getAttributeList().setAttribute(attribute, value);
     }
 
     @Override
     public @NotNull List<RapidStructure> getStructures() {
-        return null;
+        return Arrays.asList(findChildrenByClass(RapidStructure.class));
     }
 
     @Override
     public @NotNull List<RapidField> getFields() {
-        return null;
+        return Arrays.asList(findChildrenByClass(RapidField.class));
     }
 
     @Override
     public @NotNull List<RapidRoutine> getRoutines() {
-        return null;
+        return Arrays.asList(findChildrenByClass(RapidRoutine.class));
+    }
+
+    @Override
+    public int getTextOffset() {
+        PsiElement identifier = getNameIdentifier();
+        return identifier != null ? identifier.getTextOffset() : super.getTextOffset();
+    }
+
+    @Override
+    public @Nullable PsiElement getNameIdentifier() {
+        return findChildByType(RapidTokenTypes.IDENTIFIER);
+    }
+
+    @Override
+    public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
+        return null; // TODO: 2022-07-07
+    }
+
+    @Override
+    public String getName() {
+        final RapidModuleStub stub = getGreenStub();
+        if(stub != null) {
+            return stub.getName();
+        } else {
+            PsiElement identifier = getNameIdentifier();
+            return identifier != null ? identifier.getText() : null;
+        }
     }
 }

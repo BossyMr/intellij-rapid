@@ -2,7 +2,6 @@ package io.github.bossymr.language;
 
 import com.intellij.openapi.fileTypes.LanguageFileType;
 import com.intellij.openapi.vfs.VirtualFile;
-import io.github.bossymr.RapidBundle;
 import io.github.bossymr.RapidIcons;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
@@ -13,9 +12,6 @@ import java.nio.charset.StandardCharsets;
 
 public class RapidFileType extends LanguageFileType {
 
-    public static final @NonNls String DEFAULT_EXTENSION = "mod";
-    public static final @NonNls String DOT_DEFAULT_EXTENSION = ".mod";
-
     public static final RapidFileType INSTANCE = new RapidFileType();
 
     protected RapidFileType() {
@@ -24,17 +20,17 @@ public class RapidFileType extends LanguageFileType {
 
     @Override
     public @NonNls @NotNull String getName() {
-        return "RAPID";
+        return "Rapid";
     }
 
     @Override
     public @NotNull String getDescription() {
-        return RapidBundle.message("filetype.rapid.description");
+        return "Rapid";
     }
 
     @Override
     public @NotNull String getDefaultExtension() {
-        return DEFAULT_EXTENSION;
+        return "mod";
     }
 
     @Override

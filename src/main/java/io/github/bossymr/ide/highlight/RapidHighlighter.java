@@ -1,14 +1,15 @@
 package io.github.bossymr.ide.highlight;
 
+import com.intellij.lexer.LayeredLexer;
 import com.intellij.lexer.Lexer;
 import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.fileTypes.SyntaxHighlighterBase;
 import com.intellij.psi.StringEscapesTokenTypes;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
-import io.github.bossymr.language.lexer.RapidHighlightingLexer;
-import io.github.bossymr.language.psi.RapidElementTypes;
-import io.github.bossymr.language.psi.RapidTokenType;
+import io.github.bossymr.language.lexer.RapidLexer;
+import io.github.bossymr.language.lexer.RapidStringLexer;
+import io.github.bossymr.language.psi.RapidTokenTypes;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -19,31 +20,30 @@ public class RapidHighlighter extends SyntaxHighlighterBase {
     private static final Map<IElementType, RapidColor> HIGHLIGHTS = new HashMap<>();
 
     static {
-        fillMap(RapidTokenType.KEYWORDS, RapidColor.KEYWORD);
-        fillMap(RapidTokenType.LITERALS, RapidColor.KEYWORD);
-        fillMap(RapidTokenType.OPERATIONS, RapidColor.OPERATOR_SIGN);
+        fillMap(RapidTokenTypes.KEYWORDS, RapidColor.KEYWORD);
+        fillMap(RapidTokenTypes.OPERATIONS, RapidColor.OPERATOR_SIGN);
 
-        HIGHLIGHTS.put(RapidElementTypes.INTEGER_LITERAL, RapidColor.NUMBER);
-        HIGHLIGHTS.put(RapidElementTypes.STRING_LITERAL, RapidColor.STRING);
+        HIGHLIGHTS.put(RapidTokenTypes.INTEGER_LITERAL, RapidColor.NUMBER);
+        HIGHLIGHTS.put(RapidTokenTypes.STRING_LITERAL, RapidColor.STRING);
         HIGHLIGHTS.put(StringEscapesTokenTypes.VALID_STRING_ESCAPE_TOKEN, RapidColor.VALID_STRING_ESCAPE);
         HIGHLIGHTS.put(StringEscapesTokenTypes.INVALID_CHARACTER_ESCAPE_TOKEN, RapidColor.INVALID_STRING_ESCAPE);
         HIGHLIGHTS.put(StringEscapesTokenTypes.INVALID_UNICODE_ESCAPE_TOKEN, RapidColor.INVALID_STRING_ESCAPE);
 
-        HIGHLIGHTS.put(RapidElementTypes.LPARENTH, RapidColor.PARENTHESES);
-        HIGHLIGHTS.put(RapidElementTypes.RPARENTH, RapidColor.PARENTHESES);
+        HIGHLIGHTS.put(RapidTokenTypes.LPARENTH, RapidColor.PARENTHESES);
+        HIGHLIGHTS.put(RapidTokenTypes.RPARENTH, RapidColor.PARENTHESES);
 
-        HIGHLIGHTS.put(RapidElementTypes.LBRACE, RapidColor.BRACES);
-        HIGHLIGHTS.put(RapidElementTypes.RBRACE, RapidColor.BRACES);
+        HIGHLIGHTS.put(RapidTokenTypes.LBRACE, RapidColor.BRACES);
+        HIGHLIGHTS.put(RapidTokenTypes.RBRACE, RapidColor.BRACES);
 
-        HIGHLIGHTS.put(RapidElementTypes.LBRACKET, RapidColor.BRACKETS);
-        HIGHLIGHTS.put(RapidElementTypes.RBRACKET, RapidColor.BRACKETS);
+        HIGHLIGHTS.put(RapidTokenTypes.LBRACKET, RapidColor.BRACKETS);
+        HIGHLIGHTS.put(RapidTokenTypes.RBRACKET, RapidColor.BRACKETS);
 
-        HIGHLIGHTS.put(RapidElementTypes.COMMA, RapidColor.COMMA);
-        HIGHLIGHTS.put(RapidElementTypes.DOT, RapidColor.DOT);
-        HIGHLIGHTS.put(RapidElementTypes.SEMICOLON, RapidColor.SEMICOLON);
-        HIGHLIGHTS.put(RapidElementTypes.LINE, RapidColor.LINE);
+        HIGHLIGHTS.put(RapidTokenTypes.COMMA, RapidColor.COMMA);
+        HIGHLIGHTS.put(RapidTokenTypes.DOT, RapidColor.DOT);
+        HIGHLIGHTS.put(RapidTokenTypes.SEMICOLON, RapidColor.SEMICOLON);
+        HIGHLIGHTS.put(RapidTokenTypes.LINE, RapidColor.LINE);
 
-        HIGHLIGHTS.put(RapidElementTypes.COMMENT, RapidColor.COMMENT);
+        HIGHLIGHTS.put(RapidTokenTypes.COMMENT, RapidColor.COMMENT);
     }
 
     private static void fillMap(TokenSet tokenSet, RapidColor color) {
@@ -54,7 +54,9 @@ public class RapidHighlighter extends SyntaxHighlighterBase {
 
     @Override
     public @NotNull Lexer getHighlightingLexer() {
-        return new RapidHighlightingLexer();
+        LayeredLexer lexer = new LayeredLexer(new RapidLexer());
+        lexer.registerLayer(new RapidStringLexer(), RapidTokenTypes.STRING_LITERAL);
+        return lexer;
     }
 
     @Override

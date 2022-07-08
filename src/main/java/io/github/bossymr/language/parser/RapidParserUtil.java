@@ -6,6 +6,7 @@ import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
 import io.github.bossymr.language.psi.RapidElementTypes;
+import io.github.bossymr.language.psi.RapidTokenTypes;
 
 /**
  * Utility methods used to parse language.
@@ -19,7 +20,7 @@ public final class RapidParserUtil extends GeneratedParserUtilBase {
             final IElementType elementType = tokens.get(i);
             if (TokenSet.WHITE_SPACE.contains(elementType)) {
                 if (StringUtil.getLineBreakCount(getter.get(i)) > 1) break;
-            } else if (elementType.equals(RapidElementTypes.COMMENT)) {
+            } else if (elementType.equals(RapidTokenTypes.COMMENT)) {
                 result = i;
             } else {
                 break;

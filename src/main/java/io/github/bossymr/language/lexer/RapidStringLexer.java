@@ -5,6 +5,7 @@ import com.intellij.psi.StringEscapesTokenTypes;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.util.text.CharArrayUtil;
 import io.github.bossymr.language.psi.RapidElementTypes;
+import io.github.bossymr.language.psi.RapidTokenTypes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,7 +61,7 @@ public class RapidStringLexer extends LexerBase {
         }
         if (sequence.charAt(tokenStart) != '\\') {
             // This token isn't an escape sequence.
-            return RapidElementTypes.STRING_LITERAL;
+            return RapidTokenTypes.STRING_LITERAL;
         }
         if (tokenStart + 1 >= tokenEnd) {
             // '\' is at the end of the string.

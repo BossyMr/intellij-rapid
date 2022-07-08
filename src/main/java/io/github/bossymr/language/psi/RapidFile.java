@@ -6,14 +6,15 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 /**
- * Represents a Rapid file.
+ * Represents a file.
  */
-public interface RapidFile extends PsiFile {
+public interface RapidFile extends RapidElement, PsiFile {
 
     /**
-     * Returns modules declared in this file.
+     * Returns the modules declared in this file.
      *
-     * @return a list of modules declared in this file.
+     * @return a list of modules.
      */
-    @NotNull List<@NotNull RapidModule> getModules();
+    @NotNull List<RapidModule> getModules();
+
 }

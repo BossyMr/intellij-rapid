@@ -9,7 +9,9 @@ import io.github.bossymr.language.RapidLanguage;
 import io.github.bossymr.language.psi.RapidFile;
 import io.github.bossymr.language.psi.RapidModule;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.List;
 
 public class RapidFileImpl extends PsiFileBase implements RapidFile {
@@ -19,8 +21,13 @@ public class RapidFileImpl extends PsiFileBase implements RapidFile {
     }
 
     @Override
-    public @NotNull List<@NotNull RapidModule> getModules() {
-        return PsiTreeUtil.getChildrenOfTypeAsList(this, RapidModule.class);
+    public @NotNull List<RapidModule> getModules() {
+        return PsiTreeUtil.getStubChildrenOfTypeAsList(this, RapidModule.class);
+    }
+
+    @Override
+    protected @Nullable Icon getElementIcon(int flags) {
+        return getFileType().getIcon();
     }
 
     @Override
