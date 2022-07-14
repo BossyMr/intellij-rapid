@@ -12,7 +12,7 @@ public class RapidModuleStubImpl extends StubBase<RapidModule> implements RapidM
 
     private final @Nullable String name;
 
-    protected RapidModuleStubImpl(@Nullable StubElement<?> parent, @Nullable String name) {
+    public RapidModuleStubImpl(@Nullable StubElement<?> parent, @Nullable String name) {
         super(parent, RapidStubElementTypes.MODULE);
         this.name = name;
     }

@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * Represents a file.
  */
-public interface RapidFile extends RapidElement, PsiFile {
+public interface RapidFile extends PsiFile {
 
     /**
      * Returns the modules declared in this file.

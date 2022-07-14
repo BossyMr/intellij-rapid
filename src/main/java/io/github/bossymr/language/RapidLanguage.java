@@ -7,7 +7,7 @@ public class RapidLanguage extends Language {
     public static final RapidLanguage INSTANCE = new RapidLanguage();
 
     protected RapidLanguage() {
-        super("Rapid");
+        super("RAPID");
     }
 
     @Override

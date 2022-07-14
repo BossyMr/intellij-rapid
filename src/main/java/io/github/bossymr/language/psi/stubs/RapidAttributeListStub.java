@@ -3,6 +3,9 @@ package io.github.bossymr.language.psi.stubs;
 import com.intellij.psi.stubs.StubElement;
 import io.github.bossymr.language.psi.ModuleAttribute;
 import io.github.bossymr.language.psi.RapidAttributeList;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Set;
 
 /**
  * Represents an attribute list stub, containing its attributes.
@@ -10,28 +13,24 @@ import io.github.bossymr.language.psi.RapidAttributeList;
 public interface RapidAttributeListStub extends StubElement<RapidAttributeList> {
 
     /**
-     * Returns the mask of attributes in this attribute list, each attribute is masked to the corresponding mask in
-     * {@link Mask}.
+     * Returns the mask of attributes in this attribute list.
      *
      * @return a mask of attributes in this attribute list.
      */
     int getMask();
 
-    enum Mask {
-        SYSTEM_MODULE(1), NO_VIEW(2), NO_STEP_IN(3), VIEW_ONLY(4), READ_ONLY(5);
+    /**
+     * Returns the attributes in this attribute list.
+     *
+     * @return a set of the attributes in this attribute list.
+     */
+    Set<ModuleAttribute> getAttributes();
 
-        private final int mask;
-
-        Mask(int index) {
-            this.mask = 1 << index;
-        }
-
-        public int getMask() {
-            return mask;
-        }
-
-        public static int getMask(ModuleAttribute attribute) {
-            return valueOf(attribute.name()).getMask();
-        }
-    }
+    /**
+     * Checks if this attribute list contains the specified attribute.
+     *
+     * @param attribute the attribute to check.
+     * @return if the attribute list contains the specified attribute.
+     */
+    boolean hasAttribute(@NotNull ModuleAttribute attribute);
 }

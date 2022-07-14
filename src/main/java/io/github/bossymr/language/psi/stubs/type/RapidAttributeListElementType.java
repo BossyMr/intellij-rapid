@@ -1,7 +1,10 @@
-package io.github.bossymr.language.psi.stubs.impl;
+package io.github.bossymr.language.psi.stubs.type;
 
 import com.intellij.lang.ASTNode;
+import com.intellij.lang.LighterAST;
+import com.intellij.lang.LighterASTNode;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.stubs.IndexSink;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.psi.stubs.StubInputStream;
 import com.intellij.psi.stubs.StubOutputStream;
@@ -10,9 +13,13 @@ import io.github.bossymr.language.psi.RapidAttributeList;
 import io.github.bossymr.language.psi.RapidStubElementType;
 import io.github.bossymr.language.psi.impl.RapidAttributeListImpl;
 import io.github.bossymr.language.psi.stubs.RapidAttributeListStub;
+import io.github.bossymr.language.psi.stubs.impl.RapidAttributeListStubImpl;
+import io.github.bossymr.language.psi.stubs.node.RapidAttributeListElement;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.EnumSet;
+import java.util.Set;
 
 public class RapidAttributeListElementType extends RapidStubElementType<RapidAttributeListStub, RapidAttributeList> {
 
@@ -21,7 +28,12 @@ public class RapidAttributeListElementType extends RapidStubElementType<RapidAtt
     }
 
     @Override
-    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
+    public @NotNull ASTNode createCompositeNode() {
+        return new RapidAttributeListElement();
+    }
+
+    @Override
+    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
         return new RapidAttributeListImpl(node);
     }
 
@@ -31,12 +43,15 @@ public class RapidAttributeListElementType extends RapidStubElementType<RapidAtt
     }
 
     @Override
-    public @NotNull RapidAttributeListStub createStub(@NotNull RapidAttributeList psi, StubElement<? extends PsiElement> parentStub) {
-        int packed = 0;
-        for (ModuleAttribute attribute : psi.getAttributes()) {
-            packed |= RapidAttributeListStub.Mask.getMask(attribute);
+    public @NotNull RapidAttributeListStub createStub(@NotNull LighterAST tree, @NotNull LighterASTNode node, @NotNull StubElement<?> parentStub) {
+        Set<ModuleAttribute> attributeSet = EnumSet.noneOf(ModuleAttribute.class);
+        for (LighterASTNode child : tree.getChildren(node)) {
+            ModuleAttribute attribute = ModuleAttribute.getAttribute(child.getTokenType());
+            if (attribute != null) {
+                attributeSet.add(attribute);
+            }
         }
-        return new RapidAttributeListStubImpl(parentStub, packed);
+        return new RapidAttributeListStubImpl(parentStub, attributeSet);
     }
 
     @Override
@@ -47,5 +62,9 @@ public class RapidAttributeListElementType extends RapidStubElementType<RapidAtt
     @Override
     public @NotNull RapidAttributeListStub deserialize(@NotNull StubInputStream dataStream, StubElement parentStub) throws IOException {
         return new RapidAttributeListStubImpl(parentStub, dataStream.readVarInt());
+    }
+
+    @Override
+    public void indexStub(@NotNull RapidAttributeListStub stub, @NotNull IndexSink sink) {
     }
 }

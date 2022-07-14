@@ -2,17 +2,19 @@ package io.github.bossymr.language.psi.impl;
 
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.tree.TokenSet;
 import com.intellij.util.IncorrectOperationException;
 import io.github.bossymr.language.psi.*;
 import io.github.bossymr.language.psi.stubs.RapidModuleStub;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
-public class RapidModuleImpl extends RapidStubElementImpl<RapidModuleStub> implements RapidModule {
+public class RapidModuleImpl extends RapidStubElement<RapidModuleStub> implements RapidModule {
 
     public RapidModuleImpl(@NotNull RapidModuleStub stub) {
         super(stub, RapidStubElementTypes.MODULE);
@@ -23,8 +25,13 @@ public class RapidModuleImpl extends RapidStubElementImpl<RapidModuleStub> imple
     }
 
     @Override
+    public void accept(@NotNull RapidElementVisitor visitor) {
+        visitor.visitModule(this);
+    }
+
+    @Override
     public @NotNull RapidAttributeList getAttributeList() {
-        return findNotNullChildByClass(RapidAttributeList.class);
+        return getRequiredStubOrPsiChild(RapidStubElementTypes.ATTRIBUTE_LIST);
     }
 
     @Override
@@ -44,23 +51,17 @@ public class RapidModuleImpl extends RapidStubElementImpl<RapidModuleStub> imple
 
     @Override
     public @NotNull List<RapidStructure> getStructures() {
-        return Arrays.asList(findChildrenByClass(RapidStructure.class));
+        return List.of(getStubOrPsiChildren(TokenSet.create(RapidStubElementTypes.ALIAS, RapidStubElementTypes.RECORD), new RapidStructure[0]));
     }
 
     @Override
     public @NotNull List<RapidField> getFields() {
-        return Arrays.asList(findChildrenByClass(RapidField.class));
+        return List.of(getStubOrPsiChildren(RapidStubElementTypes.FIELD, new RapidField[0]));
     }
 
     @Override
     public @NotNull List<RapidRoutine> getRoutines() {
-        return Arrays.asList(findChildrenByClass(RapidRoutine.class));
-    }
-
-    @Override
-    public int getTextOffset() {
-        PsiElement identifier = getNameIdentifier();
-        return identifier != null ? identifier.getTextOffset() : super.getTextOffset();
+        return List.of(getStubOrPsiChildren(RapidStubElementTypes.ROUTINE, new RapidRoutine[0]));
     }
 
     @Override
@@ -70,18 +71,28 @@ public class RapidModuleImpl extends RapidStubElementImpl<RapidModuleStub> imple
 
     @Override
     public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
-        return null; // TODO: 2022-07-07
+        boolean renameFile = renameFile();
+        RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
+        if (renameFile) {
+            PsiFile file = getContainingFile();
+            String fileName = file.getName();
+            int index = fileName.lastIndexOf('.');
+            file.setName(index >= 0 ? name + "." + fileName.substring(index + 1) : name);
+        }
+        return this;
+    }
+
+    private boolean renameFile() {
+        PsiFile file = getContainingFile();
+        String name = file.getName();
+        int index = name.lastIndexOf('.');
+        if (index >= 0) name = name.substring(0, index);
+        return name.equals(getName());
     }
 
     @Override
     public String getName() {
-        final RapidModuleStub stub = getGreenStub();
-        if(stub != null) {
-            return stub.getName();
-        } else {
-            PsiElement identifier = getNameIdentifier();
-            return identifier != null ? identifier.getText() : null;
-        }
+        return RapidElementUtil.getName(this);
     }
 
     @Override

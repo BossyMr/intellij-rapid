@@ -14,16 +14,12 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.IFileElementType;
 import com.intellij.psi.tree.IStubFileElementType;
 import com.intellij.psi.tree.TokenSet;
-import io.github.bossymr.language.RapidLanguage;
 import io.github.bossymr.language.lexer.RapidLexer;
-import io.github.bossymr.language.psi.RapidElementType;
-import io.github.bossymr.language.psi.RapidFile;
 import io.github.bossymr.language.psi.RapidStubElementType;
 import io.github.bossymr.language.psi.RapidTokenTypes;
 import io.github.bossymr.language.psi.impl.RapidFileImpl;
 import io.github.bossymr.language.psi.stubs.RapidFileStub;
-import io.github.bossymr.language.psi.stubs.impl.RapidFileElementType;
-import org.intellij.grammar.livePreview.LivePreviewElementType;
+import io.github.bossymr.language.psi.stubs.type.RapidFileElementType;
 import org.jetbrains.annotations.NotNull;
 
 public class RapidParserDefinition implements ParserDefinition {
@@ -63,10 +59,8 @@ public class RapidParserDefinition implements ParserDefinition {
     @Override
     public @NotNull PsiElement createElement(ASTNode node) {
         final IElementType type = node.getElementType();
-        if(type instanceof RapidElementType) {
-            return ((RapidElementType) type).createElement(node);
-        } else if(type instanceof RapidStubElementType) {
-            return ((RapidStubElementType<?, ?>) type).createElement(node);
+        if (type instanceof RapidStubElementType) {
+            return ((RapidStubElementType<?, ?>) type).createPsi(node);
         }
         throw new IllegalArgumentException("Cannot create element for '" + node.getElementType() + "'");
     }

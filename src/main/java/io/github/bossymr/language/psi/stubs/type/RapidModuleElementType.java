@@ -1,17 +1,23 @@
-package io.github.bossymr.language.psi.stubs.impl;
+package io.github.bossymr.language.psi.stubs.type;
 
 import com.intellij.lang.ASTNode;
+import com.intellij.lang.LighterAST;
+import com.intellij.lang.LighterASTNode;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.impl.source.tree.LightTreeUtil;
 import com.intellij.psi.stubs.IndexSink;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.psi.stubs.StubInputStream;
 import com.intellij.psi.stubs.StubOutputStream;
 import io.github.bossymr.language.psi.RapidModule;
 import io.github.bossymr.language.psi.RapidStubElementType;
+import io.github.bossymr.language.psi.RapidTokenTypes;
 import io.github.bossymr.language.psi.impl.RapidModuleImpl;
 import io.github.bossymr.language.psi.stubs.RapidModuleStub;
-import io.github.bossymr.language.psi.stubs.RapidSymbolIndex;
+import io.github.bossymr.language.psi.stubs.impl.RapidModuleStubImpl;
+import io.github.bossymr.language.psi.stubs.index.RapidSymbolNameIndex;
+import io.github.bossymr.language.psi.stubs.node.RapidModuleElement;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -23,7 +29,12 @@ public class RapidModuleElementType extends RapidStubElementType<RapidModuleStub
     }
 
     @Override
-    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
+    public @NotNull ASTNode createCompositeNode() {
+        return new RapidModuleElement();
+    }
+
+    @Override
+    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
         return new RapidModuleImpl(node);
     }
 
@@ -33,8 +44,10 @@ public class RapidModuleElementType extends RapidStubElementType<RapidModuleStub
     }
 
     @Override
-    public @NotNull RapidModuleStub createStub(@NotNull RapidModule psi, StubElement<? extends PsiElement> parentStub) {
-        return new RapidModuleStubImpl(parentStub, psi.getName());
+    public @NotNull RapidModuleStub createStub(@NotNull LighterAST tree, @NotNull LighterASTNode node, @NotNull StubElement<?> parentStub) {
+        LighterASTNode identifier = LightTreeUtil.firstChildOfType(tree, node, RapidTokenTypes.IDENTIFIER);
+        String name = identifier != null ? LightTreeUtil.toFilteredString(tree, identifier, null) : null;
+        return new RapidModuleStubImpl(parentStub, name);
     }
 
     @Override
@@ -51,9 +64,8 @@ public class RapidModuleElementType extends RapidStubElementType<RapidModuleStub
     @Override
     public void indexStub(@NotNull RapidModuleStub stub, @NotNull IndexSink sink) {
         final String name = stub.getName();
-        if(name != null) {
-            sink.occurrence(RapidSymbolIndex.KEY, StringUtil.toLowerCase(name));
+        if (name != null) {
+            sink.occurrence(RapidSymbolNameIndex.KEY, StringUtil.toLowerCase(name));
         }
-
     }
 }

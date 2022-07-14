@@ -1,9 +1,10 @@
 package io.github.bossymr.language.psi.stubs;
 
+import com.intellij.psi.stubs.NamedStub;
 import io.github.bossymr.language.psi.RapidModule;
 
 /**
  * Represents a module stub, containing the module name.
  */
-public interface RapidModuleStub extends RapidSymbolStub<RapidModule> {
+public interface RapidModuleStub extends NamedStub<RapidModule> {
 }

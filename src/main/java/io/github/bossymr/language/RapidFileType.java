@@ -20,7 +20,7 @@ public class RapidFileType extends LanguageFileType {
 
     @Override
     public @NonNls @NotNull String getName() {
-        return "Rapid";
+        return "RAPID";
     }
 
     @Override

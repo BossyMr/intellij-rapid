@@ -1,6 +1,9 @@
 package io.github.bossymr.language.psi;
 
 import com.intellij.psi.tree.IElementType;
+import com.intellij.psi.tree.TokenSet;
+import io.github.bossymr.language.psi.impl.RapidReferenceExpressionImpl;
+import io.github.bossymr.language.psi.impl.RapidTypeElementImpl;
 
 /**
  * Contains references to all element and token types in the Rapid language.
@@ -30,18 +33,17 @@ public interface RapidElementTypes {
 
     IElementType MODULE = RapidStubElementTypes.MODULE;
     IElementType ATTRIBUTE_LIST = RapidStubElementTypes.ATTRIBUTE_LIST;
+    IElementType ALIAS = RapidStubElementTypes.ALIAS;
+    IElementType RECORD = RapidStubElementTypes.RECORD;
+    IElementType COMPONENT = RapidStubElementTypes.COMPONENT;
     IElementType FIELD = new RapidElementType("FIELD");
-    IElementType ALIAS = new RapidElementType("ALIAS");
-    IElementType RECORD = new RapidElementType("RECORD");
-    IElementType COMPONENT_LIST = new RapidElementType("COMPONENT_LIST");
-    IElementType COMPONENT = new RapidElementType("COMPONENT");
     IElementType ROUTINE = new RapidElementType("ROUTINE");
     IElementType PARAMETER_LIST = new RapidElementType("PARAMETER_LIST");
     IElementType PARAMETER_GROUP = new RapidElementType("PARAMETER_GROUP");
     IElementType PARAMETER = new RapidElementType("PARAMETER");
     IElementType ARRAY = new RapidElementType("ARRAY");
 
-    RapidElementType TYPE_ELEMENT = new RapidElementType("TYPE_ELEMENT");
+    RapidElementType TYPE_ELEMENT = new RapidElementType("TYPE_ELEMENT", RapidTypeElementImpl::new);
     RapidElementType ARGUMENT_LIST = new RapidElementType("ARGUMENT_LIST");
     RapidElementType REQUIRED_ARGUMENT = new RapidElementType("REQUIRED_ARGUMENT");
     RapidElementType CONDITIONAL_ARGUMENT = new RapidElementType("CONDITIONAL_ARGUMENT");
@@ -54,7 +56,7 @@ public interface RapidElementTypes {
     RapidElementType FUNCTION_CALL_EXPRESSION = new RapidElementType("FUNCTION_CALL_EXPRESSION");
     RapidElementType INDEX_EXPRESSION = new RapidElementType("INDEX_EXPRESSION");
     RapidElementType PARENTHESISED_EXPRESSION = new RapidElementType("PARENTHESISED_EXPRESSION");
-    RapidElementType REFERENCE_EXPRESSION = new RapidElementType("REFERENCE_EXPRESSION");
+    RapidElementType REFERENCE_EXPRESSION = new RapidElementType("REFERENCE_EXPRESSION", RapidReferenceExpressionImpl::new);
     RapidElementType UNARY_EXPRESSION = new RapidElementType("UNARY_EXPRESSION");
 
     RapidElementType BOOL_LITERAL_EXPRESSION = new RapidElementType("BOOL_LITERAL_EXPRESSION");
@@ -63,10 +65,6 @@ public interface RapidElementTypes {
 
     RapidElementType FIELD_LIST = new RapidElementType("FIELD_LIST");
     RapidElementType STATEMENT_LIST = new RapidElementType("STATEMENT_LIST");
-    RapidElementType BACKWARD_CLAUSE = new RapidElementType("BACKWARD_STATEMENT_LIST");
-    RapidElementType UNDO_CLAUSE = new RapidElementType("UNDO_STATEMENT_LIST");
-    RapidElementType ERROR_CLAUSE = new RapidElementType("ERROR_STATEMENT_LIST");
-    RapidElementType ERROR_LIST = new RapidElementType("ERROR_LIST");
     RapidElementType CASE_SECTION = new RapidElementType("CASE_SECTION");
     RapidElementType DEFAULT_SECTION = new RapidElementType("DEFAULT_SECTION");
 
@@ -86,4 +84,8 @@ public interface RapidElementTypes {
     RapidElementType FOR_STATEMENT = new RapidElementType("FOR_STATEMENT");
     RapidElementType WHILE_STATEMENT = new RapidElementType("WHILE_STATEMENT");
     RapidElementType TEST_STATEMENT = new RapidElementType("TEST_STATEMENT");
+
+    TokenSet EXPRESSIONS = TokenSet.create(EMPTY_EXPRESSION, AGGREGATE_EXPRESSION, BINARY_EXPRESSION,
+            FUNCTION_CALL_EXPRESSION, INDEX_EXPRESSION, PARENTHESISED_EXPRESSION, REFERENCE_EXPRESSION, UNARY_EXPRESSION);
+
 }

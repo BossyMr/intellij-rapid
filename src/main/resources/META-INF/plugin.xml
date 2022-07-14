@@ -14,26 +14,28 @@
 
         <!-- File Type -->
 
-        <fileType extensions="mod" name="Rapid" language="Rapid" fieldName="INSTANCE"
+        <fileType extensions="mod" name="RAPID" language="RAPID" fieldName="INSTANCE"
                   implementationClass="io.github.bossymr.language.RapidFileType"/>
 
         <stubElementTypeHolder externalIdPrefix="rapid." class="io.github.bossymr.language.psi.RapidStubElementTypes" />
 
-        <stubIndex implementation="io.github.bossymr.language.psi.stubs.RapidSymbolIndex" />
+        <stubIndex implementation="io.github.bossymr.language.psi.stubs.index.RapidSymbolNameIndex"/>
 
         <!-- Syntax -->
 
-        <lang.parserDefinition language="Rapid"
+        <lang.parserDefinition language="RAPID"
                                implementationClass="io.github.bossymr.language.parser.RapidParserDefinition"/>
 
         <!-- Syntax Highlighter -->
 
-        <lang.syntaxHighlighter language="Rapid"
+        <lang.syntaxHighlighter language="RAPID"
                                 implementationClass="io.github.bossymr.ide.highlight.RapidHighlighter"/>
 
         <!-- Color Settings -->
 
         <colorSettingsPage implementation="io.github.bossymr.ide.highlight.RapidColorSettingsPage"/>
+
+        <projectService serviceImplementation="io.github.bossymr.language.psi.RapidElementFactory"/>
     </extensions>
 
     <actions>
