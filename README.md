@@ -1,0 +1,1 @@
+# Rapid Plugin for IntelliJ IDEA
