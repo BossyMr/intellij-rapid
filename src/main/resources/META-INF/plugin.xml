@@ -8,5 +8,8 @@
 
     <depends>com.intellij.modules.platform</depends>
 
-    <extensions defaultExtensionNs="com.intellij"/>
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType name="RAPID" language="RAPID" extensions="mod"
+                  implementationClass="com.bossymr.rapid.language.RapidFileType" fieldName="INSTANCE"/>
+    </extensions>
 </idea-plugin>
