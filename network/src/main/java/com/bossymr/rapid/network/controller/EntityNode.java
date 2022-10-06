@@ -1,7 +1,8 @@
 package com.bossymr.rapid.network.controller;
 
-import com.bossymr.rapid.network.NetworkQuery;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.concurrent.CompletableFuture;
 
 public abstract class EntityNode<T> extends Node {
 
@@ -9,6 +10,6 @@ public abstract class EntityNode<T> extends Node {
         super(controller);
     }
 
-    public abstract @NotNull NetworkQuery<T> getEntity();
+    public abstract @NotNull CompletableFuture<T> getEntity();
 
 }

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class ControllerTest {
 
@@ -26,8 +27,8 @@ public class ControllerTest {
 
     @Test
     void getIdentifier() {
-        NetworkQuery<IdentityEntity> networkQuery = controller.getIdentity();
-        IdentityEntity identity = networkQuery.sendAsync().join();
+        CompletableFuture<IdentityEntity> networkQuery = controller.getIdentity();
+        IdentityEntity identity = networkQuery.join();
         Assertions.assertNotNull(identity.name());
         Assertions.assertNull(identity.identifier());
     }
@@ -35,21 +36,21 @@ public class ControllerTest {
     @Test
     void searchSymbols() {
         SymbolSearchQuery query = SymbolSearchQuery.newBuilder()
-                .setSymbolType(SymbolType.ATOMIC)
+                .setSymbolType(SymbolType.ANY)
                 .build();
-        NetworkQuery<List<SymbolEntity>> networkQuery = controller.getRapid().getSymbols(query);
-        List<SymbolEntity> symbols = networkQuery.sendAsync().join();
-        Assertions.assertTrue(symbols.size() > 0);
+        CompletableFuture<List<SymbolEntity>> networkQuery = controller.getRapid().getSymbols(query);
+        List<SymbolEntity> symbols = networkQuery.join();
+        Assertions.assertEquals(1060, symbols.size());
     }
 
     @Test
     void getEvents() {
-        NetworkQuery<List<EventLogCategory>> categoryNetworkQuery = controller.getEventLog().getCategories();
-        List<EventLogCategory> categories = categoryNetworkQuery.sendAsync().join();
+        CompletableFuture<List<EventLogCategory>> categoryNetworkQuery = controller.getEventLog().getCategories();
+        List<EventLogCategory> categories = categoryNetworkQuery.join();
         Assertions.assertTrue(categories.size() > 0);
         EventLogCategory category = categories.get(0);
-        NetworkQuery<List<EventLogMessageEntity>> messageNetworkQuery = category.getMessages();
-        List<EventLogMessageEntity> messages = messageNetworkQuery.sendAsync().join();
+        CompletableFuture<List<EventLogMessageEntity>> messageNetworkQuery = category.getMessages();
+        List<EventLogMessageEntity> messages = messageNetworkQuery.join();
         Assertions.assertTrue(messages.size() > 0);
     }
 }

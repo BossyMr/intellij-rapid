@@ -1,11 +1,11 @@
 package com.bossymr.rapid.network.controller.event;
 
-import com.bossymr.rapid.network.NetworkQuery;
-import com.bossymr.rapid.network.controller.Node;
 import com.bossymr.rapid.network.controller.Controller;
+import com.bossymr.rapid.network.controller.Node;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class EventLog extends Node {
 
@@ -13,7 +13,7 @@ public class EventLog extends Node {
         super(controller);
     }
 
-    public @NotNull NetworkQuery<List<EventLogCategory>> getCategories() {
+    public @NotNull CompletableFuture<List<EventLogCategory>> getCategories() {
         return null;
     }
 }

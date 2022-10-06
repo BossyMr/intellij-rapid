@@ -1,6 +1,5 @@
 package com.bossymr.rapid.network.controller.event;
 
-import com.bossymr.rapid.network.NetworkQuery;
 import com.bossymr.rapid.network.SubscribableEvent;
 import com.bossymr.rapid.network.controller.Controller;
 import com.bossymr.rapid.network.controller.EntityNode;
@@ -8,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class EventLogCategory extends EntityNode<EventLogCategoryEntity> {
 
@@ -19,11 +19,11 @@ public class EventLogCategory extends EntityNode<EventLogCategoryEntity> {
     }
 
     @Override
-    public @NotNull NetworkQuery<EventLogCategoryEntity> getEntity() {
+    public @NotNull CompletableFuture<EventLogCategoryEntity> getEntity() {
         return null;
     }
 
-    public @NotNull NetworkQuery<List<EventLogMessageEntity>> getMessages() {
+    public @NotNull CompletableFuture<List<EventLogMessageEntity>> getMessages() {
         return null;
     }
 

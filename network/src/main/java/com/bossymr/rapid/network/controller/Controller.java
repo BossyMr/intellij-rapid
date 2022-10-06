@@ -1,7 +1,6 @@
 package com.bossymr.rapid.network.controller;
 
 import com.bossymr.rapid.network.Credentials;
-import com.bossymr.rapid.network.NetworkQuery;
 import com.bossymr.rapid.network.client.NetworkCall;
 import com.bossymr.rapid.network.client.NetworkClient;
 import com.bossymr.rapid.network.controller.event.EventLog;
@@ -9,6 +8,7 @@ import com.bossymr.rapid.network.controller.rapid.Rapid;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A {@code Controller} represents a remote robot.
@@ -35,9 +35,9 @@ public class Controller {
         return networkClient;
     }
 
-    public @NotNull NetworkQuery<IdentityEntity> getIdentity() {
+    public @NotNull CompletableFuture<IdentityEntity> getIdentity() {
         NetworkCall networkCall = NetworkCall.newBuilder(URI.create("/ctrl/identity")).build();
-        return networkClient.getQuery(networkCall, (model) -> model.getEntity(IdentityEntity.class));
+        return networkClient.fetch(networkCall, IdentityEntity.class);
     }
 
     public @NotNull Rapid getRapid() {

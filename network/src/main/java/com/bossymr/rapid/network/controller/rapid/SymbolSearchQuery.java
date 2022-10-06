@@ -52,7 +52,7 @@ public class SymbolSearchQuery {
                 case TRAP -> "trp";
                 case MODULE -> "mod";
                 case TASK -> "tsk";
-                case UNDEFINED -> throw new IllegalArgumentException();
+                case UNDEFINED -> "udef";
                 case ANY -> "any";
             });
             return this;

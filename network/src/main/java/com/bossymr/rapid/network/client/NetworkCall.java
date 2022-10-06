@@ -28,34 +28,41 @@ public class NetworkCall {
         return method;
     }
 
-    public @NotNull Map<String, List<String>> getQueries() {
+    public @NotNull Map<String, List<String>> getQuery() {
         return queries;
     }
 
-    public @NotNull Map<String, List<String>> getFields() {
+    public @NotNull Map<String, List<String>> getField() {
         return fields;
-    }
-
-    public static @NotNull Builder newBuilder() {
-        return new Builder(URI.create(""));
     }
 
     public static @NotNull Builder newBuilder(@NotNull URI path) {
         return new Builder(path);
     }
 
+    public static @NotNull Builder newBuilder(@NotNull NetworkCall networkCall) {
+        return new Builder(networkCall);
+    }
+
     public static class Builder {
 
         private URI path;
         private NetworkMethod method;
-        private final Map<String, List<String>> queries;
-        private final Map<String, List<String>> fields;
+        private Map<String, List<String>> queries;
+        private Map<String, List<String>> fields;
 
         private Builder(@NotNull URI path) {
             this.path = path;
             this.method = NetworkMethod.GET;
             this.queries = new HashMap<>();
             this.fields = new HashMap<>();
+        }
+
+        private Builder(@NotNull NetworkCall networkCall) {
+            this.path = networkCall.getPath();
+            this.method = networkCall.getMethod();
+            this.queries = networkCall.getQuery();
+            this.fields = networkCall.getField();
         }
 
         public @NotNull Builder setPath(@NotNull URI path) {
@@ -82,14 +89,24 @@ public class NetworkCall {
             return this;
         }
 
-        public @NotNull Builder putQueries(@NotNull Map<String, String> queries) {
+        public @NotNull Builder putQuery(@NotNull Map<String, String> queries) {
             queries.forEach(this::putQuery);
             return this;
         }
 
-        public @NotNull Builder putFields(@NotNull Map<String, String> fields) {
+        public @NotNull Builder putField(@NotNull Map<String, String> fields) {
             fields.forEach(this::putField);
             return this;
+        }
+
+        public @NotNull Builder setQuery(@NotNull Map<String, String> queries) {
+            this.queries = new HashMap<>();
+            return putQuery(queries);
+        }
+
+        public @NotNull Builder setField(@NotNull Map<String, String> fields) {
+            this.fields = new HashMap<>();
+            return putField(fields);
         }
 
         public @NotNull NetworkCall build() {
