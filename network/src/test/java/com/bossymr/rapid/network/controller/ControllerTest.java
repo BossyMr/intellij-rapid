@@ -1,8 +1,8 @@
-package com.bossymr.rapid.network;
+package com.bossymr.rapid.network.controller;
 
-import com.bossymr.rapid.network.controller.Controller;
-import com.bossymr.rapid.network.controller.IdentityEntity;
+import com.bossymr.rapid.network.Credentials;
 import com.bossymr.rapid.network.controller.event.EventLogCategory;
+import com.bossymr.rapid.network.controller.event.EventLogCategoryEntity;
 import com.bossymr.rapid.network.controller.event.EventLogMessageEntity;
 import com.bossymr.rapid.network.controller.rapid.SymbolEntity;
 import com.bossymr.rapid.network.controller.rapid.SymbolSearchQuery;
@@ -47,10 +47,13 @@ public class ControllerTest {
     void getEvents() {
         CompletableFuture<List<EventLogCategory>> categoryNetworkQuery = controller.getEventLog().getCategories();
         List<EventLogCategory> categories = categoryNetworkQuery.join();
-        Assertions.assertTrue(categories.size() > 0);
+        Assertions.assertEquals(14, categories.size());
         EventLogCategory category = categories.get(0);
+        CompletableFuture<EventLogCategoryEntity> categoryEntity = category.getEntity();
+        EventLogCategoryEntity entity = Assertions.assertDoesNotThrow(categoryEntity::join);
+        Assertions.assertNotNull(entity.name());
         CompletableFuture<List<EventLogMessageEntity>> messageNetworkQuery = category.getMessages();
         List<EventLogMessageEntity> messages = messageNetworkQuery.join();
-        Assertions.assertTrue(messages.size() > 0);
+        Assertions.assertEquals(472, messages.size());
     }
 }

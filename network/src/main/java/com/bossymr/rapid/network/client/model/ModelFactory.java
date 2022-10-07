@@ -2,6 +2,7 @@ package com.bossymr.rapid.network.client.model;
 
 import com.bossymr.rapid.network.client.annotations.Entity;
 import com.bossymr.rapid.network.client.annotations.Field;
+import com.bossymr.rapid.network.client.annotations.Title;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,10 +16,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public class ModelFactory {
@@ -33,10 +31,6 @@ public class ModelFactory {
 
     public <T> @NotNull T getEntity(@NotNull Response response, @NotNull Class<T> clazz) throws IOException {
         return getEntity(getModel(response), clazz);
-    }
-
-    public <T> @NotNull List<T> getList(@NotNull Response response, @NotNull Class<T> clazz) throws IOException {
-        return getList(getModel(response), clazz);
     }
 
     public <T> @NotNull T getEntity(@NotNull Model model, @NotNull Class<T> clazz) {
@@ -72,16 +66,22 @@ public class ModelFactory {
         for (int i = 0; i < components.length; i++) {
             RecordComponent component = components[i];
             constructorType[i] = component.getType();
-            if (!component.isAnnotationPresent(Field.class)) throw new IllegalStateException();
-            Field field = component.getAnnotation(Field.class);
-            Optional<Property> optional = entity.getProperty(field.value());
-            if(optional.isPresent()) {
-                 String value = optional.get().content();
-                 JavaType javaType = objectMapper.constructType(component.getGenericType());
-                 Object argument = objectMapper.convertValue(value, javaType);
-                 arguments[i] = argument;
-            } else {
-                arguments[i] = null;
+            if (component.isAnnotationPresent(Field.class)) {
+                Field field = component.getAnnotation(Field.class);
+                Optional<Property> optional = entity.getProperty(field.value());
+                if (optional.isPresent()) {
+                    String value = optional.get().content();
+                    JavaType javaType = objectMapper.constructType(component.getGenericType());
+                    Object argument = objectMapper.convertValue(value, javaType);
+                    arguments[i] = argument;
+                } else {
+                    arguments[i] = null;
+                }
+            } else if(component.isAnnotationPresent(Title.class)) {
+                String value = entity.title();
+                JavaType javaType = objectMapper.constructType(component.getGenericType());
+                Object argument = objectMapper.convertValue(value, javaType);
+                arguments[i] = argument;
             }
         }
         try {

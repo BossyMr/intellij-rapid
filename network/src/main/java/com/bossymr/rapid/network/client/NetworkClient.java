@@ -1,5 +1,6 @@
 package com.bossymr.rapid.network.client;
 
+import com.bossymr.rapid.network.client.model.EntityModel;
 import com.bossymr.rapid.network.client.model.Link;
 import com.bossymr.rapid.network.client.model.Model;
 import com.bossymr.rapid.network.client.model.ModelFactory;
@@ -18,6 +19,7 @@ import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 public class NetworkClient {
 
@@ -70,6 +72,26 @@ public class NetworkClient {
         return completableFuture;
     }
 
+    public @NotNull CompletableFuture<Model> fetch(@NotNull NetworkCall networkCall) {
+        CompletableFuture<Model> completableFuture = new CompletableFuture<>();
+        httpClient.newCall(toRequest(networkCall))
+                .enqueue(new NetworkCallback<>(factory, completableFuture) {
+                    @Override
+                    public void onResponse(@NotNull Response response) throws IOException {
+                        completableFuture.complete(factory.getModel(response));
+                    }
+                });
+        return completableFuture;
+    }
+
+    public @NotNull CompletableFuture<List<EntityModel>> fetchAll(@NotNull NetworkCall networkCall) {
+        return fetch(networkCall)
+                .thenCompose(response -> {
+                    List<EntityModel> entities = new ArrayList<>();
+                    return getNext(entities, (model) -> entities.addAll(model.entities()), networkCall, response);
+                });
+    }
+
     public <T> @NotNull CompletableFuture<T> fetch(@NotNull NetworkCall networkCall, @NotNull Class<T> clazz) {
         CompletableFuture<T> completableFuture = new CompletableFuture<>();
         httpClient.newCall(toRequest(networkCall))
@@ -83,36 +105,23 @@ public class NetworkClient {
     }
 
     public <T> @NotNull CompletableFuture<List<T>> fetchAll(@NotNull NetworkCall networkCall, @NotNull Class<T> clazz) {
-        return fetchList(networkCall)
+        return fetch(networkCall)
                 .thenComposeAsync(response -> {
                     List<T> entities = new ArrayList<>();
-                    return getNext(entities, clazz, networkCall, response);
+                    return getNext(entities, (model) -> entities.addAll(factory.getList(model, clazz)) , networkCall, response);
                 });
     }
 
-    private @NotNull CompletableFuture<Model> fetchList(@NotNull NetworkCall networkCall) {
-        CompletableFuture<Model> completableFuture = new CompletableFuture<>();
-        httpClient.newCall(toRequest(networkCall))
-                .enqueue(new NetworkCallback<>(factory, completableFuture) {
-                    @Override
-                    public void onResponse(@NotNull Response response) throws IOException {
-
-                        completableFuture.complete(factory.getModel(response));
-                    }
-                });
-        return completableFuture;
-    }
-
-    private <T> @NotNull CompletableFuture<List<T>> getNext(@NotNull List<T> entities, @NotNull Class<T> clazz, @NotNull NetworkCall networkCall, @NotNull Model model) {
-        entities.addAll(factory.getList(model, clazz));
+    private <T> @NotNull CompletableFuture<List<T>> getNext(@NotNull List<T> entities, @NotNull Consumer<Model> consumer, @NotNull NetworkCall networkCall, @NotNull Model model) {
+        consumer.accept(model);
         Optional<Link> next = model.entity().getLink("next");
         if(next.isEmpty()) return CompletableFuture.supplyAsync(() -> entities);
         URI path = next.get().path();
         NetworkCall nextCall = NetworkCall.newBuilder(networkCall)
                 .setPath(path).setQuery(new HashMap<>())
                 .build();
-        return fetchList(nextCall)
-                .thenComposeAsync(response -> getNext(entities, clazz, networkCall, response));
+        return fetch(nextCall)
+                .thenComposeAsync(response -> getNext(entities, consumer, networkCall, response));
     }
 
     private @NotNull Request toRequest(@NotNull NetworkCall networkCall) {

@@ -4,6 +4,7 @@ import com.bossymr.rapid.network.Credentials;
 import com.bossymr.rapid.network.client.NetworkCall;
 import com.bossymr.rapid.network.client.NetworkClient;
 import com.bossymr.rapid.network.controller.event.EventLog;
+import com.bossymr.rapid.network.controller.io.InputOutput;
 import com.bossymr.rapid.network.controller.rapid.Rapid;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,6 +23,7 @@ public class Controller {
 
     private final Rapid rapid = new Rapid(this);
     private final EventLog eventLog = new EventLog(this);
+    private final InputOutput inputOutput = new InputOutput(this);
 
     public Controller(@NotNull NetworkClient networkClient) {
         this.networkClient = networkClient;
@@ -48,4 +50,7 @@ public class Controller {
         return eventLog;
     }
 
+    public @NotNull InputOutput getInputOutput() {
+        return inputOutput;
+    }
 }
