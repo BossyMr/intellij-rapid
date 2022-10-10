@@ -6,7 +6,7 @@ import com.bossymr.rapid.network.client.annotations.Title;
 import org.jetbrains.annotations.Nullable;
 
 @Entity("elog-domain(-li)?")
-public record EventLogCategoryEntity(@Title String identifier,
+public record EventLogCategoryEntity(@Title String title,
                                      @Nullable @Field("domain-name") String name,
                                      @Field("numevts") int size,
                                      @Field("buffsize") int capacity) {}

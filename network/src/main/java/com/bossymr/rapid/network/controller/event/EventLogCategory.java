@@ -30,13 +30,12 @@ public class EventLogCategory extends EntityNode<EventLogCategoryEntity> {
         return getController().getNetworkClient().fetchAll(networkCall, EventLogCategoryEntity.class)
                 .thenApplyAsync(entities -> {
                     for (EventLogCategoryEntity entity : entities) {
-                        if (entity.identifier().equals(identifier)) {
+                        if (entity.title().equals(identifier)) {
                             return entity;
                         }
                     }
                     throw new IllegalStateException();
                 });
-
     }
 
     public @NotNull CompletableFuture<List<EventLogMessageEntity>> getMessages() {

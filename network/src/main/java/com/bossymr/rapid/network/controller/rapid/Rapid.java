@@ -24,4 +24,12 @@ public class Rapid extends Node {
                 .build();
         return getController().getNetworkClient().fetchAll(networkCall, SymbolEntity.class);
     }
+
+    public @NotNull CompletableFuture<List<Task>> getTasks() {
+        NetworkCall networkCall = NetworkCall.newBuilder(URI.create("/rw/rapid/tasks")).build();
+        return getController().getNetworkClient().fetchAll(networkCall)
+                .thenApplyAsync(entities -> entities.stream()
+                        .map(entity -> new Task(getController(), entity.getLink("self").orElseThrow().path(), entity.title()))
+                        .toList());
+    }
 }

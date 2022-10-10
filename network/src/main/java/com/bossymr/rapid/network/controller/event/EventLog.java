@@ -22,6 +22,7 @@ public class EventLog extends Node {
                 .build();
         return getController().getNetworkClient().fetchAll(networkCall)
                 .thenApplyAsync(entities -> entities.stream()
-                        .map(entity -> new EventLogCategory(getController(), entity.getLink("self").orElseThrow().path(), entity.title())).toList());
+                        .map(entity -> new EventLogCategory(getController(), entity.getLink("self").orElseThrow().path(), entity.title()))
+                        .toList());
     }
 }
