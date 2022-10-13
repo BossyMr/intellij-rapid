@@ -1,6 +1,5 @@
 package com.bossymr.rapid.network.controller;
 
-import com.bossymr.rapid.network.Credentials;
 import com.bossymr.rapid.network.client.NetworkCall;
 import com.bossymr.rapid.network.client.NetworkClient;
 import com.bossymr.rapid.network.controller.event.EventLog;
@@ -29,8 +28,8 @@ public class Controller {
         this.networkClient = networkClient;
     }
 
-    public static @NotNull Controller connect(@NotNull URI path, @NotNull Credentials credentials) {
-        return new Controller(NetworkClient.connect(path, credentials.username(), credentials.password()));
+    public static @NotNull Controller connect(@NotNull URI path, @NotNull String username, @NotNull String password) {
+        return new Controller(NetworkClient.connect(path, username, password.toCharArray()));
     }
 
     public NetworkClient getNetworkClient() {

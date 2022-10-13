@@ -15,7 +15,7 @@ public class ControllerTest {
     @BeforeEach
     void setUp() {
         Credentials credentials = new Credentials("Default User", "robotics".toCharArray());
-        controller = Controller.connect(URI.create("http://localhost:80/"), credentials);
+        controller = Controller.connect(URI.create("http://localhost:80/"), credentials.username(), new String(credentials.password()));
     }
 
     @Test
