@@ -23,6 +23,10 @@ intellij {
     plugins.set(emptyList())
 }
 
+dependencies {
+    implementation(project(":network"))
+}
+
 // Configure Gradle Changelog Plugin
 // Read more: https://github.com/JetBrains/gradle-changelog-plugin
 changelog {
