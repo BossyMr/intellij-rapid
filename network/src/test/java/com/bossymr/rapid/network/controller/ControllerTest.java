@@ -1,6 +1,5 @@
 package com.bossymr.rapid.network.controller;
 
-import com.bossymr.rapid.network.Credentials;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,8 +13,7 @@ public class ControllerTest {
 
     @BeforeEach
     void setUp() {
-        Credentials credentials = new Credentials("Default User", "robotics".toCharArray());
-        controller = Controller.connect(URI.create("http://localhost:80/"), credentials.username(), new String(credentials.password()));
+        controller = Controller.connect(URI.create("http://localhost:80/"), "Default User", "robotics");
     }
 
     @Test

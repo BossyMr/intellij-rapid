@@ -1,6 +1,5 @@
 package com.bossymr.rapid.network.controller.rapid;
 
-import com.bossymr.rapid.network.Credentials;
 import com.bossymr.rapid.network.controller.Controller;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,8 +20,7 @@ class RapidTest {
 
     @BeforeEach
     void setUp() {
-        Credentials credentials = new Credentials("Default User", "robotics".toCharArray());
-        controller = Controller.connect(URI.create("http://localhost:80/"), credentials.username(), new String(credentials.password()));
+        controller = Controller.connect(URI.create("http://localhost:80/"), "Default User", "robotics");
     }
 
     @Test
