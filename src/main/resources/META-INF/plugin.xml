@@ -7,9 +7,25 @@
     <description>Adds language support to the RAPID language.</description>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <!-- File Type -->
+
         <fileType name="RAPID" language="RAPID" extensions="mod"
                   implementationClass="com.bossymr.rapid.language.RapidFileType" fieldName="INSTANCE"/>
+
+        <!-- PsiElement  -->
+
+        <projectService serviceImplementation="com.bossymr.rapid.language.psi.RapidElementFactory"/>
+
+        <!-- Language -->
+
+        <lang.parserDefinition language="RAPID"
+                               implementationClass="com.bossymr.rapid.language.parser.RapidParserDefinition"/>
+
+        <stubElementTypeHolder externalIdPrefix="rapid." class="com.bossymr.rapid.language.psi.RapidStubElementTypes"/>
+
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidSymbolNameIndex"/>
     </extensions>
 </idea-plugin>

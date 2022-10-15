@@ -3,9 +3,12 @@ fun properties(key: String) = project.findProperty(key).toString()
 plugins {
     id("java")
     id("org.jetbrains.intellij") version "1.9.0"
+    id("org.jetbrains.grammarkit") version "2021.2.2"
     id("org.jetbrains.changelog") version "1.3.1"
     id("org.jetbrains.qodana") version "0.1.12"
 }
+
+sourceSets["main"].java.srcDirs("src/main/gen")
 
 group = properties("pluginGroup")
 version = properties("pluginGroup")
@@ -20,7 +23,7 @@ intellij {
     pluginName.set(properties("pluginName"))
     version.set(properties("platformVersion"))
     type.set(properties("platformType"))
-    plugins.set(emptyList())
+    plugins.set(listOf("com.intellij.java"))
 }
 
 dependencies {
@@ -60,5 +63,20 @@ tasks {
         dependsOn("patchChangelog")
         token.set(System.getenv("PUBLISH_TOKEN"))
         channels.set(listOf(properties("pluginVersion").split('-').getOrElse(1) { "default" }.split('.').first()))
+    }
+
+    generateLexer {
+        source.set("src/main/java/com/bossymr/rapid/language/grammar/Rapid.flex")
+        targetDir.set("src/main/gen/com/bossymr/rapid/language/lexer")
+        targetClass.set("_RapidLexer")
+        purgeOldFiles.set(true)
+    }
+
+    generateParser {
+        source.set("src/main/java/com/bossymr/rapid/language/grammar/Rapid.bnf")
+        targetRoot.set("src/main/gen")
+        pathToParser.set("/com/bossymr/rapid/language/parser/RapidParser.java")
+        pathToPsiRoot.set("/com/bossymr/rapid/language/psi")
+        purgeOldFiles.set(true)
     }
 }
