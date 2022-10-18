@@ -19,6 +19,13 @@
 
         <projectService serviceImplementation="com.bossymr.rapid.language.psi.RapidElementFactory"/>
 
+        <!-- Robot -->
+
+        <projectService serviceInterface="com.bossymr.rapid.robot.RobotService"
+                        serviceImplementation="com.bossymr.rapid.robot.impl.RobotServiceImpl"/>
+
+        <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
+
         <!-- Language -->
 
         <lang.parserDefinition language="RAPID"

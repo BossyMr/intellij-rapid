@@ -27,7 +27,9 @@ intellij {
 }
 
 dependencies {
-    implementation(project(":network"))
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")
+    implementation("io.github.rburgst:okhttp-digest:2.7")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.4")
 }
 
 // Configure Gradle Changelog Plugin

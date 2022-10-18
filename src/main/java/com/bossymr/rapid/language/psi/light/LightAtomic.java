@@ -22,6 +22,11 @@ public class LightAtomic extends LightSymbol implements RapidAtomic {
     }
 
     @Override
+    public boolean isLocal() {
+        return false;
+    }
+
+    @Override
     public @Nullable RapidType getType() {
         return type;
     }
@@ -47,10 +52,5 @@ public class LightAtomic extends LightSymbol implements RapidAtomic {
     @Override
     public String toString() {
         return "LightAtomic:" + getName();
-    }
-
-    @Override
-    public boolean isLocal() {
-        return false;
     }
 }
