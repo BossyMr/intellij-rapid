@@ -56,7 +56,7 @@ public class NetworkClient {
                 .build();
     }
 
-    public static @NotNull NetworkClient connect(@NotNull URI path, @NotNull String username, char @NotNull [] password) {
+    public static @NotNull NetworkClient connect(@NotNull URI path, @NotNull String username, char @NotNull [] password) throws IOException {
         return new NetworkClient(path, username, password);
     }
 

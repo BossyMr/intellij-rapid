@@ -15,14 +15,24 @@ import com.intellij.ide.passwordSafe.PasswordSafe;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public final class RobotUtil {
 
     private RobotUtil() {}
+
+    public static @NotNull String getName(@NotNull Controller controller) throws IOException {
+        try {
+            return controller.getIdentity().get().name();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new IOException(e);
+        }
+    }
 
     private static @NotNull CredentialAttributes createCredentialAttributes(@NotNull URI path) {
         return new CredentialAttributes(CredentialAttributesKt.generateServiceName("RAPID", path.toString()));
@@ -38,17 +48,17 @@ public final class RobotUtil {
         PasswordSafe.getInstance().set(credentialAttributes, credentials);
     }
 
-    public static @NotNull Controller getController(@NotNull URI path) {
+    public static @NotNull Controller getController(@NotNull URI path) throws IOException {
         Credentials credentials = getCredentials(path);
         return createController(path, credentials != null ? credentials : new Credentials("", ""));
     }
 
-    public static @NotNull Controller getController(@NotNull URI path, @NotNull Credentials credentials) {
+    public static @NotNull Controller getController(@NotNull URI path, @NotNull Credentials credentials) throws IOException {
         setCredentials(path, credentials);
         return createController(path, credentials);
     }
 
-    private static @NotNull Controller createController(@NotNull URI path, @NotNull Credentials credentials) {
+    private static @NotNull Controller createController(@NotNull URI path, @NotNull Credentials credentials) throws IOException {
         String username = credentials.getUserName() != null ? credentials.getUserName() : "";
         String password = credentials.getPasswordAsString() != null ? credentials.getPasswordAsString() : "";
         return Controller.connect(path, username, password);
@@ -59,19 +69,28 @@ public final class RobotUtil {
         return factory.getSymbols();
     }
 
-    public static @NotNull RobotState getState(@NotNull Controller controller) {
+    public static @NotNull RobotState getState(@NotNull Controller controller) throws IOException {
         RobotState robotState = new RobotState();
-        robotState.name = controller.getIdentity().join().name();
+        try {
+            robotState.name = controller.getIdentity().get().name();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new IOException(e);
+        }
         robotState.path = controller.getPath().toString();
         robotState.symbols = getSymbols(controller.getRapid());
         return robotState;
     }
 
-    private static @NotNull List<SymbolState> getSymbols(@NotNull Rapid rapid) {
+    private static @NotNull List<SymbolState> getSymbols(@NotNull Rapid rapid) throws IOException {
         SymbolSearchQuery query = SymbolSearchQuery.newBuilder()
                 .setSymbolType(SymbolType.ANY)
                 .build();
-        List<SymbolEntity> entities = rapid.getSymbols(query).join();
+        List<SymbolEntity> entities;
+        try {
+            entities = rapid.getSymbols(query).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new IOException(e);
+        }
         EnumSet<SymbolType> symbolTypes = EnumSet.complementOf(EnumSet.of(SymbolType.MODULE, SymbolType.TASK, SymbolType.ANY, SymbolType.UNDEFINED));
         return entities.stream()
                 .filter(entity -> symbolTypes.contains(entity.symbolType()))

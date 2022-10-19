@@ -7,8 +7,10 @@ import com.bossymr.rapid.robot.network.controller.io.InputOutput;
 import com.bossymr.rapid.robot.network.controller.rapid.Rapid;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * A {@code Controller} represents a remote robot.
@@ -24,11 +26,16 @@ public class Controller {
     private final EventLog eventLog = new EventLog(this);
     private final InputOutput inputOutput = new InputOutput(this);
 
-    public Controller(@NotNull NetworkClient networkClient) {
+    public Controller(@NotNull NetworkClient networkClient) throws IOException {
         this.networkClient = networkClient;
+        try {
+            getIdentity().get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new IOException(e);
+        }
     }
 
-    public static @NotNull Controller connect(@NotNull URI path, @NotNull String username, @NotNull String password) {
+    public static @NotNull Controller connect(@NotNull URI path, @NotNull String username, @NotNull String password) throws IOException {
         return new Controller(NetworkClient.connect(path, username, password.toCharArray()));
     }
 

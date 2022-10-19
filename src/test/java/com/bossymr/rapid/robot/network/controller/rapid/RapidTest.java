@@ -18,7 +18,7 @@ public class RapidTest {
     private Controller controller;
 
     @Before
-    public void setUp() {
+    public void setUp() throws IOException {
         controller = Controller.connect(URI.create("http://localhost:80/"), "Default User", "robotics");
     }
 

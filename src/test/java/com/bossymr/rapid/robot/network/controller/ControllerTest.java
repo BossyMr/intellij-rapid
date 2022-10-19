@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.network.controller;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 
@@ -14,7 +15,7 @@ public class ControllerTest {
     private Controller controller;
 
     @Before
-    public void setUp() {
+    public void setUp() throws IOException {
         controller = Controller.connect(URI.create("http://localhost:80/"), "Default User", "robotics");
     }
 
