@@ -65,6 +65,21 @@ public class LightRoutine extends LightSymbol implements RapidRoutine {
     }
 
     @Override
+    public @Nullable RapidStatementList getBackwardStatementList() {
+        return null;
+    }
+
+    @Override
+    public @Nullable RapidStatementList getErrorStatementList() {
+        return null;
+    }
+
+    @Override
+    public @Nullable RapidStatementList getUndoStatementList() {
+        return null;
+    }
+
+    @Override
     public @NotNull String getName() {
         return name;
     }

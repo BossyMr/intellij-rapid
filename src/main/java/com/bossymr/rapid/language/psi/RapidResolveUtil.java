@@ -1,11 +1,12 @@
 package com.bossymr.rapid.language.psi;
 
+import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiElementResolveResult;
-import com.intellij.psi.ResolveResult;
+import com.intellij.psi.*;
+import com.intellij.psi.search.FileTypeIndex;
+import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,8 +30,9 @@ public final class RapidResolveUtil {
     }
 
     public static ResolveResult @NotNull [] resolve(@NotNull String name, @NotNull Project project, @Nullable PsiElement context) {
+        RapidSymbolBundle bundle = new RapidSymbolBundle(name, context);
+        // Check current file
         if (context != null) {
-            RapidSymbolBundle bundle = new RapidSymbolBundle(name, context);
             for (PsiElement level = context.getParent(); level != null; level = level.getParent()) {
                 switch (bundle.collect(level)) {
                     case CONTINUE:
@@ -40,6 +42,22 @@ public final class RapidResolveUtil {
                 }
             }
         }
+        if (bundle.getResults().length > 0) {
+            return bundle.getResults();
+        }
+        // Check other files
+        FileTypeIndex.processFiles(RapidFileType.INSTANCE,
+                file -> {
+                    PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
+                    if (psiFile != null) {
+                        bundle.collect(psiFile);
+                    }
+                    return true;
+                }, GlobalSearchScope.allScope(project));
+        if (bundle.getResults().length > 0) {
+            return bundle.getResults();
+        }
+        // Check remote robot
         RobotService service = RobotService.getInstance(project);
         Optional<Robot> robot = service.getRobot();
         if (robot.isPresent()) {
@@ -59,7 +77,7 @@ public final class RapidResolveUtil {
 
         private final List<RapidSymbol> symbols = new ArrayList<>();
 
-        public RapidSymbolBundle(@NotNull String name, @NotNull PsiElement context) {
+        public RapidSymbolBundle(@NotNull String name, @Nullable PsiElement context) {
             this.name = name;
             this.context = context;
         }
@@ -102,6 +120,9 @@ public final class RapidResolveUtil {
                     }
                 }
                 if (next instanceof RapidRoutine routine) {
+                    for (RapidLabelStatement label : PsiTreeUtil.findChildrenOfType(routine, RapidLabelStatement.class)) {
+                        collect(label);
+                    }
                     if (routine.getParameters() != null) {
                         for (RapidParameterGroup group : routine.getParameters()) {
                             for (RapidParameter parameter : group.getParameters()) {
@@ -121,7 +142,7 @@ public final class RapidResolveUtil {
 
         public @NotNull ContinueState collect(@NotNull RapidSymbol symbol) {
             if (name.equals(symbol.getName())) {
-                if (context.getContainingFile().equals(symbol.getContainingFile())) {
+                if (context != null && context.getContainingFile().equals(symbol.getContainingFile())) {
                     symbols.add(symbol);
                     return ContinueState.HALT;
                 } else {
@@ -137,7 +158,7 @@ public final class RapidResolveUtil {
         }
 
         public ResolveResult @NotNull [] getResults() {
-            return symbols.stream()
+            return getSymbols().stream()
                     .map(PsiElementResolveResult::new)
                     .toArray(ResolveResult[]::new);
         }

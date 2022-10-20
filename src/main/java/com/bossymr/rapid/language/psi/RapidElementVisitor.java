@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.psi;
 
-import com.intellij.psi.PsiElementVisitor;
 import com.bossymr.rapid.language.psi.impl.statement.RapidTryNextStatementImpl;
+import com.intellij.psi.PsiElementVisitor;
 
 public abstract class RapidElementVisitor extends PsiElementVisitor {
 
@@ -186,6 +186,10 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
     }
 
     public void visitTestStatement(RapidTestStatement statement) {
+        visitStatement(statement);
+    }
+
+    public void visitLabel(RapidLabelStatement statement) {
         visitStatement(statement);
     }
 }

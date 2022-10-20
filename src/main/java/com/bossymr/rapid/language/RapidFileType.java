@@ -39,7 +39,7 @@ public class RapidFileType extends LanguageFileType {
 
     @Override
     public Icon getIcon() {
-        return RapidIcons.RAPID_FILE;
+        return RapidIcons.RAPID;
     }
 
     @Override

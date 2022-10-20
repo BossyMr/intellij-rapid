@@ -1,11 +1,18 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.intellij.lang.ASTNode;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.stubs.NamedStub;
-import com.intellij.util.IncorrectOperationException;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.stubs.RapidFieldStub;
+import com.intellij.lang.ASTNode;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.impl.PsiImplUtil;
+import com.intellij.psi.impl.source.tree.CompositeElement;
+import com.intellij.psi.impl.source.tree.Factory;
+import com.intellij.psi.impl.source.tree.SharedImplUtil;
+import com.intellij.psi.impl.source.tree.TreeElement;
+import com.intellij.psi.stubs.NamedStub;
+import com.intellij.psi.tree.TokenSet;
+import com.intellij.util.CharTable;
+import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -78,6 +85,28 @@ public class RapidFieldImpl extends RapidStubElement<RapidFieldStub> implements 
     @Override
     public @Nullable RapidExpression getInitializer() {
         return findChildByType(RapidElementTypes.EXPRESSIONS);
+    }
+
+    @Override
+    public void setInitializer(@Nullable RapidExpression initializer) throws UnsupportedOperationException {
+        RapidExpression expression = getInitializer();
+        if (expression != null) {
+            expression.delete();
+        }
+        if (initializer == null) {
+            return;
+        }
+        CompositeElement element = (CompositeElement) getNode();
+        ASTNode equals = element.findChildByType(RapidTokenTypes.CEQ);
+        if (equals == null) {
+            final CharTable charTable = SharedImplUtil.findCharTableByTree(element);
+            equals = Factory.createSingleLeafElement(RapidTokenTypes.CEQ, ":=", 0, 2, charTable, getManager());
+            PsiElement identifier = getNameIdentifier();
+            assert identifier != null;
+            ASTNode node = PsiImplUtil.skipWhitespaceCommentsAndTokens(identifier.getNode().getTreeNext(), TokenSet.create(RapidTokenTypes.LBRACE, RapidTokenTypes.ASTERISK, RapidTokenTypes.COMMA, RapidTokenTypes.RBRACE));
+            equals = element.addInternal((TreeElement) equals, equals, node, Boolean.TRUE);
+        }
+        addAfter(initializer, equals.getPsi());
     }
 
     @Override

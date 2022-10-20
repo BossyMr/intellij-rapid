@@ -1,6 +1,11 @@
-package com.bossymr.rapid.language.psi.impl;
+package com.bossymr.rapid.language.psi.impl.statement;
 
-import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.RapidElementTypes;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidLabelStatement;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.IncorrectOperationException;
@@ -9,10 +14,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class RapidTargetVariableImpl extends RapidCompositeElement implements RapidTargetVariable {
+public class RapidLabelStatementImpl extends RapidCompositeElement implements RapidLabelStatement {
 
-    public RapidTargetVariableImpl() {
-        super(RapidElementTypes.TARGET_VARIABLE);
+    public RapidLabelStatementImpl() {
+        super(RapidElementTypes.LABEL_STATEMENT);
+    }
+
+    @Override
+    public void accept(@NotNull RapidElementVisitor visitor) {
+        visitor.visitLabel(this);
     }
 
     @Override
@@ -39,22 +49,7 @@ public class RapidTargetVariableImpl extends RapidCompositeElement implements Ra
     }
 
     @Override
-    public @Nullable RapidType getType() {
-        return RapidType.NUMBER.apply(getProject());
-    }
-
-    @Override
-    public @Nullable RapidTypeElement getTypeElement() {
-        return null;
-    }
-
-    @Override
-    public void accept(@NotNull RapidElementVisitor visitor) {
-        visitor.visitTargetVariable(this);
-    }
-
-    @Override
     public String toString() {
-        return "RapidTargetVariable:" + getName();
+        return "RapidLabelStatement:" + getName();
     }
 }

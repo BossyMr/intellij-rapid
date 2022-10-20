@@ -13,5 +13,5 @@ public class RapidIcons {
     public static final Icon ROBOT_ICON = AllIcons.Nodes.Project;
     public static final Icon ROBOT_DIRECTORY = AllIcons.Nodes.Package;
 
-    public static final Icon RAPID_FILE = AllIcons.FileTypes.Java;
+    public static final Icon RAPID = AllIcons.FileTypes.Java;
 }

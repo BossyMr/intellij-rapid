@@ -82,6 +82,12 @@ public interface RapidRoutine extends RapidSymbol {
      */
     @NotNull RapidStatementList getStatementList();
 
+    @Nullable RapidStatementList getBackwardStatementList();
+
+    @Nullable RapidStatementList getErrorStatementList();
+
+    @Nullable RapidStatementList getUndoStatementList();
+
 
     /**
      * Represents the attributes with which a routine can be declared.

@@ -1,11 +1,11 @@
 package com.bossymr.rapid.language.psi.impl;
 
+import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.stubs.RapidRoutineStub;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.NamedStub;
 import com.intellij.util.IncorrectOperationException;
-import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.stubs.RapidRoutineStub;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -70,7 +70,32 @@ public class RapidRoutineImpl extends RapidStubElement<RapidRoutineStub> impleme
 
     @Override
     public @NotNull RapidStatementList getStatementList() {
-        return findNotNullChildByType(RapidElementTypes.STATEMENT_LIST);
+        return Objects.requireNonNull(getStatementList(RapidStatementList.Attribute.STATEMENT_LIST));
+    }
+
+    @Override
+    public @Nullable RapidStatementList getBackwardStatementList() {
+        return getStatementList(RapidStatementList.Attribute.BACKWARD_CLAUSE);
+    }
+
+    @Override
+    public @Nullable RapidStatementList getErrorStatementList() {
+        return getStatementList(RapidStatementList.Attribute.ERROR_CLAUSE);
+    }
+
+    @Override
+    public @Nullable RapidStatementList getUndoStatementList() {
+        return getStatementList(RapidStatementList.Attribute.UNDO_CLAUSE);
+    }
+
+    private @Nullable RapidStatementList getStatementList(@NotNull RapidStatementList.Attribute attribute) {
+        List<RapidStatementList> statementLists = findChildrenByType(RapidElementTypes.STATEMENT_LIST);
+        for (RapidStatementList statementList : statementLists) {
+            if (statementList.getAttribute().equals(attribute)) {
+                return statementList;
+            }
+        }
+        return null;
     }
 
     @Override

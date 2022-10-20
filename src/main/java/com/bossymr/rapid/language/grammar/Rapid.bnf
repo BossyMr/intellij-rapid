@@ -350,7 +350,7 @@ private compound_statement ::= if_statement |
                                while_statement |
                                test_statement
 
-private label_statement ::= IDENTIFIER ':' {pin=2}
+label_statement ::= IDENTIFIER ':' {pin=2}
 
 assignment_statement ::= variable_target ':=' empty_expression ';' {pin=2}
 

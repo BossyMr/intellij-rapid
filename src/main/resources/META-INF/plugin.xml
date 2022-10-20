@@ -31,6 +31,15 @@
 
         <editorNotificationProvider implementation="com.bossymr.rapid.robot.ui.RobotNotificationProvider"/>
 
+        <!-- Syntax Highlighter -->
+
+        <lang.syntaxHighlighter language="RAPID"
+                                implementationClass="com.bossymr.rapid.ide.highlight.RapidHighlighter"/>
+
+        <!-- Color Settings -->
+
+        <colorSettingsPage implementation="com.bossymr.rapid.ide.highlight.RapidColorSettingsPage"/>
+
         <!-- Language -->
 
         <lang.parserDefinition language="RAPID"

@@ -51,6 +51,7 @@ public interface RapidElementTypes {
     RapidElementType RETURN_STATEMENT = new RapidElementType("RETURN_STATEMENT", RapidReturnStatementImpl::new);
     RapidElementType TRY_NEXT_STATEMENT = new RapidElementType("TRY_NEXT_STATEMENT", RapidTryNextStatementImpl::new);
 
+    RapidElementType LABEL_STATEMENT = new RapidElementType("LABEL_STATEMENT", RapidLabelStatementImpl::new);
     RapidElementType TARGET_VARIABLE = new RapidElementType("TARGET_VARIABLE", RapidTargetVariableImpl::new);
 
     RapidElementType IF_STATEMENT = new RapidElementType("IF_STATEMENT", RapidIfStatementImpl::new);
