@@ -68,6 +68,11 @@ public class RobotToolWindow implements Disposable {
             }
 
             @Override
+            public void onRefresh(@NotNull Robot robot) {
+                model.invalidate();
+            }
+
+            @Override
             public void onDisconnect() {
                 model.invalidate();
             }

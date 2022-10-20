@@ -1,13 +1,14 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
+import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiReference;
 import com.intellij.psi.ResolveResult;
 import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.util.IncorrectOperationException;
-import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,6 +16,11 @@ public class RapidReferenceExpressionImpl extends RapidExpressionElement impleme
 
     public RapidReferenceExpressionImpl() {
         super(RapidElementTypes.REFERENCE_EXPRESSION);
+    }
+
+    @Override
+    public PsiReference getReference() {
+        return this;
     }
 
     @Override
@@ -59,7 +65,7 @@ public class RapidReferenceExpressionImpl extends RapidExpressionElement impleme
 
     @Override
     public ResolveResult @NotNull [] multiResolve(boolean incompleteCode) {
-        return new ResolveResult[0];
+        return RapidResolveUtil.resolve(getCanonicalText(), this);
     }
 
     @Override

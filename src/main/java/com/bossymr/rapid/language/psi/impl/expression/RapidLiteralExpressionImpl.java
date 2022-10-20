@@ -17,13 +17,13 @@ public class RapidLiteralExpressionImpl extends RapidExpressionElement implement
     public @Nullable RapidType getType() {
         IElementType elementType = getNode().getFirstChildNode().getElementType();
         if (RapidTokenTypes.TRUE_KEYWORD.equals(elementType) || RapidTokenTypes.FALSE_KEYWORD.equals(elementType)) {
-            return RapidType.BOOLEAN;
+            return RapidType.BOOLEAN.apply(getProject());
         }
         if (RapidTokenTypes.INTEGER_LITERAL.equals(elementType)) {
-            return RapidType.NUMBER;
+            return RapidType.NUMBER.apply(getProject());
         }
         if (RapidTokenTypes.STRING_LITERAL.equals(elementType)) {
-            return RapidType.STRING;
+            return RapidType.STRING.apply(getProject());
         }
         return null;
     }

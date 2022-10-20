@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.psi.light;
 
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidStatementListImpl;
+import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,7 +16,8 @@ public class LightRoutine extends LightSymbol implements RapidRoutine {
     private final RapidType type;
     private final List<RapidParameterGroup> parameters;
 
-    public LightRoutine(@NotNull Attribute attribute, @NotNull String name, @Nullable RapidType type, @NotNull List<RapidParameterGroup> parameters) {
+    public LightRoutine(@NotNull PsiManager manager, @NotNull Attribute attribute, @NotNull String name, @Nullable RapidType type, @NotNull List<RapidParameterGroup> parameters) {
+        super(manager);
         this.attribute = attribute;
         this.name = name;
         this.type = type;
@@ -65,5 +67,10 @@ public class LightRoutine extends LightSymbol implements RapidRoutine {
     @Override
     public @NotNull String getName() {
         return name;
+    }
+
+    @Override
+    public String toString() {
+        return "RapidRoutine";
     }
 }

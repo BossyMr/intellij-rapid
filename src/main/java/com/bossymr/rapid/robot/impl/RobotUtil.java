@@ -12,6 +12,7 @@ import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.credentialStore.CredentialAttributesKt;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.ide.passwordSafe.PasswordSafe;
+import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -64,8 +65,8 @@ public final class RobotUtil {
         return Controller.connect(path, username, password);
     }
 
-    public static @NotNull Map<String, RapidSymbol> getSymbols(@NotNull RobotState robotState) {
-        RobotSymbolFactory factory = new RobotSymbolFactory(robotState);
+    public static @NotNull Map<String, RapidSymbol> getSymbols(@NotNull PsiManager manager, @NotNull RobotState robotState) {
+        RobotSymbolFactory factory = new RobotSymbolFactory(manager, robotState);
         return factory.getSymbols();
     }
 
@@ -102,7 +103,6 @@ public final class RobotUtil {
                     state.mode = entity.mode();
                     state.isRequired = entity.required();
                     state.dataType = entity.dataType();
-                    state.isLocal = entity.isLocal() != null ? entity.isLocal() : false;
                     if (entity.componentLength() != null) {
                         state.length = entity.componentLength();
                     } else if (entity.parameterLength() != null) {

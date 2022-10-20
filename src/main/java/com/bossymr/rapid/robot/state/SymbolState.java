@@ -21,9 +21,6 @@ public class SymbolState {
     @Attribute("dataType")
     public String dataType;
 
-    @Attribute("local")
-    public Boolean isLocal;
-
     @Attribute("mode")
     public String mode;
 

@@ -1,29 +1,28 @@
 package com.bossymr.rapid.robot.ui.node;
 
-import com.bossymr.rapid.RapidIcons;
-import com.bossymr.rapid.robot.Robot;
+import com.bossymr.rapid.language.psi.RapidSymbol;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 
-public class RobotViewRobotNode extends RobotViewNode<Robot> {
+public class RobotViewSymbolNode extends RobotViewNode<RapidSymbol> {
 
-    public RobotViewRobotNode(@NotNull Project project, @NotNull Robot node) {
+    public RobotViewSymbolNode(@NotNull Project project, @NotNull RapidSymbol node) {
         super(project, node);
     }
 
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
-        return Collections.singletonList(new RobotViewDirectoryNode(getProject(), getValue().getSymbols()));
+        return new ArrayList<>();
     }
 
     @Override
     protected void update(@NotNull PresentationData presentation) {
-        presentation.setIcon(RapidIcons.ROBOT_ICON);
+        presentation.setIcon(getValue().getIcon(0));
         presentation.setPresentableText(getValue().getName());
     }
 }

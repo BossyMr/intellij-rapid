@@ -4,6 +4,7 @@ import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidField;
 import com.bossymr.rapid.language.psi.RapidType;
 import com.bossymr.rapid.language.psi.RapidTypeElement;
+import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,7 +14,8 @@ public class LightField extends LightSymbol implements RapidField {
     private final RapidType type;
     private final String name;
 
-    public LightField(@NotNull Attribute attribute, @NotNull RapidType type, @NotNull String name) {
+    public LightField(@NotNull PsiManager manager, @NotNull Attribute attribute, @NotNull RapidType type, @NotNull String name) {
+        super(manager);
         this.attribute = attribute;
         this.type = type;
         this.name = name;
@@ -57,5 +59,10 @@ public class LightField extends LightSymbol implements RapidField {
     @Override
     public @NotNull String getName() {
         return name;
+    }
+
+    @Override
+    public String toString() {
+        return "RapidField";
     }
 }

@@ -20,7 +20,6 @@ public class RobotViewListNode extends RobotViewNode<Project> {
 
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
-        System.out.println("Updating connected controllers");
         List<RobotViewRobotNode> nodes = new ArrayList<>();
         RobotService service = RobotService.getInstance(getProject());
         Optional<Robot> robot = service.getRobot();

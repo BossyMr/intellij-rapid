@@ -3,6 +3,10 @@ package com.bossymr.rapid.robot.ui;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.ProgressManager;
+import com.intellij.openapi.progress.Task;
+import com.intellij.openapi.progress.impl.BackgroundableProcessIndicator;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import org.jetbrains.annotations.NotNull;
@@ -40,12 +44,18 @@ public class RobotConnect extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
-        RobotService service = RobotService.getInstance(project);
-        try {
-            service.connect(getHost(), getCredentials());
-        } catch (IOException e) {
-            LOG.error("Could not connect to path: " + hostField.getText(), e);
-        }
+        Task.Backgroundable task = new Task.Backgroundable(project, "Connecting...") {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                RobotService service = RobotService.getInstance(project);
+                try {
+                    service.connect(getHost(), getCredentials());
+                } catch (IOException e) {
+                    LOG.error("Could not connect to path: " + hostField.getText(), e);
+                }
+            }
+        };
+        ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));
         super.doOKAction();
     }
 

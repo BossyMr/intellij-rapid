@@ -40,7 +40,7 @@ public class RapidTargetVariableImpl extends RapidCompositeElement implements Ra
 
     @Override
     public @Nullable RapidType getType() {
-        return RapidType.NUMBER;
+        return RapidType.NUMBER.apply(getProject());
     }
 
     @Override

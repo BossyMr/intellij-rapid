@@ -4,6 +4,7 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.light.*;
 import com.bossymr.rapid.robot.state.RobotState;
 import com.bossymr.rapid.robot.state.SymbolState;
+import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,10 +12,12 @@ import java.util.*;
 
 public final class RobotSymbolFactory {
 
+    private final PsiManager manager;
     private final Map<String, Map<String, SymbolState>> states;
     private final Map<String, RapidSymbol> symbols;
 
-    public RobotSymbolFactory(@NotNull RobotState robotState) {
+    public RobotSymbolFactory(@NotNull PsiManager manager, @NotNull RobotState robotState) {
+        this.manager = manager;
         this.states = new HashMap<>();
         for (SymbolState symbol : robotState.symbols) {
             String address = symbol.path.substring(0, symbol.path.lastIndexOf('/'));
@@ -35,9 +38,6 @@ public final class RobotSymbolFactory {
         if (symbols.containsKey(name)) return symbols.get(name);
         SymbolState state = states.get("RAPID").get(name);
         if (state == null) {
-            throw new IllegalStateException(name);
-        }
-        if (state.isLocal) {
             return null;
         }
         return switch (state.type) {
@@ -66,7 +66,7 @@ public final class RobotSymbolFactory {
 
     private @NotNull RapidAtomic getAtomic(@NotNull SymbolState state) {
         RapidType dataType = state.dataType != null && state.dataType.length() > 0 ? new RapidType(getStructure(state.dataType)) : null;
-        return getSymbol(new LightAtomic(state.name, dataType));
+        return getSymbol(new LightAtomic(manager, state.name, dataType));
     }
 
     private @NotNull RapidRecord getRecord(@NotNull SymbolState state) {
@@ -78,23 +78,23 @@ public final class RobotSymbolFactory {
         for (SymbolState symbolState : states) {
             components.set(symbolState.index, getComponent(symbolState));
         }
-        LightRecord symbol = new LightRecord(state.name, Collections.unmodifiableList(components));
+        LightRecord symbol = new LightRecord(manager, state.name, Collections.unmodifiableList(components));
         return getSymbol(symbol);
     }
 
     private @NotNull RapidAlias getAlias(@NotNull SymbolState state) {
         RapidType dataType = new RapidType(getStructure(state.dataType));
-        return getSymbol(new LightAlias(state.name, dataType));
+        return getSymbol(new LightAlias(manager, state.name, dataType));
     }
 
     private @NotNull RapidComponent getComponent(@NotNull SymbolState state) {
         RapidType dataType = new RapidType(getStructure(state.dataType));
-        return new LightComponent(state.name, dataType);
+        return new LightComponent(manager, state.name, dataType);
     }
 
     private @NotNull RapidField getField(@NotNull SymbolState state, @NotNull RapidField.Attribute attribute) {
         RapidType dataType = new RapidType(getStructure(state.dataType));
-        return getSymbol(new LightField(attribute, dataType, state.name));
+        return getSymbol(new LightField(manager, attribute, dataType, state.name));
     }
 
     private @NotNull RapidParameter getParameter(@NotNull SymbolState state) {
@@ -107,7 +107,7 @@ public final class RobotSymbolFactory {
             case "inout" -> RapidParameter.Attribute.INOUT;
             default -> throw new IllegalStateException("Unexpected value: " + state.mode);
         };
-        return new LightParameter(attribute, dataType, state.name);
+        return new LightParameter(manager, attribute, dataType, state.name);
     }
 
     private @NotNull RapidRoutine getRoutine(@NotNull SymbolState state, @NotNull RapidRoutine.Attribute attribute) {
@@ -122,12 +122,12 @@ public final class RobotSymbolFactory {
             if (groups.get(symbolState.index) != null) {
                 groups.get(symbolState.index).getParameters().add(getParameter(symbolState));
             } else {
-                groups.set(symbolState.index, new LightParameterGroup(!symbolState.isRequired, new ArrayList<>()));
+                groups.set(symbolState.index, new LightParameterGroup(manager, !symbolState.isRequired, new ArrayList<>()));
                 groups.get(symbolState.index).getParameters().add(getParameter(symbolState));
             }
         }
         RapidType dataType = state.dataType != null && state.dataType.length() > 0 ? new RapidType(getStructure(state.dataType)) : null;
-        LightRoutine routine = new LightRoutine(attribute, state.name, dataType, new ArrayList<>());
+        LightRoutine routine = new LightRoutine(manager, attribute, state.name, dataType, new ArrayList<>());
         return getSymbol(routine);
     }
 }

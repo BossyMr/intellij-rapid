@@ -28,7 +28,6 @@ public class RobotViewTreeStructure extends AbstractTreeStructureBase {
         return new RobotViewListNode(project);
     }
 
-
     @Override
     public @NotNull Object getRootElement() {
         return rootNode;

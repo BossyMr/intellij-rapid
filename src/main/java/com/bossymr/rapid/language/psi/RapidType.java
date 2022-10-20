@@ -3,25 +3,28 @@ package com.bossymr.rapid.language.psi;
 import com.bossymr.rapid.language.psi.light.LightAtomic;
 import com.bossymr.rapid.language.psi.light.LightComponent;
 import com.bossymr.rapid.language.psi.light.LightRecord;
+import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Represents a type (alias, record, atomic, or array).
  */
 public class RapidType {
 
-    public static final RapidType NUMBER = new RapidType(new LightAtomic("num"));
-    public static final RapidType DOUBLE = new RapidType(new LightAtomic("dnum"));
-    public static final RapidType BOOLEAN = new RapidType(new LightAtomic("bool"));
-    public static final RapidType STRING = new RapidType(new LightAtomic("string"));
-    public static final RapidType POSITION = new RapidType(new LightRecord("pos", List.of(new LightComponent("x", NUMBER), new LightComponent("y", NUMBER), new LightComponent("z", NUMBER))));
-    public static final RapidType ORIENTATION = new RapidType(new LightRecord("orient", List.of(new LightComponent("q1", NUMBER), new LightComponent("q2", NUMBER), new LightComponent("q3", NUMBER), new LightComponent("q4", NUMBER))));
-    public static final RapidType POSE = new RapidType(new LightRecord("pose", List.of(new LightComponent("trans", POSITION), new LightComponent("rot", ORIENTATION))));
+    public static final Function<Project, RapidType> NUMBER = (project) -> new RapidType(new LightAtomic(PsiManager.getInstance(project), "num"));
+    public static final Function<Project, RapidType> DOUBLE = (project) -> new RapidType(new LightAtomic(PsiManager.getInstance(project), "dnum"));
+    public static final Function<Project, RapidType> BOOLEAN = (project) -> new RapidType(new LightAtomic(PsiManager.getInstance(project), "bool"));
+    public static final Function<Project, RapidType> STRING = (project) -> new RapidType(new LightAtomic(PsiManager.getInstance(project), "string"));
+    public static final Function<Project, RapidType> POSITION = (project) -> new RapidType(new LightRecord(PsiManager.getInstance(project), "pos", List.of(new LightComponent(PsiManager.getInstance(project), "x", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "y", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "z", NUMBER.apply(project)))));
+    public static final Function<Project, RapidType> ORIENTATION = (project) -> new RapidType(new LightRecord(PsiManager.getInstance(project), "orient", List.of(new LightComponent(PsiManager.getInstance(project), "q1", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "q2", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "q3", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "q4", NUMBER.apply(project)))));
+    public static final Function<Project, RapidType> POSE = (project) -> new RapidType(new LightRecord(PsiManager.getInstance(project), "pose", List.of(new LightComponent(PsiManager.getInstance(project), "trans", POSITION.apply(project)), new LightComponent(PsiManager.getInstance(project), "rot", ORIENTATION.apply(project)))));
 
     private final RapidStructure structure;
     private final int dimensions;

@@ -1,10 +1,11 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.intellij.lang.ASTNode;
-import com.intellij.psi.PsiElement;
-import com.intellij.util.IncorrectOperationException;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterStub;
+import com.intellij.lang.ASTNode;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.stubs.NamedStub;
+import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -62,6 +63,17 @@ public class RapidParameterImpl extends RapidStubElement<RapidParameterStub> imp
     public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
         RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
         return this;
+    }
+
+    @Override
+    public String getName() {
+        final NamedStub<?> stub = getGreenStub();
+        if (stub != null) {
+            return stub.getName();
+        } else {
+            PsiElement identifier = getNameIdentifier();
+            return identifier != null ? identifier.getText() : null;
+        }
     }
 
     @Override

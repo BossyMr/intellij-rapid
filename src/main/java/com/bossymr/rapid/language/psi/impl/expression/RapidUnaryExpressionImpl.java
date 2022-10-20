@@ -24,9 +24,9 @@ public class RapidUnaryExpressionImpl extends RapidExpressionElement implements 
             IElementType sign = getSign().getNode().getElementType();
             if (TokenSet.create(RapidTokenTypes.PLUS, RapidTokenTypes.MINUS).contains(sign)) {
                 if (type == null) return null;
-                return RapidType.NUMBER.isAssignable(type) || RapidType.DOUBLE.isAssignable(type) ? type : null;
+                return RapidType.NUMBER.apply(getProject()).isAssignable(type) || RapidType.DOUBLE.apply(getProject()).isAssignable(type) ? type : null;
             } else if (RapidTokenTypes.NOT_KEYWORD.equals(sign)) {
-                return RapidType.BOOLEAN;
+                return RapidType.BOOLEAN.apply(getProject());
             }
             throw new RuntimeException();
         } else {

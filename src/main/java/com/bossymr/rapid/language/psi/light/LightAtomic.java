@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.psi.light;
 
 import com.bossymr.rapid.language.psi.RapidAtomic;
 import com.bossymr.rapid.language.psi.RapidType;
+import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,11 +13,12 @@ public class LightAtomic extends LightSymbol implements RapidAtomic {
     private final String name;
     private final RapidType type;
 
-    public LightAtomic(@NotNull String name) {
-        this(name, null);
+    public LightAtomic(@NotNull PsiManager manager, @NotNull String name) {
+        this(manager, name, null);
     }
 
-    public LightAtomic(@NotNull String name, @Nullable RapidType type) {
+    public LightAtomic(@NotNull PsiManager manager, @NotNull String name, @Nullable RapidType type) {
+        super(manager);
         this.name = name;
         this.type = type;
     }

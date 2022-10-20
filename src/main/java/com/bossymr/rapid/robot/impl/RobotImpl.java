@@ -7,6 +7,7 @@ import com.bossymr.rapid.robot.network.controller.Controller;
 import com.bossymr.rapid.robot.state.RobotState;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +37,7 @@ public class RobotImpl implements Robot {
         this.project = project;
         this.path = URI.create(robotState.path);
         this.controller = controller;
-        this.symbols = RobotUtil.getSymbols(robotState);
+        this.symbols = RobotUtil.getSymbols(PsiManager.getInstance(project), robotState);
         this.name = robotState.name;
         getTopic().onRefresh(this);
     }
@@ -44,7 +45,7 @@ public class RobotImpl implements Robot {
     private void build() throws IOException {
         controller = RobotUtil.getController(path);
         RobotState robotState = RobotUtil.getState(controller);
-        symbols = RobotUtil.getSymbols(robotState);
+        symbols = RobotUtil.getSymbols(PsiManager.getInstance(project), robotState);
         name = robotState.name;
     }
 
