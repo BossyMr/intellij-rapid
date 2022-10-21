@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.psi.impl;
 
 import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.IncorrectOperationException;
@@ -40,7 +41,7 @@ public class RapidTargetVariableImpl extends RapidCompositeElement implements Ra
 
     @Override
     public @Nullable RapidType getType() {
-        return RapidType.NUMBER.apply(getProject());
+        return RobotService.getInstance(getProject()).getType().getNumber();
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.psi.light;
 import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.RapidParameter;
 import com.bossymr.rapid.language.psi.RapidParameterGroup;
+import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.impl.light.LightElement;
@@ -15,8 +16,8 @@ public class LightParameterGroup extends LightElement implements RapidParameterG
     private final boolean isOptional;
     private final List<RapidParameter> parameters;
 
-    public LightParameterGroup(@NotNull PsiManager manager, boolean isOptional, @NotNull List<RapidParameter> parameters) {
-        super(manager, RapidLanguage.INSTANCE);
+    public LightParameterGroup(@NotNull Project project, boolean isOptional, @NotNull List<RapidParameter> parameters) {
+        super(PsiManager.getInstance(project), RapidLanguage.INSTANCE);
         this.isOptional = isOptional;
         this.parameters = parameters;
     }

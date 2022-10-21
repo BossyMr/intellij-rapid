@@ -48,6 +48,8 @@
         <stubElementTypeHolder externalIdPrefix="rapid." class="com.bossymr.rapid.language.psi.RapidStubElementTypes"/>
 
         <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidSymbolNameIndex"/>
+
+        <annotator language="RAPID" implementationClass="com.bossymr.rapid.ide.insight.RapidAnnotator"/>
     </extensions>
 
     <actions>

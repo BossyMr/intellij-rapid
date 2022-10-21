@@ -1,30 +1,15 @@
 package com.bossymr.rapid.language.psi;
 
-import com.bossymr.rapid.language.psi.light.LightAtomic;
-import com.bossymr.rapid.language.psi.light.LightComponent;
-import com.bossymr.rapid.language.psi.light.LightRecord;
-import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
 
 /**
  * Represents a type (alias, record, atomic, or array).
  */
 public class RapidType {
-
-    public static final Function<Project, RapidType> NUMBER = (project) -> new RapidType(new LightAtomic(PsiManager.getInstance(project), "num"));
-    public static final Function<Project, RapidType> DOUBLE = (project) -> new RapidType(new LightAtomic(PsiManager.getInstance(project), "dnum"));
-    public static final Function<Project, RapidType> BOOLEAN = (project) -> new RapidType(new LightAtomic(PsiManager.getInstance(project), "bool"));
-    public static final Function<Project, RapidType> STRING = (project) -> new RapidType(new LightAtomic(PsiManager.getInstance(project), "string"));
-    public static final Function<Project, RapidType> POSITION = (project) -> new RapidType(new LightRecord(PsiManager.getInstance(project), "pos", List.of(new LightComponent(PsiManager.getInstance(project), "x", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "y", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "z", NUMBER.apply(project)))));
-    public static final Function<Project, RapidType> ORIENTATION = (project) -> new RapidType(new LightRecord(PsiManager.getInstance(project), "orient", List.of(new LightComponent(PsiManager.getInstance(project), "q1", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "q2", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "q3", NUMBER.apply(project)), new LightComponent(PsiManager.getInstance(project), "q4", NUMBER.apply(project)))));
-    public static final Function<Project, RapidType> POSE = (project) -> new RapidType(new LightRecord(PsiManager.getInstance(project), "pose", List.of(new LightComponent(PsiManager.getInstance(project), "trans", POSITION.apply(project)), new LightComponent(PsiManager.getInstance(project), "rot", ORIENTATION.apply(project)))));
 
     private final RapidStructure structure;
     private final int dimensions;

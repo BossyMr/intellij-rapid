@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.psi.light;
 
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidStatementListImpl;
-import com.intellij.psi.PsiManager;
+import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,8 +16,8 @@ public class LightRoutine extends LightSymbol implements RapidRoutine {
     private final RapidType type;
     private final List<RapidParameterGroup> parameters;
 
-    public LightRoutine(@NotNull PsiManager manager, @NotNull Attribute attribute, @NotNull String name, @Nullable RapidType type, @NotNull List<RapidParameterGroup> parameters) {
-        super(manager);
+    public LightRoutine(@NotNull Project project, @NotNull Attribute attribute, @NotNull String name, @Nullable RapidType type, @NotNull List<RapidParameterGroup> parameters) {
+        super(project);
         this.attribute = attribute;
         this.name = name;
         this.type = type;

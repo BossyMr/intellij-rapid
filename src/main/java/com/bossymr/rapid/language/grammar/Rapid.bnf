@@ -199,11 +199,11 @@ private array_expression_recovery ::= !(',' | '}' | ':=' | ';') symbol_recovery
 
 routine ::= procedure | function | trap
 
-private procedure ::= visibility? 'PROC' (type_element &(identifier))? identifier parameter_list? field_list statement_list [backward_clause] [error_clause] [undo_clause] 'ENDPROC' {pin=2}
+private procedure ::= visibility? 'PROC' identifier parameter_list? field_list statement_list [backward_clause] [error_clause] [undo_clause] 'ENDPROC' {pin=2}
 
-private function ::= visibility? 'FUNC' (type_element &(identifier))? identifier parameter_list? field_list statement_list [backward_clause] [error_clause] [undo_clause] 'ENDFUNC' {pin=2}
+private function ::= visibility? 'FUNC' type_element identifier parameter_list? field_list statement_list [backward_clause] [error_clause] [undo_clause] 'ENDFUNC' {pin=2}
 
-private trap ::= visibility? 'TRAP' (type_element &(identifier))? identifier parameter_list? field_list statement_list [backward_clause] [error_clause] [undo_clause] 'ENDTRAP' {pin=2}
+private trap ::= visibility? 'TRAP' identifier parameter_list? field_list statement_list [backward_clause] [error_clause] [undo_clause] 'ENDTRAP' {pin=2}
 
 backward_clause ::= 'BACKWARD' statement_list {pin=1 elementType=statement_list}
 

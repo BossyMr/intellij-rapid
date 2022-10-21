@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 public final class RapidResolveUtil {
+    // FIXME: 2022-10-20 Refactor, as continue/halt system not entirely respected
 
     private RapidResolveUtil() {}
 
@@ -84,9 +85,7 @@ public final class RapidResolveUtil {
 
         public @NotNull ContinueState collect(@NotNull PsiElement element) {
             if (element instanceof RapidFile file) {
-                RapidModule module = PsiTreeUtil.getParentOfType(context, RapidModule.class);
                 for (RapidModule fileModule : file.getModules()) {
-                    if (fileModule.equals(module)) continue;
                     switch (collect(fileModule)) {
                         case CONTINUE:
                             break;
@@ -141,7 +140,7 @@ public final class RapidResolveUtil {
         }
 
         public @NotNull ContinueState collect(@NotNull RapidSymbol symbol) {
-            if (name.equals(symbol.getName())) {
+            if (name.equalsIgnoreCase(symbol.getName())) {
                 if (context != null && context.getContainingFile().equals(symbol.getContainingFile())) {
                     symbols.add(symbol);
                     return ContinueState.HALT;

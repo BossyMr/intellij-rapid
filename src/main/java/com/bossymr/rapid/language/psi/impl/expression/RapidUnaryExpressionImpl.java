@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
@@ -18,15 +19,16 @@ public class RapidUnaryExpressionImpl extends RapidExpressionElement implements 
 
     @Override
     public @Nullable RapidType getType() {
+        RobotService.Type type = RobotService.getInstance(getProject()).getType();
         RapidExpression expression = getExpression();
         if (expression != null) {
-            RapidType type = expression.getType();
+            RapidType rapidType = expression.getType();
             IElementType sign = getSign().getNode().getElementType();
             if (TokenSet.create(RapidTokenTypes.PLUS, RapidTokenTypes.MINUS).contains(sign)) {
-                if (type == null) return null;
-                return RapidType.NUMBER.apply(getProject()).isAssignable(type) || RapidType.DOUBLE.apply(getProject()).isAssignable(type) ? type : null;
+                if (rapidType == null) return null;
+                return type.getNumber().isAssignable(rapidType) || type.getDouble().isAssignable(rapidType) ? rapidType : null;
             } else if (RapidTokenTypes.NOT_KEYWORD.equals(sign)) {
-                return RapidType.BOOLEAN.apply(getProject());
+                return type.getBool();
             }
             throw new RuntimeException();
         } else {

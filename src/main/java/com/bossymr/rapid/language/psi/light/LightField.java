@@ -4,7 +4,7 @@ import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidField;
 import com.bossymr.rapid.language.psi.RapidType;
 import com.bossymr.rapid.language.psi.RapidTypeElement;
-import com.intellij.psi.PsiManager;
+import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,8 +14,8 @@ public class LightField extends LightSymbol implements RapidField {
     private final RapidType type;
     private final String name;
 
-    public LightField(@NotNull PsiManager manager, @NotNull Attribute attribute, @NotNull RapidType type, @NotNull String name) {
-        super(manager);
+    public LightField(@NotNull Project project, @NotNull Attribute attribute, @NotNull RapidType type, @NotNull String name) {
+        super(project);
         this.attribute = attribute;
         this.type = type;
         this.name = name;

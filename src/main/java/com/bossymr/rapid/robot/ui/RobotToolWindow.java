@@ -10,6 +10,7 @@ import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import com.intellij.pom.Navigatable;
 import com.intellij.ui.PopupHandler;
 import com.intellij.ui.ScrollPaneFactory;
+import com.intellij.ui.TreeSpeedSearch;
 import com.intellij.ui.tree.AsyncTreeModel;
 import com.intellij.ui.tree.StructureTreeModel;
 import com.intellij.util.EditSourceOnDoubleClickHandler;
@@ -60,6 +61,7 @@ public class RobotToolWindow implements Disposable {
 
         EditSourceOnDoubleClickHandler.install(tree);
         EditSourceOnEnterKeyHandler.install(tree);
+        new TreeSpeedSearch(tree);
 
         project.getMessageBus().connect().subscribe(RobotTopic.ROBOT_TOPIC, new RobotTopic() {
             @Override

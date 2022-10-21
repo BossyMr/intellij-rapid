@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.rapid.language.psi.RapidType;
 import com.bossymr.rapid.robot.state.RobotState;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.components.PersistentStateComponent;
@@ -19,6 +20,8 @@ public interface RobotService extends PersistentStateComponent<RobotService.Stat
         return project.getService(RobotService.class);
     }
 
+    @NotNull Type getType();
+
     @NotNull Optional<Robot> getRobot();
 
     void disconnect() throws IOException;
@@ -27,5 +30,21 @@ public interface RobotService extends PersistentStateComponent<RobotService.Stat
 
     class State {
         public RobotState robotState;
+    }
+
+    interface Type {
+        @NotNull RapidType getNumber();
+
+        @NotNull RapidType getDouble();
+
+        @NotNull RapidType getString();
+
+        @NotNull RapidType getBool();
+
+        @NotNull RapidType getPosition();
+
+        @NotNull RapidType getOrientation();
+
+        @NotNull RapidType getTransformation();
     }
 }

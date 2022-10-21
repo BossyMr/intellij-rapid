@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.psi.light;
 import com.bossymr.rapid.language.psi.RapidParameter;
 import com.bossymr.rapid.language.psi.RapidType;
 import com.bossymr.rapid.language.psi.RapidTypeElement;
-import com.intellij.psi.PsiManager;
+import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,8 +13,8 @@ public class LightParameter extends LightSymbol implements RapidParameter {
     private final RapidType type;
     private final String name;
 
-    public LightParameter(@NotNull PsiManager manager, @NotNull Attribute attribute, @NotNull RapidType type, @NotNull String name) {
-        super(manager);
+    public LightParameter(@NotNull Project project, @NotNull Attribute attribute, @NotNull RapidType type, @NotNull String name) {
+        super(project);
         this.attribute = attribute;
         this.type = type;
         this.name = name;

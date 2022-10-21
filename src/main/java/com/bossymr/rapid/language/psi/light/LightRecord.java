@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.psi.light;
 
 import com.bossymr.rapid.language.psi.RapidComponent;
 import com.bossymr.rapid.language.psi.RapidRecord;
-import com.intellij.psi.PsiManager;
+import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -13,8 +13,8 @@ public class LightRecord extends LightSymbol implements RapidRecord {
     private final String name;
     private final List<RapidComponent> components;
 
-    public LightRecord(@NotNull PsiManager manager, @NotNull String name, @NotNull List<RapidComponent> components) {
-        super(manager);
+    public LightRecord(@NotNull Project project, @NotNull String name, @NotNull List<RapidComponent> components) {
+        super(project);
         this.name = name;
         this.components = components;
     }

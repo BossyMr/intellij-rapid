@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.rapid.language.psi.RapidSymbol;
+import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.network.controller.Controller;
 import com.bossymr.rapid.robot.network.controller.rapid.Rapid;
 import com.bossymr.rapid.robot.network.controller.rapid.SymbolEntity;
@@ -12,7 +13,7 @@ import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.credentialStore.CredentialAttributesKt;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.ide.passwordSafe.PasswordSafe;
-import com.intellij.psi.PsiManager;
+import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,9 +66,11 @@ public final class RobotUtil {
         return Controller.connect(path, username, password);
     }
 
-    public static @NotNull Map<String, RapidSymbol> getSymbols(@NotNull PsiManager manager, @NotNull RobotState robotState) {
-        RobotSymbolFactory factory = new RobotSymbolFactory(manager, robotState);
-        return factory.getSymbols();
+    public static @NotNull Map<String, RapidSymbol> getSymbols(@NotNull Project project, @NotNull RobotState robotState) {
+        RobotSymbolFactory factory = new RobotSymbolFactory(project, robotState);
+        Map<String, RapidSymbol> symbols = factory.getSymbols();
+        symbols.putAll(((RobotServiceImpl) RobotService.getInstance(project)).getSymbols());
+        return symbols;
     }
 
     public static @NotNull RobotState getState(@NotNull Controller controller) throws IOException {

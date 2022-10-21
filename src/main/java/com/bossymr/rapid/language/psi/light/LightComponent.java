@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.psi.light;
 import com.bossymr.rapid.language.psi.RapidComponent;
 import com.bossymr.rapid.language.psi.RapidType;
 import com.bossymr.rapid.language.psi.RapidTypeElement;
-import com.intellij.psi.PsiManager;
+import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,8 +14,8 @@ public class LightComponent extends LightSymbol implements RapidComponent {
     private final String name;
     private final RapidType type;
 
-    public LightComponent(@NotNull PsiManager manager, @NotNull String name, @NotNull RapidType type) {
-        super(manager);
+    public LightComponent(@NotNull Project project, @NotNull String name, @NotNull RapidType type) {
+        super(project);
         this.name = name;
         this.type = type;
     }

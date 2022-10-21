@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.psi.light;
 import com.bossymr.rapid.language.psi.RapidAlias;
 import com.bossymr.rapid.language.psi.RapidType;
 import com.bossymr.rapid.language.psi.RapidTypeElement;
-import com.intellij.psi.PsiManager;
+import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,8 +14,8 @@ public class LightAlias extends LightSymbol implements RapidAlias {
     private final String name;
     private final RapidType type;
 
-    public LightAlias(@NotNull PsiManager manager, @NotNull String name, @NotNull RapidType type) {
-        super(manager);
+    public LightAlias(@NotNull Project project, @NotNull String name, @NotNull RapidType type) {
+        super(project);
         this.name = name;
         this.type = type;
     }
