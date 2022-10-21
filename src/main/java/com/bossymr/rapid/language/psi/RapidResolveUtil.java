@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.psi;
 
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
@@ -60,14 +59,10 @@ public final class RapidResolveUtil {
         }
         // Check remote robot
         RobotService service = RobotService.getInstance(project);
-        Optional<Robot> robot = service.getRobot();
-        if (robot.isPresent()) {
-            Optional<RapidSymbol> symbol = robot.get().getSymbol(name);
-            if (symbol.isPresent()) {
-                return new ResolveResult[]{new PsiElementResolveResult(symbol.get())};
-            }
-        }
-        return ResolveResult.EMPTY_ARRAY;
+        Optional<RapidSymbol> symbol = service.getSymbol(name);
+        return symbol
+                .map(rapidSymbol -> new ResolveResult[]{new PsiElementResolveResult(rapidSymbol)})
+                .orElse(ResolveResult.EMPTY_ARRAY);
     }
 
 

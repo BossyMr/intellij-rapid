@@ -19,16 +19,15 @@ public class RapidUnaryExpressionImpl extends RapidExpressionElement implements 
 
     @Override
     public @Nullable RapidType getType() {
-        RobotService.Type type = RobotService.getInstance(getProject()).getType();
         RapidExpression expression = getExpression();
         if (expression != null) {
             RapidType rapidType = expression.getType();
             IElementType sign = getSign().getNode().getElementType();
             if (TokenSet.create(RapidTokenTypes.PLUS, RapidTokenTypes.MINUS).contains(sign)) {
                 if (rapidType == null) return null;
-                return type.getNumber().isAssignable(rapidType) || type.getDouble().isAssignable(rapidType) ? rapidType : null;
+                return RobotService.DataType.NUMBER.getType(getProject()).isAssignable(rapidType) || RobotService.DataType.DOUBLE.getType(getProject()).isAssignable(rapidType) ? rapidType : null;
             } else if (RapidTokenTypes.NOT_KEYWORD.equals(sign)) {
-                return type.getBool();
+                return RobotService.DataType.BOOLEAN.getType(getProject());
             }
             throw new RuntimeException();
         } else {

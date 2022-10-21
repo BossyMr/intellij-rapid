@@ -20,10 +20,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @State(name = "robot", storages = {
         @Storage("robot/robot.xml")
@@ -32,78 +29,69 @@ public class RobotServiceImpl implements RobotService {
 
     private static final Logger LOG = Logger.getInstance(RobotService.class);
     private final Project project;
+    private final Map<String, RapidSymbol> symbols;
     private Robot robot;
     private RobotService.State state = new RobotService.State();
-
-    private final Map<String, RapidSymbol> symbols;
-    private final Type type;
 
     public RobotServiceImpl(@NotNull Project project) {
         this.project = project;
         this.symbols = new HashMap<>();
-        this.type = buildSymbols();
+        buildSymbols();
     }
 
-    public @NotNull Map<String, RapidSymbol> getSymbols() {
+    public @NotNull Map<String, RapidSymbol> getMap() {
         return symbols;
     }
 
-    private @NotNull Type buildSymbols() {
-        symbols.put("num", new LightAtomic(project, "num"));
-        RapidType numberType = new RapidType((RapidStructure) symbols.get("num"));
-        symbols.put("dnum", new LightAtomic(project, "dnum"));
-        RapidType doubleType = new RapidType((RapidStructure) symbols.get("dnum"));
-        symbols.put("bool", new LightAtomic(project, "bool"));
-        RapidType boolType = new RapidType((RapidStructure) symbols.get("bool"));
-        symbols.put("string", new LightAtomic(project, "string"));
-        RapidType stringType = new RapidType((RapidStructure) symbols.get("string"));
-        symbols.put("pos", new LightRecord(project, "pos", List.of(new LightComponent(project, "x", numberType), new LightComponent(project, "y", numberType), new LightComponent(project, "z", numberType))));
-        RapidType posType = new RapidType((RapidStructure) symbols.get("pos"));
-        symbols.put("orient", new LightRecord(project, "orient", List.of(new LightComponent(project, "q1", numberType), new LightComponent(project, "q2", numberType), new LightComponent(project, "q3", numberType), new LightComponent(project, "q4", numberType))));
-        RapidType orientType = new RapidType((RapidStructure) symbols.get("pos"));
-        symbols.put("pose", new LightRecord(project, "pose", List.of(new LightComponent(project, "trans", posType), new LightComponent(project, "rot", orientType))));
-        RapidType poseType = new RapidType((RapidStructure) symbols.get("pose"));
-        return new Type() {
-            @Override
-            public @NotNull RapidType getNumber() {
-                return numberType;
-            }
-
-            @Override
-            public @NotNull RapidType getDouble() {
-                return doubleType;
-            }
-
-            @Override
-            public @NotNull RapidType getString() {
-                return stringType;
-            }
-
-            @Override
-            public @NotNull RapidType getBool() {
-                return boolType;
-            }
-
-            @Override
-            public @NotNull RapidType getPosition() {
-                return posType;
-            }
-
-            @Override
-            public @NotNull RapidType getOrientation() {
-                return orientType;
-            }
-
-            @Override
-            public @NotNull RapidType getTransformation() {
-                return poseType;
-            }
-        };
+    @Override
+    public @NotNull Set<RapidSymbol> getSymbols() {
+        Optional<Robot> optional = getRobot();
+        if (optional.isPresent()) {
+            RobotImpl implementation = (RobotImpl) optional.get();
+            return implementation.getSymbols();
+        }
+        return Set.copyOf(symbols.values());
     }
 
     @Override
-    public @NotNull Type getType() {
-        return type;
+    public @NotNull Optional<RapidSymbol> getSymbol(@NotNull String name) {
+        Optional<Robot> optional = getRobot();
+        if (optional.isPresent()) {
+            RobotImpl implementation = (RobotImpl) optional.get();
+            return implementation.getSymbol(name);
+        }
+        return symbols.containsKey(name) ? Optional.of(symbols.get(name)) : Optional.empty();
+    }
+
+    private void buildSymbols() {
+        symbols.put("num", new LightAtomic(project, "num"));
+        symbols.put("dnum", new LightAtomic(project, "dnum"));
+        symbols.put("bool", new LightAtomic(project, "bool"));
+        symbols.put("string", new LightAtomic(project, "string"));
+        symbols.put("pos", new LightRecord(project, "pos", List.of(new LightComponent(project, "x", getType(DataType.NUMBER)), new LightComponent(project, "y", getType(DataType.NUMBER)), new LightComponent(project, "z", getType(DataType.NUMBER)))));
+        symbols.put("orient", new LightRecord(project, "orient", List.of(new LightComponent(project, "q1", getType(DataType.NUMBER)), new LightComponent(project, "q2", getType(DataType.NUMBER)), new LightComponent(project, "q3", getType(DataType.NUMBER)), new LightComponent(project, "q4", getType(DataType.NUMBER)))));
+        symbols.put("pose", new LightRecord(project, "pose", List.of(new LightComponent(project, "trans", getType(DataType.POSITION)), new LightComponent(project, "rot", getType(DataType.ORIENTATION)))));
+    }
+
+    @Override
+    public @NotNull RapidType getType(@NotNull DataType dataType) {
+        return switch (dataType) {
+            case NUMBER -> getType("num");
+            case DOUBLE -> getType("dnum");
+            case STRING -> getType("string");
+            case BOOLEAN -> getType("bool");
+            case POSITION -> getType("pos");
+            case ORIENTATION -> getType("orient");
+            case TRANSFORMATION -> getType("pose");
+        };
+    }
+
+    private @NotNull RapidType getType(@NotNull String name) {
+        RapidSymbol symbol = symbols.get(name);
+        if (symbol instanceof RapidStructure structure) {
+            return new RapidType(structure);
+        }
+        throw new IllegalStateException(name);
     }
 
     @Override
@@ -120,7 +108,7 @@ public class RobotServiceImpl implements RobotService {
     }
 
     @Override
-    public void disconnect() throws IOException {
+    public void delete() throws IOException {
         if (state.robotState != null) {
             LOG.info("Disconnecting from persisted robot: " + state.robotState.path);
             Robot robot = getRobot().orElseThrow();
@@ -129,7 +117,7 @@ public class RobotServiceImpl implements RobotService {
             this.robot = null;
             getTopic().onDisconnect();
         } else {
-            LOG.warn("Attempt to disconnect to non-existent robot");
+            LOG.warn("Attempting to delete non-existent robot");
         }
     }
 
@@ -155,5 +143,18 @@ public class RobotServiceImpl implements RobotService {
     @Override
     public void loadState(@NotNull State state) {
         this.state = state;
+    }
+
+    @Override
+    public void dispose() {
+        Optional<Robot> optionalRobot = getRobot();
+        if (optionalRobot.isPresent()) {
+            URI path = optionalRobot.get().getPath();
+            try {
+                optionalRobot.get().disconnect();
+            } catch (IOException e) {
+                LOG.error("Failed to disconnect robot: " + path);
+            }
+        }
     }
 }

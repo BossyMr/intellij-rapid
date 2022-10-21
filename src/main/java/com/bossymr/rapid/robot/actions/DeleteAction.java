@@ -16,7 +16,7 @@ public class DeleteAction extends AnAction {
         assert project != null;
         RobotService service = RobotService.getInstance(project);
         try {
-            service.disconnect();
+            service.delete();
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }

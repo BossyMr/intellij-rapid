@@ -41,7 +41,7 @@ public class RapidTargetVariableImpl extends RapidCompositeElement implements Ra
 
     @Override
     public @Nullable RapidType getType() {
-        return RobotService.getInstance(getProject()).getType().getNumber();
+        return RobotService.DataType.NUMBER.getType(getProject());
     }
 
     @Override

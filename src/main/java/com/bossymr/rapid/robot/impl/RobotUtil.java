@@ -69,7 +69,7 @@ public final class RobotUtil {
     public static @NotNull Map<String, RapidSymbol> getSymbols(@NotNull Project project, @NotNull RobotState robotState) {
         RobotSymbolFactory factory = new RobotSymbolFactory(project, robotState);
         Map<String, RapidSymbol> symbols = factory.getSymbols();
-        symbols.putAll(((RobotServiceImpl) RobotService.getInstance(project)).getSymbols());
+        symbols.putAll(((RobotServiceImpl) RobotService.getInstance(project)).getMap());
         return symbols;
     }
 

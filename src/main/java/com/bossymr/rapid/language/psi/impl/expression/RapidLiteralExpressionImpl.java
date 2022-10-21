@@ -16,16 +16,15 @@ public class RapidLiteralExpressionImpl extends RapidExpressionElement implement
 
     @Override
     public @Nullable RapidType getType() {
-        RobotService.Type type = RobotService.getInstance(getProject()).getType();
         IElementType elementType = getNode().getFirstChildNode().getElementType();
         if (RapidTokenTypes.TRUE_KEYWORD.equals(elementType) || RapidTokenTypes.FALSE_KEYWORD.equals(elementType)) {
-            return type.getBool();
+            return RobotService.DataType.BOOLEAN.getType(getProject());
         }
         if (RapidTokenTypes.INTEGER_LITERAL.equals(elementType)) {
-            return type.getNumber();
+            return RobotService.DataType.NUMBER.getType(getProject());
         }
         if (RapidTokenTypes.STRING_LITERAL.equals(elementType)) {
-            return type.getString();
+            return RobotService.DataType.STRING.getType(getProject());
         }
         return null;
     }

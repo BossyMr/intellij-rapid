@@ -2,7 +2,7 @@ package com.bossymr.rapid.ide.insight;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.robot.RobotService;
+import com.bossymr.rapid.robot.RobotService.DataType;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.lang.annotation.AnnotationHolder;
 import com.intellij.lang.annotation.Annotator;
@@ -59,8 +59,8 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     @Override
     public void visitLiteralExpression(@NotNull RapidLiteralExpression expression) {
-        RobotService.Type type = RobotService.getInstance(expression.getProject()).getType();
-        if (type.getNumber() == expression.getType()) {
+        RapidType type = expression.getType();
+        if (type != null && DataType.NUMBER.getType(expression.getProject()).isAssignable(type)) {
             if (expression.getValue() == null) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.literal.numerical.size"))
                         .range(expression)
@@ -68,7 +68,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
             }
             // TODO: 2022-10-20 Check max value of numeric literal
         }
-        if (type.getString() == expression.getType()) {
+        if (type != null && DataType.STRING.getType(expression.getProject()).isAssignable(type)) {
             Object value = expression.getValue();
             if (value instanceof String string && string.length() > 80) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.string.length"))
@@ -81,10 +81,10 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     @Override
     public void visitArray(@NotNull RapidArray array) {
-        RobotService.Type type = RobotService.getInstance(array.getProject()).getType();
         for (RapidExpression expression : array.getDimensions()) {
-            if (type.getNumber() != expression.getType()) {
-                createIncompatibleType(type.getNumber(), expression.getType(), expression.getTextRange());
+            RapidType type = expression.getType();
+            if (type != null && !DataType.NUMBER.getType(expression.getProject()).isAssignable(type)) {
+                createIncompatibleType(DataType.NUMBER.getType(expression.getProject()), type, expression.getTextRange());
             }
         }
         super.visitArray(array);

@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
-import com.bossymr.rapid.robot.RobotService;
+import com.bossymr.rapid.robot.RobotService.DataType;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
@@ -38,38 +38,37 @@ public class RapidBinaryExpressionImpl extends RapidExpressionElement implements
         RapidType left = getLeft().getType();
         RapidType right = getRight() != null ? getRight().getType() : null;
         IElementType sign = getSign().getNode().getElementType();
-        RobotService.Type type = RobotService.getInstance(getProject()).getType();
         if (left == null || right == null) return null;
         if (List.of(OR_KEYWORD, XOR_KEYWORD, AND_KEYWORD, LT, LE, EQ, GT, GE, LTGT).contains(sign)) {
-            return type.getBool();
+            return DataType.BOOLEAN.getType(getProject());
         }
-        if (left.isAssignable(type.getNumber()) && right.isAssignable(type.getNumber()))
-            return type.getNumber();
-        if (left.isAssignable(type.getDouble()) && right.isAssignable(type.getDouble()))
-            return type.getDouble();
+        if (left.isAssignable(DataType.NUMBER.getType(getProject())) && right.isAssignable(DataType.NUMBER.getType(getProject())))
+            return DataType.NUMBER.getType(getProject());
+        if (left.isAssignable(DataType.DOUBLE.getType(getProject())) && right.isAssignable(DataType.DOUBLE.getType(getProject())))
+            return DataType.DOUBLE.getType(getProject());
         if (sign == ASTERISK) {
-            if ((left.isAssignable(type.getNumber()) && right.isAssignable(type.getPosition())))
-                return type.getPosition();
-            if ((left.isAssignable(type.getPosition()) && right.isAssignable(type.getNumber())))
-                return type.getPosition();
-            if (left.isAssignable(type.getPosition()) && right.isAssignable(type.getPosition()))
-                return type.getPosition();
-            if (left.isAssignable(type.getOrientation()) && right.isAssignable(type.getOrientation()))
-                return type.getOrientation();
+            if ((left.isAssignable(DataType.NUMBER.getType(getProject())) && right.isAssignable(DataType.POSITION.getType(getProject()))))
+                return DataType.POSITION.getType(getProject());
+            if ((left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.NUMBER.getType(getProject()))))
+                return DataType.POSITION.getType(getProject());
+            if (left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.POSITION.getType(getProject())))
+                return DataType.POSITION.getType(getProject());
+            if (left.isAssignable(DataType.ORIENTATION.getType(getProject())) && right.isAssignable(DataType.ORIENTATION.getType(getProject())))
+                return DataType.ORIENTATION.getType(getProject());
         }
         if (sign == BACKSLASH) {
-            if (left.isAssignable(type.getPosition()) && right.isAssignable(type.getNumber()))
-                return type.getPosition();
+            if (left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.NUMBER.getType(getProject())))
+                return DataType.POSITION.getType(getProject());
         }
         if (sign == PLUS) {
-            if (left.isAssignable(type.getPosition()) && right.isAssignable(type.getPosition()))
-                return type.getPosition();
-            if (left.isAssignable(type.getString()) && right.isAssignable(type.getString()))
-                return type.getString();
+            if (left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.POSITION.getType(getProject())))
+                return DataType.POSITION.getType(getProject());
+            if (left.isAssignable(DataType.STRING.getType(getProject())) && right.isAssignable(DataType.STRING.getType(getProject())))
+                return DataType.STRING.getType(getProject());
         }
         if (sign == MINUS) {
-            if (left.isAssignable(type.getPosition()) && right.isAssignable(type.getPosition()))
-                return type.getPosition();
+            if (left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.POSITION.getType(getProject())))
+                return DataType.POSITION.getType(getProject());
         }
         return null;
     }

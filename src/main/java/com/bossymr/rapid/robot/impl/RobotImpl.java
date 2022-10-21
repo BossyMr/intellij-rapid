@@ -5,6 +5,7 @@ import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotTopic;
 import com.bossymr.rapid.robot.network.controller.Controller;
 import com.bossymr.rapid.robot.state.RobotState;
+import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
@@ -58,12 +59,10 @@ public class RobotImpl implements Robot {
         return path;
     }
 
-    @Override
     public @NotNull Set<RapidSymbol> getSymbols() {
         return Set.copyOf(symbols.values());
     }
 
-    @Override
     public @NotNull Optional<RapidSymbol> getSymbol(@NotNull String name) {
         return symbols.containsKey(name) ? Optional.of(symbols.get(name)) : Optional.empty();
     }
@@ -77,6 +76,14 @@ public class RobotImpl implements Robot {
     public void reconnect() throws IOException {
         LOG.debug("Reconnecting to robot: " + path);
         controller = RobotUtil.getController(path);
+        build();
+        getTopic().onRefresh(this);
+    }
+
+    @Override
+    public void reconnect(@NotNull Credentials credentials) throws IOException {
+        LOG.debug("Reconnecting to robot: " + path);
+        controller = RobotUtil.getController(path, credentials);
         build();
         getTopic().onRefresh(this);
     }

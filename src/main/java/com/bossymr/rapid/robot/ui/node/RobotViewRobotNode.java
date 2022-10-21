@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.ui.node;
 
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.robot.Robot;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.openapi.project.Project;
@@ -18,7 +19,7 @@ public class RobotViewRobotNode extends RobotViewNode<Robot> {
 
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
-        return Collections.singletonList(new RobotViewDirectoryNode(getProject(), getValue().getSymbols()));
+        return Collections.singletonList(new RobotViewDirectoryNode(getProject(), RobotService.getInstance(getProject()).getSymbols()));
     }
 
     @Override
