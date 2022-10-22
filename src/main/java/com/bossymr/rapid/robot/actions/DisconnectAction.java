@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.actions;
 
+import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -12,6 +13,7 @@ import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.Optional;
 
 public class DisconnectAction extends AnAction {
 
@@ -42,8 +44,17 @@ public class DisconnectAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         Project project = e.getProject();
-        e.getPresentation().setEnabled(project != null &&
-                RobotService.getInstance(project).getRobot().isPresent() &&
-                RobotService.getInstance(project).getRobot().orElseThrow().isConnected());
+        if (project != null) {
+            RobotService service = RobotService.getInstance(project);
+            Optional<Robot> optional = service.getRobot();
+            if (optional.isPresent()) {
+                Robot robot = optional.get();
+                if (robot.isConnected()) {
+                    e.getPresentation().setEnabled(true);
+                    return;
+                }
+            }
+        }
+        e.getPresentation().setEnabled(false);
     }
 }

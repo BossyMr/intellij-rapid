@@ -7,7 +7,6 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
-import com.intellij.pom.Navigatable;
 import com.intellij.ui.PopupHandler;
 import com.intellij.ui.ScrollPaneFactory;
 import com.intellij.ui.TreeSpeedSearch;
@@ -15,16 +14,12 @@ import com.intellij.ui.tree.AsyncTreeModel;
 import com.intellij.ui.tree.StructureTreeModel;
 import com.intellij.util.EditSourceOnDoubleClickHandler;
 import com.intellij.util.EditSourceOnEnterKeyHandler;
-import com.intellij.util.ui.tree.TreeUtil;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
-import javax.swing.tree.TreePath;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
 
 public class RobotToolWindow implements Disposable {
 
@@ -63,7 +58,7 @@ public class RobotToolWindow implements Disposable {
         EditSourceOnEnterKeyHandler.install(tree);
         new TreeSpeedSearch(tree);
 
-        project.getMessageBus().connect().subscribe(RobotTopic.ROBOT_TOPIC, new RobotTopic() {
+        RobotTopic.subscribe(project, new RobotTopic() {
             @Override
             public void onConnect(@NotNull Robot robot) {
                 model.invalidate();
@@ -95,25 +90,10 @@ public class RobotToolWindow implements Disposable {
         return actionToolbar.getComponent();
     }
 
-    private final class RobotViewPanel extends JPanel implements DataProvider {
+    private static final class RobotViewPanel extends JPanel implements DataProvider {
 
         @Override
         public @Nullable Object getData(@NotNull @NonNls String dataId) {
-            if (CommonDataKeys.NAVIGATABLE_ARRAY.is(dataId)) {
-                TreePath[] paths = tree.getSelectionPaths();
-                if (paths == null) return null;
-                List<Navigatable> objects = new ArrayList<>();
-                for (TreePath path : paths) {
-                    Object node = path.getLastPathComponent();
-                    Object object = TreeUtil.getUserObject(node);
-                    if (object instanceof Navigatable navigatable) {
-                        objects.add(navigatable);
-                    } else if (node instanceof Navigatable navigatable) {
-                        objects.add(navigatable);
-                    }
-                }
-                return objects.isEmpty() ? null : objects.toArray(Navigatable.EMPTY_NAVIGATABLE_ARRAY);
-            }
             return null;
         }
     }

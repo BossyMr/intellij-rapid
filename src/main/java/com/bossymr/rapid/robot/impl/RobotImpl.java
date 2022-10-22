@@ -89,7 +89,7 @@ public class RobotImpl implements Robot {
     }
 
     private @NotNull RobotTopic getTopic() {
-        return project.getMessageBus().syncPublisher(RobotTopic.ROBOT_TOPIC);
+        return RobotTopic.publish(project);
     }
 
     @Override

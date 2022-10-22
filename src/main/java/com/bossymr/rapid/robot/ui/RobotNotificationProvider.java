@@ -17,6 +17,11 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.function.Function;
 
+/**
+ * A {@code RobotNotificationProvider} is an implementation of {@link EditorNotificationProvider}. The implementation
+ * shows a warning on an editor window if a robot is not connected or persisted, as references to installed symbols
+ * would not be available; which would most likely result in unresolved symbols.
+ */
 public class RobotNotificationProvider implements EditorNotificationProvider, DumbAware {
 
     @Override

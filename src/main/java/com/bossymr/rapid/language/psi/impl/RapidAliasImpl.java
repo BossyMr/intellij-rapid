@@ -1,11 +1,11 @@
 package com.bossymr.rapid.language.psi.impl;
 
+import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.stubs.RapidAliasStub;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.NamedStub;
 import com.intellij.util.IncorrectOperationException;
-import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.stubs.RapidAliasStub;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,7 +28,6 @@ public class RapidAliasImpl extends RapidStubElement<RapidAliasStub> implements 
 
     @Override
     public @Nullable RapidType getType() {
-        // TODO: 2022-07-15 Access through getGreenStub()
         return getTypeElement() != null ? getTypeElement().getType() : null;
     }
 
