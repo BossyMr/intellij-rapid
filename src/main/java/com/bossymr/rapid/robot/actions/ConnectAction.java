@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.actions;
 
-import com.bossymr.rapid.robot.ui.RobotConnect;
+import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
@@ -11,6 +11,6 @@ public class ConnectAction extends AnAction {
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         assert project != null;
-        new RobotConnect(project).show();
+        new RobotConnectView(project).show();
     }
 }

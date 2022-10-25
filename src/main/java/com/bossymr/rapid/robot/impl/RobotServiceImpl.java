@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.RapidStructure;
 import com.bossymr.rapid.language.psi.RapidSymbol;
 import com.bossymr.rapid.language.psi.RapidType;
@@ -8,13 +9,17 @@ import com.bossymr.rapid.language.psi.light.LightComponent;
 import com.bossymr.rapid.language.psi.light.LightRecord;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.RobotTopic;
 import com.bossymr.rapid.robot.network.controller.Controller;
 import com.intellij.credentialStore.Credentials;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.search.FileTypeIndex;
+import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -110,12 +115,13 @@ public class RobotServiceImpl implements RobotService {
     @Override
     public void delete() throws IOException {
         if (state.robotState != null) {
-            LOG.info("Disconnecting from persisted robot: " + state.robotState.path);
+            LOG.info("Removing persisted robot: " + state.robotState.path);
             Robot robot = getRobot().orElseThrow();
+            ApplicationManager.getApplication().invokeLater(() -> WriteAction.run(() -> PsiDocumentManager.getInstance(project).reparseFiles(FileTypeIndex.getFiles(RapidFileType.INSTANCE, GlobalSearchScope.projectScope(project)), true)));
+            project.getMessageBus().syncPublisher(RobotService.TOPIC).onRemoval(robot);
             if (robot.isConnected()) robot.disconnect();
             this.state.robotState = null;
             this.robot = null;
-            getTopic().onDisconnect();
         } else {
             LOG.warn("Attempting to delete non-existent robot");
         }
@@ -127,12 +133,9 @@ public class RobotServiceImpl implements RobotService {
         Controller controller = RobotUtil.getController(path, credentials);
         state.robotState = RobotUtil.getState(controller);
         robot = new RobotImpl(project, state.robotState, controller);
-        getTopic().onConnect(robot);
+        ApplicationManager.getApplication().invokeLater(() -> WriteAction.run(() -> PsiDocumentManager.getInstance(project).reparseFiles(FileTypeIndex.getFiles(RapidFileType.INSTANCE, GlobalSearchScope.projectScope(project)), true)));
+        project.getMessageBus().syncPublisher(RobotService.TOPIC).onConnect(robot);
         return robot;
-    }
-
-    private @NotNull RobotTopic getTopic() {
-        return RobotTopic.publish(project);
     }
 
     @Override

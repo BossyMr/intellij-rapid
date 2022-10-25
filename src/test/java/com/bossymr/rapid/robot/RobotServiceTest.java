@@ -12,7 +12,7 @@ public class RobotServiceTest extends BasePlatformTestCase {
         RobotService service = RobotService.getInstance(getProject());
         assertTrue(service.getRobot().isEmpty());
         Robot robot = service.connect(URI.create("http://localhost:80/"), new Credentials("Default User", "robotics"));
-        assertNotEmpty(robot.getSymbols());
+        assertNotEmpty(service.getSymbols());
         assertTrue(service.getRobot().isPresent());
         assertEquals(robot, service.getRobot().orElseThrow());
     }

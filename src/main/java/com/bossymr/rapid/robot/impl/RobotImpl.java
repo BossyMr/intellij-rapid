@@ -1,13 +1,19 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.RapidSymbol;
 import com.bossymr.rapid.robot.Robot;
-import com.bossymr.rapid.robot.RobotTopic;
+import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.network.controller.Controller;
 import com.bossymr.rapid.robot.state.RobotState;
 import com.intellij.credentialStore.Credentials;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.search.FileTypeIndex;
+import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,7 +45,7 @@ public class RobotImpl implements Robot {
         this.controller = controller;
         this.symbols = RobotUtil.getSymbols(project, robotState);
         this.name = robotState.name;
-        getTopic().onRefresh(this);
+        project.getMessageBus().syncPublisher(RobotService.TOPIC).onRefresh(this);
     }
 
     private void build() throws IOException {
@@ -77,7 +83,8 @@ public class RobotImpl implements Robot {
         LOG.debug("Reconnecting to robot: " + path);
         controller = RobotUtil.getController(path);
         build();
-        getTopic().onRefresh(this);
+        ApplicationManager.getApplication().invokeLater(() -> WriteAction.run(() -> PsiDocumentManager.getInstance(project).reparseFiles(FileTypeIndex.getFiles(RapidFileType.INSTANCE, GlobalSearchScope.projectScope(project)), true)));
+        project.getMessageBus().syncPublisher(RobotService.TOPIC).onRefresh(this);
     }
 
     @Override
@@ -85,16 +92,14 @@ public class RobotImpl implements Robot {
         LOG.debug("Reconnecting to robot: " + path);
         controller = RobotUtil.getController(path, credentials);
         build();
-        getTopic().onRefresh(this);
-    }
-
-    private @NotNull RobotTopic getTopic() {
-        return RobotTopic.publish(project);
+        ApplicationManager.getApplication().invokeLater(() -> WriteAction.run(() -> PsiDocumentManager.getInstance(project).reparseFiles(FileTypeIndex.getFiles(RapidFileType.INSTANCE, GlobalSearchScope.projectScope(project)), true)));
+        project.getMessageBus().syncPublisher(RobotService.TOPIC).onRefresh(this);
     }
 
     @Override
     public void disconnect() {
         LOG.debug("Disconnect to robot: " + path);
         controller = null;
+        project.getMessageBus().syncPublisher(RobotService.TOPIC).onDisconnect(this);
     }
 }

@@ -26,6 +26,12 @@ intellij {
     plugins.set(listOf("com.intellij.java"))
 }
 
+configurations {
+    all {
+        resolutionStrategy.sortArtifacts(ResolutionStrategy.SortOrder.DEPENDENCY_FIRST)
+    }
+}
+
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
     implementation("io.github.rburgst:okhttp-digest:2.7")

@@ -7,6 +7,7 @@ import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.project.Project;
+import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -19,6 +20,9 @@ import java.util.Set;
  * {@link Robot} instance.
  */
 public interface RobotService extends PersistentStateComponent<RobotService.State>, Disposable {
+
+    @Topic.ProjectLevel
+    Topic<RobotEventListener> TOPIC = Topic.create("Robot Refresh", RobotEventListener.class);
 
     /**
      * Returns the instance of this service which is associated with the specified project.
@@ -69,8 +73,7 @@ public interface RobotService extends PersistentStateComponent<RobotService.Stat
      *
      * @param path the path to the remote robot.
      * @param credentials the credentials to authenticate to the robot.
-     * @throws IOException if a robot could not be found at the specified path or if the supplied credentials were
-     * invalid.
+     * @throws IOException if an I/O error occurs.
      */
     @NotNull Robot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException;
 

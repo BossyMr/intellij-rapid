@@ -1,7 +1,8 @@
 package com.bossymr.rapid.robot.ui;
 
 import com.bossymr.rapid.robot.Robot;
-import com.bossymr.rapid.robot.RobotTopic;
+import com.bossymr.rapid.robot.RobotEventListener;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.*;
@@ -58,7 +59,7 @@ public class RobotToolWindow implements Disposable {
         EditSourceOnEnterKeyHandler.install(tree);
         new TreeSpeedSearch(tree);
 
-        RobotTopic.subscribe(project, new RobotTopic() {
+        project.getMessageBus().connect().subscribe(RobotService.TOPIC, new RobotEventListener() {
             @Override
             public void onConnect(@NotNull Robot robot) {
                 model.invalidate();
@@ -70,7 +71,7 @@ public class RobotToolWindow implements Disposable {
             }
 
             @Override
-            public void onDisconnect() {
+            public void onRemoval(@NotNull Robot robot) {
                 model.invalidate();
             }
         });

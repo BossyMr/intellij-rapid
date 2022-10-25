@@ -31,6 +31,9 @@
 
         <editorNotificationProvider implementation="com.bossymr.rapid.robot.ui.RobotNotificationProvider"/>
 
+        <notificationGroup displayType="STICKY_BALLOON" id="Robot Connect Error" bundle="messages.RapidBundle"
+                           key="notification.group.robot.connect.error"/>
+
         <!-- Syntax Highlighter -->
 
         <lang.syntaxHighlighter language="RAPID"
