@@ -50,9 +50,14 @@ public abstract class NetworkCallback<T> implements Callback {
     public void onFailure(@NotNull Response response) throws IOException {
         ResponseBody responseBody = response.body();
         String contentType = response.header("Content-Type");
-        if(contentType == null || responseBody == null) throw new ResponseStatusException(response.code());
+        if (contentType == null || responseBody == null) {
+            response.close();
+            completableFuture.completeExceptionally(new ResponseStatusException(response.code()));
+            return;
+        }
         switch (contentType) {
-            case "text/plain" -> completableFuture.completeExceptionally(new ResponseStatusException(responseBody.string(), response.code()));
+            case "text/plain" ->
+                    completableFuture.completeExceptionally(new ResponseStatusException(responseBody.string(), response.code()));
             case "application/xhtml+xml" -> {
                 Model model = factory.getModel(responseBody);
                 int responseCode = model.entity().getProperty("code")

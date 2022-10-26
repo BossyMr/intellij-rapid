@@ -57,7 +57,7 @@
 
     <actions>
         <action id="com.bossymr.rapid.robot.actions.ConnectAction" icon="AllIcons.General.Add"
-                class="com.bossymr.rapid.robot.actions.ConnectAction" text="Connect"/>
+                class="com.bossymr.rapid.robot.actions.ConnectAction" text="Connect..."/>
 
         <action id="com.bossymr.rapid.robot.actions.RefreshAction" icon="AllIcons.Actions.Refresh"
                 class="com.bossymr.rapid.robot.actions.RefreshAction" text="Refresh">

@@ -12,9 +12,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public class RobotViewListNode extends RobotViewNode<Project> {
+public class RobotViewRobotListNode extends RobotViewNode<Project> {
 
-    public RobotViewListNode(@NotNull Project project) {
+    public RobotViewRobotListNode(@NotNull Project project) {
         super(project, project);
     }
 

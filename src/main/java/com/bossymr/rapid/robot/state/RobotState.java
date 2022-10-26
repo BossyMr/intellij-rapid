@@ -3,8 +3,9 @@ package com.bossymr.rapid.robot.state;
 import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Tag("robot")
 public class RobotState {
@@ -15,6 +16,6 @@ public class RobotState {
     @Attribute("path")
     public String path;
 
-    public List<SymbolState> symbols = new ArrayList<>();
+    public Map<String, List<SymbolState>> symbols = new HashMap<>();
 
 }

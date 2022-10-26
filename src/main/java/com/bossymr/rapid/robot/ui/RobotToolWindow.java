@@ -1,15 +1,18 @@
 package com.bossymr.rapid.robot.ui;
 
+import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.*;
+import com.intellij.openapi.actionSystem.ex.ActionUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import com.intellij.ui.PopupHandler;
 import com.intellij.ui.ScrollPaneFactory;
+import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.ui.TreeSpeedSearch;
 import com.intellij.ui.tree.AsyncTreeModel;
 import com.intellij.ui.tree.StructureTreeModel;
@@ -58,6 +61,14 @@ public class RobotToolWindow implements Disposable {
         EditSourceOnDoubleClickHandler.install(tree);
         EditSourceOnEnterKeyHandler.install(tree);
         new TreeSpeedSearch(tree);
+
+        AnAction action = ActionManager.getInstance().getAction("com.bossymr.rapid.robot.actions.ConnectAction");
+
+        tree.getEmptyText().setText(RapidBundle.message("robot.tool.window.no.content"));
+        tree.getEmptyText().appendLine("");
+        tree.getEmptyText().appendText(RapidBundle.message("robot.tool.window.no.content.action"),
+                SimpleTextAttributes.LINK_PLAIN_ATTRIBUTES,
+                e -> ActionUtil.invokeAction(action, panel, "RobotToolWindow", null, null));
 
         project.getMessageBus().connect().subscribe(RobotService.TOPIC, new RobotEventListener() {
             @Override

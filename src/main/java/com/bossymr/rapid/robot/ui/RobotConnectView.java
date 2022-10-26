@@ -72,7 +72,8 @@ public class RobotConnectView extends DialogWrapper {
                     } catch (IOException e) {
                         NotificationGroupManager.getInstance()
                                 .getNotificationGroup("Robot Connect Error")
-                                .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)
+                                .createNotification(RapidBundle.message("notification.title.robot.connect.error", path.toString()), NotificationType.ERROR)
+                                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
                                 .addAction(new NotificationAction(RapidBundle.message("notification.action.retry.connect")) {
                                     @Override
                                     public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {

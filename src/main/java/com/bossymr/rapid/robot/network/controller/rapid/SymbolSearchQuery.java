@@ -58,6 +58,11 @@ public class SymbolSearchQuery {
             return this;
         }
 
+        public @NotNull Builder setName(@NotNull String name) {
+            arguments.put("regexp", name);
+            return this;
+        }
+
         public @NotNull SymbolSearchQuery build() {
             return new SymbolSearchQuery(arguments);
         }

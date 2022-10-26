@@ -70,7 +70,22 @@ public class RobotImpl implements Robot {
     }
 
     public @NotNull Optional<RapidSymbol> getSymbol(@NotNull String name) {
-        return symbols.containsKey(name) ? Optional.of(symbols.get(name)) : Optional.empty();
+        if (symbols.containsKey(name)) {
+            return Optional.of(symbols.get(name));
+        }
+        if (isConnected()) {
+            try {
+                Optional<RapidSymbol> optional = RobotUtil.getSymbol(project, controller, name);
+                if (optional.isPresent()) {
+                    RapidSymbol symbol = optional.get();
+                    symbols.put(symbol.getName(), symbol);
+                }
+                return optional;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return Optional.empty();
     }
 
     @Override

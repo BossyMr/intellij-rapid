@@ -1,11 +1,11 @@
 package com.bossymr.rapid.language.psi.impl;
 
+import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.stubs.RapidComponentStub;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.NamedStub;
 import com.intellij.util.IncorrectOperationException;
-import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.stubs.RapidComponentStub;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,6 +28,7 @@ public class RapidComponentImpl extends RapidStubElement<RapidComponentStub> imp
 
     @Override
     public @Nullable RapidType getType() {
+        // TODO: 2022-10-26 Get type using stub
         return getTypeElement().getType();
     }
 

@@ -39,6 +39,7 @@ public class RapidParameterImpl extends RapidStubElement<RapidParameterStub> imp
 
     @Override
     public @Nullable RapidType getType() {
+        // TODO: 2022-10-26 Get type using stub
         RapidType type = getTypeElement() != null ? getTypeElement().getType() : null;
         if (type != null) {
             int dimensions = findChildrenByType(RapidTokenTypes.ASTERISK).size();

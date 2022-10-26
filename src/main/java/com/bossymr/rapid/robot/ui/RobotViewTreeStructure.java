@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.ui;
 
-import com.bossymr.rapid.robot.ui.node.RobotViewListNode;
+import com.bossymr.rapid.robot.ui.node.RobotViewRobotListNode;
 import com.intellij.ide.projectView.TreeStructureProvider;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.ide.util.treeView.AbstractTreeStructureBase;
@@ -25,7 +25,7 @@ public class RobotViewTreeStructure extends AbstractTreeStructureBase {
     }
 
     protected AbstractTreeNode<?> createRoot(@NotNull Project project) {
-        return new RobotViewListNode(project);
+        return new RobotViewRobotListNode(project);
     }
 
     @Override

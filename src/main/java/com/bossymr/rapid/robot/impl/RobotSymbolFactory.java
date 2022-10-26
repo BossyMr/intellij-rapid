@@ -16,13 +16,26 @@ public final class RobotSymbolFactory {
     private final Map<String, Map<String, SymbolState>> states;
     private final Map<String, RapidSymbol> symbols;
 
-    public RobotSymbolFactory(@NotNull Project project, @NotNull RobotState robotState) {
+    public RobotSymbolFactory(@NotNull Project project, @NotNull Set<SymbolState> symbolStates) {
         this.project = project;
         this.states = new HashMap<>();
-        for (SymbolState symbol : robotState.symbols) {
+        for (SymbolState symbol : symbolStates) {
             String address = symbol.path.substring(0, symbol.path.lastIndexOf('/'));
             states.computeIfAbsent(address, (value) -> new HashMap<>());
             states.get(address).put(symbol.path.substring(symbol.path.lastIndexOf('/') + 1), symbol);
+        }
+        this.symbols = new HashMap<>();
+    }
+
+    public RobotSymbolFactory(@NotNull Project project, @NotNull RobotState robotState) {
+        this.project = project;
+        this.states = new HashMap<>();
+        for (List<SymbolState> symbols : robotState.symbols.values()) {
+            for (SymbolState symbol : symbols) {
+                String address = symbol.path.substring(0, symbol.path.lastIndexOf('/'));
+                states.computeIfAbsent(address, (value) -> new HashMap<>());
+                states.get(address).put(symbol.path.substring(symbol.path.lastIndexOf('/') + 1), symbol);
+            }
         }
         this.symbols = new HashMap<>();
     }

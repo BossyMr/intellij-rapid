@@ -50,6 +50,7 @@ public class RapidRoutineImpl extends RapidStubElement<RapidRoutineStub> impleme
 
     @Override
     public @Nullable RapidType getType() {
+        // TODO: 2022-10-26 Get type using stub
         return getTypeElement() != null ? getTypeElement().getType() : null;
     }
 

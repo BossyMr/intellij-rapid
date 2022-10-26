@@ -66,6 +66,7 @@ public class RapidFieldImpl extends RapidStubElement<RapidFieldStub> implements 
 
     @Override
     public @Nullable RapidType getType() {
+        // TODO: 2022-10-26 Get type using stub
         RapidType type = getTypeElement() != null ? getTypeElement().getType() : null;
         if (type != null) {
             RapidArray array = findChildByType(RapidElementTypes.ARRAY);

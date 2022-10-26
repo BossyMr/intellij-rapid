@@ -28,6 +28,7 @@ public class RapidAliasImpl extends RapidStubElement<RapidAliasStub> implements 
 
     @Override
     public @Nullable RapidType getType() {
+        // TODO: 2022-10-26 Get type using stub
         return getTypeElement() != null ? getTypeElement().getType() : null;
     }
 
