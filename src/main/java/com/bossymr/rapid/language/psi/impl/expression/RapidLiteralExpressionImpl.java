@@ -1,8 +1,11 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
-import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.RapidElementTypes;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidLiteralExpression;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
-import com.bossymr.rapid.robot.RobotService;
+import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.util.PsiLiteralUtil;
 import org.jetbrains.annotations.NotNull;
@@ -18,13 +21,13 @@ public class RapidLiteralExpressionImpl extends RapidExpressionElement implement
     public @Nullable RapidType getType() {
         IElementType elementType = getNode().getFirstChildNode().getElementType();
         if (RapidTokenTypes.TRUE_KEYWORD.equals(elementType) || RapidTokenTypes.FALSE_KEYWORD.equals(elementType)) {
-            return RobotService.DataType.BOOLEAN.getType(getProject());
+            return RapidType.BOOLEAN;
         }
         if (RapidTokenTypes.INTEGER_LITERAL.equals(elementType)) {
-            return RobotService.DataType.NUMBER.getType(getProject());
+            return RapidType.NUMBER;
         }
         if (RapidTokenTypes.STRING_LITERAL.equals(elementType)) {
-            return RobotService.DataType.STRING.getType(getProject());
+            return RapidType.STRING;
         }
         return null;
     }

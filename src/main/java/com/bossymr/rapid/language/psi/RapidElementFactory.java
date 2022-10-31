@@ -1,6 +1,8 @@
 package com.bossymr.rapid.language.psi;
 
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.symbol.RapidField;
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFileFactory;
@@ -33,7 +35,7 @@ public final class RapidElementFactory {
      */
     public @NotNull PsiElement createIdentifier(@NotNull String name) {
         RapidFile file = createDummyFile("MODULE " + name + " ENDMODULE");
-        PsiElement element = file.getModules().get(0).getIdentifyingElement();
+        PsiElement element = ((PhysicalModule) file.getModules().get(0)).getIdentifyingElement();
         if (element != null) return element;
         throw new IllegalArgumentException("Invalid name '" + name + "'");
     }

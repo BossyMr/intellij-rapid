@@ -1,5 +1,7 @@
 package com.bossymr.rapid.language.psi;
 
+import com.bossymr.rapid.language.symbol.RapidField;
+
 import java.util.List;
 
 public interface RapidFieldList extends RapidElement {

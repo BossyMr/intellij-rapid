@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.symbol.*;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
@@ -65,7 +66,7 @@ public class RapidReferenceExpressionImpl extends RapidExpressionElement impleme
 
     @Override
     public ResolveResult @NotNull [] multiResolve(boolean incompleteCode) {
-        return RapidResolveUtil.resolve(getCanonicalText(), this);
+        return ResolveUtil.getSymbols(this, getCanonicalText());
     }
 
     @Override

@@ -1,8 +1,10 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
-import com.intellij.psi.util.PsiTreeUtil;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.symbol.RapidVariable;
+import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,11 +23,11 @@ public class RapidAggregateExpressionImpl extends RapidExpressionElement impleme
 
     @Override
     public @Nullable RapidType getType() {
-        if(getTreeParent() instanceof RapidVariable) {
+        if (getTreeParent() instanceof RapidVariable) {
             return ((RapidVariable) getTreeParent()).getType();
-        } else if(getTreeParent() instanceof RapidAggregateExpression) {
+        } else if (getTreeParent() instanceof RapidAggregateExpression) {
             return ((RapidAggregateExpression) getTreeParent()).getType();
-        } else if(getTreeParent() instanceof RapidAssignmentStatement) {
+        } else if (getTreeParent() instanceof RapidAssignmentStatement) {
             RapidExpression left = ((RapidAssignmentStatement) getTreeParent()).getLeft();
             return left != null ? left.getType() : null;
         }

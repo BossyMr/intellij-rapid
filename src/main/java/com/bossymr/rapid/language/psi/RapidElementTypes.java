@@ -3,6 +3,8 @@ package com.bossymr.rapid.language.psi;
 import com.bossymr.rapid.language.psi.impl.*;
 import com.bossymr.rapid.language.psi.impl.expression.*;
 import com.bossymr.rapid.language.psi.impl.statement.*;
+import com.bossymr.rapid.language.symbol.physical.PhysicalLabelStatement;
+import com.bossymr.rapid.language.symbol.physical.PhysicalTargetVariable;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
 
@@ -51,8 +53,8 @@ public interface RapidElementTypes {
     RapidElementType RETURN_STATEMENT = new RapidElementType("RETURN_STATEMENT", RapidReturnStatementImpl::new);
     RapidElementType TRY_NEXT_STATEMENT = new RapidElementType("TRY_NEXT_STATEMENT", RapidTryNextStatementImpl::new);
 
-    RapidElementType LABEL_STATEMENT = new RapidElementType("LABEL_STATEMENT", RapidLabelStatementImpl::new);
-    RapidElementType TARGET_VARIABLE = new RapidElementType("TARGET_VARIABLE", RapidTargetVariableImpl::new);
+    RapidElementType LABEL_STATEMENT = new RapidElementType("LABEL_STATEMENT", PhysicalLabelStatement::new);
+    RapidElementType TARGET_VARIABLE = new RapidElementType("TARGET_VARIABLE", PhysicalTargetVariable::new);
 
     RapidElementType IF_STATEMENT = new RapidElementType("IF_STATEMENT", RapidIfStatementImpl::new);
     RapidElementType FOR_STATEMENT = new RapidElementType("FOR_STATEMENT", RapidForStatementImpl::new);

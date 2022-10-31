@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
-import com.bossymr.rapid.robot.RobotService.DataType;
+import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
@@ -40,35 +40,35 @@ public class RapidBinaryExpressionImpl extends RapidExpressionElement implements
         IElementType sign = getSign().getNode().getElementType();
         if (left == null || right == null) return null;
         if (List.of(OR_KEYWORD, XOR_KEYWORD, AND_KEYWORD, LT, LE, EQ, GT, GE, LTGT).contains(sign)) {
-            return DataType.BOOLEAN.getType(getProject());
+            return RapidType.BOOLEAN;
         }
-        if (left.isAssignable(DataType.NUMBER.getType(getProject())) && right.isAssignable(DataType.NUMBER.getType(getProject())))
-            return DataType.NUMBER.getType(getProject());
-        if (left.isAssignable(DataType.DOUBLE.getType(getProject())) && right.isAssignable(DataType.DOUBLE.getType(getProject())))
-            return DataType.DOUBLE.getType(getProject());
+        if (left.isAssignable(RapidType.NUMBER) && right.isAssignable(RapidType.NUMBER))
+            return RapidType.NUMBER;
+        if (left.isAssignable(RapidType.DOUBLE) && right.isAssignable(RapidType.DOUBLE))
+            return RapidType.DOUBLE;
         if (sign == ASTERISK) {
-            if ((left.isAssignable(DataType.NUMBER.getType(getProject())) && right.isAssignable(DataType.POSITION.getType(getProject()))))
-                return DataType.POSITION.getType(getProject());
-            if ((left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.NUMBER.getType(getProject()))))
-                return DataType.POSITION.getType(getProject());
-            if (left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.POSITION.getType(getProject())))
-                return DataType.POSITION.getType(getProject());
-            if (left.isAssignable(DataType.ORIENTATION.getType(getProject())) && right.isAssignable(DataType.ORIENTATION.getType(getProject())))
-                return DataType.ORIENTATION.getType(getProject());
+            if ((left.isAssignable(RapidType.NUMBER) && right.isAssignable(RapidType.POSITION)))
+                return RapidType.POSITION;
+            if ((left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.NUMBER)))
+                return RapidType.POSITION;
+            if (left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.POSITION))
+                return RapidType.POSITION;
+            if (left.isAssignable(RapidType.ORIENTATION) && right.isAssignable(RapidType.ORIENTATION))
+                return RapidType.ORIENTATION;
         }
         if (sign == BACKSLASH) {
-            if (left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.NUMBER.getType(getProject())))
-                return DataType.POSITION.getType(getProject());
+            if (left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.NUMBER))
+                return RapidType.POSITION;
         }
         if (sign == PLUS) {
-            if (left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.POSITION.getType(getProject())))
-                return DataType.POSITION.getType(getProject());
-            if (left.isAssignable(DataType.STRING.getType(getProject())) && right.isAssignable(DataType.STRING.getType(getProject())))
-                return DataType.STRING.getType(getProject());
+            if (left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.POSITION))
+                return RapidType.POSITION;
+            if (left.isAssignable(RapidType.STRING) && right.isAssignable(RapidType.STRING))
+                return RapidType.STRING;
         }
         if (sign == MINUS) {
-            if (left.isAssignable(DataType.POSITION.getType(getProject())) && right.isAssignable(DataType.POSITION.getType(getProject())))
-                return DataType.POSITION.getType(getProject());
+            if (left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.POSITION))
+                return RapidType.POSITION;
         }
         return null;
     }

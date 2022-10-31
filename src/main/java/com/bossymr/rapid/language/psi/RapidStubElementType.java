@@ -48,6 +48,6 @@ public abstract class RapidStubElementType<StubT extends StubElement<?>, PsiT ex
 
     @Override
     public @NotNull String getExternalId() {
-        return "rapid." + super.toString();
+        return "rapid." + this;
     }
 }

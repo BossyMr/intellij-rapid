@@ -1,44 +1,44 @@
 package com.bossymr.rapid.language.psi;
 
-import com.bossymr.rapid.language.psi.impl.statement.RapidTryNextStatementImpl;
+import com.bossymr.rapid.language.symbol.*;
 import com.intellij.psi.PsiElementVisitor;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class RapidElementVisitor extends PsiElementVisitor {
 
-    public void visitModule(@NotNull RapidModule module) {
+    public <T extends RapidModule & RapidElement> void visitModule(@NotNull T module) {
         visitSymbol(module);
     }
 
-    public void visitAlias(@NotNull RapidAlias alias) {
+    public <T extends RapidAlias & RapidElement> void visitAlias(@NotNull T alias) {
         visitStructure(alias);
     }
 
-    public void visitRecord(@NotNull RapidRecord record) {
+    public <T extends RapidRecord & RapidElement> void visitRecord(@NotNull T record) {
         visitStructure(record);
     }
 
-    public void visitComponent(@NotNull RapidComponent component) {
+    public <T extends RapidComponent & RapidElement> void visitComponent(@NotNull T component) {
         visitSymbol(component);
     }
 
-    public void visitStructure(@NotNull RapidStructure structure) {
+    public <T extends RapidStructure & RapidElement> void visitStructure(@NotNull T structure) {
         visitSymbol(structure);
     }
 
-    public void visitField(@NotNull RapidField field) {
+    public <T extends RapidField & RapidElement> void visitField(@NotNull T field) {
         visitVariable(field);
     }
 
-    public void visitVariable(@NotNull RapidVariable variable) {
+    public <T extends RapidVariable & RapidElement> void visitVariable(@NotNull T variable) {
         visitSymbol(variable);
     }
 
-    public void visitRoutine(@NotNull RapidRoutine routine) {
+    public <T extends RapidRoutine & RapidElement> void visitRoutine(@NotNull T routine) {
         visitSymbol(routine);
     }
 
-    public void visitSymbol(@NotNull RapidSymbol symbol) {
+    public <T extends RapidSymbol & RapidElement> void visitSymbol(@NotNull T symbol) {
         visitElement(symbol);
     }
 
@@ -62,11 +62,11 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
         visitElement(fieldList);
     }
 
-    public void visitParameterGroup(@NotNull RapidParameterGroup parameterGroup) {
+    public <T extends RapidParameterGroup & RapidElement> void visitParameterGroup(@NotNull T parameterGroup) {
         visitElement(parameterGroup);
     }
 
-    public void visitParameter(@NotNull RapidParameter parameter) {
+    public <T extends RapidParameter & RapidElement> void visitParameter(@NotNull T parameter) {
         visitVariable(parameter);
     }
 
@@ -166,11 +166,11 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
         visitStatement(statement);
     }
 
-    public void visitTryNextStatement(@NotNull RapidTryNextStatementImpl statement) {
+    public void visitTryNextStatement(@NotNull RapidTryNextStatement statement) {
         visitStatement(statement);
     }
 
-    public void visitTargetVariable(@NotNull RapidTargetVariable variable) {
+    public <T extends RapidTargetVariable & RapidElement> void visitTargetVariable(@NotNull T variable) {
         visitVariable(variable);
     }
 

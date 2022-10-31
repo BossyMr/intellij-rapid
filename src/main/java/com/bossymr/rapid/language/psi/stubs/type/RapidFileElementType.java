@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.psi.stubs.type;
 import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.stubs.RapidFileStub;
-import com.bossymr.rapid.language.psi.stubs.impl.RapidFileStubImpl;
 import com.bossymr.rapid.language.psi.stubs.node.RapidFileElement;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
@@ -15,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class RapidFileElementType extends ILightStubFileElementType<RapidFileStub> {
-    public static final int STUB_VERSION = 0;
+    public static final int STUB_VERSION = 1;
 
     public RapidFileElementType() {
         super("rapid.FILE", RapidLanguage.INSTANCE);
@@ -34,7 +33,7 @@ public class RapidFileElementType extends ILightStubFileElementType<RapidFileStu
                 if (!(file instanceof RapidFile)) {
                     return super.createStubForFile(file, tree);
                 }
-                return new RapidFileStubImpl((RapidFile) file);
+                return new RapidFileStub((RapidFile) file);
             }
         };
     }

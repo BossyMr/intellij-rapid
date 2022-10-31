@@ -74,14 +74,14 @@ tasks {
     }
 
     generateLexer {
-        source.set("src/main/java/com/bossymr/rapid/language/grammar/Rapid.flex")
+        source.set("src/main/grammar/Rapid.flex")
         targetDir.set("src/main/gen/com/bossymr/rapid/language/lexer")
         targetClass.set("_RapidLexer")
         purgeOldFiles.set(true)
     }
 
     generateParser {
-        source.set("src/main/java/com/bossymr/rapid/language/grammar/Rapid.bnf")
+        source.set("src/main/grammar/Rapid.bnf")
         targetRoot.set("src/main/gen")
         pathToParser.set("/com/bossymr/rapid/language/parser/RapidParser.java")
         pathToPsiRoot.set("/com/bossymr/rapid/language/psi")

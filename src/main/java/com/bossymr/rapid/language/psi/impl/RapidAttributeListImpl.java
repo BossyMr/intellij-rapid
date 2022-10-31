@@ -1,19 +1,18 @@
 package com.bossymr.rapid.language.psi.impl;
 
+import com.bossymr.rapid.language.psi.RapidAttributeList;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.stubs.RapidAttributeListStub;
+import com.bossymr.rapid.language.symbol.RapidModule.Attribute;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.CompositeElement;
 import com.intellij.psi.impl.source.tree.Factory;
 import com.intellij.psi.impl.source.tree.LeafElement;
-import com.intellij.psi.tree.TokenSet;
-import com.bossymr.rapid.language.psi.ModuleAttribute;
-import com.bossymr.rapid.language.psi.RapidAttributeList;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidStubElementTypes;
-import com.bossymr.rapid.language.psi.stubs.RapidAttributeListStub;
+import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.EnumSet;
 import java.util.Set;
 
 public class RapidAttributeListImpl extends RapidStubElement<RapidAttributeListStub> implements RapidAttributeList {
@@ -32,34 +31,28 @@ public class RapidAttributeListImpl extends RapidStubElement<RapidAttributeListS
     }
 
     @Override
-    public @NotNull Set<ModuleAttribute> getAttributes() {
+    public @NotNull Set<Attribute> getAttributes() {
         RapidAttributeListStub stub = getGreenStub();
         if (stub != null) {
             return stub.getAttributes();
         } else {
-            Set<ModuleAttribute> attributes = EnumSet.noneOf(ModuleAttribute.class);
-            for (ASTNode child : getNode().getChildren(TokenSet.ANY)) {
-                ModuleAttribute attribute = ModuleAttribute.getAttribute(child.getElementType());
-                if (attribute != null) {
-                    attributes.add(attribute);
-                }
-            }
-            return attributes;
+            return Attribute.getAttributes(this);
         }
     }
 
     @Override
-    public boolean hasAttribute(ModuleAttribute attribute) {
+    public boolean hasAttribute(@NotNull Attribute attribute) {
         RapidAttributeListStub stub = getGreenStub();
         if (stub != null) {
             return stub.hasAttribute(attribute);
         } else {
-            return findChildByType(attribute.getElementType()) != null;
+            IElementType elementType = attribute.getElementType();
+            return findChildByType(elementType) != null;
         }
     }
 
     @Override
-    public void setAttribute(ModuleAttribute attribute, boolean value) throws UnsupportedOperationException {
+    public void setAttribute(@NotNull Attribute attribute, boolean value) throws UnsupportedOperationException {
         CompositeElement node = (CompositeElement) getNode();
         if (value) {
             LeafElement element = Factory.createSingleLeafElement(attribute.getElementType(), attribute.getText(), null, getManager());

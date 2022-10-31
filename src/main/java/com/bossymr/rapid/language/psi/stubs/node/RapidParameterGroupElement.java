@@ -1,12 +1,12 @@
 package com.bossymr.rapid.language.psi.stubs.node;
 
+import com.bossymr.rapid.language.psi.RapidElementTypes;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.impl.source.tree.CompositeElement;
 import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.psi.tree.TokenSet;
-import com.bossymr.rapid.language.psi.RapidElementTypes;
-import com.bossymr.rapid.language.psi.RapidTokenTypes;
-import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

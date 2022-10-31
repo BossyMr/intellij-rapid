@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.psi;
 
+import com.bossymr.rapid.language.symbol.RapidModule;
 import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 

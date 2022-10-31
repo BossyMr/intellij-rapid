@@ -1,11 +1,12 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.intellij.lang.ASTNode;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidParameterGroup;
 import com.bossymr.rapid.language.psi.RapidParameterList;
 import com.bossymr.rapid.language.psi.RapidStubElementTypes;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterListStub;
+import com.bossymr.rapid.language.symbol.RapidParameterGroup;
+import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -26,7 +27,7 @@ public class RapidParameterListImpl extends RapidStubElement<RapidParameterListS
 
     @Override
     public @NotNull List<RapidParameterGroup> getParameters() {
-        return List.of(getStubOrPsiChildren(RapidStubElementTypes.PARAMETER_GROUP, new RapidParameterGroup[0]));
+        return List.of(getStubOrPsiChildren(RapidStubElementTypes.PARAMETER_GROUP, new PhysicalParameterGroup[0]));
     }
 
     @Override

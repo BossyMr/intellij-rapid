@@ -1,48 +1,67 @@
 package com.bossymr.rapid.language.psi.stubs;
 
-import com.intellij.psi.stubs.NamedStub;
-import com.bossymr.rapid.language.psi.RapidField;
-import com.bossymr.rapid.language.psi.RapidField.Attribute;
+import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.symbol.RapidField.Attribute;
+import com.bossymr.rapid.language.symbol.Visibility;
+import com.bossymr.rapid.language.symbol.physical.PhysicalField;
+import com.intellij.psi.stubs.NamedStubBase;
+import com.intellij.psi.stubs.StubElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Represents a field stub.
- */
-public interface RapidFieldStub extends NamedStub<RapidField> {
+import java.util.Objects;
 
-    /**
-     * Returns the attribute of this field.
-     *
-     * @return the attribute of this field.
-     */
-    @NotNull Attribute getAttribute();
+public class RapidFieldStub extends NamedStubBase<PhysicalField> {
 
-    /**
-     * Checks if the field is local.
-     *
-     * @return if the field is local.
-     */
-    boolean isLocal();
+    private final Visibility visibility;
+    private final Attribute attribute;
+    private final String type, initializer;
+    private final int dimensions;
 
-    /**
-     * Checks if the field is task.
-     *
-     * @return if the field is task.
-     */
-    boolean isTask();
+    public RapidFieldStub(@Nullable StubElement<?> parent, @NotNull Visibility visibility, @NotNull Attribute attribute, @Nullable String name, @Nullable String type, int dimensions, @Nullable String initializer) {
+        super(parent, RapidStubElementTypes.FIELD, name);
+        this.visibility = visibility;
+        this.attribute = attribute;
+        this.type = type;
+        this.dimensions = dimensions;
+        this.initializer = initializer;
+    }
 
-    /**
-     * Returns the type of this field.
-     *
-     * @return the type of this field.
-     */
-    @Nullable String getType();
+    public @NotNull Attribute getAttribute() {
+        return attribute;
+    }
 
-    /**
-     * Returns the initializer of this field.
-     *
-     * @return the initializer of this field, or {@code null} if the field has no initializer.
-     */
-    @Nullable String getInitializer();
+    public @NotNull Visibility getVisibility() {
+        return visibility;
+    }
+
+    public @Nullable String getType() {
+        return type;
+    }
+
+    public int getDimensions() {
+        return dimensions;
+    }
+
+    public @Nullable String getInitializer() {
+        return initializer;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RapidFieldStub stub = (RapidFieldStub) o;
+        return getDimensions() == stub.getDimensions() && getVisibility() == stub.getVisibility() && getAttribute() == stub.getAttribute() && Objects.equals(getName(), stub.getName()) && Objects.equals(getType(), stub.getType()) && Objects.equals(getInitializer(), stub.getInitializer());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getVisibility(), getAttribute(), getName(), getType(), getInitializer(), getDimensions());
+    }
+
+    @Override
+    public String toString() {
+        return "RapidFieldStub:" + getName();
+    }
 }

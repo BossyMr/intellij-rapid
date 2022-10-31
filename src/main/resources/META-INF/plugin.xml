@@ -15,74 +15,23 @@
         <fileType name="RAPID" language="RAPID" extensions="mod"
                   implementationClass="com.bossymr.rapid.language.RapidFileType" fieldName="INSTANCE"/>
 
-        <!-- PsiElement  -->
-
-        <projectService serviceImplementation="com.bossymr.rapid.language.psi.RapidElementFactory"/>
-
-        <!-- Robot -->
-
-        <projectService serviceInterface="com.bossymr.rapid.robot.RobotService"
-                        serviceImplementation="com.bossymr.rapid.robot.impl.RobotServiceImpl"/>
-
-        <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
-
-        <toolWindow id="Robot" anchor="right" icon="com.bossymr.rapid.RapidIcons.ROBOT_TOOL_WINDOW"
-                    factoryClass="com.bossymr.rapid.robot.ui.RobotToolWindowFactory"/>
-
-        <editorNotificationProvider implementation="com.bossymr.rapid.robot.ui.RobotNotificationProvider"/>
-
-        <notificationGroup displayType="STICKY_BALLOON" id="Robot Connect Error" bundle="messages.RapidBundle"
-                           key="notification.group.robot.connect.error"/>
-
-        <!-- Syntax Highlighter -->
-
-        <lang.syntaxHighlighter language="RAPID"
-                                implementationClass="com.bossymr.rapid.ide.highlight.RapidHighlighter"/>
-
-        <!-- Color Settings -->
-
-        <colorSettingsPage implementation="com.bossymr.rapid.ide.highlight.RapidColorSettingsPage"/>
-
         <!-- Language -->
 
         <lang.parserDefinition language="RAPID"
                                implementationClass="com.bossymr.rapid.language.parser.RapidParserDefinition"/>
 
+        <!-- PsiElement  -->
+
+        <projectService serviceImplementation="com.bossymr.rapid.language.psi.RapidElementFactory"/>
+
         <stubElementTypeHolder externalIdPrefix="rapid." class="com.bossymr.rapid.language.psi.RapidStubElementTypes"/>
 
-        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidSymbolNameIndex"/>
-
-        <annotator language="RAPID" implementationClass="com.bossymr.rapid.ide.insight.RapidAnnotator"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidAliasIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidComponentIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidFieldIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidModuleIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidRecordIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidRoutineIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex"/>
     </extensions>
-
-    <actions>
-        <action id="com.bossymr.rapid.robot.actions.ConnectAction" icon="AllIcons.General.Add"
-                class="com.bossymr.rapid.robot.actions.ConnectAction" text="Connect..."/>
-
-        <action id="com.bossymr.rapid.robot.actions.RefreshAction" icon="AllIcons.Actions.Refresh"
-                class="com.bossymr.rapid.robot.actions.RefreshAction" text="Refresh">
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl F5"/>
-        </action>
-
-        <action id="com.bossymr.rapid.robot.actions.DisconnectAction" icon="AllIcons.Actions.Suspend"
-                class="com.bossymr.rapid.robot.actions.DisconnectAction" text="Disconnect">
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl F2"/>
-        </action>
-
-        <action id="com.bossymr.rapid.robot.actions.DeleteAction" class="com.bossymr.rapid.robot.actions.DeleteAction"
-                text="Delete">
-            <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
-        </action>
-
-        <group id="RobotContextMenu">
-            <reference id="com.bossymr.rapid.robot.actions.ConnectAction"/>
-            <reference id="com.bossymr.rapid.robot.actions.DeleteAction"/>
-        </group>
-
-        <group id="RobotToolWindow">
-            <reference id="com.bossymr.rapid.robot.actions.ConnectAction"/>
-            <reference id="com.bossymr.rapid.robot.actions.RefreshAction"/>
-            <reference id="com.bossymr.rapid.robot.actions.DisconnectAction"/>
-        </group>
-    </actions>
 </idea-plugin>

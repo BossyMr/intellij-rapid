@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.psi;
 
+import com.bossymr.rapid.language.symbol.RapidParameterGroup;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
