@@ -36,7 +36,6 @@ public class PhysicalParameterGroup extends RapidStubElement<RapidParameterGroup
         } else {
             return findChildByType(RapidTokenTypes.BACKSLASH) != null;
         }
-
     }
 
     @Override

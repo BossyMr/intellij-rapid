@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.symbol.RapidLabelStatement;
+import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.intellij.navigation.ColoredItemPresentation;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.editor.colors.TextAttributesKey;
@@ -55,8 +56,7 @@ public class PhysicalLabelStatement extends RapidCompositeElement implements Rap
 
     @Override
     public String getName() {
-        PsiElement identifier = getNameIdentifier();
-        return identifier != null ? identifier.getText() : null;
+        return SymbolUtil.getName(this);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.psi.stubs;
 
 import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTypeStub;
 import com.bossymr.rapid.language.symbol.RapidRoutine.Attribute;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
@@ -11,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class RapidRoutineStub extends NamedStubBase<PhysicalRoutine> {
+public class RapidRoutineStub extends NamedStubBase<PhysicalRoutine> implements RapidVisibleStub, RapidTypeStub {
 
     private final Visibility visibility;
     private final Attribute attribute;
@@ -24,6 +25,7 @@ public class RapidRoutineStub extends NamedStubBase<PhysicalRoutine> {
         this.type = type;
     }
 
+    @Override
     public @NotNull Visibility getVisibility() {
         return visibility;
     }
@@ -32,6 +34,7 @@ public class RapidRoutineStub extends NamedStubBase<PhysicalRoutine> {
         return attribute;
     }
 
+    @Override
     public String getType() {
         return type;
     }

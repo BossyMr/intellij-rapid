@@ -42,8 +42,12 @@ public class RapidType {
     }
 
     public static boolean isAssignable(@NotNull RapidType left, @NotNull RapidType right) {
-        // TODO: 2022-10-28 Implement "isAssignable(RapidType, RapidType)"
-        return false;
+        if (left.equals(right)) return true;
+        if (left.getDimensions() != right.getDimensions()) return false;
+        RapidStructure leftStructure = left.getTargetStructure();
+        RapidStructure rightStructure = right.getTargetStructure();
+        if (leftStructure == null || rightStructure == null) return false;
+        return Objects.equals(leftStructure, rightStructure);
     }
 
     public boolean isAssignable(@NotNull RapidType type) {
@@ -59,6 +63,21 @@ public class RapidType {
     }
 
     public @Nullable RapidStructure getStructure() {
+        return structure;
+    }
+
+    public @Nullable RapidStructure getTargetStructure() {
+        RapidStructure structure = getStructure();
+        while (structure instanceof RapidAlias || structure instanceof RapidAtomic) {
+            RapidType type;
+            if (structure instanceof RapidAlias alias) {
+                type = alias.getType();
+            } else {
+                RapidAtomic atomic = (RapidAtomic) structure;
+                type = atomic.getType();
+            }
+            structure = type != null ? type.getStructure() : null;
+        }
         return structure;
     }
 

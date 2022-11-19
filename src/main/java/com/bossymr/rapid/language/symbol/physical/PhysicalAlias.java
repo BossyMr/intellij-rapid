@@ -1,17 +1,25 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidAliasStub;
-import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.symbol.RapidAlias;
+import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.symbol.SymbolUtil;
+import com.bossymr.rapid.language.symbol.Visibility;
 import com.intellij.lang.ASTNode;
+import com.intellij.navigation.ColoredItemPresentation;
+import com.intellij.navigation.ItemPresentation;
+import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements RapidAlias, PhysicalSymbol {
@@ -31,42 +39,17 @@ public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements R
 
     @Override
     public @NotNull Visibility getVisibility() {
-        RapidAliasStub stub = getGreenStub();
-        if (stub != null) {
-            return stub.getVisibility();
-        } else {
-            return Visibility.getVisibility(this);
-        }
-    }
-
-    public @Nullable RapidTypeElement getTypeElement() {
-        return findChildByType(RapidElementTypes.TYPE_ELEMENT);
+        return SymbolUtil.getVisibility(this);
     }
 
     @Override
     public @Nullable RapidType getType() {
-        return CachedValuesManager.getProjectPsiDependentCache(this, (ignored) -> {
-            RapidAliasStub stub = getGreenStub();
-            if (stub != null) {
-                String typeName = stub.getType();
-                if (typeName == null) return null;
-                RapidStructure structure = ResolveUtil.getStructure(this, typeName);
-                return new RapidType(structure, typeName);
-            } else {
-                return getTypeElement() != null ? getTypeElement().getType() : null;
-            }
-        });
+        return SymbolUtil.getType(this);
     }
 
     @Override
-    public String getName() {
-        RapidAliasStub stub = getGreenStub();
-        if (stub != null) {
-            return stub.getName();
-        } else {
-            PsiElement identifier = getNameIdentifier();
-            return identifier != null ? identifier.getText() : null;
-        }
+    public @Nullable String getName() {
+        return SymbolUtil.getName(this);
     }
 
     @Override
@@ -78,5 +61,25 @@ public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements R
     public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
         RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
         return this;
+    }
+
+    @Override
+    public @Nullable ItemPresentation getPresentation() {
+        return new ColoredItemPresentation() {
+            @Override
+            public @Nullable TextAttributesKey getTextAttributesKey() {
+                return null;
+            }
+
+            @Override
+            public @Nullable String getPresentableText() {
+                return getName();
+            }
+
+            @Override
+            public @Nullable Icon getIcon(boolean unused) {
+                return null;
+            }
+        };
     }
 }

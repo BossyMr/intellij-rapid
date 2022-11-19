@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.psi;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Reprsents a connect statement.
+ * Represents a connect statement.
  */
 public interface RapidConnectStatement extends RapidStatement {
 

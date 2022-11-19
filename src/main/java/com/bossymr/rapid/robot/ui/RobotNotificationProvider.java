@@ -27,8 +27,8 @@ public class RobotNotificationProvider implements EditorNotificationProvider, Du
     @Override
     public @NotNull Function<? super @NotNull FileEditor, ? extends @Nullable JComponent> collectNotificationData(@NotNull Project project, @NotNull VirtualFile file) {
         return fileEditor -> {
-            RobotService service = RobotService.getInstance(project);
-            if (service.getRobot().isEmpty()) {
+            RobotService service = RobotService.getInstance();
+            if (service.getRobot() == null) {
                 if (file.getFileType().equals(RapidFileType.INSTANCE)) {
                     return new ConnectRobotNotificationPanel(fileEditor);
                 }

@@ -1,15 +1,17 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.robot.network.Controller;
 import com.intellij.credentialStore.Credentials;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Set;
 
 /**
- * A {@code Robot} represents a robot, and can be directly connected to the remote robot or provide a previously
- * persisted state. A {@code Robot} is represented by a {@link com.bossymr.rapid.robot.state.RobotState}, which is
- * persisted by {@link RobotService}.
+ * A {@code Robot} is a persisted robot, which might be connected.
  */
 public interface Robot {
 
@@ -20,43 +22,50 @@ public interface Robot {
      */
     @NotNull String getName();
 
-    /**
-     * Returns the path to this robot.
-     *
-     * @return the path to this robot.
-     */
     @NotNull URI getPath();
 
     /**
-     * Checks if this robot is currently connected to the remote robot.
+     * Returns all symbols on this persisted robot.
      *
-     * @return if this robot is currently connected to the remote robot.
+     * @return all symbols on this robot.
      */
-    boolean isConnected();
+    @NotNull Set<VirtualSymbol> getSymbols();
 
     /**
-     * Reconnects to this robot, using persisted credentials. This will reconstruct all persisted state for this robot.
-     * If no persisted credentials are found for this robot, empty credentials are used instead.
+     * Returns a symbol on this persisted robot, with the specified name. If the symbol was not found and if the robot
+     * is currently connected, it will attempt to retrieve the symbol.
+     *
+     * @param name the name of the symbol.
+     * @return a symbol on this robot with the specified name, or {@code null} if a symbol with the specified name was
+     * not found.
+     * @throws IOException if an I/O error occurs.
+     */
+    @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException;
+
+    /**
+     * Returns the controller to the connected robot, if the robot is currently connected.
+     *
+     * @return the controller to the connected robot, or {@code null} if the robot is not currently connected.
+     */
+    @Nullable Controller getController();
+
+    /**
+     * Reconnects to this robot, using the persisted path and credentials.
      *
      * @throws IOException if an I/O error occurs.
      */
     void reconnect() throws IOException;
 
     /**
-     * Reconnects to this robot, using the supplied credentials. This will reconstruct all persisted state for this
-     * robot.
+     * Reconnects to this robot, using the specified credentials.
      *
      * @param credentials the credentials to authenticate with.
      * @throws IOException if an I/O error occurs.
      */
     void reconnect(@NotNull Credentials credentials) throws IOException;
 
-    /**
-     * Disconnects from this robot. This will close all active subscriptions for this robot, but will not impact the
-     * persisted state for this robot.
-     *
-     * @throws IOException if an I/O error occurs.
-     */
     void disconnect() throws IOException;
+
+    boolean isConnected();
 
 }

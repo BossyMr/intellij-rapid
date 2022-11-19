@@ -33,5 +33,52 @@
         <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidRecordIndex"/>
         <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidRoutineIndex"/>
         <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex"/>
+
+        <!-- Robot -->
+
+        <applicationService serviceInterface="com.bossymr.rapid.robot.RobotService"
+                            serviceImplementation="com.bossymr.rapid.robot.impl.RobotServiceImpl"/>
+
+        <toolWindow id="Robot" anchor="right" icon="com.bossymr.rapid.RapidIcons.ROBOT_TOOL_WINDOW"
+                    factoryClass="com.bossymr.rapid.robot.ui.RobotToolWindowFactory"/>
+
+        <editorNotificationProvider implementation="com.bossymr.rapid.robot.ui.RobotNotificationProvider"/>
+
+        <notificationGroup displayType="STICKY_BALLOON" id="Robot Connect Error" bundle="messages.RapidBundle"
+                           key="notification.group.robot.connect.error"/>
+
+        <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
     </extensions>
+
+
+    <actions>
+        <action id="com.bossymr.rapid.robot.actions.ConnectAction" icon="AllIcons.General.Add"
+                class="com.bossymr.rapid.robot.actions.ConnectAction" text="Connect..."/>
+
+        <action id="com.bossymr.rapid.robot.actions.RefreshAction" icon="AllIcons.Actions.Refresh"
+                class="com.bossymr.rapid.robot.actions.RefreshAction" text="Refresh">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl F5"/>
+        </action>
+
+        <action id="com.bossymr.rapid.robot.actions.DisconnectAction" icon="AllIcons.Actions.Suspend"
+                class="com.bossymr.rapid.robot.actions.DisconnectAction" text="Disconnect">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl F2"/>
+        </action>
+
+        <action id="com.bossymr.rapid.robot.actions.DeleteAction" class="com.bossymr.rapid.robot.actions.DeleteAction"
+                text="Delete">
+            <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
+        </action>
+
+        <group id="RobotContextMenu">
+            <reference id="com.bossymr.rapid.robot.actions.ConnectAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.DeleteAction"/>
+        </group>
+
+        <group id="RobotToolWindow">
+            <reference id="com.bossymr.rapid.robot.actions.ConnectAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.RefreshAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.DisconnectAction"/>
+        </group>
+    </actions>
 </idea-plugin>

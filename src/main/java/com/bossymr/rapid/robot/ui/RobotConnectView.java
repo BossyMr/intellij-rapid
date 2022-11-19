@@ -2,12 +2,9 @@ package com.bossymr.rapid.robot.ui;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.RobotService;
+import com.bossymr.rapid.robot.impl.RobotUtil;
+import com.bossymr.rapid.robot.network.Controller;
 import com.intellij.credentialStore.Credentials;
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationAction;
-import com.intellij.notification.NotificationGroupManager;
-import com.intellij.notification.NotificationType;
-import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.progress.EmptyProgressIndicator;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
@@ -35,7 +32,7 @@ public class RobotConnectView extends DialogWrapper {
     private ComboBox<AuthenticationType> authenticationComboBox;
     private JPanel hostPanel;
 
-    public RobotConnectView(@NotNull Project project) {
+    public RobotConnectView(@Nullable Project project) {
         super(project, false);
         this.project = project;
         setTitle(RapidBundle.message("robot.connect.dialog.title"));
@@ -45,6 +42,20 @@ public class RobotConnectView extends DialogWrapper {
         authenticationComboBox.addItemListener(e -> checkAuthenticationType((AuthenticationType) e.getItem()));
 
         init();
+    }
+
+    public RobotConnectView(@Nullable Project project, @NotNull URI path) {
+        this(project);
+        Credentials credentials = RobotUtil.getCredentials(path);
+        if (credentials != null) {
+            if (!(credentials.equals(Controller.DEFAULT_CREDENTIALS))) {
+                authenticationComboBox.setItem(AuthenticationType.PASSWORD);
+                userField.setText(credentials.getUserName());
+                passwordField.setText(credentials.getPasswordAsString());
+            }
+        }
+        hostField.setText(path.getHost());
+        portField.setText(String.valueOf(path.getPort()));
     }
 
     private void checkAuthenticationType(@NotNull AuthenticationType authenticationType) {
@@ -58,38 +69,18 @@ public class RobotConnectView extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
-        ProgressManager.getInstance().runProcessWithProgressAsynchronously(new Task.Backgroundable(project, "Connecting") {
+        ProgressManager.getInstance().runProcessWithProgressAsynchronously(new Task.Backgroundable(project, RapidBundle.message("robot.connect.progress.indicator.title", hostField.getText())) {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
-                RobotService service = RobotService.getInstance(project);
+                RobotService service = RobotService.getInstance();
+                URI path = URI.create("http" + "://" + hostField.getText() + ":" + portField.getText());
+                Credentials credentials = authenticationComboBox.getItem().equals(AuthenticationType.DEFAULT) ?
+                        Controller.DEFAULT_CREDENTIALS :
+                        new Credentials(userField.getText(), passwordField.getPassword());
                 try {
-                    URI path = URI.create("http" + "://" + hostField.getText() + ":" + portField.getText());
-                    Credentials credentials = authenticationComboBox.getItem().equals(AuthenticationType.DEFAULT) ?
-                            new Credentials("Default User", "robotics") :
-                            new Credentials(userField.getText(), passwordField.getPassword());
-                    try {
-                        service.connect(path, credentials);
-                    } catch (IOException e) {
-                        NotificationGroupManager.getInstance()
-                                .getNotificationGroup("Robot Connect Error")
-                                .createNotification(RapidBundle.message("notification.title.robot.connect.error", path.toString()), NotificationType.ERROR)
-                                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
-                                .addAction(new NotificationAction(RapidBundle.message("notification.action.retry.connect")) {
-                                    @Override
-                                    public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-                                        RobotConnectView connectView = new RobotConnectView(project);
-                                        connectView.portField.setText(portField.getText());
-                                        connectView.hostField.setText(hostField.getText());
-                                        connectView.authenticationComboBox.setItem(authenticationComboBox.getItem());
-                                        connectView.userField.setText(userField.getText());
-                                        connectView.show();
-                                        notification.expire();
-                                    }
-                                })
-                                .notify(project);
-                    }
-                } catch (IllegalArgumentException e) {
-                    throw new RuntimeException(e);
+                    service.connect(path, credentials);
+                } catch (IOException e) {
+                    RobotUtil.showNotification(path);
                 }
             }
         }, new EmptyProgressIndicator());

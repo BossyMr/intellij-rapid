@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.ui;
 
 import com.bossymr.rapid.RapidBundle;
+import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotService;
@@ -72,17 +73,22 @@ public class RobotToolWindow implements Disposable {
 
         project.getMessageBus().connect().subscribe(RobotService.TOPIC, new RobotEventListener() {
             @Override
-            public void onConnect(@NotNull Robot robot) {
+            public void afterConnect(@NotNull Robot robot) {
                 model.invalidate();
             }
 
             @Override
-            public void onRefresh(@NotNull Robot robot) {
+            public void afterRefresh(@NotNull Robot robot) {
                 model.invalidate();
             }
 
             @Override
-            public void onRemoval(@NotNull Robot robot) {
+            public void afterRemoval() {
+                model.invalidate();
+            }
+
+            @Override
+            public void onSymbol(@NotNull Robot robot, @NotNull VirtualSymbol symbol) {
                 model.invalidate();
             }
         });

@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.psi.stubs;
 
 import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTypeStub;
 import com.bossymr.rapid.language.symbol.physical.PhysicalComponent;
 import com.intellij.psi.stubs.NamedStubBase;
 import com.intellij.psi.stubs.StubElement;
@@ -8,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class RapidComponentStub extends NamedStubBase<PhysicalComponent> {
+public class RapidComponentStub extends NamedStubBase<PhysicalComponent> implements RapidTypeStub {
 
     private final String type;
 
@@ -17,13 +18,9 @@ public class RapidComponentStub extends NamedStubBase<PhysicalComponent> {
         this.type = type;
     }
 
+    @Override
     public @Nullable String getType() {
         return type;
-    }
-
-    @Override
-    public @Nullable String getName() {
-        return super.getName();
     }
 
     @Override

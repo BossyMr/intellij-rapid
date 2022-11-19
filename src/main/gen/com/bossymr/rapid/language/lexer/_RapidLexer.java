@@ -18,7 +18,7 @@ class _RapidLexer implements FlexLexer {
   /** This character denotes the end of file */
   public static final int YYEOF = -1;
 
-  /** initial size of the lookahead buffer */
+  /** initial degree of the lookahead buffer */
   private static final int ZZ_BUFFERSIZE = 16384;
 
   /** lexical states */
@@ -37,7 +37,7 @@ class _RapidLexer implements FlexLexer {
   /** 
    * Translates characters to character classes
    * Chosen bits are [12, 6, 3]
-   * Total runtime size is 18560 bytes
+   * Total runtime degree is 18560 bytes
    */
   public static int ZZ_CMAP(int ch) {
     return ZZ_CMAP_A[(ZZ_CMAP_Y[(ZZ_CMAP_Z[ch>>9]<<6)|((ch>>3)&0x3f)]<<3)|(ch&0x7)];

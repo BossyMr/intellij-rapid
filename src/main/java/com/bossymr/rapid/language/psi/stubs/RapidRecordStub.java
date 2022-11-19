@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class RapidRecordStub extends NamedStubBase<PhysicalRecord> {
+public class RapidRecordStub extends NamedStubBase<PhysicalRecord> implements RapidVisibleStub {
 
     private final Visibility visibility;
 
@@ -19,6 +19,7 @@ public class RapidRecordStub extends NamedStubBase<PhysicalRecord> {
         this.visibility = visibility;
     }
 
+    @Override
     public @NotNull Visibility getVisibility() {
         return visibility;
     }

@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.psi.stubs;
 
 import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTypeStub;
 import com.bossymr.rapid.language.symbol.RapidField.Attribute;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
@@ -11,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class RapidFieldStub extends NamedStubBase<PhysicalField> {
+public class RapidFieldStub extends NamedStubBase<PhysicalField> implements RapidVisibleStub, RapidTypeStub {
 
     private final Visibility visibility;
     private final Attribute attribute;
@@ -31,14 +32,17 @@ public class RapidFieldStub extends NamedStubBase<PhysicalField> {
         return attribute;
     }
 
+    @Override
     public @NotNull Visibility getVisibility() {
         return visibility;
     }
 
+    @Override
     public @Nullable String getType() {
         return type;
     }
 
+    @Override
     public int getDimensions() {
         return dimensions;
     }

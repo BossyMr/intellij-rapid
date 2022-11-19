@@ -1,13 +1,15 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.RapidAttributeList;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidModuleStub;
 import com.bossymr.rapid.language.symbol.*;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.tree.TokenSet;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -56,26 +58,22 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
 
     @Override
     public @NotNull List<RapidStructure> getStructures() {
-        PsiElement[] elements = getStubOrPsiChildren(TokenSet.create(RapidElementTypes.ALIAS, RapidElementTypes.RECORD), new PsiElement[0]);
-        return Arrays.stream(elements)
-                .map(symbol -> (RapidStructure) symbol)
+        RapidRecord[] records = getStubOrPsiChildren(RapidStubElementTypes.RECORD, new PhysicalRecord[0]);
+        RapidAlias[] aliases = getStubOrPsiChildren(RapidStubElementTypes.ALIAS, new PhysicalAlias[0]);
+        return Stream.of(records, aliases)
+                .flatMap(Arrays::stream)
                 .toList();
+
     }
 
     @Override
     public @NotNull List<RapidField> getFields() {
-        PsiElement[] elements = getStubOrPsiChildren(TokenSet.create(RapidElementTypes.FIELD), new PsiElement[0]);
-        return Arrays.stream(elements)
-                .map(symbol -> (RapidField) symbol)
-                .toList();
+        return List.of(getStubOrPsiChildren(RapidStubElementTypes.FIELD, new PhysicalField[0]));
     }
 
     @Override
     public @NotNull List<RapidRoutine> getRoutines() {
-        PsiElement[] elements = getStubOrPsiChildren(TokenSet.create(RapidElementTypes.ROUTINE), new PsiElement[0]);
-        return Arrays.stream(elements)
-                .map(symbol -> (RapidRoutine) symbol)
-                .toList();
+        return List.of(getStubOrPsiChildren(RapidStubElementTypes.ROUTINE, new PhysicalRoutine[0]));
     }
 
     @Override
@@ -85,13 +83,7 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
 
     @Override
     public String getName() {
-        RapidModuleStub stub = getGreenStub();
-        if (stub != null) {
-            return stub.getName();
-        } else {
-            PsiElement identifier = getNameIdentifier();
-            return identifier != null ? identifier.getText() : null;
-        }
+        return SymbolUtil.getName(this);
     }
 
     @Override

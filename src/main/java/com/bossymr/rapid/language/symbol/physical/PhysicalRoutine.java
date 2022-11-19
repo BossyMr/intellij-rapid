@@ -6,12 +6,15 @@ import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidRoutineStub;
 import com.bossymr.rapid.language.symbol.*;
 import com.intellij.lang.ASTNode;
+import com.intellij.navigation.ColoredItemPresentation;
+import com.intellij.navigation.ItemPresentation;
+import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.List;
 import java.util.Objects;
 
@@ -56,17 +59,7 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
 
     @Override
     public @Nullable RapidType getType() {
-        return CachedValuesManager.getProjectPsiDependentCache(this, (ignored) -> {
-            RapidRoutineStub stub = getGreenStub();
-            if (stub != null) {
-                String typeName = stub.getType();
-                if (typeName == null) return null;
-                RapidStructure structure = ResolveUtil.getStructure(this, typeName);
-                return new RapidType(structure, typeName);
-            } else {
-                return getTypeElement() != null ? getTypeElement().getType() : null;
-            }
-        });
+        return SymbolUtil.getType(this);
     }
 
     public @Nullable RapidParameterList getParameterList() {
@@ -113,13 +106,7 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
 
     @Override
     public String getName() {
-        RapidRoutineStub stub = getGreenStub();
-        if (stub != null) {
-            return stub.getName();
-        } else {
-            PsiElement identifier = getNameIdentifier();
-            return identifier != null ? identifier.getText() : null;
-        }
+        return SymbolUtil.getName(this);
     }
 
     @Override
@@ -131,5 +118,25 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     @Override
     public String toString() {
         return "PhysicalRoutine:" + getName();
+    }
+
+    @Override
+    public @Nullable ItemPresentation getPresentation() {
+        return new ColoredItemPresentation() {
+            @Override
+            public @Nullable TextAttributesKey getTextAttributesKey() {
+                return null;
+            }
+
+            @Override
+            public @Nullable String getPresentableText() {
+                return getName();
+            }
+
+            @Override
+            public @Nullable Icon getIcon(boolean unused) {
+                return null;
+            }
+        };
     }
 }

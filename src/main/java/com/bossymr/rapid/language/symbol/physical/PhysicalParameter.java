@@ -5,16 +5,18 @@ import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterStub;
 import com.bossymr.rapid.language.symbol.RapidParameter;
-import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.RapidType;
-import com.bossymr.rapid.language.symbol.ResolveUtil;
+import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.intellij.lang.ASTNode;
+import com.intellij.navigation.ColoredItemPresentation;
+import com.intellij.navigation.ItemPresentation;
+import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalParameter extends RapidStubElement<RapidParameterStub> implements RapidParameter, PhysicalSymbol {
@@ -48,25 +50,8 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
 
     @Override
     public @Nullable RapidType getType() {
-        return CachedValuesManager.getProjectPsiDependentCache(this, (ignored) -> {
-            RapidParameterStub stub = getGreenStub();
-            if (stub != null) {
-                String typeName = stub.getType();
-                if (typeName == null) return null;
-                RapidStructure structure = ResolveUtil.getStructure(this, typeName);
-                return new RapidType(structure, typeName, stub.getDimensions());
-            } else {
-                RapidType type = getTypeElement() != null ? getTypeElement().getType() : null;
-                if (type != null) {
-                    RapidArray array = findChildByType(RapidElementTypes.ARRAY);
-                    int dimensions = array != null ? array.getDimensions().size() : 0;
-                    if (dimensions > 0) {
-                        type = type.createArrayType(dimensions);
-                    }
-                }
-                return type;
-            }
-        });
+        int dimensions = findChildrenByType(RapidTokenTypes.ASTERISK).size();
+        return SymbolUtil.getType(this, dimensions);
     }
 
     @Override
@@ -76,13 +61,7 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
 
     @Override
     public String getName() {
-        RapidParameterStub stub = getGreenStub();
-        if (stub != null) {
-            return stub.getName();
-        } else {
-            PsiElement identifier = getNameIdentifier();
-            return identifier != null ? identifier.getText() : null;
-        }
+        return SymbolUtil.getName(this);
     }
 
     @Override
@@ -94,5 +73,25 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
     @Override
     public String toString() {
         return "PhysicalParameter:" + getName();
+    }
+
+    @Override
+    public @Nullable ItemPresentation getPresentation() {
+        return new ColoredItemPresentation() {
+            @Override
+            public @Nullable TextAttributesKey getTextAttributesKey() {
+                return null;
+            }
+
+            @Override
+            public @Nullable String getPresentableText() {
+                return getName();
+            }
+
+            @Override
+            public @Nullable Icon getIcon(boolean unused) {
+                return null;
+            }
+        };
     }
 }

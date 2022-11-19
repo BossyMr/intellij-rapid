@@ -1,34 +1,37 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.intellij.openapi.application.ApplicationManager;
 import org.jetbrains.annotations.NotNull;
 
-public interface RobotEventListener {
+import java.util.EventListener;
 
-    /**
-     * This event is called on a robot connection.
-     *
-     * @param robot the connected robot.
-     */
-    default void onConnect(@NotNull Robot robot) {}
+public interface RobotEventListener extends EventListener {
 
-    /**
-     * This event is called on a robot disconnection.
-     *
-     * @param robot the disconnected robot.
-     */
-    default void onDisconnect(@NotNull Robot robot) {}
+    static @NotNull RobotEventListener publish() {
+        return ApplicationManager.getApplication().getMessageBus().syncPublisher(RobotService.TOPIC);
+    }
 
-    /**
-     * This event is called on a robot removal.
-     *
-     * @param robot the removed robot.
-     */
-    default void onRemoval(@NotNull Robot robot) {}
+    static void connect(@NotNull RobotEventListener eventListener) {
+        ApplicationManager.getApplication().getMessageBus().connect().subscribe(RobotService.TOPIC, eventListener);
+    }
 
-    /**
-     * This event is called on a robot reconnection.
-     *
-     * @param robot the reconnected robot.
-     */
-    default void onRefresh(@NotNull Robot robot) {}
+    default void onSymbol(@NotNull Robot robot, @NotNull VirtualSymbol symbol) {}
+
+    default void beforeConnect() {}
+
+    default void afterConnect(@NotNull Robot robot) {}
+
+    default void beforeDisconnect(@NotNull Robot robot) {}
+
+    default void afterDisconnect(@NotNull Robot robot) {}
+
+    default void beforeRemoval(@NotNull Robot robot) {}
+
+    default void afterRemoval() {}
+
+    default void beforeRefresh(@NotNull Robot robot) {}
+
+    default void afterRefresh(@NotNull Robot robot) {}
+
 }

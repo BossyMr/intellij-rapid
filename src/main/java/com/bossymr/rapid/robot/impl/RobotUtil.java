@@ -1,161 +1,101 @@
 package com.bossymr.rapid.robot.impl;
 
-import com.bossymr.rapid.language.psi.RapidSymbol;
-import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.network.controller.Controller;
-import com.bossymr.rapid.robot.network.controller.rapid.Rapid;
-import com.bossymr.rapid.robot.network.controller.rapid.SymbolEntity;
-import com.bossymr.rapid.robot.network.controller.rapid.SymbolSearchQuery;
-import com.bossymr.rapid.robot.network.controller.rapid.SymbolType;
-import com.bossymr.rapid.robot.state.RobotState;
-import com.bossymr.rapid.robot.state.SymbolState;
+import com.bossymr.rapid.RapidBundle;
+import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.robot.RobotState;
+import com.bossymr.rapid.robot.RobotState.SymbolState;
+import com.bossymr.rapid.robot.network.Controller;
+import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.credentialStore.CredentialAttributes;
-import com.intellij.credentialStore.CredentialAttributesKt;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.ide.passwordSafe.PasswordSafe;
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationAction;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.search.FileTypeIndex;
+import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+
+import static com.intellij.credentialStore.CredentialAttributesKt.generateServiceName;
 
 public final class RobotUtil {
 
     private RobotUtil() {}
 
-    public static @NotNull String getName(@NotNull Controller controller) throws IOException {
-        try {
-            return controller.getIdentity().get().name();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new IOException(e);
-        }
-    }
-
-    private static @NotNull CredentialAttributes createCredentialAttributes(@NotNull URI path) {
-        return new CredentialAttributes(CredentialAttributesKt.generateServiceName("RAPID", path.toString()));
+    private static CredentialAttributes createCredentialAttributes(String key) {
+        return new CredentialAttributes(generateServiceName("Robot", key));
     }
 
     public static @Nullable Credentials getCredentials(@NotNull URI path) {
-        CredentialAttributes credentialAttributes = createCredentialAttributes(path);
+        CredentialAttributes credentialAttributes = createCredentialAttributes(path.toString());
         return PasswordSafe.getInstance().get(credentialAttributes);
     }
 
     public static void setCredentials(@NotNull URI path, @NotNull Credentials credentials) {
-        CredentialAttributes credentialAttributes = createCredentialAttributes(path);
+        CredentialAttributes credentialAttributes = createCredentialAttributes(path.toString());
         PasswordSafe.getInstance().set(credentialAttributes, credentials);
     }
 
-    public static @NotNull Controller getController(@NotNull URI path) throws IOException {
-        Credentials credentials = getCredentials(path);
-        return createController(path, credentials != null ? credentials : new Credentials("", ""));
+    public static void reload() {
+        ApplicationManager.getApplication().invokeLater(() -> {
+            Project[] projects = ProjectManager.getInstance().getOpenProjects();
+            for (Project project : projects) {
+                Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.INSTANCE, GlobalSearchScope.projectScope(project));
+                PsiDocumentManager.getInstance(project).reparseFiles(virtualFiles, true);
+            }
+        });
     }
 
-    public static @NotNull Controller getController(@NotNull URI path, @NotNull Credentials credentials) throws IOException {
-        setCredentials(path, credentials);
-        return createController(path, credentials);
-    }
-
-    private static @NotNull Controller createController(@NotNull URI path, @NotNull Credentials credentials) throws IOException {
-        String username = credentials.getUserName() != null ? credentials.getUserName() : "";
-        String password = credentials.getPasswordAsString() != null ? credentials.getPasswordAsString() : "";
-        return Controller.connect(path, username, password);
-    }
-
-    public static @NotNull Optional<RapidSymbol> getSymbol(@NotNull Project project, @NotNull Controller controller, @NotNull String name) throws IOException {
-        RobotService.State state = RobotService.getInstance(project).getState();
-        Objects.requireNonNull(state);
-        RobotState robotState = state.robotState;
-        Objects.requireNonNull(robotState);
-        if (robotState.symbols.containsKey(name)) {
-            // Check if a null value is persisted for the requested name, indicating the symbol does not exist.
-            List<SymbolState> symbolState = robotState.symbols.get(name);
-            if (symbolState.size() > 0) throw new IllegalStateException();
-            return Optional.empty();
-        }
-
-        try {
-            SymbolEntity entity = controller.getRapid().getSymbol("RAPID/" + name).get();
-            SymbolState symbolState = RobotUtil.getSymbolState(entity);
-            Map<String, RapidSymbol> symbols = new RobotSymbolFactory(project, Set.of(symbolState)).getSymbols();
-            List<RapidSymbol> values = new ArrayList<>(symbols.values());
-            if (values.size() != 1) throw new IllegalStateException();
-            robotState.symbols.computeIfAbsent(name, (k) -> new ArrayList<>());
-            robotState.symbols.get(name).add(symbolState);
-            return Optional.of(values.get(0));
-        } catch (InterruptedException | ExecutionException e) {
-            robotState.symbols.computeIfAbsent(name, (k) -> new ArrayList<>());
-            return Optional.empty();
-        }
-    }
-
-    public static @NotNull Map<String, RapidSymbol> getSymbols(@NotNull Project project, @NotNull RobotState robotState) {
-        RobotSymbolFactory factory = new RobotSymbolFactory(project, robotState);
-        Map<String, RapidSymbol> symbols = factory.getSymbols();
-        symbols.putAll(((RobotServiceImpl) RobotService.getInstance(project)).getMap());
-        return symbols;
-    }
-
-    public static @NotNull RobotState getState(@NotNull Controller controller) throws IOException {
+    public static @NotNull RobotState getRobotState(@NotNull Controller controller) throws IOException {
         RobotState robotState = new RobotState();
-        try {
-            robotState.name = controller.getIdentity().get().name();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new IOException(e);
-        }
-        robotState.path = controller.getPath().toString();
-        robotState.symbols = getSymbols(controller.getRapid());
+        robotState.name = controller.getName();
+        robotState.path = String.valueOf(controller.getPath());
+        robotState.symbols = controller.getSymbols();
         return robotState;
     }
 
-    private static @NotNull Map<String, List<SymbolState>> getSymbols(@NotNull Rapid rapid) throws IOException {
-        SymbolSearchQuery query = SymbolSearchQuery.newBuilder()
-                .setSymbolType(SymbolType.ANY)
-                .build();
-        List<SymbolEntity> entities;
-        try {
-            entities = rapid.getSymbols(query).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new IOException(e);
-        }
-        EnumSet<SymbolType> symbolTypes = EnumSet.complementOf(EnumSet.of(SymbolType.MODULE, SymbolType.TASK, SymbolType.ANY, SymbolType.UNDEFINED));
-        List<SymbolState> symbols = entities.stream()
-                .filter(entity -> symbolTypes.contains(entity.symbolType()))
-                .map(RobotUtil::getSymbolState).toList();
-        Map<String, List<SymbolState>> states = new HashMap<>();
-        for (SymbolState symbol : symbols) {
-            states.computeIfAbsent(symbol.name, (value) -> new ArrayList<>());
-            states.get(symbol.name).add(symbol);
-        }
-        return states;
+    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolState state) {
+        RobotSymbolFactory factory = new RobotSymbolFactory(Collections.singleton(state));
+        Map<String, VirtualSymbol> symbols = factory.getSymbols();
+        return symbols.get(state.name);
     }
 
-    private static @NotNull SymbolState getSymbolState(@NotNull SymbolEntity entity) {
-        SymbolState state = new SymbolState();
-        state.name = entity.name();
-        state.path = entity.symbol();
-        state.type = entity.symbolType();
-        state.mode = entity.mode();
-        state.isRequired = entity.required();
-        state.dataType = entity.dataType();
-        if (entity.componentLength() != null) {
-            state.length = entity.componentLength();
-        } else if (entity.parameterLength() != null) {
-            state.length = entity.parameterLength();
-        } else {
-            state.length = 0;
-        }
-        if (entity.componentIndex() != null) {
-            state.index = entity.componentIndex() - 1;
-        } else if (entity.parameterIndex() != null) {
-            state.index = entity.parameterIndex() - 1;
-        } else {
-            state.index = 0;
-        }
-        state.dimension = entity.dimensions();
-        state.size = entity.length();
-        return state;
+    public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull RobotState robotState) {
+        RobotSymbolFactory factory = new RobotSymbolFactory(robotState);
+        return factory.getSymbols();
+    }
+
+    public static void showNotification(@NotNull URI path) {
+        showNotification(null, path);
+    }
+
+    public static void showNotification(@Nullable Project project, @NotNull URI path) {
+        NotificationGroupManager.getInstance()
+                .getNotificationGroup("Robot Connect Error")
+                .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)
+                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
+                .addAction(new NotificationAction(RapidBundle.message("notification.action.retry.connect")) {
+                    @Override
+                    public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+                        RobotConnectView connectView = new RobotConnectView(e.getProject(), path);
+                        connectView.show();
+                    }
+                })
+                .notify(project);
     }
 }

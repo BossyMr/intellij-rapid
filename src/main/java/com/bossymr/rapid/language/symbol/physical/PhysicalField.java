@@ -4,19 +4,25 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidFieldStub;
-import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.symbol.RapidField;
+import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.symbol.SymbolUtil;
+import com.bossymr.rapid.language.symbol.Visibility;
 import com.intellij.lang.ASTNode;
+import com.intellij.navigation.ColoredItemPresentation;
+import com.intellij.navigation.ItemPresentation;
+import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.CompositeElement;
 import com.intellij.psi.impl.source.tree.Factory;
 import com.intellij.psi.impl.source.tree.SharedImplUtil;
 import com.intellij.psi.impl.source.tree.TreeElement;
-import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.util.CharTable;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalField extends RapidStubElement<RapidFieldStub> implements RapidField, PhysicalSymbol {
@@ -100,43 +106,16 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
         }
     }
 
-    public @Nullable RapidTypeElement getTypeElement() {
-        return findChildByType(RapidElementTypes.TYPE_ELEMENT);
-    }
-
-
     @Override
     public @Nullable RapidType getType() {
-        return CachedValuesManager.getProjectPsiDependentCache(this, (ignored) -> {
-            RapidFieldStub stub = getGreenStub();
-            if (stub != null) {
-                String typeName = stub.getType();
-                if (typeName == null) return null;
-                RapidStructure structure = ResolveUtil.getStructure(this, typeName);
-                return new RapidType(structure, typeName, stub.getDimensions());
-            } else {
-                RapidType type = getTypeElement() != null ? getTypeElement().getType() : null;
-                if (type != null) {
-                    RapidArray array = findChildByType(RapidElementTypes.ARRAY);
-                    int dimensions = array != null ? array.getDimensions().size() : 0;
-                    if (dimensions > 0) {
-                        type = type.createArrayType(dimensions);
-                    }
-                }
-                return type;
-            }
-        });
+        RapidArray array = findChildByType(RapidElementTypes.ARRAY);
+        int dimensions = array != null ? array.getDimensions().size() : 0;
+        return SymbolUtil.getType(this, dimensions);
     }
 
     @Override
     public String getName() {
-        RapidFieldStub stub = getGreenStub();
-        if (stub != null) {
-            return stub.getName();
-        } else {
-            PsiElement identifier = getNameIdentifier();
-            return identifier != null ? identifier.getText() : null;
-        }
+        return SymbolUtil.getName(this);
     }
 
     @Override
@@ -153,5 +132,25 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     @Override
     public String toString() {
         return "PhysicalField:" + getName();
+    }
+
+    @Override
+    public @Nullable ItemPresentation getPresentation() {
+        return new ColoredItemPresentation() {
+            @Override
+            public @Nullable TextAttributesKey getTextAttributesKey() {
+                return null;
+            }
+
+            @Override
+            public @Nullable String getPresentableText() {
+                return getName();
+            }
+
+            @Override
+            public @Nullable Icon getIcon(boolean unused) {
+                return null;
+            }
+        };
     }
 }

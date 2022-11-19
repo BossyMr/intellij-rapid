@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class RapidLanguage extends Language {
 
-    public static RapidLanguage INSTANCE = new RapidLanguage();
+    public static final RapidLanguage INSTANCE = new RapidLanguage();
 
     private RapidLanguage() {
         super("RAPID");

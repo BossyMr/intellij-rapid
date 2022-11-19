@@ -6,9 +6,6 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
 import com.intellij.lang.LighterASTNode;
-import com.intellij.navigation.ColoredItemPresentation;
-import com.intellij.navigation.ItemPresentation;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.LightTreeUtil;
 import com.intellij.psi.tree.IElementType;
@@ -16,7 +13,6 @@ import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.List;
 
 public interface RapidRoutine extends RapidAccessibleSymbol {
@@ -32,26 +28,6 @@ public interface RapidRoutine extends RapidAccessibleSymbol {
     @NotNull List<RapidStatement> getStatements();
 
     @Nullable List<RapidStatement> getStatements(@NotNull RapidStatementList.Attribute attribute);
-
-    @Override
-    default @Nullable ItemPresentation getPresentation() {
-        return new ColoredItemPresentation() {
-            @Override
-            public @Nullable TextAttributesKey getTextAttributesKey() {
-                return null;
-            }
-
-            @Override
-            public @Nullable String getPresentableText() {
-                return getName();
-            }
-
-            @Override
-            public @Nullable Icon getIcon(boolean unused) {
-                return null;
-            }
-        };
-    }
 
     enum Attribute {
         FUNCTION, PROCEDURE, TRAP;

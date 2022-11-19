@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.psi.stubs;
 
 import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTypeStub;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalAlias;
 import com.intellij.psi.stubs.NamedStubBase;
@@ -10,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class RapidAliasStub extends NamedStubBase<PhysicalAlias> {
+public class RapidAliasStub extends NamedStubBase<PhysicalAlias> implements RapidVisibleStub, RapidTypeStub {
 
     private final Visibility visibility;
     private final String type;
@@ -21,10 +22,12 @@ public class RapidAliasStub extends NamedStubBase<PhysicalAlias> {
         this.type = type;
     }
 
+    @Override
     public @NotNull Visibility getVisibility() {
         return visibility;
     }
 
+    @Override
     public @Nullable String getType() {
         return type;
     }

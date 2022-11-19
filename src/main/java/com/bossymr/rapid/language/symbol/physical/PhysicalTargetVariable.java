@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.IncorrectOperationException;
@@ -34,8 +35,7 @@ public class PhysicalTargetVariable extends RapidCompositeElement implements Rap
 
     @Override
     public String getName() {
-        PsiElement identifier = getNameIdentifier();
-        return identifier != null ? identifier.getText() : null;
+        return SymbolUtil.getName(this);
     }
 
     @Override

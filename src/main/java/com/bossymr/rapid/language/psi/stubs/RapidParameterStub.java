@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.psi.stubs;
 
 import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTypeStub;
 import com.bossymr.rapid.language.symbol.RapidParameter.Attribute;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameter;
 import com.intellij.psi.stubs.NamedStubBase;
@@ -10,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class RapidParameterStub extends NamedStubBase<PhysicalParameter> {
+public class RapidParameterStub extends NamedStubBase<PhysicalParameter> implements RapidTypeStub {
 
     private final Attribute attribute;
     private final String type;
@@ -27,10 +28,12 @@ public class RapidParameterStub extends NamedStubBase<PhysicalParameter> {
         return attribute;
     }
 
+    @Override
     public @Nullable String getType() {
         return type;
     }
 
+    @Override
     public int getDimensions() {
         return dimensions;
     }

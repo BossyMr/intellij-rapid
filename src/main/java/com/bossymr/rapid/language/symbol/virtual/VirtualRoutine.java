@@ -3,9 +3,13 @@ package com.bossymr.rapid.language.symbol.virtual;
 import com.bossymr.rapid.language.psi.RapidStatement;
 import com.bossymr.rapid.language.psi.RapidStatementList;
 import com.bossymr.rapid.language.symbol.*;
+import com.intellij.navigation.ColoredItemPresentation;
+import com.intellij.navigation.ItemPresentation;
+import com.intellij.openapi.editor.colors.TextAttributesKey;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.Collections;
 import java.util.List;
 
@@ -63,5 +67,25 @@ public class VirtualRoutine implements RapidRoutine, VirtualSymbol {
     @Override
     public @Nullable List<RapidStatement> getStatements(RapidStatementList.@NotNull Attribute attribute) {
         return Collections.emptyList();
+    }
+
+    @Override
+    public @Nullable ItemPresentation getPresentation() {
+        return new ColoredItemPresentation() {
+            @Override
+            public @Nullable TextAttributesKey getTextAttributesKey() {
+                return null;
+            }
+
+            @Override
+            public @Nullable String getPresentableText() {
+                return getName();
+            }
+
+            @Override
+            public @Nullable Icon getIcon(boolean unused) {
+                return null;
+            }
+        };
     }
 }

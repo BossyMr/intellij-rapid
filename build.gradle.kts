@@ -2,7 +2,7 @@ fun properties(key: String) = project.findProperty(key).toString()
 
 plugins {
     id("java")
-    id("org.jetbrains.intellij") version "1.9.0"
+    id("org.jetbrains.intellij") version "1.10.0"
     id("org.jetbrains.grammarkit") version "2021.2.2"
     id("org.jetbrains.changelog") version "1.3.1"
     id("org.jetbrains.qodana") version "0.1.12"
@@ -30,12 +30,6 @@ configurations {
     all {
         resolutionStrategy.sortArtifacts(ResolutionStrategy.SortOrder.DEPENDENCY_FIRST)
     }
-}
-
-dependencies {
-    implementation("com.squareup.okhttp3:okhttp:4.10.0")
-    implementation("io.github.rburgst:okhttp-digest:2.7")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.4")
 }
 
 // Configure Gradle Changelog Plugin

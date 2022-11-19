@@ -1,20 +1,24 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidComponentStub;
 import com.bossymr.rapid.language.symbol.RapidComponent;
-import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.RapidType;
-import com.bossymr.rapid.language.symbol.ResolveUtil;
+import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.intellij.lang.ASTNode;
+import com.intellij.navigation.ColoredItemPresentation;
+import com.intellij.navigation.ItemPresentation;
+import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalComponent extends RapidStubElement<RapidComponentStub> implements RapidComponent, PhysicalSymbol {
@@ -32,23 +36,9 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
         visitor.visitComponent(this);
     }
 
-    public @Nullable RapidTypeElement getTypeElement() {
-        return findChildByType(RapidElementTypes.TYPE_ELEMENT);
-    }
-
     @Override
     public @Nullable RapidType getType() {
-        return CachedValuesManager.getProjectPsiDependentCache(this, (ignored) -> {
-            RapidComponentStub stub = getGreenStub();
-            if (stub != null) {
-                String typeName = stub.getType();
-                if (typeName == null) return null;
-                RapidStructure structure = ResolveUtil.getStructure(this, typeName);
-                return new RapidType(structure, typeName);
-            } else {
-                return getTypeElement() != null ? getTypeElement().getType() : null;
-            }
-        });
+        return SymbolUtil.getType(this);
     }
 
     @Override
@@ -58,13 +48,7 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
 
     @Override
     public String getName() {
-        RapidComponentStub stub = getGreenStub();
-        if (stub != null) {
-            return stub.getName();
-        } else {
-            PsiElement identifier = getNameIdentifier();
-            return identifier != null ? identifier.getText() : null;
-        }
+        return SymbolUtil.getName(this);
     }
 
     @Override
@@ -76,5 +60,25 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
     @Override
     public String toString() {
         return "PhysicalComponent:" + getName();
+    }
+
+    @Override
+    public @Nullable ItemPresentation getPresentation() {
+        return new ColoredItemPresentation() {
+            @Override
+            public @Nullable TextAttributesKey getTextAttributesKey() {
+                return null;
+            }
+
+            @Override
+            public @Nullable String getPresentableText() {
+                return getName();
+            }
+
+            @Override
+            public @Nullable Icon getIcon(boolean unused) {
+                return null;
+            }
+        };
     }
 }

@@ -10,7 +10,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public class RobotViewRobotListNode extends RobotViewNode<Project> {
 
@@ -21,9 +20,11 @@ public class RobotViewRobotListNode extends RobotViewNode<Project> {
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
         List<RobotViewRobotNode> nodes = new ArrayList<>();
-        RobotService service = RobotService.getInstance(getProject());
-        Optional<Robot> robot = service.getRobot();
-        robot.ifPresent(value -> nodes.add(new RobotViewRobotNode(getProject(), value)));
+        RobotService service = RobotService.getInstance();
+        Robot robot = service.getRobot();
+        if (robot != null) {
+            nodes.add(new RobotViewRobotNode(getProject(), robot));
+        }
         return nodes;
     }
 
