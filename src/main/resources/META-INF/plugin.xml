@@ -20,9 +20,17 @@
         <lang.parserDefinition language="RAPID"
                                implementationClass="com.bossymr.rapid.language.parser.RapidParserDefinition"/>
 
+        <annotator language="RAPID" implementationClass="com.bossymr.rapid.ide.insight.RapidAnnotator"/>
+
+        <colorSettingsPage implementation="com.bossymr.rapid.ide.highlight.RapidColorSettingsPage"/>
+
+        <lang.syntaxHighlighterFactory language="RAPID"
+                                       implementationClass="com.bossymr.rapid.ide.highlight.RapidHighlighterFactory"/>
+
         <!-- PsiElement  -->
 
         <projectService serviceImplementation="com.bossymr.rapid.language.psi.RapidElementFactory"/>
+        <projectService serviceImplementation="com.bossymr.rapid.robot.ui.RobotToolWindowService"/>
 
         <stubElementTypeHolder externalIdPrefix="rapid." class="com.bossymr.rapid.language.psi.RapidStubElementTypes"/>
 

@@ -6,6 +6,7 @@ import com.bossymr.rapid.robot.network.Controller;
 import com.bossymr.rapid.robot.network.security.Authenticator;
 import com.bossymr.rapid.robot.network.security.impl.DigestAuthenticator;
 import com.intellij.credentialStore.Credentials;
+import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Document;
@@ -27,6 +28,8 @@ import java.net.http.HttpResponse;
 import java.util.*;
 
 public class ControllerImpl implements Controller {
+
+    private static final Logger LOG = Logger.getInstance(Controller.class);
 
     private static final CookieManager COOKIE_MANAGER = new CookieManager();
 
@@ -55,11 +58,11 @@ public class ControllerImpl implements Controller {
     protected <T> @NotNull HttpResponse<T> retry(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException {
         HttpRequest authenticated = authenticator.authenticate(request);
         try {
-            HttpResponse<T> response = httpClient.send(authenticated != null ? authenticated : request, bodyHandler);
+            HttpResponse<T> response = notify(authenticated != null ? authenticated : request, bodyHandler);
             if (response.statusCode() == 401 || response.statusCode() == 407) {
                 HttpRequest retry = authenticator.authenticate(response);
                 if (retry != null) {
-                    return httpClient.send(retry, bodyHandler);
+                    return notify(retry, bodyHandler);
                 }
             }
             return response;
@@ -67,6 +70,12 @@ public class ControllerImpl implements Controller {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
+    }
+
+    protected <T> @NotNull HttpResponse<T> notify(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
+        HttpResponse<T> response = httpClient.send(request, bodyHandler);
+        LOG.info("Request: " + request + " with response: " + response);
+        return response;
     }
 
     @Override
@@ -104,6 +113,24 @@ public class ControllerImpl implements Controller {
                 states.add(getSymbolState(model));
             }
         }
+        Map<String, Set<String>> symbols = new HashMap<>();
+        for (SymbolState state : states) {
+            // Example: "" (contains MoveJ), "MoveJ" (contains arguments of MoveJ)
+            String title = state.title.substring("RAPID".length(), state.title.lastIndexOf('/'));
+            if (title.startsWith("/")) title = title.substring(1);
+
+            symbols.putIfAbsent(title, new HashSet<>());
+
+            String name = state.title.substring(state.title.lastIndexOf('/') + 1);
+            symbols.get(title).add(name);
+        }
+        for (String symbol : symbols.keySet()) {
+            if (symbol.equals("")) continue;
+            if (symbols.get("").contains(symbol)) continue;
+            // Symbol is not present.
+            states.add(getSymbol(symbol));
+        }
+        states.removeIf(symbol -> !(Set.of("atm", "rec", "ali", "rcp", "con", "var", "per", "par", "fun", "prc", "trp").contains(symbol.type)));
         return states;
     }
 

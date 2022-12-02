@@ -6,12 +6,18 @@ import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.Controller;
 import com.intellij.credentialStore.Credentials;
+import com.intellij.openapi.components.State;
+import com.intellij.openapi.components.Storage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
 
+@State(name = "robot",
+        storages = {
+                @Storage("robot.xml")
+        })
 public class RobotServiceImpl implements RobotService {
 
     private State state = new State();

@@ -17,12 +17,10 @@ public class DeleteAction extends AnAction {
         Project project = e.getProject();
         assert project != null;
         RobotService service = RobotService.getInstance();
-        Robot robot = service.getRobot();
-        assert robot != null;
         try {
             service.disconnect();
         } catch (IOException ex) {
-            RobotUtil.showNotification(robot.getPath());
+            RobotUtil.showNotification();
         }
     }
 

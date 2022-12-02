@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.impl;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.RobotState.SymbolState;
 import com.bossymr.rapid.robot.network.Controller;
@@ -69,7 +70,7 @@ public final class RobotUtil {
         return robotState;
     }
 
-    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolState state) {
+    public static @Nullable VirtualSymbol getSymbol(@NotNull SymbolState state) {
         RobotSymbolFactory factory = new RobotSymbolFactory(Collections.singleton(state));
         Map<String, VirtualSymbol> symbols = factory.getSymbols();
         return symbols.get(state.name);
@@ -78,6 +79,13 @@ public final class RobotUtil {
     public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull RobotState robotState) {
         RobotSymbolFactory factory = new RobotSymbolFactory(robotState);
         return factory.getSymbols();
+    }
+
+
+    public static void showNotification() {
+        RobotService instance = RobotService.getInstance();
+        assert instance.getRobot() != null;
+        showNotification(instance.getRobot().getPath());
     }
 
     public static void showNotification(@NotNull URI path) {

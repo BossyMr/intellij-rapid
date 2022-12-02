@@ -9,6 +9,7 @@ import com.bossymr.rapid.language.symbol.RapidLabelStatement;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.intellij.navigation.ColoredItemPresentation;
 import com.intellij.navigation.ItemPresentation;
+import com.intellij.navigation.NavigationRequest;
 import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.IncorrectOperationException;
@@ -63,5 +64,10 @@ public class PhysicalLabelStatement extends RapidCompositeElement implements Rap
     public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
         RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
         return this;
+    }
+
+    @Override
+    public @Nullable NavigationRequest navigationRequest() {
+        return super.navigationRequest();
     }
 }

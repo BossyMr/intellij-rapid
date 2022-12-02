@@ -3,8 +3,8 @@ package com.bossymr.rapid.language.psi.impl.expression;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidType;
-import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,7 +18,7 @@ public class RapidFunctionCallExpressionImpl extends RapidExpressionElement impl
 
     @Override
     public @Nullable RapidType getType() {
-        PsiElement element = getReferenceExpression().resolve();
+        RapidSymbol element = getReferenceExpression().resolve();
         return element instanceof RapidRoutine ? ((RapidRoutine) element).getType() : null;
     }
 

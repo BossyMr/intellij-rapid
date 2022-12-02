@@ -4,13 +4,9 @@ import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.Visibility;
-import com.intellij.navigation.ColoredItemPresentation;
-import com.intellij.navigation.ItemPresentation;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Objects;
 
 public class VirtualField implements RapidField, VirtualSymbol {
@@ -73,25 +69,5 @@ public class VirtualField implements RapidField, VirtualSymbol {
     @Override
     public String toString() {
         return "VirtualField:" + getName();
-    }
-
-    @Override
-    public @Nullable ItemPresentation getPresentation() {
-        return new ColoredItemPresentation() {
-            @Override
-            public @Nullable TextAttributesKey getTextAttributesKey() {
-                return null;
-            }
-
-            @Override
-            public @Nullable String getPresentableText() {
-                return getName();
-            }
-
-            @Override
-            public @Nullable Icon getIcon(boolean unused) {
-                return null;
-            }
-        };
     }
 }

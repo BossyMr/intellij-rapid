@@ -3,7 +3,7 @@ package com.bossymr.rapid.robot.ui.node;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
-import com.intellij.navigation.ItemPresentation;
+import com.intellij.navigation.TargetPresentation;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,14 +24,12 @@ public class RobotViewSymbolNode extends RobotViewNode<RapidSymbol> {
 
     @Override
     protected void update(@NotNull PresentationData presentation) {
-        ItemPresentation value = getValue().getPresentation();
-        if (value != null) {
-            Icon icon = value.getIcon(false);
-            if (icon != null) {
-                presentation.setIcon(icon);
-            }
-            presentation.setPresentableText(value.getPresentableText());
-            presentation.setLocationString(value.getLocationString());
+        TargetPresentation value = getValue().getTargetPresentation();
+        Icon icon = value.getIcon();
+        if (icon != null) {
+            presentation.setIcon(icon);
         }
+        presentation.setPresentableText(value.getPresentableText());
+        presentation.setLocationString(value.getLocationText());
     }
 }

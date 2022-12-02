@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.psi;
 
-import com.bossymr.rapid.language.symbol.RapidModule;
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 
@@ -16,6 +16,6 @@ public interface RapidFile extends PsiFile {
      *
      * @return a list of modules.
      */
-    @NotNull List<RapidModule> getModules();
+    @NotNull List<PhysicalModule> getModules();
 
 }

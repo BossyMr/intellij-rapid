@@ -9,9 +9,6 @@ import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.intellij.lang.ASTNode;
-import com.intellij.navigation.ColoredItemPresentation;
-import com.intellij.navigation.ItemPresentation;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.CompositeElement;
 import com.intellij.psi.impl.source.tree.Factory;
@@ -22,7 +19,6 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalField extends RapidStubElement<RapidFieldStub> implements RapidField, PhysicalSymbol {
@@ -132,25 +128,5 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     @Override
     public String toString() {
         return "PhysicalField:" + getName();
-    }
-
-    @Override
-    public @Nullable ItemPresentation getPresentation() {
-        return new ColoredItemPresentation() {
-            @Override
-            public @Nullable TextAttributesKey getTextAttributesKey() {
-                return null;
-            }
-
-            @Override
-            public @Nullable String getPresentableText() {
-                return getName();
-            }
-
-            @Override
-            public @Nullable Icon getIcon(boolean unused) {
-                return null;
-            }
-        };
     }
 }

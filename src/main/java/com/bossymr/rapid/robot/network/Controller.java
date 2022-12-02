@@ -24,6 +24,11 @@ public interface Controller extends Closeable {
         return new ControllerImpl(path, credentials);
     }
 
+    /**
+     * Returns the path of this robot.
+     *
+     * @return the path of this robot.
+     */
     @NotNull URI getPath();
 
     /**

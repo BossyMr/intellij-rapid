@@ -18,7 +18,7 @@ public class RobotToolWindowFactory implements ToolWindowFactory, DumbAware {
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
         ContentFactory contentFactory = ContentFactory.getInstance();
-        RobotToolWindow robotToolWindow = new RobotToolWindow(project);
+        RobotToolWindow robotToolWindow = RobotToolWindowService.getInstance(project).getToolWindow();
         Content content = contentFactory.createContent(robotToolWindow.getComponent(), null, false);
         content.setDisposer(robotToolWindow);
         toolWindow.getContentManager().addContent(content);

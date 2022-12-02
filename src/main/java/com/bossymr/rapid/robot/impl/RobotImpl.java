@@ -71,13 +71,14 @@ public class RobotImpl implements Robot {
                 // The connected robot does contain the specified symbol.
                 robotState.symbols.add(symbolState);
                 VirtualSymbol symbol = RobotUtil.getSymbol(symbolState);
-                symbols.put(name, symbol);
-                RobotEventListener.publish().onSymbol(this, symbol);
-                return symbol;
-            } else {
-                // The connected robot does not contain the specified symbol.
-                robotState.cache.add(name);
+                if (symbol != null) {
+                    symbols.put(name, symbol);
+                    RobotEventListener.publish().onSymbol(this, symbol);
+                    return symbol;
+                }
             }
+            // The connected robot does not contain the specified symbol.
+            robotState.cache.add(name);
             return null;
         }
         return null;

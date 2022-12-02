@@ -2,13 +2,8 @@ package com.bossymr.rapid.language.symbol.virtual;
 
 import com.bossymr.rapid.language.symbol.RapidParameter;
 import com.bossymr.rapid.language.symbol.RapidType;
-import com.intellij.navigation.ColoredItemPresentation;
-import com.intellij.navigation.ItemPresentation;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Objects;
 
 public class VirtualParameter implements RapidParameter, VirtualSymbol {
@@ -54,25 +49,5 @@ public class VirtualParameter implements RapidParameter, VirtualSymbol {
     @Override
     public String toString() {
         return "VirtualParameter:" + getName();
-    }
-
-    @Override
-    public @Nullable ItemPresentation getPresentation() {
-        return new ColoredItemPresentation() {
-            @Override
-            public @Nullable TextAttributesKey getTextAttributesKey() {
-                return null;
-            }
-
-            @Override
-            public @Nullable String getPresentableText() {
-                return getName();
-            }
-
-            @Override
-            public @Nullable Icon getIcon(boolean unused) {
-                return null;
-            }
-        };
     }
 }

@@ -4,7 +4,9 @@ import com.bossymr.rapid.language.psi.RapidTypeElement;
 import com.bossymr.rapid.language.psi.RapidTypeStub;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidVisibleStub;
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
+import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.NamedStub;
 import com.intellij.psi.stubs.StubElement;
@@ -26,6 +28,10 @@ public final class SymbolUtil {
         }
         PsiElement identifier = element.getNameIdentifier();
         return identifier != null ? identifier.getText() : null;
+    }
+
+    public static @Nullable RapidModule getModule(@NotNull PsiElement element) {
+        return PsiTreeUtil.getStubOrPsiParentOfType(element, PhysicalModule.class);
     }
 
     public static <T extends RapidStubElement<? extends RapidVisibleStub>> @NotNull Visibility getVisibility(T element) {

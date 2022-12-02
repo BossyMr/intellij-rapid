@@ -30,7 +30,7 @@ public class DisconnectAction extends AnAction {
                 try {
                     robot.disconnect();
                 } catch (IOException ex) {
-                    RobotUtil.showNotification(robot.getPath());
+                    RobotUtil.showNotification();
                 }
             }
         };

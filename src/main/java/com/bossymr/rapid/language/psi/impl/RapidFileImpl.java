@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.psi.impl;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.RapidFile;
-import com.bossymr.rapid.language.symbol.RapidModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.openapi.fileTypes.FileType;
@@ -21,7 +20,7 @@ public class RapidFileImpl extends PsiFileBase implements RapidFile {
     }
 
     @Override
-    public @NotNull List<RapidModule> getModules() {
+    public @NotNull List<PhysicalModule> getModules() {
         return List.of(findChildrenByClass(PhysicalModule.class));
     }
 

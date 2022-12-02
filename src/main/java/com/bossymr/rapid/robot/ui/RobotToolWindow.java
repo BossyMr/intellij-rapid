@@ -6,6 +6,7 @@ import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
+import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.actionSystem.ex.ActionUtil;
@@ -35,11 +36,12 @@ public class RobotToolWindow implements Disposable {
     private final SimpleToolWindowPanel panel;
 
     private final DnDAwareTree tree;
+    private final RobotViewTreeStructure structure;
 
     public RobotToolWindow(@NotNull Project project) {
         this.project = project;
 
-        RobotViewTreeStructure structure = new RobotViewTreeStructure(project);
+        structure = new RobotViewTreeStructure(project);
         StructureTreeModel<RobotViewTreeStructure> model = new StructureTreeModel<>(structure, this);
         this.tree = new DnDAwareTree(new AsyncTreeModel(model, this));
         this.tree.setRootVisible(false);
@@ -96,6 +98,17 @@ public class RobotToolWindow implements Disposable {
 
     public @NotNull JComponent getComponent() {
         return content;
+    }
+
+    private @Nullable AbstractTreeNode<?> getNode(@NotNull AbstractTreeNode<?> node, @NotNull Object element) {
+        if (node.getValue().equals(element)) return node;
+        for (AbstractTreeNode<?> child : node.getChildren()) {
+            AbstractTreeNode<?> result = getNode(child, element);
+            if (result != null) {
+                return result;
+            }
+        }
+        return null;
     }
 
     @Override

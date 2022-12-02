@@ -1,44 +1,47 @@
 package com.bossymr.rapid.language.psi;
 
-import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.symbol.RapidLabelStatement;
+import com.bossymr.rapid.language.symbol.RapidStructure;
+import com.bossymr.rapid.language.symbol.RapidVariable;
+import com.bossymr.rapid.language.symbol.physical.*;
 import com.intellij.psi.PsiElementVisitor;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class RapidElementVisitor extends PsiElementVisitor {
 
-    public <T extends RapidModule & RapidElement> void visitModule(@NotNull T module) {
+    public void visitModule(@NotNull PhysicalModule module) {
         visitSymbol(module);
     }
 
-    public <T extends RapidAlias & RapidElement> void visitAlias(@NotNull T alias) {
+    public void visitAlias(@NotNull PhysicalAlias alias) {
         visitStructure(alias);
     }
 
-    public <T extends RapidRecord & RapidElement> void visitRecord(@NotNull T record) {
+    public void visitRecord(@NotNull PhysicalRecord record) {
         visitStructure(record);
     }
 
-    public <T extends RapidComponent & RapidElement> void visitComponent(@NotNull T component) {
+    public void visitComponent(@NotNull PhysicalComponent component) {
         visitSymbol(component);
     }
 
-    public <T extends RapidStructure & RapidElement> void visitStructure(@NotNull T structure) {
+    public <T extends RapidStructure & PhysicalSymbol> void visitStructure(@NotNull T structure) {
         visitSymbol(structure);
     }
 
-    public <T extends RapidField & RapidElement> void visitField(@NotNull T field) {
+    public void visitField(@NotNull PhysicalField field) {
         visitVariable(field);
     }
 
-    public <T extends RapidVariable & RapidElement> void visitVariable(@NotNull T variable) {
+    public <T extends RapidVariable & PhysicalSymbol> void visitVariable(@NotNull T variable) {
         visitSymbol(variable);
     }
 
-    public <T extends RapidRoutine & RapidElement> void visitRoutine(@NotNull T routine) {
+    public void visitRoutine(@NotNull PhysicalRoutine routine) {
         visitSymbol(routine);
     }
 
-    public <T extends RapidSymbol & RapidElement> void visitSymbol(@NotNull T symbol) {
+    public void visitSymbol(@NotNull PhysicalSymbol symbol) {
         visitElement(symbol);
     }
 
@@ -62,11 +65,11 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
         visitElement(fieldList);
     }
 
-    public <T extends RapidParameterGroup & RapidElement> void visitParameterGroup(@NotNull T parameterGroup) {
+    public void visitParameterGroup(@NotNull PhysicalParameterGroup parameterGroup) {
         visitElement(parameterGroup);
     }
 
-    public <T extends RapidParameter & RapidElement> void visitParameter(@NotNull T parameter) {
+    public void visitParameter(@NotNull PhysicalParameter parameter) {
         visitVariable(parameter);
     }
 
@@ -170,7 +173,7 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
         visitStatement(statement);
     }
 
-    public <T extends RapidTargetVariable & RapidElement> void visitTargetVariable(@NotNull T variable) {
+    public void visitTargetVariable(@NotNull PhysicalTargetVariable variable) {
         visitVariable(variable);
     }
 

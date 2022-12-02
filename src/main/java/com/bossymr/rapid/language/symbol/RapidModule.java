@@ -1,9 +1,11 @@
 package com.bossymr.rapid.language.symbol;
 
+import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
 import com.intellij.lang.LighterASTNode;
+import com.intellij.navigation.TargetPresentation;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.LightTreeUtil;
 import com.intellij.psi.tree.IElementType;
@@ -12,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public interface RapidModule extends RapidSymbol {
@@ -31,6 +34,13 @@ public interface RapidModule extends RapidSymbol {
     @NotNull List<RapidField> getFields();
 
     @NotNull List<RapidRoutine> getRoutines();
+
+    @Override
+    default @NotNull TargetPresentation getTargetPresentation() {
+        return TargetPresentation.builder(Objects.requireNonNullElse(getName(), ""))
+                .icon(hasAttribute(Attribute.SYSTEM_MODULE) ? RapidIcons.SYSTEM_MODULE : RapidIcons.MODULE)
+                .presentation();
+    }
 
     enum Attribute {
         SYSTEM_MODULE(RapidTokenTypes.SYSMODULE_KEYWORD, "SYSMODULE"),
