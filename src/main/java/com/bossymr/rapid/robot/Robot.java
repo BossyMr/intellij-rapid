@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot;
 
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.network.Controller;
+import com.bossymr.rapid.robot.network.RobotService;
 import com.intellij.credentialStore.Credentials;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -47,7 +47,7 @@ public interface Robot {
      *
      * @return the controller to the connected robot, or {@code null} if the robot is not currently connected.
      */
-    @Nullable Controller getController();
+    @Nullable RobotService getController();
 
     /**
      * Reconnects to this robot, using the persisted path and credentials.

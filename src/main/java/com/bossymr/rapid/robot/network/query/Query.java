@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network.query;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.annotation.*;
@@ -19,12 +20,12 @@ public interface Query<T> {
      * @return the response.
      * @throws IOException if an I/O error occurs.
      */
-    @NotNull T send() throws IOException;
+    @Nullable T send() throws IOException;
 
     /**
      * Sends the request to the server and returns the response asynchronously.
      *
-     * @return the
+     * @return the asynchronous response.
      */
     @NotNull CompletableFuture<T> sendAsync();
 
@@ -73,38 +74,6 @@ public interface Query<T> {
          * Specifies the name of the field.
          *
          * @return the name of the field.
-         */
-        @NotNull String value();
-    }
-
-    /**
-     * Indicates that this endpoint is subscribable.
-     */
-    @Documented
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.METHOD)
-    @interface Subscribable {
-
-        /**
-         * Specifies the resource.
-         *
-         * @return the resource.
-         */
-        @NotNull String value();
-    }
-
-    /**
-     * Indicates that this endpoint is asynchronous.
-     */
-    @Documented
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.METHOD)
-    @interface Asynchronous {
-
-        /**
-         * Specifies the path of the request.
-         *
-         * @return the path of the request.
          */
         @NotNull String value();
     }

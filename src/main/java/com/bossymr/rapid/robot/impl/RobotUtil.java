@@ -3,10 +3,7 @@ package com.bossymr.rapid.robot.impl;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.RobotState;
-import com.bossymr.rapid.robot.RobotState.SymbolState;
-import com.bossymr.rapid.robot.network.Controller;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.credentialStore.Credentials;
@@ -26,10 +23,8 @@ import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 
 import static com.intellij.credentialStore.CredentialAttributesKt.generateServiceName;
@@ -62,20 +57,6 @@ public final class RobotUtil {
         });
     }
 
-    public static @NotNull RobotState getRobotState(@NotNull Controller controller) throws IOException {
-        RobotState robotState = new RobotState();
-        robotState.name = controller.getName();
-        robotState.path = String.valueOf(controller.getPath());
-        robotState.symbols = controller.getSymbols();
-        return robotState;
-    }
-
-    public static @Nullable VirtualSymbol getSymbol(@NotNull SymbolState state) {
-        RobotSymbolFactory factory = new RobotSymbolFactory(Collections.singleton(state));
-        Map<String, VirtualSymbol> symbols = factory.getSymbols();
-        return symbols.get(state.name);
-    }
-
     public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull RobotState robotState) {
         RobotSymbolFactory factory = new RobotSymbolFactory(robotState);
         return factory.getSymbols();
@@ -83,7 +64,7 @@ public final class RobotUtil {
 
 
     public static void showNotification() {
-        RobotService instance = RobotService.getInstance();
+        com.bossymr.rapid.robot.RobotService instance = com.bossymr.rapid.robot.RobotService.getInstance();
         assert instance.getRobot() != null;
         showNotification(instance.getRobot().getPath());
     }

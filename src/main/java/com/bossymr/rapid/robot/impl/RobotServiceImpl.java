@@ -4,7 +4,6 @@ import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.RobotState;
-import com.bossymr.rapid.robot.network.Controller;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
@@ -21,7 +20,7 @@ import java.net.URI;
 public class RobotServiceImpl implements RobotService {
 
     private State state = new State();
-    private Robot robot;
+    private com.bossymr.rapid.robot.Robot robot;
 
     @Override
     public @Nullable RobotState getRobotState() {
@@ -34,23 +33,13 @@ public class RobotServiceImpl implements RobotService {
     }
 
     @Override
-    public @Nullable Robot getRobot() {
-        if (robot != null) {
-            return robot;
-        }
-        if (getRobotState() != null) {
-            return robot = new RobotImpl(getRobotState());
-        }
+    public Robot getRobot() {
         return null;
     }
 
     @Override
     public @NotNull Robot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException {
-        RobotEventListener.publish().beforeConnect();
-        Controller controller = Controller.connect(path, credentials);
-        robot = new RobotImpl(controller);
-        RobotEventListener.publish().afterConnect(robot);
-        return robot;
+        return null;
     }
 
     @Override
@@ -64,7 +53,7 @@ public class RobotServiceImpl implements RobotService {
 
     @Override
     public void dispose() {
-        Robot robot = getRobot();
+        com.bossymr.rapid.robot.Robot robot = getRobot();
         if (robot != null) {
             try {
                 robot.disconnect();

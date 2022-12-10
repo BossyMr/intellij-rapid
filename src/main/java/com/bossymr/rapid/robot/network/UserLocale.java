@@ -4,7 +4,9 @@ import com.bossymr.rapid.robot.network.annotations.Deserializable;
 
 public enum UserLocale {
 
-    @Deserializable("remote") REMOTE,
+    @Deserializable("remote")
+    REMOTE,
 
-    @Deserializable("local") LOCAL
+    @Deserializable("local")
+    LOCAL
 }

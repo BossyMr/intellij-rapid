@@ -1,10 +1,9 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.rapid.robot.network.impl.ControllerImpl.CollectionModel;
+import com.bossymr.rapid.robot.network.client.model.CollectionModel;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpResponse;
 import java.util.Objects;
@@ -33,7 +32,7 @@ public class ResponseStatusException extends IOException {
         this.errorCode = errorCode;
     }
 
-    public static @NotNull ResponseStatusException of(@NotNull HttpResponse<InputStream> response) throws IOException {
+    public static @NotNull ResponseStatusException of(@NotNull HttpResponse<byte[]> response) throws IOException {
         int statusCode = response.statusCode();
         URI path = response.uri();
         String contentType = response.headers()
@@ -45,10 +44,9 @@ public class ResponseStatusException extends IOException {
             String message = Objects.requireNonNull(model.model().field("msg"));
             return new ResponseStatusException(statusCode, path, errorCode, message);
         }
-        try (InputStream body = response.body()) {
-            String content = new String(body.readAllBytes());
-            return new ResponseStatusException(statusCode, path, content);
-        }
+        byte[] body = response.body();
+        String content = new String(body);
+        return new ResponseStatusException(statusCode, path, content);
     }
 
     public int getStatusCode() {

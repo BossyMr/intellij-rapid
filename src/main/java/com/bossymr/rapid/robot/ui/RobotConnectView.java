@@ -1,9 +1,7 @@
 package com.bossymr.rapid.robot.ui;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.impl.RobotUtil;
-import com.bossymr.rapid.robot.network.Controller;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.progress.EmptyProgressIndicator;
 import com.intellij.openapi.progress.ProgressIndicator;
@@ -48,7 +46,7 @@ public class RobotConnectView extends DialogWrapper {
         this(project);
         Credentials credentials = RobotUtil.getCredentials(path);
         if (credentials != null) {
-            if (!(credentials.equals(Controller.DEFAULT_CREDENTIALS))) {
+            if (!(credentials.equals(null))) {
                 authenticationComboBox.setItem(AuthenticationType.PASSWORD);
                 userField.setText(credentials.getUserName());
                 passwordField.setText(credentials.getPasswordAsString());
@@ -72,10 +70,10 @@ public class RobotConnectView extends DialogWrapper {
         ProgressManager.getInstance().runProcessWithProgressAsynchronously(new Task.Backgroundable(project, RapidBundle.message("robot.connect.progress.indicator.title", hostField.getText())) {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
-                RobotService service = RobotService.getInstance();
+                com.bossymr.rapid.robot.RobotService service = com.bossymr.rapid.robot.RobotService.getInstance();
                 URI path = URI.create("http" + "://" + hostField.getText() + ":" + portField.getText());
                 Credentials credentials = authenticationComboBox.getItem().equals(AuthenticationType.DEFAULT) ?
-                        Controller.DEFAULT_CREDENTIALS :
+                        null :
                         new Credentials(userField.getText(), passwordField.getPassword());
                 try {
                     service.connect(path, credentials);

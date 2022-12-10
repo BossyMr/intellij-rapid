@@ -3,8 +3,12 @@ package com.bossymr.rapid.robot.network;
 import com.bossymr.rapid.robot.network.annotations.Entity;
 import com.bossymr.rapid.robot.network.annotations.Property;
 import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.Query.*;
+import com.bossymr.rapid.robot.network.query.Query.Argument;
+import com.bossymr.rapid.robot.network.query.Query.GET;
+import com.bossymr.rapid.robot.network.query.Query.POST;
+import com.bossymr.rapid.robot.network.query.Query.Path;
 import com.bossymr.rapid.robot.network.query.SubscribableQuery;
+import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,18 +31,18 @@ public interface EventLogCategory extends EntityModel {
      *
      * @return all messages in this event log category.
      */
-    @GET("@self")
+    @GET("{@self}")
     @NotNull Query<List<EventLogMessage>> getMessages();
 
     /**
      * Returns all messages in this event log category, starting with the specified message.
      *
-     * @param identifier the identifier of the first message.
+     * @param message the identifier of the first message.
      * @return all messages in this event log category, starting with the specified message.
      */
-    @GET("@self")
+    @GET("{@self}")
     @NotNull Query<List<EventLogMessage>> getMessages(
-            @Argument("elogseqnum") int identifier
+            @Argument("elogseqnum") int message
     );
 
     /**
@@ -47,7 +51,7 @@ public interface EventLogCategory extends EntityModel {
      * @param message the message sequence identifier.
      * @return the message in this category with the specified sequence identifier.
      */
-    @GET("@self/{message}")
+    @GET("{@self}/{message}")
     @NotNull Query<EventLogMessage> getMessage(
             @Path("message") int message
     );
@@ -55,13 +59,13 @@ public interface EventLogCategory extends EntityModel {
     /**
      * Clears all messages in this category.
      */
-    @POST("@self?action=clear")
+    @POST("{@self}?action=clear")
     @NotNull Query<Void> clear();
 
     /**
      * Subscribes to new events in this category.
      */
-    @Subscribable("@self")
-    @NotNull SubscribableQuery<EventLogMessage> onMessage();
+    @Subscribable("{@self}")
+    @NotNull SubscribableQuery<EventLogMessageEvent> onMessage();
 
 }

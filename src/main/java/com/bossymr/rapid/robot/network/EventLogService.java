@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.network;
 
 import com.bossymr.rapid.robot.network.annotations.Service;
 import com.bossymr.rapid.robot.network.query.AsynchronousQuery;
+import com.bossymr.rapid.robot.network.query.AsynchronousQuery.Asynchronous;
 import com.bossymr.rapid.robot.network.query.Query;
 import com.bossymr.rapid.robot.network.query.Query.*;
 import org.jetbrains.annotations.NotNull;

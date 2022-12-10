@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -29,5 +30,14 @@ public interface EntityModel {
      * @return the links of this entity.
      */
     @NotNull List<Link> getLinks();
+
+    default @Nullable Link getLink(@NotNull String relationship) {
+        for (Link link : getLinks()) {
+            if (link.relationship().equals(relationship)) {
+                return link;
+            }
+        }
+        return null;
+    }
 
 }

@@ -5,8 +5,8 @@ import com.bossymr.rapid.robot.network.query.Query;
 import com.bossymr.rapid.robot.network.query.Query.Field;
 import com.bossymr.rapid.robot.network.query.Query.GET;
 import com.bossymr.rapid.robot.network.query.Query.POST;
-import com.bossymr.rapid.robot.network.query.Query.Subscribable;
 import com.bossymr.rapid.robot.network.query.SubscribableQuery;
+import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -59,7 +59,7 @@ public interface ManualModePrivilegeService {
      * Subscribes to requests for {@code Manual Mode Privilege (RMMP)}.
      */
     @Subscribable("/users/rmmp'")
-    @NotNull SubscribableQuery<ManualModePrivilegeState> onRequest();
+    @NotNull SubscribableQuery<ManualModePrivilegeEvent> onRequest();
 
     /**
      * Returns the state of a {@code Manual Mode Privilege (RMMP)} request. This method is also used to extend the
