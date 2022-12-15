@@ -16,4 +16,8 @@ public interface RobotWareService {
      */
     @NotNull EventLogService getEventLogService();
 
+    @NotNull MastershipService getMastershipService();
+
+    @NotNull RapidService getRapidService();
+
 }

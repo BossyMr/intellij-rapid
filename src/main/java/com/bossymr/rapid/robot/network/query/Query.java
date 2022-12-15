@@ -1,7 +1,6 @@
 package com.bossymr.rapid.robot.network.query;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.annotation.*;
@@ -20,7 +19,7 @@ public interface Query<T> {
      * @return the response.
      * @throws IOException if an I/O error occurs.
      */
-    @Nullable T send() throws IOException;
+    T send() throws IOException;
 
     /**
      * Sends the request to the server and returns the response asynchronously.
@@ -45,6 +44,12 @@ public interface Query<T> {
         @NotNull String value();
     }
 
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.PARAMETER)
+    @interface FieldMap {}
+
+
     /**
      * Indicates that this value is included in the request path.
      */
@@ -60,6 +65,11 @@ public interface Query<T> {
          */
         @NotNull String value();
     }
+
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.PARAMETER)
+    @interface ArgumentMap {}
 
 
     /**
@@ -77,6 +87,11 @@ public interface Query<T> {
          */
         @NotNull String value();
     }
+
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.PARAMETER)
+    @interface PathMap {}
 
     /**
      * Indicates that this query will send a request with the method {@code GET}.

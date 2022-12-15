@@ -17,7 +17,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     private final Class<?> entityType;
 
     public EntityInvocationHandler(@NotNull Class<? extends EntityModel> entityType, @NotNull NetworkClient networkClient, @NotNull Model model) {
-        assert entityType.isAnnotationPresent(Entity.class) : "EntityInvocationHandler cannot be created for proxy '" + entityType.getName() + "' - method not annotated as service.";
+        assert entityType.isAnnotationPresent(Entity.class) : "EntityInvocationHandler cannot be created for proxy '" + entityType.getName() + "' - method not annotated as entity.";
         assert !entityType.isAnnotationPresent(Service.class) : "EntityInvocationHandler cannot be created for proxy '" + entityType.getName() + "' - method annotated as service.";
         this.entityType = entityType;
         this.networkClient = networkClient;

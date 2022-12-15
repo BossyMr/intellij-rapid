@@ -53,7 +53,7 @@ public interface ManualModePrivilegeState extends EntityModel {
     @NotNull ManualModePrivilege getPrivilege();
 
     /**
-     * Returns if the privilege request and this request are made by the same user.
+     * Checks if the privilege request and this request are made by the same user.
      *
      * @return if the privilege request and this request are made by the same user.
      */

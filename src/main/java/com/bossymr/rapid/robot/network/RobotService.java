@@ -45,5 +45,19 @@ public interface RobotService {
      */
     @NotNull UserService getUserService();
 
+    /**
+     * Returns the controller service.
+     *
+     * @return the controller service.
+     */
+    @NotNull ControllerService getControllerService();
+
+    /**
+     * Returns the RobotWare service.
+     *
+     * @return the RobotWare service.
+     */
+    @NotNull RobotWareService getRobotWareService();
+
 
 }

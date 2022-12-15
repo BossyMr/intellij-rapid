@@ -208,19 +208,34 @@ public class NetworkClient {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     public <T extends EntityModel> @NotNull List<T> getEntities(@NotNull List<Model> models, @NotNull Class<T> type) {
-        Entity annotation = type.getAnnotation(Entity.class);
-        LOG.assertTrue(annotation != null, "Entity '" + type.getName() + "' not annotated");
-        String[] names = annotation.value();
+        Map<String, Class<? extends EntityModel>> map = getReturnTypes(type);
         List<T> entities = new ArrayList<>();
         for (Model model : models) {
-            for (String name : names) {
-                if (name.equals(model.type())) {
-                    entities.add(process(model, type));
-                }
+            if (map.containsKey(model.type())) {
+                EntityModel entityModel = process(model, map.get(model.type()));
+                entities.add((T) entityModel);
             }
         }
         return entities;
+    }
+
+    public @NotNull Map<String, Class<? extends EntityModel>> getReturnTypes(@NotNull Class<? extends EntityModel> type) {
+        HashMap<String, Class<? extends EntityModel>> map = new HashMap<>();
+        getReturnTypes(type, map);
+        return map;
+    }
+
+    private void getReturnTypes(@NotNull Class<? extends EntityModel> type, @NotNull Map<String, Class<? extends EntityModel>> map) {
+        Entity annotation = type.getAnnotation(Entity.class);
+        LOG.assertTrue(annotation != null, "Entity '" + type.getName() + "' not annotated");
+        for (String value : annotation.value()) {
+            map.put(value, type);
+        }
+        for (Class<? extends EntityModel> subtype : annotation.subtype()) {
+            getReturnTypes(subtype, map);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -302,12 +317,17 @@ public class NetworkClient {
     }
 
     private void consume(@NotNull Model entity) {
+        Link link = entity.getLink("self");
+        assert link != null;
+        String path = link.path().getPath();
         for (SubscriptionDetail<? extends EntityModel> detail : subscriptions.values()) {
             Entity annotation = detail.type().getAnnotation(Entity.class);
             assert annotation != null;
-            for (String value : annotation.value()) {
-                if (value.equals(entity.type())) {
-                    process(entity, detail);
+            if (path.equals(detail.path())) {
+                for (String value : annotation.value()) {
+                    if (value.equals(entity.type())) {
+                        process(entity, detail);
+                    }
                 }
             }
         }

@@ -76,14 +76,14 @@ public final class NetworkUtil {
     private static HttpRequest getRequest(@NotNull NetworkClient networkClient, @NotNull Object proxy, @NotNull String command, @NotNull String path, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         String interpolate = interpolate(path, proxy, method, args);
         URI address = networkClient.getPath().resolve(interpolate);
-        Map<String, String> queries = collect(method, args, annotation -> annotation instanceof Query.Argument field ? field.value() : null);
+        Map<String, String> queries = collect(method, args, annotation -> annotation instanceof Query.Argument field ? field.value() : null, Query.ArgumentMap.class);
         if (queries.size() > 0) {
             String query = (address.getPath() != null ? "&" : "?") + queries.entrySet().stream()
                     .map(entry -> entry.getKey() + "=" + entry.getValue())
                     .collect(Collectors.joining("&"));
             address = networkClient.getPath().resolve(interpolate + query);
         }
-        Map<String, String> fields = collect(method, args, annotation -> annotation instanceof Query.Field field ? field.value() : null);
+        Map<String, String> fields = collect(method, args, annotation -> annotation instanceof Query.Field field ? field.value() : null, Query.FieldMap.class);
         String field = fields.size() > 0 ? fields.entrySet().stream()
                 .map(entry -> entry.getKey() + "=" + entry.getValue())
                 .collect(Collectors.joining("&")) : null;
@@ -103,7 +103,7 @@ public final class NetworkUtil {
     }
 
     public static @NotNull String interpolate(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
-        Map<String, String> map = collect(method, args, annotation -> annotation instanceof Query.Path argument ? argument.value() : null);
+        Map<String, String> map = collect(method, args, annotation -> annotation instanceof Query.Path argument ? argument.value() : null, Query.PathMap.class);
         return Pattern.compile("\\{([^}]*)}").matcher(path)
                 .replaceAll(result -> {
                     String value = result.group().substring(1, result.group().length() - 1);
@@ -127,12 +127,21 @@ public final class NetworkUtil {
                 });
     }
 
-    public static @NotNull Map<String, String> collect(@NotNull Method method, Object @NotNull [] args, @NotNull Function<Annotation, String> function) throws NoSuchFieldException {
+    public static @NotNull Map<String, String> collect(@NotNull Method method, Object @NotNull [] args, @NotNull Function<Annotation, String> function, @NotNull Class<? extends Annotation> marker) throws NoSuchFieldException {
         Map<String, String> map = new HashMap<>();
         Annotation[][] parameterAnnotations = method.getParameterAnnotations();
         for (int i = 0; i < method.getParameterCount(); i++) {
             Annotation[] annotations = parameterAnnotations[i];
             for (Annotation annotation : annotations) {
+                if (marker.isInstance(annotation)) {
+                    if (args[i] instanceof Map<?, ?> values) {
+                        for (Map.Entry<?, ?> entry : values.entrySet()) {
+                            map.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
+                        }
+                    } else {
+                        LOG.error("Parameter of '" + method.getName() + "' should be Map<String, String>");
+                    }
+                }
                 String value = function.apply(annotation);
                 if (value != null) {
                     map.put(value, convert(args[i]));
