@@ -16,7 +16,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     private final Model model;
     private final Class<?> entityType;
 
-    public EntityInvocationHandler(@NotNull Class<? extends EntityModel> entityType, @NotNull NetworkClient networkClient, @NotNull Model model) {
+    public EntityInvocationHandler(@NotNull Class<?> entityType, @NotNull NetworkClient networkClient, @NotNull Model model) {
         assert entityType.isAnnotationPresent(Entity.class) : "EntityInvocationHandler cannot be created for proxy '" + entityType.getName() + "' - method not annotated as entity.";
         assert !entityType.isAnnotationPresent(Service.class) : "EntityInvocationHandler cannot be created for proxy '" + entityType.getName() + "' - method annotated as service.";
         this.entityType = entityType;
@@ -27,18 +27,21 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     @Override
     public @Nullable Object execute(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (isMethod(method, EntityModel.class, "getTitle")) {
-            return model.title();
+            return model.getTitle();
         }
         if (isMethod(method, EntityModel.class, "getType")) {
-            return model.type();
+            return model.getType();
         }
         if (isMethod(method, EntityModel.class, "getLinks")) {
-            return model.links();
+            return model.getLinks();
+        }
+        if (isMethod(method, EntityModel.class, "getFields")) {
+            return model.getFields();
         }
         if (method.isAnnotationPresent(Property.class)) {
             Property property = method.getAnnotation(Property.class);
             String name = property.value();
-            String value = model.properties().get(name);
+            String value = model.getField(name);
             if (value != null) {
                 return NetworkUtil.convert(value, method.getReturnType());
             } else {

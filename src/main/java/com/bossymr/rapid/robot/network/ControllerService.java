@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network;
 
+import com.bossymr.rapid.robot.network.annotations.GET;
 import com.bossymr.rapid.robot.network.annotations.Service;
 import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.Query.GET;
 import org.jetbrains.annotations.NotNull;
 
 @Service("/ctrl")

@@ -1,15 +1,14 @@
 package com.bossymr.rapid.robot.network.query;
 
-import com.bossymr.rapid.robot.network.EntityModel;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.lang.annotation.*;
 import java.util.function.BiConsumer;
 
-public interface SubscribableQuery<T extends EntityModel> {
+public interface SubscribableQuery<T> {
 
-    @NotNull SubscriptionEntity subscribe(@NotNull SubscriptionPriority priority, @NotNull BiConsumer<SubscriptionEntity, T> onEvent) throws IOException;
+    @NotNull SubscriptionEntity subscribe(@NotNull SubscriptionPriority priority, @NotNull BiConsumer<SubscriptionEntity, T> onEvent) throws IOException, InterruptedException;
 
 
     /**

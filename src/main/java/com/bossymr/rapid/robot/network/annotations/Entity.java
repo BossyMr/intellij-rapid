@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot.network.annotations;
 
-import com.bossymr.rapid.robot.network.EntityModel;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.*;
@@ -27,5 +26,5 @@ public @interface Entity {
      *
      * @return the subtypes of this entity.
      */
-    Class<? extends EntityModel> @NotNull [] subtype() default {};
+    Class<?> @NotNull [] subtype() default {};
 }

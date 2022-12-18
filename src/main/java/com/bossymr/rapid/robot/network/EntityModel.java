@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.network;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
+import java.net.URI;
+import java.util.Map;
 
 /**
  * An {@code EntityModel} is an entity provided by a robot.
@@ -29,15 +29,21 @@ public interface EntityModel {
      *
      * @return the links of this entity.
      */
-    @NotNull List<Link> getLinks();
+    @NotNull Map<String, URI> getLinks();
 
-    default @Nullable Link getLink(@NotNull String relationship) {
-        for (Link link : getLinks()) {
-            if (link.relationship().equals(relationship)) {
-                return link;
-            }
-        }
-        return null;
+    /**
+     * Returns the fields of this entity.
+     *
+     * @return the fields of this entity.
+     */
+    @NotNull Map<String, String> getFields();
+
+    default URI getLink(@NotNull String relationship) {
+        return getLinks().get(relationship);
+    }
+
+    default String getField(@NotNull String type) {
+        return getFields().get(type);
     }
 
 }

@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network;
 
+import com.bossymr.rapid.robot.network.annotations.POST;
 import com.bossymr.rapid.robot.network.annotations.Service;
 import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.Query.POST;
 import com.bossymr.rapid.robot.network.query.SubscribableQuery;
 import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
 import org.jetbrains.annotations.NotNull;

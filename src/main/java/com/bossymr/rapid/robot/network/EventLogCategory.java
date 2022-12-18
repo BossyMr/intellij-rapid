@@ -1,12 +1,7 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Entity;
-import com.bossymr.rapid.robot.network.annotations.Property;
+import com.bossymr.rapid.robot.network.annotations.*;
 import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.Query.Argument;
-import com.bossymr.rapid.robot.network.query.Query.GET;
-import com.bossymr.rapid.robot.network.query.Query.POST;
-import com.bossymr.rapid.robot.network.query.Query.Path;
 import com.bossymr.rapid.robot.network.query.SubscribableQuery;
 import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
 import org.jetbrains.annotations.NotNull;

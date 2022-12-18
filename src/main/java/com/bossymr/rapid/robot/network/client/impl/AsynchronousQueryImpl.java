@@ -22,7 +22,7 @@ public class AsynchronousQueryImpl implements AsynchronousQuery {
     }
 
     @Override
-    public @NotNull AsynchronousEntity send() throws IOException {
+    public @NotNull AsynchronousEntity send() throws IOException, InterruptedException {
         HttpResponse<byte[]> response = networkClient.send(request);
         String location = response.headers().firstValue("Location").orElseThrow();
         return new AsynchronousEntityImpl(networkClient, URI.create(location));
@@ -48,7 +48,7 @@ public class AsynchronousQueryImpl implements AsynchronousQuery {
         }
 
         @Override
-        public @NotNull SubscriptionEntity subscribe(@NotNull SubscriptionPriority priority, @NotNull BiConsumer<SubscriptionEntity, AsynchronousEvent> onEvent) throws IOException {
+        public @NotNull SubscriptionEntity subscribe(@NotNull SubscriptionPriority priority, @NotNull BiConsumer<SubscriptionEntity, AsynchronousEvent> onEvent) throws IOException, InterruptedException {
             SubscriptionEntity subscriptionEntity = new SubscribableQueryImpl.SubscriptionEntityImpl(networkClient);
             networkClient.subscribe(subscriptionEntity, path.getPath(), priority, model -> onEvent.accept(subscriptionEntity, model), AsynchronousEvent.class);
             return subscriptionEntity;

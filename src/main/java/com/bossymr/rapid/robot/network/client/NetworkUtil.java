@@ -1,9 +1,7 @@
 package com.bossymr.rapid.robot.network.client;
 
 import com.bossymr.rapid.robot.network.EntityModel;
-import com.bossymr.rapid.robot.network.Link;
-import com.bossymr.rapid.robot.network.annotations.Deserializable;
-import com.bossymr.rapid.robot.network.annotations.Service;
+import com.bossymr.rapid.robot.network.annotations.*;
 import com.bossymr.rapid.robot.network.client.impl.AsynchronousQueryImpl;
 import com.bossymr.rapid.robot.network.client.impl.QueryImpl;
 import com.bossymr.rapid.robot.network.client.impl.SubscribableQueryImpl;
@@ -40,16 +38,16 @@ public final class NetworkUtil {
         Service service = type.getAnnotation(Service.class);
         String path = service != null ? service.value() : "";
         for (Annotation annotation : method.getAnnotations()) {
-            if (annotation instanceof Query.GET request) {
+            if (annotation instanceof GET request) {
                 return newQuery(networkClient, proxy, "GET", path + request.value(), method, args);
             }
-            if (annotation instanceof Query.POST request) {
+            if (annotation instanceof POST request) {
                 return newQuery(networkClient, proxy, "POST", path + request.value(), method, args);
             }
-            if (annotation instanceof Query.PUT request) {
+            if (annotation instanceof PUT request) {
                 return newQuery(networkClient, proxy, "PUT", path + request.value(), method, args);
             }
-            if (annotation instanceof Query.DELETE request) {
+            if (annotation instanceof DELETE request) {
                 return newQuery(networkClient, proxy, "DELETE", path + request.value(), method, args);
             }
             if (annotation instanceof AsynchronousQuery.Asynchronous request) {
@@ -75,15 +73,15 @@ public final class NetworkUtil {
 
     private static HttpRequest getRequest(@NotNull NetworkClient networkClient, @NotNull Object proxy, @NotNull String command, @NotNull String path, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         String interpolate = interpolate(path, proxy, method, args);
-        URI address = networkClient.getPath().resolve(interpolate);
-        Map<String, String> queries = collect(method, args, annotation -> annotation instanceof Query.Argument field ? field.value() : null, Query.ArgumentMap.class);
+        URI address = networkClient.getDefaultPath().resolve(interpolate);
+        Map<String, String> queries = collect(method, args, annotation -> annotation instanceof Argument field ? field.value() : null, ArgumentMap.class);
         if (queries.size() > 0) {
-            String query = (address.getPath() != null ? "&" : "?") + queries.entrySet().stream()
+            String query = (address.getQuery() != null ? "&" : "?") + queries.entrySet().stream()
                     .map(entry -> entry.getKey() + "=" + entry.getValue())
                     .collect(Collectors.joining("&"));
-            address = networkClient.getPath().resolve(interpolate + query);
+            address = networkClient.getDefaultPath().resolve(interpolate + query);
         }
-        Map<String, String> fields = collect(method, args, annotation -> annotation instanceof Query.Field field ? field.value() : null, Query.FieldMap.class);
+        Map<String, String> fields = collect(method, args, annotation -> annotation instanceof com.bossymr.rapid.robot.network.annotations.Field field ? field.value() : null, FieldMap.class);
         String field = fields.size() > 0 ? fields.entrySet().stream()
                 .map(entry -> entry.getKey() + "=" + entry.getValue())
                 .collect(Collectors.joining("&")) : null;
@@ -103,15 +101,15 @@ public final class NetworkUtil {
     }
 
     public static @NotNull String interpolate(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
-        Map<String, String> map = collect(method, args, annotation -> annotation instanceof Query.Path argument ? argument.value() : null, Query.PathMap.class);
+        Map<String, String> map = collect(method, args, annotation -> annotation instanceof Path argument ? argument.value() : null, PathMap.class);
         return Pattern.compile("\\{([^}]*)}").matcher(path)
                 .replaceAll(result -> {
                     String value = result.group().substring(1, result.group().length() - 1);
                     if (value.startsWith("@")) {
                         if (proxy instanceof EntityModel model) {
-                            Link link = model.getLink(value.substring(1));
+                            URI link = model.getLink(value.substring(1));
                             if (link != null) {
-                                return link.path().getPath();
+                                return link.getPath();
                             } else {
                                 LOG.error("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
                             }

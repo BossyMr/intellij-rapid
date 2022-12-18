@@ -4,6 +4,6 @@ import java.io.IOException;
 
 public interface SubscriptionEntity {
 
-    void unsubscribe() throws IOException;
+    void unsubscribe() throws IOException, InterruptedException;
 
 }

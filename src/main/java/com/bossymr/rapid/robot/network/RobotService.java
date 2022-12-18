@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.network;
 
+import com.bossymr.rapid.robot.network.annotations.GET;
 import com.bossymr.rapid.robot.network.annotations.Service;
-import com.bossymr.rapid.robot.network.client.NetworkClient;
+import com.bossymr.rapid.robot.network.client.impl.NetworkClientImpl;
 import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.Query.GET;
 import com.intellij.credentialStore.Credentials;
 import org.jetbrains.annotations.NotNull;
 
@@ -29,7 +29,7 @@ public interface RobotService {
      * @throws IOException if an I/O error occurs.
      */
     static @NotNull RobotService connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException {
-        return new NetworkClient(path, credentials).newService(RobotService.class);
+        return new NetworkClientImpl(path, credentials).newService(RobotService.class);
     }
 
     /**

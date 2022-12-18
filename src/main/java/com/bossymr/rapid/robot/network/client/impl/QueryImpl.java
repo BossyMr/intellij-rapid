@@ -8,8 +8,8 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 public class QueryImpl<T> implements Query<T> {
 
@@ -25,19 +25,14 @@ public class QueryImpl<T> implements Query<T> {
     }
 
     @Override
-    public @Nullable T send() throws IOException {
-        return networkClient.process(networkClient.send(request), returnType);
+    public @Nullable T send() throws IOException, InterruptedException {
+        HttpResponse<byte[]> response = networkClient.send(request);
+        return EntityUtil.convert(networkClient, response, returnType);
     }
 
     @Override
     public @NotNull CompletableFuture<T> sendAsync() {
         return networkClient.sendAsync(request)
-                .thenComposeAsync(response -> {
-                    try {
-                        return networkClient.processAsync(response, returnType);
-                    } catch (IOException e) {
-                        throw new CompletionException(e);
-                    }
-                });
+                .thenComposeAsync(response -> EntityUtil.convertAsync(networkClient, response, returnType));
     }
 }
