@@ -9,6 +9,7 @@ import com.bossymr.rapid.robot.network.query.AsynchronousQuery;
 import com.bossymr.rapid.robot.network.query.Query;
 import com.bossymr.rapid.robot.network.query.SubscribableQuery;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.util.ReflectionUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.Annotation;
@@ -159,15 +160,16 @@ public final class NetworkUtil {
     }
 
     public static @NotNull Object convert(@NotNull String value, @NotNull Class<?> type) throws IllegalAccessException {
-        if (String.class.isAssignableFrom(type)) return value;
-        if (Byte.class.isAssignableFrom(type)) return Byte.parseByte(value);
-        if (Short.class.isAssignableFrom(type)) return Short.parseShort(value);
-        if (Integer.class.isAssignableFrom(type)) return Integer.parseInt(value);
-        if (Long.class.isAssignableFrom(type)) return Long.parseLong(value);
-        if (Float.class.isAssignableFrom(type)) return Float.parseFloat(value);
-        if (Double.class.isAssignableFrom(type)) return Double.parseDouble(value);
-        if (Boolean.class.isAssignableFrom(type)) return Boolean.parseBoolean(value);
-        if (Character.class.isAssignableFrom(type)) return value.charAt(0);
+        type = ReflectionUtil.boxType(type);
+        if (String.class.equals(type)) return value;
+        if (Byte.class.equals(type)) return Byte.parseByte(value);
+        if (Short.class.equals(type)) return Short.parseShort(value);
+        if (Integer.class.equals(type)) return Integer.parseInt(value);
+        if (Long.class.equals(type)) return Long.parseLong(value);
+        if (Float.class.equals(type)) return Float.parseFloat(value);
+        if (Double.class.equals(type)) return Double.parseDouble(value);
+        if (Boolean.class.equals(type)) return Boolean.parseBoolean(value);
+        if (Character.class.equals(type)) return value.charAt(0);
         if (Enum.class.isAssignableFrom(type)) {
             Map<String, Object> constants = new HashMap<>();
             for (Field field : type.getFields()) {
@@ -185,6 +187,9 @@ public final class NetworkUtil {
                     }
                     constants.put(name, field.get(null));
                 }
+            }
+            if (constants.containsKey(value)) {
+                return constants.get(value);
             }
         }
         throw new IllegalStateException("Unable to convert '" + value + "' into '" + type + "'");

@@ -16,7 +16,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     private final Model model;
     private final Class<?> entityType;
 
-    public EntityInvocationHandler(@NotNull Class<?> entityType, @NotNull NetworkClient networkClient, @NotNull Model model) {
+    public EntityInvocationHandler(@NotNull Class<?> entityType, @Nullable NetworkClient networkClient, @NotNull Model model) {
         assert entityType.isAnnotationPresent(Entity.class) : "EntityInvocationHandler cannot be created for proxy '" + entityType.getName() + "' - method not annotated as entity.";
         assert !entityType.isAnnotationPresent(Service.class) : "EntityInvocationHandler cannot be created for proxy '" + entityType.getName() + "' - method annotated as service.";
         this.entityType = entityType;
@@ -38,6 +38,9 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         if (isMethod(method, EntityModel.class, "getFields")) {
             return model.getFields();
         }
+        if (isMethod(method, EntityModel.class, "getNetworkClient")) {
+            return networkClient;
+        }
         if (method.isAnnotationPresent(Property.class)) {
             Property property = method.getAnnotation(Property.class);
             String name = property.value();
@@ -48,7 +51,10 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
                 return null;
             }
         }
-        return NetworkUtil.newQuery(entityType, networkClient, proxy, method, args);
+        if (networkClient != null) {
+            return NetworkUtil.newQuery(entityType, networkClient, proxy, method, args);
+        }
+        throw new IllegalArgumentException();
     }
 
     @Override

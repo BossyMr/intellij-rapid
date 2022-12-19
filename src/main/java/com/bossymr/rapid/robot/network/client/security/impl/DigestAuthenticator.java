@@ -122,7 +122,7 @@ public class DigestAuthenticator implements Authenticator {
         parameters.put("opaque", Objects.requireNonNull(challenge.values().get("opaque")));
         String name = isProxy ? "Proxy-Authorization" : "Authorization";
         String output = parse(parameters);
-        return HttpRequest.newBuilder(request, (n, v) -> true)
+        return HttpRequest.newBuilder(request, (n, v) -> !n.equalsIgnoreCase("Authorization") && !n.equalsIgnoreCase("Proxy-Authorization"))
                 .header(name, output)
                 .build();
     }

@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network.client;
 
+import com.bossymr.rapid.robot.network.ServiceModel;
 import com.bossymr.rapid.robot.network.annotations.Service;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -19,6 +20,9 @@ public class ServiceInvocationHandler extends AbstractInvocationHandler {
 
     @Override
     public @Nullable Object execute(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
+        if (isMethod(method, ServiceModel.class, "getNetworkClient")) {
+            return networkClient;
+        }
         assert serviceType.isInstance(proxy);
         return NetworkUtil.newQuery(serviceType, networkClient, proxy, method, args);
     }

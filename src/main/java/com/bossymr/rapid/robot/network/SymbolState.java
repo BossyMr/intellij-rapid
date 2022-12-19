@@ -26,10 +26,34 @@ public interface SymbolState extends EntityModel {
     @Nullable String getName();
 
     @Property("symtyp")
-    @Nullable SymbolType getSymbolType();
+    @NotNull SymbolType getSymbolType();
 
     @Property("named")
     boolean isNamed();
+
+    interface VisibleSymbolState extends SymbolState {
+
+        @Property("local")
+        boolean isLocal();
+    }
+
+    interface FieldSymbolState extends SymbolState, VisibleSymbolState {
+
+        @Property("typurl")
+        @Nullable String getCanonicalType();
+
+        @Property("dattyp")
+        @Nullable String getDataType();
+
+        @Property("ndim")
+        int getSize();
+    }
+
+    interface RoutineSymbolState extends SymbolState, VisibleSymbolState {
+
+        @Property("npar")
+        int getSize();
+    }
 
     @Entity({"rap-sympropatomic", "rap-sympropatomic-li"})
     interface AtomicSymbolState extends SymbolState {
@@ -49,10 +73,7 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-symproprecord", "rap-symproprecord-li"})
-    interface RecordSymbolState extends SymbolState {
-
-        @Property("local")
-        boolean isLocal();
+    interface RecordSymbolState extends SymbolState, VisibleSymbolState {
 
         @Property("ncom")
         int getSize();
@@ -63,13 +84,10 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropalias", "rap-sympropalias-li"})
-    interface AliasSymbolState extends SymbolState {
+    interface AliasSymbolState extends SymbolState, VisibleSymbolState {
 
         @Property("linked")
         boolean isLinked();
-
-        @Property("local")
-        boolean isLocal();
 
         @Property("typurl")
         @Nullable String getCanonicalType();
@@ -92,41 +110,18 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropconstant", "rap-sympropconstant-li"})
-    interface ConstantSymbolState extends SymbolState {
+    interface ConstantSymbolState extends SymbolState, VisibleSymbolState, FieldSymbolState {
 
         @Property("linked")
         boolean isLinked();
 
-        @Property("local")
-        boolean isLocal();
-
-        @Property("typurl")
-        @Nullable String getCanonicalType();
-
-        @Property("dattyp")
-        @Nullable String getDataType();
-
-        @Property("ndim")
-        int getSize();
     }
 
     @Entity({"rap-sympropvar", "rap-sympropvar-li"})
-    interface VariableSymbolState extends SymbolState {
-
-        @Property("dattyp")
-        @Nullable String getDataType();
-
-        @Property("typurl")
-        @Nullable String getCanonicalType();
-
-        @Property("ndim")
-        int getSize();
+    interface VariableSymbolState extends SymbolState, VisibleSymbolState, FieldSymbolState {
 
         @Property("dim")
         @Nullable String getDimensions();
-
-        @Property("local")
-        boolean isLocal();
 
         @Property("rdonly")
         boolean isRead();
@@ -137,28 +132,16 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-symproppers", "rap-symproppers-li"})
-    interface PersistentSymbolState extends SymbolState {
-
-        @Property("dattyp")
-        @Nullable String getDataType();
-
-        @Property("ndim")
-        int getSize();
+    interface PersistentSymbolState extends SymbolState, VisibleSymbolState, FieldSymbolState {
 
         @Property("dim")
         @Nullable String getDimensions();
 
-        @Property("local")
-        boolean isLocal();
-
         @Property("rdonly")
         boolean isRead();
 
-        @Property("taskvar")
+        @Property("taskpers")
         boolean isTask();
-
-        @Property("typurl")
-        @Nullable String getCanonicalType();
 
     }
 
@@ -189,13 +172,10 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropfunction", "rap-sympropfunction-li"})
-    interface FunctionSymbolState extends SymbolState {
+    interface FunctionSymbolState extends SymbolState, VisibleSymbolState, RoutineSymbolState {
 
         @Property("linked")
         boolean isLinked();
-
-        @Property("local")
-        boolean isLocal();
 
         @Property("typurl")
         @NotNull String getCanonicalType();
@@ -203,19 +183,10 @@ public interface SymbolState extends EntityModel {
         @Property("dattyp")
         @NotNull String getDataType();
 
-        @Property("npar")
-        int getSize();
     }
 
     @Entity({"rap-sympropproc", "rap-sympropproc-li"})
-    interface ProcedureSymbolState extends SymbolState {
-
-        @Property("local")
-        boolean isLocal();
-
-        @Property("npar")
-        int getSize();
-    }
+    interface ProcedureSymbolState extends SymbolState, VisibleSymbolState, RoutineSymbolState {}
 
     @Entity({"rap-symproptask", "rap-symproptask-li"})
     interface TaskSymbolState extends SymbolState {}

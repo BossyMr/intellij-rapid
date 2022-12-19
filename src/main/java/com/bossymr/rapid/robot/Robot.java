@@ -22,6 +22,11 @@ public interface Robot {
      */
     @NotNull String getName();
 
+    /**
+     * Returns the path of this robot.
+     *
+     * @return the path of this robot.
+     */
     @NotNull URI getPath();
 
     /**
@@ -40,14 +45,14 @@ public interface Robot {
      * not found.
      * @throws IOException if an I/O error occurs.
      */
-    @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException;
+    @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException;
 
     /**
      * Returns the controller to the connected robot, if the robot is currently connected.
      *
      * @return the controller to the connected robot, or {@code null} if the robot is not currently connected.
      */
-    @Nullable RobotService getController();
+    @Nullable RobotService getRobotService();
 
     /**
      * Reconnects to this robot, using the persisted path and credentials.
@@ -64,8 +69,11 @@ public interface Robot {
      */
     void reconnect(@NotNull Credentials credentials) throws IOException;
 
+    /**
+     * Disconnects from this robot.
+     *
+     * @throws IOException if an I/O error occurs.
+     */
     void disconnect() throws IOException;
-
-    boolean isConnected();
 
 }

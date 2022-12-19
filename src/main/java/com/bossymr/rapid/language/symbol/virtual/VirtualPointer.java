@@ -1,8 +1,7 @@
 package com.bossymr.rapid.language.symbol.virtual;
 
+import com.bossymr.rapid.robot.RemoteService;
 import com.bossymr.rapid.robot.Robot;
-import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.impl.RobotUtil;
 import com.intellij.model.Pointer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -19,13 +18,12 @@ public class VirtualPointer implements Pointer<VirtualSymbol> {
 
     @Override
     public @Nullable VirtualSymbol dereference() {
-        RobotService instance = RobotService.getInstance();
+        RemoteService instance = RemoteService.getInstance();
         Robot robot = instance.getRobot();
         if (robot == null) return null;
         try {
             return robot.getSymbol(name);
-        } catch (IOException e) {
-            RobotUtil.showNotification();
+        } catch (IOException | InterruptedException e) {
             return null;
         }
     }

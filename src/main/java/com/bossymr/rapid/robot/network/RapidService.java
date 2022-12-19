@@ -27,16 +27,13 @@ public interface RapidService {
 
     /**
      * Returns the symbol with the specified path. If a symbol with the specified path does not exist, a
-     * {@link com.bossymr.rapid.robot.ResponseStatusException} will be thrown, with the status code 400.
+     * {@link ResponseStatusException} will be thrown, with the status code 400.
      *
      * @param symbol the path of the symbol.
      * @return the symbol.
-     * @throws ResponseStatusException if a symbol with the specified path does not exist.
      */
     @GET("/symbol/properties/{symbol}")
     @NotNull Query<SymbolState> findSymbol(
             @Path("symbol") String symbol
-    ) throws ResponseStatusException;
-
-
+    );
 }

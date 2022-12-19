@@ -8,7 +8,7 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.7.21"
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.10.0"
+    id("org.jetbrains.intellij") version "1.11.0"
     // Gradle GrammarKit Plugin
     id("org.jetbrains.grammarkit") version "2021.2.2"
     // Gradle Changelog Plugin
@@ -16,7 +16,7 @@ plugins {
     // Gradle Qodana Plugin
     id("org.jetbrains.qodana") version "0.1.13"
     // Gradle Kover Plugin
-    id("org.jetbrains.kotlinx.kover") version "0.6.1"
+    // id("org.jetbrains.kotlinx.kover") version "0.6.1"
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
@@ -54,9 +54,9 @@ qodana {
 }
 
 // Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
-kover.xmlReport {
-    onCheck.set(true)
-}
+// kover.xmlReport {
+//     onCheck.set(true)
+// }
 
 configurations {
     all {

@@ -9,11 +9,11 @@ import java.util.EventListener;
 public interface RobotEventListener extends EventListener {
 
     static @NotNull RobotEventListener publish() {
-        return ApplicationManager.getApplication().getMessageBus().syncPublisher(RobotService.TOPIC);
+        return ApplicationManager.getApplication().getMessageBus().syncPublisher(RemoteService.TOPIC);
     }
 
     static void connect(@NotNull RobotEventListener eventListener) {
-        ApplicationManager.getApplication().getMessageBus().connect().subscribe(RobotService.TOPIC, eventListener);
+        ApplicationManager.getApplication().getMessageBus().connect().subscribe(RemoteService.TOPIC, eventListener);
     }
 
     default void onSymbol(@NotNull Robot robot, @NotNull VirtualSymbol symbol) {}

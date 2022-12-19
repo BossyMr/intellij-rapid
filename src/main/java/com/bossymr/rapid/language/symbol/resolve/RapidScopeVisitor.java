@@ -5,8 +5,7 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
-import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.impl.RobotUtil;
+import com.bossymr.rapid.robot.RemoteService;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -151,12 +150,11 @@ public class RapidScopeVisitor extends RapidElementVisitor {
                 }, GlobalSearchScope.projectScope(project));
 
                 if (this.state != State.HALT) {
-                    RobotService service = RobotService.getInstance();
+                    RemoteService service = RemoteService.getInstance();
                     if (service.getRobot() != null) {
                         try {
                             process(service.getRobot().getSymbol(processor.getName()));
-                        } catch (IOException e) {
-                            RobotUtil.showNotification();
+                        } catch (IOException | InterruptedException e) {
                             return;
                         }
                     }

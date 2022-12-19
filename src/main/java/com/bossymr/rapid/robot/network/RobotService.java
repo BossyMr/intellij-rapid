@@ -17,7 +17,7 @@ import java.net.URI;
  * A {@code Robot} instance is created with {@link #connect(URI, Credentials)}.
  */
 @Service
-public interface RobotService {
+public interface RobotService extends ServiceModel {
 
     /**
      * Connects to the specified path, using the specified credentials. An attempt to connect to the remote robot will

@@ -44,8 +44,8 @@
 
         <!-- Robot -->
 
-        <applicationService serviceInterface="com.bossymr.rapid.robot.RobotService"
-                            serviceImplementation="com.bossymr.rapid.robot.impl.RobotServiceImpl"/>
+        <applicationService serviceInterface="com.bossymr.rapid.robot.RemoteService"
+                            serviceImplementation="com.bossymr.rapid.robot.impl.RemoteServiceImpl"/>
 
         <toolWindow id="Robot" anchor="right" icon="com.bossymr.rapid.RapidIcons.ROBOT_TOOL_WINDOW"
                     factoryClass="com.bossymr.rapid.robot.ui.RobotToolWindowFactory"/>

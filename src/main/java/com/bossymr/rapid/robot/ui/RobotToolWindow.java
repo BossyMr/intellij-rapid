@@ -4,7 +4,6 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
-import com.bossymr.rapid.robot.RobotService;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.openapi.Disposable;
@@ -73,7 +72,7 @@ public class RobotToolWindow implements Disposable {
                 SimpleTextAttributes.LINK_PLAIN_ATTRIBUTES,
                 e -> ActionUtil.invokeAction(action, panel, "RobotToolWindow", null, null));
 
-        project.getMessageBus().connect().subscribe(RobotService.TOPIC, new RobotEventListener() {
+        RobotEventListener.connect(new RobotEventListener() {
             @Override
             public void afterConnect(@NotNull Robot robot) {
                 model.invalidate();

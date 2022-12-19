@@ -12,6 +12,7 @@ import com.bossymr.rapid.robot.network.query.SubscriptionPriority;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -25,6 +26,14 @@ import java.util.function.Consumer;
  * A {@code NetworkClient} capable of sending, receiving and subscribing to events on a remote robot.
  */
 public interface NetworkClient {
+
+    @SuppressWarnings("unchecked")
+    static <T> @NotNull T newSimpleEntity(@NotNull Model model, @NotNull Class<T> entityType) {
+        return (T) Proxy.newProxyInstance(
+                entityType.getClassLoader(),
+                new Class[]{entityType},
+                new EntityInvocationHandler(entityType, null, model));
+    }
 
     /**
      * Creates a new service of the specified type.
@@ -127,4 +136,5 @@ public interface NetworkClient {
      */
     <T> @NotNull SubscribableQuery<T> newSubscribableQuery(@NotNull String path, @NotNull Class<T> returnType);
 
+    void close() throws IOException;
 }

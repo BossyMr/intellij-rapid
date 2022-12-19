@@ -26,21 +26,25 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
+import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 public class NetworkClientImpl implements NetworkClient {
 
     private static final Logger LOG = Logger.getInstance(NetworkClientImpl.class);
 
+    private static final int MAX_CONNECTIONS = 1;
+
     private static final CookieManager COOKIE_MANAGER = new CookieManager();
 
+    private final ExecutorService executorService;
     private final Map<Object, SubscriptionDetail<?>> details = new HashMap<>();
     private final Authenticator authenticator;
     private final HttpClient httpClient;
     private final URI defaultPath;
+    private final List<CompletableFuture<Void>> locks = Collections.synchronizedList(new ArrayList<>());
     private URI subscriptionGroup;
     private WebSocket webSocket;
 
@@ -51,8 +55,13 @@ public class NetworkClientImpl implements NetworkClient {
         // meaning that session and authentication cookies are reused for a new NetworkClient, with a potentially
         // different NetworkClient. Additionally, only a single NetworkClient should be instantiated at once.
         COOKIE_MANAGER.getCookieStore().removeAll();
+        ThreadFactory threadFactory = Executors.defaultThreadFactory();
+        this.executorService = Executors.newFixedThreadPool(2, threadFactory);
         this.httpClient = HttpClient.newBuilder()
+                .executor(executorService)
+                .version(HttpClient.Version.HTTP_1_1)
                 .cookieHandler(COOKIE_MANAGER)
+                .connectTimeout(Duration.ofSeconds(5))
                 .build();
     }
 
@@ -101,7 +110,20 @@ public class NetworkClientImpl implements NetworkClient {
     }
 
     private <T> @NotNull HttpResponse<T> notify(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
-        HttpResponse<T> response = httpClient.send(httpRequest, bodyHandler);
+        HttpResponse<T> response;
+        CompletableFuture<Void> lock = new CompletableFuture<>();
+        locks.add(lock);
+        int index = locks.indexOf(lock);
+        if (index >= MAX_CONNECTIONS) {
+            try {
+                locks.get(index - 1).get();
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        response = httpClient.send(httpRequest, bodyHandler);
+        locks.remove(lock);
+        lock.complete(null);
         LOG.info("Request: '" + httpRequest + "' - Response: '" + response + "'");
         return response;
     }
@@ -123,7 +145,7 @@ public class NetworkClientImpl implements NetworkClient {
 
     private <T> @NotNull CompletableFuture<HttpResponse<T>> retryAsync(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
         HttpRequest authenticated = authenticator.authenticate(httpRequest);
-        return httpClient.sendAsync(authenticated != null ? authenticated : httpRequest, bodyHandler)
+        return notifyAsync(authenticated != null ? authenticated : httpRequest, bodyHandler)
                 .thenComposeAsync(response -> {
                     if (response.statusCode() == 401 || response.statusCode() == 407) {
                         HttpRequest retry = authenticator.authenticate(response);
@@ -136,8 +158,21 @@ public class NetworkClientImpl implements NetworkClient {
     }
 
     private <T> @NotNull CompletableFuture<HttpResponse<T>> notifyAsync(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
-        return httpClient.sendAsync(httpRequest, bodyHandler)
+        assert httpRequest.headers().allValues("Authorization").size() <= 1;
+        CompletableFuture<Void> waiting = null;
+        CompletableFuture<Void> lock = new CompletableFuture<>();
+        synchronized (locks) {
+            locks.add(lock);
+            int index = locks.indexOf(lock);
+            if (index >= MAX_CONNECTIONS) {
+                waiting = locks.get(index - 1);
+            }
+        }
+        return (waiting != null ? CompletableFuture.anyOf(waiting) : CompletableFuture.completedFuture(null))
+                .thenComposeAsync((ignored) -> httpClient.sendAsync(httpRequest, bodyHandler))
                 .thenApplyAsync(response -> {
+                    locks.remove(lock);
+                    lock.complete(null);
                     LOG.info("Request: '" + httpRequest + "' - Response: '" + response + "'");
                     return response;
                 });
@@ -262,6 +297,18 @@ public class NetworkClientImpl implements NetworkClient {
     @Override
     public @NotNull <T> SubscribableQuery<T> newSubscribableQuery(@NotNull String path, @NotNull Class<T> returnType) {
         return new SubscribableQueryImpl<>(this, path, returnType);
+    }
+
+    @Override
+    public void close() throws IOException {
+        details.clear();
+        try {
+            closeSubscription();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
+        executorService.shutdownNow();
     }
 
     private record SubscriptionDetail<T>(

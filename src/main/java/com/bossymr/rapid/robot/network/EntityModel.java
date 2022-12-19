@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
+import com.bossymr.rapid.robot.network.client.NetworkClient;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
@@ -9,6 +10,8 @@ import java.util.Map;
  * An {@code EntityModel} is an entity provided by a robot.
  */
 public interface EntityModel {
+
+    @NotNull NetworkClient getNetworkClient();
 
     /**
      * Returns the title of this entity.
