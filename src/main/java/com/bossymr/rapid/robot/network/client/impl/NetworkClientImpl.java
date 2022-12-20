@@ -303,7 +303,9 @@ public class NetworkClientImpl implements NetworkClient {
     public void close() throws IOException {
         details.clear();
         try {
-            closeSubscription();
+            if (subscriptionGroup != null && webSocket != null) {
+                closeSubscription();
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);

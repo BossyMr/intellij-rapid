@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.network.RobotService;
 import com.intellij.credentialStore.Credentials;
@@ -8,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -37,6 +39,13 @@ public interface Robot {
     @NotNull Set<VirtualSymbol> getSymbols();
 
     /**
+     * Returns all tasks on this persisted robot.
+     *
+     * @return all tasks on this robot.
+     */
+    @NotNull List<RapidTask> getTasks();
+
+    /**
      * Returns a symbol on this persisted robot, with the specified name. If the symbol was not found and if the robot
      * is currently connected, it will attempt to retrieve the symbol.
      *
@@ -59,7 +68,7 @@ public interface Robot {
      *
      * @throws IOException if an I/O error occurs.
      */
-    void reconnect() throws IOException;
+    void reconnect() throws IOException, InterruptedException;
 
     /**
      * Reconnects to this robot, using the specified credentials.
@@ -67,7 +76,7 @@ public interface Robot {
      * @param credentials the credentials to authenticate with.
      * @throws IOException if an I/O error occurs.
      */
-    void reconnect(@NotNull Credentials credentials) throws IOException;
+    void reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException;
 
     /**
      * Disconnects from this robot.

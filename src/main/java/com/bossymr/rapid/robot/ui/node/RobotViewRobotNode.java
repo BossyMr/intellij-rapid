@@ -10,10 +10,7 @@ import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RobotViewRobotNode extends RobotViewNode<Robot> {
@@ -25,6 +22,10 @@ public class RobotViewRobotNode extends RobotViewNode<Robot> {
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
         Set<String> symbols = Set.of("atm", "rec", "ali", "var", "prc");
+        List<RobotViewNode<?>> nodes = new ArrayList<>();
+        for (RapidTask task : getValue().getTasks()) {
+            nodes.add(new RobotViewTaskNode(getProject(), task));
+        }
         RobotViewDirectoryNode<String> directoryNode = new RobotViewDirectoryNode<>(getProject(), "Symbols", RapidIcons.ROBOT_DIRECTORY, symbols) {
             @Override
             public @NotNull AbstractTreeNode<?> getChild(@NotNull String value) {
@@ -57,8 +58,8 @@ public class RobotViewRobotNode extends RobotViewNode<Robot> {
             }
 
         };
-
-        return Collections.singletonList(directoryNode);
+        nodes.add(directoryNode);
+        return nodes;
     }
 
     @Override

@@ -88,7 +88,7 @@ public final class RobotSymbolFactory {
         List<RapidComponent> components = new ArrayList<>();
         assert states.size() == symbol.getSize();
         processed.add(symbol.getTitle());
-        for (int i = 0; i < symbol.getSize() + 1; i++) {
+        for (int i = 0; i < symbol.getSize(); i++) {
             components.add(null);
         }
         for (SymbolState symbolState : states) {
@@ -96,6 +96,7 @@ public final class RobotSymbolFactory {
             ComponentSymbolState componentSymbolState = (ComponentSymbolState) symbolState;
             components.set(componentSymbolState.getIndex() - 1, getComponent(componentSymbolState));
         }
+        assert !components.contains(null);
         return getSymbol(new VirtualRecord(getName(symbol), Collections.unmodifiableList(components)));
     }
 
@@ -166,6 +167,7 @@ public final class RobotSymbolFactory {
         }
         RapidType dataType = state instanceof FunctionSymbolState functionSymbolState && functionSymbolState.getDataType().length() > 0 ? new RapidType(getStructure(functionSymbolState.getDataType())) : null;
         groups.removeIf(Objects::isNull);
+        assert !groups.contains(null);
         Visibility visibility = state.isLocal() ? Visibility.LOCAL : Visibility.GLOBAL;
         VirtualRoutine routine = new VirtualRoutine(visibility, attribute, getName(state), dataType, groups);
         return getSymbol(routine);

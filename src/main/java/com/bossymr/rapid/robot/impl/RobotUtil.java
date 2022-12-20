@@ -1,21 +1,23 @@
 package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.PersistentRobotState;
 import com.bossymr.rapid.robot.PersistentRobotState.StorageSymbolState;
 import com.bossymr.rapid.robot.ResponseStatusException;
-import com.bossymr.rapid.robot.network.RobotService;
-import com.bossymr.rapid.robot.network.SymbolQueryBuilder;
-import com.bossymr.rapid.robot.network.SymbolState;
-import com.bossymr.rapid.robot.network.SymbolType;
+import com.bossymr.rapid.robot.network.Module;
+import com.bossymr.rapid.robot.network.*;
 import com.bossymr.rapid.robot.network.query.Query;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.ide.passwordSafe.PasswordSafe;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.search.FileTypeIndex;
@@ -23,10 +25,14 @@ import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static com.intellij.credentialStore.CredentialAttributesKt.generateServiceName;
@@ -34,6 +40,7 @@ import static com.intellij.credentialStore.CredentialAttributesKt.generateServic
 public final class RobotUtil {
 
     private RobotUtil() {
+        throw new AssertionError();
     }
 
     private static @NotNull CredentialAttributes createCredentialAttributes(String key) {
@@ -60,6 +67,62 @@ public final class RobotUtil {
         });
     }
 
+    public static @NotNull List<RapidTask> download(@NotNull RobotService robotService) throws InterruptedException, IOException {
+        String homePath = PathManager.getSystemPath();
+        List<RapidTask> rapidTasks = new ArrayList<>();
+        List<Task> tasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
+        // TODO: 2022-12-20 Check if the user wants to save/upload existing (changed) content or overwrite
+        remove();
+        for (Task task : tasks) {
+            Set<VirtualFile> files = new HashSet<>();
+            RapidTask rapidTask = new RapidTaskImpl(task.getName(), files);
+            List<ModuleInfo> moduleInfos = task.getModules().send();
+            for (ModuleInfo moduleInfo : moduleInfos) {
+                Module module = moduleInfo.getModule().send();
+                Path path = Path.of(homePath, "robot", task.getName());
+                if (path.toFile().exists() || path.toFile().mkdirs()) {
+                    module.save(module.getName(), path.toString()).send();
+                    VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path.resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION));
+                    assert virtualFile != null;
+                    files.add(virtualFile);
+                }
+            }
+            rapidTasks.add(rapidTask);
+        }
+
+        return rapidTasks;
+    }
+
+    public static @NotNull List<RapidTask> download() {
+        String homePath = PathManager.getSystemPath();
+        List<RapidTask> rapidTasks = new ArrayList<>();
+        Path robotPath = Path.of(homePath, "robot");
+        if (robotPath.toFile().exists()) {
+            assert robotPath.toFile().isDirectory();
+            File[] files = robotPath.toFile().listFiles();
+            assert files != null;
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    Set<VirtualFile> virtualFiles = new HashSet<>();
+                    RapidTask rapidTask = new RapidTaskImpl(file.getName(), virtualFiles);
+                    File[] modules = file.listFiles();
+                    assert modules != null;
+                    for (File module : modules) {
+                        virtualFiles.add(LocalFileSystem.getInstance().findFileByIoFile(module));
+                    }
+                    rapidTasks.add(rapidTask);
+                }
+            }
+        }
+        return rapidTasks;
+    }
+
+    public static void remove() throws IOException {
+        String homePath = PathManager.getSystemPath();
+        Path robotPath = Path.of(homePath, "robot");
+        if (robotPath.toFile().exists()) FileUtil.delete(robotPath);
+    }
+
     public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull PersistentRobotState robotState) {
         return new RobotSymbolFactory(robotState).getSymbols();
     }
@@ -71,61 +134,68 @@ public final class RobotUtil {
         return virtualSymbols.get(0);
     }
 
-    public static @NotNull PersistentRobotState getRobotState(@NotNull RobotService service) {
+    public static @NotNull PersistentRobotState getRobotState(@NotNull RobotService service) throws IOException, InterruptedException {
         PersistentRobotState robotState = new PersistentRobotState();
         Map<String, String> query = new SymbolQueryBuilder()
                 .setRecursive(true)
                 .setSymbolType(SymbolType.ANY)
                 .build();
-        CompletableFuture.allOf(
-                service.getControllerService().getIdentity().sendAsync()
-                        .thenAcceptAsync(identity -> {
-                            robotState.name = identity.getName();
-                            URI self = identity.getLink("self");
-                            robotState.path = self.getScheme() + "://" + self.getHost() + ":" + self.getPort();
-                        }),
-                service.getRobotWareService().getRapidService().findSymbols(query).sendAsync()
-                        .thenApplyAsync(symbols -> {
-                            robotState.symbols = symbols.stream()
-                                    .map(RobotUtil::getSymbolState)
-                                    .collect(Collectors.toSet());
-                            return symbols;
-                        }).thenComposeAsync(symbols -> {
-                            Map<String, Set<String>> states = new HashMap<>();
-                            for (SymbolState symbol : symbols) {
-                                String address = symbol.getTitle().substring(0, symbol.getTitle().lastIndexOf('/'));
-                                states.computeIfAbsent(address, (value) -> new HashSet<>());
-                                states.get(address).add(symbol.getTitle().substring(symbol.getTitle().lastIndexOf('/') + 1));
-                            }
-                            List<CompletableFuture<?>> completableFutures = new ArrayList<>();
-                            for (Map.Entry<String, Set<String>> entry : states.entrySet()) {
-                                if (entry.getKey().equals("RAPID")) continue;
-                                String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
-                                if (!states.get("RAPID").contains(name)) {
-                                    Query<SymbolState> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
-                                    CompletableFuture<Void> completableFuture = symbol.sendAsync()
-                                            .exceptionally((exception) -> {
-                                                if (exception.getCause() instanceof ResponseStatusException responseStatusException) {
-                                                    if (responseStatusException.getStatusCode() == 400) {
-                                                        return null;
-                                                    }
-                                                }
-                                                if (exception instanceof RuntimeException runtimeException) {
-                                                    throw runtimeException;
-                                                }
-                                                throw new CompletionException(exception);
-                                            }).thenAcceptAsync((response) -> {
-                                                if (response != null) {
-                                                    StorageSymbolState storageSymbolState = RobotUtil.getSymbolState(response);
-                                                    robotState.symbols.add(storageSymbolState);
-                                                }
-                                            });
-                                    completableFutures.add(completableFuture);
+        try {
+            CompletableFuture.allOf(
+                    service.getControllerService().getIdentity().sendAsync()
+                            .thenAcceptAsync(identity -> {
+                                robotState.name = identity.getName();
+                                URI self = identity.getLink("self");
+                                robotState.path = self.getScheme() + "://" + self.getHost() + ":" + self.getPort();
+                            }),
+                    service.getRobotWareService().getRapidService().findSymbols(query).sendAsync()
+                            .thenApplyAsync(symbols -> {
+                                robotState.symbols = symbols.stream()
+                                        .map(RobotUtil::getSymbolState)
+                                        .collect(Collectors.toSet());
+                                return symbols;
+                            }).thenComposeAsync(symbols -> {
+                                Map<String, Set<String>> states = new HashMap<>();
+                                for (SymbolState symbol : symbols) {
+                                    String address = symbol.getTitle().substring(0, symbol.getTitle().lastIndexOf('/'));
+                                    states.computeIfAbsent(address, (value) -> new HashSet<>());
+                                    states.get(address).add(symbol.getTitle().substring(symbol.getTitle().lastIndexOf('/') + 1));
                                 }
-                            }
-                            return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
-                        })
-        ).join();
+                                List<CompletableFuture<?>> completableFutures = new ArrayList<>();
+                                for (Map.Entry<String, Set<String>> entry : states.entrySet()) {
+                                    if (entry.getKey().equals("RAPID")) continue;
+                                    String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
+                                    if (!states.get("RAPID").contains(name)) {
+                                        Query<SymbolState> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
+                                        CompletableFuture<Void> completableFuture = symbol.sendAsync()
+                                                .exceptionally((exception) -> {
+                                                    if (exception.getCause() instanceof ResponseStatusException responseStatusException) {
+                                                        if (responseStatusException.getStatusCode() == 400) {
+                                                            return null;
+                                                        }
+                                                    }
+                                                    if (exception instanceof RuntimeException runtimeException) {
+                                                        throw runtimeException;
+                                                    }
+                                                    throw new CompletionException(exception);
+                                                }).thenAcceptAsync((response) -> {
+                                                    if (response != null) {
+                                                        StorageSymbolState storageSymbolState = RobotUtil.getSymbolState(response);
+                                                        robotState.symbols.add(storageSymbolState);
+                                                    }
+                                                });
+                                        completableFutures.add(completableFuture);
+                                    }
+                                }
+                                return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
+                            })
+            ).get();
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof IOException ioException) {
+                throw ioException;
+            }
+            throw new RuntimeException(e);
+        }
         return robotState;
     }
 

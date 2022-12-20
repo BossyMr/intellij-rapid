@@ -110,7 +110,8 @@ public final class NetworkUtil {
                         if (proxy instanceof EntityModel model) {
                             URI link = model.getLink(value.substring(1));
                             if (link != null) {
-                                return link.getPath();
+                                String query = link.getQuery();
+                                return link.getPath() + (query != null ? "?" + query : "");
                             } else {
                                 LOG.error("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
                             }

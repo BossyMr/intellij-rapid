@@ -4,6 +4,7 @@ import com.bossymr.rapid.robot.ResponseStatusException;
 import com.bossymr.rapid.robot.impl.RemoteServiceImpl;
 import com.bossymr.rapid.robot.network.query.Query;
 import com.intellij.credentialStore.Credentials;
+import com.intellij.openapi.application.PathManager;
 import com.intellij.testFramework.LightIdeaTestCase;
 import org.junit.Assert;
 
@@ -15,8 +16,25 @@ public class RobotServiceTest extends LightIdeaTestCase {
 
     public void testService() throws Throwable {
         RemoteServiceImpl service = new RemoteServiceImpl();
+        System.out.println(PathManager.getSystemPath());
         service.connect(URI.create("http://localhost:80"), new Credentials("Default User", "robotics".toCharArray()));
         System.out.println(service.getRobotState());
+    }
+
+    public void testTask() throws Throwable {
+        Credentials credentials = new Credentials("Default User", "robotics".toCharArray());
+        RobotService robotService = RobotService.connect(URI.create("http://localhost:80"), credentials);
+        Query<List<Task>> query = robotService.getRobotWareService().getRapidService().getTaskService().getTasks();
+        List<Task> tasks = query.send();
+        Task task = tasks.get(0);
+        System.out.println(task);
+        Assert.assertEquals("rap-task-li", task.getType());
+        Query<Program> query2 = task.getProgram();
+        Program program = query2.send();
+        // program.save("C:\\Users\\Robert Fromholz\\Documents\\test").send();
+        System.out.println(program);
+        System.out.println(task);
+        Assert.assertEquals("rap-task", task.getType());
     }
 
     public void testConnect() throws Throwable {

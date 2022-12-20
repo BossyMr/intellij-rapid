@@ -13,6 +13,8 @@ public interface RapidService {
 
     @NotNull ExecutionService getExecutionService();
 
+    @NotNull TaskService getTaskService();
+
     /**
      * Searches for symbols on this robot, according to the specified arguments. To build a correctly formatted argument
      * map, use {@link SymbolQueryBuilder}.

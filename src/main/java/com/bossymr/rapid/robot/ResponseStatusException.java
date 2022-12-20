@@ -115,6 +115,6 @@ public class ResponseStatusException extends IOException {
     @Override
     public String toString() {
         String message = getMessage();
-        return "ResponseStatusException" + " [" + (getStatusCode()) + "] " + getPath() + " " + (message != null ? ": " + message : "");
+        return "ResponseStatusException" + " [" + (getStatusCode()) + "] " + getPath() + (message != null ? ": " + message : "");
     }
 }

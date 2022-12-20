@@ -37,7 +37,7 @@ public final class PersistentRobotState {
         Map<String, Class<?>> returnTypes = EntityUtil.getReturnTypes(SymbolState.class);
         Model model = getModel(symbolState);
         assert returnTypes.containsKey(model.getType());
-        return NetworkClient.newSimpleEntity(model, SymbolState.class);
+        return (SymbolState) NetworkClient.newSimpleEntity(model, returnTypes.get(model.getType()));
     }
 
     private static @NotNull Model getModel(@NotNull StorageSymbolState symbolState) {

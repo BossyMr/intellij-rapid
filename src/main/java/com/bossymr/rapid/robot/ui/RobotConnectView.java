@@ -96,7 +96,7 @@ public class RobotConnectView extends DialogWrapper {
                         new Credentials(userField.getText(), passwordField.getPassword());
                 try {
                     service.connect(path, credentials);
-                } catch (IOException ignored) {}
+                } catch (IOException | InterruptedException ignored) {}
             }
         }, new EmptyProgressIndicator());
         super.doOKAction();

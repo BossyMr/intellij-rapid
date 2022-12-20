@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.*;
 import com.bossymr.rapid.robot.network.RobotService;
@@ -10,8 +11,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 public class RobotImpl implements Robot {
@@ -19,6 +20,7 @@ public class RobotImpl implements Robot {
     private @NotNull PersistentRobotState robotState;
     private @Nullable RobotService robotService;
 
+    private @NotNull List<RapidTask> tasks;
     private @NotNull Map<String, VirtualSymbol> symbols;
 
     /**
@@ -26,12 +28,13 @@ public class RobotImpl implements Robot {
      *
      * @param robotService the robot service.
      */
-    public RobotImpl(@NotNull RobotService robotService) {
+    public RobotImpl(@NotNull RobotService robotService) throws IOException, InterruptedException {
         this.robotService = robotService;
         robotState = RobotUtil.getRobotState(robotService);
         RemoteService.getInstance().setRobotState(robotState);
-        RobotUtil.reload();
+        tasks = RobotUtil.download(robotService);
         symbols = RobotUtil.getSymbols(robotState);
+        RobotUtil.reload();
         RobotEventListener.publish().afterConnect(this);
     }
 
@@ -44,6 +47,7 @@ public class RobotImpl implements Robot {
         this.robotState = robotState;
         RemoteService.getInstance().setRobotState(robotState);
         symbols = RobotUtil.getSymbols(robotState);
+        tasks = RobotUtil.download();
     }
 
     @Override
@@ -59,6 +63,11 @@ public class RobotImpl implements Robot {
     @Override
     public @NotNull Set<VirtualSymbol> getSymbols() {
         return Set.copyOf(symbols.values());
+    }
+
+    @Override
+    public @NotNull List<RapidTask> getTasks() {
+        return tasks;
     }
 
     @Override
@@ -101,27 +110,32 @@ public class RobotImpl implements Robot {
     }
 
     @Override
-    public void reconnect() throws IOException {
-        RobotEventListener.publish().beforeRefresh(this);
+    public void reconnect() throws IOException, InterruptedException {
         URI path = URI.create(robotState.path);
-        robotService = RobotService.connect(path, Objects.requireNonNull(RobotUtil.getCredentials(path)));
-        robotState = RobotUtil.getRobotState(robotService);
-        RemoteService.getInstance().setRobotState(robotState);
-        RobotUtil.reload();
-        symbols = RobotUtil.getSymbols(robotState);
-        RobotEventListener.publish().afterRefresh(this);
+        Credentials credentials = RobotUtil.getCredentials(path);
+        if (credentials != null) {
+            RobotEventListener.publish().beforeRefresh(this);
+            robotService = RobotService.connect(path, credentials);
+            robotState = RobotUtil.getRobotState(robotService);
+            RemoteService.getInstance().setRobotState(robotState);
+            tasks = RobotUtil.download(robotService);
+            symbols = RobotUtil.getSymbols(robotState);
+            RobotUtil.reload();
+            RobotEventListener.publish().afterRefresh(this);
+        }
     }
 
     @Override
-    public void reconnect(@NotNull Credentials credentials) throws IOException {
+    public void reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException {
         RobotEventListener.publish().beforeRefresh(this);
         URI path = URI.create(robotState.path);
         RobotUtil.setCredentials(path, credentials);
         robotService = RobotService.connect(path, credentials);
         robotState = RobotUtil.getRobotState(robotService);
         RemoteService.getInstance().setRobotState(robotState);
-        RobotUtil.reload();
         symbols = RobotUtil.getSymbols(robotState);
+        tasks = RobotUtil.download(robotService);
+        RobotUtil.reload();
         RobotEventListener.publish().afterRefresh(this);
     }
 
@@ -130,6 +144,7 @@ public class RobotImpl implements Robot {
         RobotEventListener.publish().beforeDisconnect(this);
         if (getRobotService() != null) {
             getRobotService().getNetworkClient().close();
+            this.robotService = null;
         }
         RobotEventListener.publish().afterDisconnect(this);
     }

@@ -37,8 +37,9 @@ public class RemoteServiceImpl implements RemoteService {
     }
 
     @Override
-    public @NotNull Robot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException {
+    public @NotNull Robot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         RobotEventListener.publish().beforeConnect();
+        RobotUtil.setCredentials(path, credentials);
         RobotService service = RobotService.connect(path, credentials);
         return new RobotImpl(service);
     }
@@ -49,6 +50,7 @@ public class RemoteServiceImpl implements RemoteService {
         if (robot != null) {
             RobotEventListener.publish().beforeRemoval(robot);
             robot.disconnect();
+            RobotUtil.remove();
             this.robot = null;
             setRobotState(null);
             RobotEventListener.publish().afterRemoval();

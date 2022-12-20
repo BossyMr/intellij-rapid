@@ -74,10 +74,11 @@ public final class EntityUtil {
     }
 
     private static void handleSingleEntity(@NotNull CollectionModel collectionModel, @NotNull List<Model> models) {
-        if (models.size() == 1 && collectionModel.getModels().size() == 1) {
-            Model model = models.get(0);
-            if (model.getLink("self") == null) {
-                model.getLinks().putAll(collectionModel.getLinks());
+        if (collectionModel.getLink("self") != null) {
+            for (Model model : models) {
+                if (model.getLink("self") == null) {
+                    model.getLinks().putIfAbsent("self", collectionModel.getLink("self"));
+                }
             }
         }
     }

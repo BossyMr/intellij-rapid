@@ -41,12 +41,8 @@ public interface EntityModel {
      */
     @NotNull Map<String, String> getFields();
 
-    default URI getLink(@NotNull String relationship) {
-        return getLinks().get(relationship);
-    }
+    URI getLink(@NotNull String relationship);
 
-    default String getField(@NotNull String type) {
-        return getFields().get(type);
-    }
+    String getField(@NotNull String type);
 
 }

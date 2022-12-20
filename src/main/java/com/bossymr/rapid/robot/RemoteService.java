@@ -41,7 +41,7 @@ public interface RemoteService extends PersistentStateComponent<RemoteService.St
      * @return the connected robot.
      * @throws IOException if an I/O error occurs.
      */
-    @NotNull Robot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException;
+    @NotNull Robot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException;
 
     /**
      * Disconnects the currently persisted robot, and deletes all persisted state associated with it.

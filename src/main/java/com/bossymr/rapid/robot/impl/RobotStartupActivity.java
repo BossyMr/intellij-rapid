@@ -18,7 +18,7 @@ public class RobotStartupActivity implements StartupActivity.DumbAware {
             if (robot.getRobotService() == null) {
                 try {
                     robot.reconnect();
-                } catch (IOException ignored) {}
+                } catch (IOException | InterruptedException ignored) {}
             }
         }
     }
