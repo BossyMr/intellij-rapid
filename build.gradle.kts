@@ -1,5 +1,3 @@
-import org.jetbrains.changelog.Changelog
-
 fun properties(key: String) = project.findProperty(key).toString()
 
 plugins {
@@ -11,15 +9,10 @@ plugins {
     id("org.jetbrains.intellij") version "1.10.0"
     // Gradle GrammarKit Plugin
     id("org.jetbrains.grammarkit") version "2021.2.2"
-    // Gradle Changelog Plugin
-    id("org.jetbrains.changelog") version "2.0.0"
-    // Gradle Qodana Plugin
-    id("org.jetbrains.qodana") version "0.1.13"
-    // Gradle Kover Plugin
-    id("org.jetbrains.kotlinx.kover") version "0.6.1"
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
+sourceSets["main"].java.srcDirs("src/main/grammar")
 
 group = properties("pluginGroup")
 version = properties("pluginGroup")
@@ -39,36 +32,10 @@ intellij {
     plugins.set(properties("platformPlugins").split(',').map(String::trim).filter(String::isNotEmpty))
 }
 
-// Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
-changelog {
-    groups.set(emptyList())
-    repositoryUrl.set(properties("pluginRepositoryUrl"))
-}
-
-// Configure Gradle Qodana Plugin - read more: https://github.com/JetBrains/gradle-qodana-plugin
-qodana {
-    cachePath.set(file(".qodana").canonicalPath)
-    reportPath.set(file("build/reports/inspections").canonicalPath)
-    saveReport.set(true)
-    showReport.set(System.getenv("QODANA_SHOW_REPORT")?.toBoolean() ?: false)
-}
-
-// Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
-kover.xmlReport {
-    onCheck.set(true)
-}
-
 configurations {
     all {
         resolutionStrategy.sortArtifacts(ResolutionStrategy.SortOrder.DEPENDENCY_FIRST)
     }
-}
-
-// Configure Gradle Changelog Plugin
-// Read more: https://github.com/JetBrains/gradle-changelog-plugin
-changelog {
-    version.set(properties("pluginVersion"))
-    groups.set(emptyList())
 }
 
 // Configure Gradle Qodana Plugin
@@ -83,13 +50,6 @@ tasks {
         version.set(properties("pluginVersion"))
         sinceBuild.set(properties("pluginSinceBuild"))
         untilBuild.set(properties("pluginUntilBuild"))
-
-        // Get the latest available change notes from the changelog file
-        changeNotes.set(provider {
-            changelog.renderItem(changelog.run {
-                getOrNull(properties("pluginVersion")) ?: getLatest()
-            }, Changelog.OutputType.HTML)
-        })
     }
 
     // Configure UI tests plugin
@@ -125,6 +85,8 @@ tasks {
         purgeOldFiles.set(true)
     }
 
+    // Configure GrammarKit plugin
+    // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-grammar-kit-plugin.html
     generateParser {
         source.set("src/main/grammar/Rapid.bnf")
         targetRoot.set("src/main/gen")
