@@ -6,7 +6,7 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.7.21"
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.10.0"
+    id("org.jetbrains.intellij") version "1.11.0"
     // Gradle GrammarKit Plugin
     id("org.jetbrains.grammarkit") version "2021.2.2"
 }
