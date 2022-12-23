@@ -10,7 +10,7 @@ plugins {
     // Gradle IntelliJ Plugin
     id("org.jetbrains.intellij") version "1.11.0"
     // Gradle GrammarKit Plugin
-    id("org.jetbrains.grammarkit") version "2021.2.2"
+    id("org.jetbrains.grammarkit") version "2022.3"
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
