@@ -3,17 +3,14 @@ package com.bossymr.rapid.robot.ui.node;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.robot.RemoteService;
 import com.bossymr.rapid.robot.Robot;
-import com.bossymr.rapid.robot.RobotService;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RobotViewRobotNode extends RobotViewNode<Robot> {
@@ -25,10 +22,14 @@ public class RobotViewRobotNode extends RobotViewNode<Robot> {
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
         Set<String> symbols = Set.of("atm", "rec", "ali", "var", "prc");
+        List<RobotViewNode<?>> nodes = new ArrayList<>();
+        for (RapidTask task : getValue().getTasks()) {
+            nodes.add(new RobotViewTaskNode(getProject(), task));
+        }
         RobotViewDirectoryNode<String> directoryNode = new RobotViewDirectoryNode<>(getProject(), "Symbols", RapidIcons.ROBOT_DIRECTORY, symbols) {
             @Override
             public @NotNull AbstractTreeNode<?> getChild(@NotNull String value) {
-                Robot robot = RobotService.getInstance().getRobot();
+                Robot robot = RemoteService.getInstance().getRobot();
                 Set<RapidSymbol> symbols = robot != null ? robot.getSymbols().stream()
                         .filter(symbol -> switch (value) {
                             case "atm" -> symbol instanceof RapidAtomic;
@@ -57,8 +58,8 @@ public class RobotViewRobotNode extends RobotViewNode<Robot> {
             }
 
         };
-
-        return Collections.singletonList(directoryNode);
+        nodes.add(directoryNode);
+        return nodes;
     }
 
     @Override

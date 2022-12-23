@@ -1,8 +1,7 @@
 package com.bossymr.rapid.robot.actions;
 
+import com.bossymr.rapid.robot.RemoteService;
 import com.bossymr.rapid.robot.Robot;
-import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.impl.RobotUtil;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -23,14 +22,12 @@ public class RefreshAction extends AnAction {
         Task.Backgroundable task = new Task.Backgroundable(project, "Refreshing...") {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
-                RobotService service = RobotService.getInstance();
+                RemoteService service = RemoteService.getInstance();
                 Robot robot = service.getRobot();
                 assert robot != null;
                 try {
                     robot.reconnect();
-                } catch (IOException ex) {
-                    RobotUtil.showNotification(robot.getPath());
-                }
+                } catch (IOException | InterruptedException ignored) {}
             }
         };
         ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));
@@ -45,6 +42,6 @@ public class RefreshAction extends AnAction {
     public void update(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         e.getPresentation().setEnabled(project != null &&
-                RobotService.getInstance().getRobot() != null);
+                RemoteService.getInstance().getRobot() != null);
     }
 }

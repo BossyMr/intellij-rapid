@@ -1,22 +1,24 @@
 package com.bossymr.rapid.robot.ui;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.impl.RobotUtil;
-import com.bossymr.rapid.robot.network.Controller;
+import com.bossymr.rapid.robot.RemoteService;
 import com.intellij.credentialStore.Credentials;
-import com.intellij.openapi.progress.EmptyProgressIndicator;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
+import com.intellij.openapi.progress.impl.BackgroundableProcessIndicator;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.ui.LabeledComponent;
 import com.intellij.ui.SimpleListCellRenderer;
+import com.intellij.ui.components.JBPasswordField;
+import com.intellij.util.ui.JBInsets;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 
@@ -24,18 +26,57 @@ public class RobotConnectView extends DialogWrapper {
 
     private final Project project;
 
-    private JPanel content;
-    private JTextField userField;
-    private JPasswordField passwordField;
-    private JTextField hostField;
-    private JTextField portField;
-    private ComboBox<AuthenticationType> authenticationComboBox;
-    private JPanel hostPanel;
+    private final JPanel contentPanel;
+    private final JTextField userField;
+    private final JPasswordField passwordField;
+    private final JTextField hostField;
+    private final JTextField portField;
+    private final ComboBox<AuthenticationType> authenticationComboBox;
+    private final JPanel userPanel;
 
     public RobotConnectView(@Nullable Project project) {
         super(project, false);
         this.project = project;
         setTitle(RapidBundle.message("robot.connect.dialog.title"));
+
+        contentPanel = new JPanel(new BorderLayout());
+
+        JPanel hostPanel = new JPanel(new GridBagLayout());
+        hostField = new JTextField();
+        portField = new JTextField();
+        authenticationComboBox = new ComboBox<>(new AuthenticationType[]{AuthenticationType.DEFAULT, AuthenticationType.PASSWORD});
+
+        userPanel = new JPanel(new GridBagLayout());
+        userField = new JTextField();
+        passwordField = new JBPasswordField();
+
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        constraints.fill = GridBagConstraints.HORIZONTAL;
+        constraints.weightx = 1;
+        constraints.weighty = 1;
+        constraints.anchor = GridBagConstraints.NORTHWEST;
+        constraints.insets = JBInsets.create(5, 5);
+
+        userPanel.add(LabeledComponent.create(userField, RapidBundle.message("robot.connect.authentication.username"), BorderLayout.WEST), constraints);
+        constraints.gridy++;
+        userPanel.add(LabeledComponent.create(passwordField, RapidBundle.message("robot.connect.authentication.password"), BorderLayout.WEST), constraints);
+
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+
+        hostPanel.add(LabeledComponent.create(hostField, RapidBundle.message("robot.connect.host.label"), BorderLayout.WEST), constraints);
+        constraints.gridx++;
+        hostPanel.add(LabeledComponent.create(portField, RapidBundle.message("robot.connect.host.port"), BorderLayout.WEST), constraints);
+
+        constraints.gridx = 0;
+        constraints.gridy++;
+
+        hostPanel.add(LabeledComponent.create(authenticationComboBox, RapidBundle.message("robot.connect.authentication.type"), BorderLayout.WEST), constraints);
+
+        contentPanel.add(hostPanel, BorderLayout.NORTH);
+        contentPanel.add(userPanel, BorderLayout.SOUTH);
 
         authenticationComboBox.setRenderer(SimpleListCellRenderer.create((label, value, index) -> label.setText(value.getDisplayName())));
         checkAuthenticationType(authenticationComboBox.getItem());
@@ -44,51 +85,39 @@ public class RobotConnectView extends DialogWrapper {
         init();
     }
 
-    public RobotConnectView(@Nullable Project project, @NotNull URI path) {
+
+    public RobotConnectView(@NotNull Project project, @NotNull URI path) {
         this(project);
-        Credentials credentials = RobotUtil.getCredentials(path);
-        if (credentials != null) {
-            if (!(credentials.equals(Controller.DEFAULT_CREDENTIALS))) {
-                authenticationComboBox.setItem(AuthenticationType.PASSWORD);
-                userField.setText(credentials.getUserName());
-                passwordField.setText(credentials.getPasswordAsString());
-            }
-        }
         hostField.setText(path.getHost());
         portField.setText(String.valueOf(path.getPort()));
     }
 
     private void checkAuthenticationType(@NotNull AuthenticationType authenticationType) {
-        hostPanel.setVisible(authenticationType.equals(AuthenticationType.PASSWORD));
+        userPanel.setVisible(authenticationType.equals(AuthenticationType.PASSWORD));
     }
 
     @Override
     protected @Nullable JComponent createCenterPanel() {
-        return content;
+        return contentPanel;
     }
 
     @Override
     protected void doOKAction() {
-        ProgressManager.getInstance().runProcessWithProgressAsynchronously(new Task.Backgroundable(project, RapidBundle.message("robot.connect.progress.indicator.title", hostField.getText())) {
+        Task.Backgroundable task = new Task.Backgroundable(project, RapidBundle.message("robot.connect.progress.indicator.title", hostField.getText())) {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
-                RobotService service = RobotService.getInstance();
+                RemoteService service = RemoteService.getInstance();
                 URI path = URI.create("http" + "://" + hostField.getText() + ":" + portField.getText());
-                Credentials credentials = authenticationComboBox.getItem().equals(AuthenticationType.DEFAULT) ?
-                        Controller.DEFAULT_CREDENTIALS :
+                Credentials credentials = authenticationComboBox.getItem().equals(AuthenticationType.DEFAULT) ? new Credentials("Default User", "robotics".toCharArray()) :
                         new Credentials(userField.getText(), passwordField.getPassword());
                 try {
                     service.connect(path, credentials);
-                } catch (IOException e) {
-                    RobotUtil.showNotification(path);
+                } catch (IOException | InterruptedException ignored) {
+                    indicator.stop();
                 }
             }
-        }, new EmptyProgressIndicator());
+        };
+        ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));
         super.doOKAction();
-    }
-
-    private void createUIComponents() {
-        AuthenticationType[] authenticationTypes = {AuthenticationType.DEFAULT, AuthenticationType.PASSWORD};
-        authenticationComboBox = new ComboBox<>(authenticationTypes);
     }
 }

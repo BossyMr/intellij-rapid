@@ -1,41 +1,63 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.Robot;
-import com.bossymr.rapid.robot.RobotEventListener;
-import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.RobotState;
-import com.bossymr.rapid.robot.RobotState.SymbolState;
-import com.bossymr.rapid.robot.network.Controller;
+import com.bossymr.rapid.robot.*;
+import com.bossymr.rapid.robot.network.Module;
+import com.bossymr.rapid.robot.network.*;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.PathManager;
+import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.nio.file.Path;
+import java.util.*;
 
 public class RobotImpl implements Robot {
 
-    private RobotState robotState;
-    private Controller controller;
+    private @NotNull PersistentRobotState robotState;
+    private @Nullable RobotService robotService;
 
-    private Map<String, VirtualSymbol> symbols;
+    private @NotNull List<RapidTask> tasks;
+    private @NotNull Map<String, VirtualSymbol> symbols;
 
-    public RobotImpl(@NotNull Controller controller) throws IOException {
-        setRobotState(RobotUtil.getRobotState(controller));
-        this.controller = controller;
-        this.symbols = RobotUtil.getSymbols(robotState);
+    /**
+     * Creates a new {@code Robot} which is connected to the remote robot through the specified service.
+     *
+     * @param robotService the robot service.
+     */
+    public RobotImpl(@NotNull RobotService robotService) throws IOException, InterruptedException {
+        this.robotService = robotService;
+        robotState = RobotUtil.getRobotState(robotService);
+        RemoteService.getInstance().setRobotState(robotState);
+        symbols = RobotUtil.getSymbols(robotState);
+        tasks = new ArrayList<>();
+        download();
         RobotUtil.reload();
+        RobotEventListener.publish().afterConnect(this);
     }
 
-    public RobotImpl(@NotNull RobotState robotState) {
-        setRobotState(robotState);
-        this.symbols = RobotUtil.getSymbols(robotState);
-        RobotUtil.reload();
+    /**
+     * Creates a new {@code Robot} from a persisted robot state, which is not immediately connected.
+     *
+     * @param robotState the persisted robot state.
+     */
+    public RobotImpl(@NotNull PersistentRobotState robotState) {
+        this.robotState = robotState;
+        RemoteService.getInstance().setRobotState(robotState);
+        symbols = RobotUtil.getSymbols(robotState);
+        tasks = new ArrayList<>();
+        retrieve();
     }
 
     @Override
@@ -50,91 +72,192 @@ public class RobotImpl implements Robot {
 
     @Override
     public @NotNull Set<VirtualSymbol> getSymbols() {
-        return new HashSet<>(symbols.values());
+        return Set.copyOf(symbols.values());
     }
 
     @Override
-    public @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException {
+    public @NotNull List<RapidTask> getTasks() {
+        return tasks;
+    }
+
+    @Override
+    public @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException {
         if (symbols.containsKey(name)) {
             return symbols.get(name);
-        }
-        if (robotState.cache.contains(name)) {
-            // The connected robot does not contain the specified symbol.
-            return null;
-        }
-        // Unfortunately, the API to fetch all symbols from the connected robot is not complete.
-        // As a result, each unresolved symbol is attempted to be resolved automatically.
-        if (controller != null) {
-            // Attempt to fetch symbol from the connected robot.
-            SymbolState symbolState = controller.getSymbol(name);
-            if (symbolState != null) {
-                // The connected robot does contain the specified symbol.
-                robotState.symbols.add(symbolState);
-                VirtualSymbol symbol = RobotUtil.getSymbol(symbolState);
-                if (symbol != null) {
-                    symbols.put(name, symbol);
-                    RobotEventListener.publish().onSymbol(this, symbol);
-                    return symbol;
+        } else {
+            RobotService robotService = getRobotService();
+            if (robotService != null) {
+                if (robotState.cache.contains(name)) {
+                    return null;
+                }
+                SymbolState symbolState;
+                try {
+                    symbolState = robotService.getRobotWareService().getRapidService().findSymbol("RAPID" + "/" + name).send();
+                } catch (ResponseStatusException e) {
+                    if (e.getStatusCode() == 400) {
+                        symbolState = null;
+                    } else {
+                        throw e;
+                    }
+                }
+                if (symbolState != null) {
+                    PersistentRobotState.StorageSymbolState storageSymbolState = RobotUtil.getSymbolState(symbolState);
+                    VirtualSymbol virtualSymbol = RobotUtil.getSymbol(symbolState);
+                    symbols.put(virtualSymbol.getName(), virtualSymbol);
+                    robotState.symbols.add(storageSymbolState);
+                    RobotEventListener.publish().onSymbol(this, virtualSymbol);
+                    return virtualSymbol;
+                } else {
+                    robotState.cache.add(name);
                 }
             }
-            // The connected robot does not contain the specified symbol.
-            robotState.cache.add(name);
-            return null;
         }
         return null;
     }
 
     @Override
-    public @Nullable Controller getController() {
-        return controller;
+    public void upload() throws IOException, InterruptedException {
+        if (robotService == null) throw new IllegalStateException();
+        for (RapidTask task : getTasks()) {
+            Set<VirtualFile> modules = task.getFiles();
+            upload(task, modules);
+        }
     }
 
     @Override
-    public void reconnect() throws IOException {
-        RobotEventListener.publish().beforeRefresh(this);
+    public void upload(@NotNull RapidTask task, @NotNull Set<VirtualFile> modules) throws IOException, InterruptedException {
+        try {
+            ApplicationManager.getApplication().invokeLater(() -> ApplicationManager.getApplication().runWriteAction(() -> {
+                try {
+                    doUpload(task, modules);
+                } catch (IOException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof IOException) throw (IOException) e.getCause();
+            if (e.getCause() instanceof InterruptedException) throw (InterruptedException) e.getCause();
+            throw e;
+        }
+    }
+
+    private void doUpload(@NotNull RapidTask task, @NotNull Set<VirtualFile> modules) throws IOException, InterruptedException {
+        if (robotService == null) throw new IllegalStateException();
+        File directory = FileUtil.createTempDirectory("robot", "upload");
+        VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(directory);
+        assert virtualFile != null;
+        List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
+        for (Task remoteTask : remoteTasks) {
+            if (remoteTask.getName().equals(task.getName())) {
+                String programName = remoteTask.getProgram().send().getName();
+                File programFile = directory.toPath().resolve(programName + ".pgf").toFile();
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(programFile))) {
+                    writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
+                    writer.write("<Program>\r\n");
+                    for (VirtualFile module : modules) {
+                        writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
+                        module.copy(this, virtualFile, module.getName());
+                    }
+                    writer.write("</Program>");
+                }
+                remoteTask.getProgram().send().load(programFile.getPath(), LoadProgramMode.REPLACE).send();
+                return;
+            }
+        }
+    }
+
+    @Override
+    public void download() throws IOException, InterruptedException {
+        if (robotService == null) throw new IllegalStateException();
+        List<RapidTask> rapidTasks = new ArrayList<>();
+        Path defaultPath = Path.of(PathManager.getSystemPath(), "robot");
+        File defaultFile = defaultPath.toFile();
+        if (defaultFile.exists()) FileUtil.delete(defaultFile);
+        if (!defaultFile.mkdir()) throw new IOException();
+        List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
+        for (Task remoteTask : remoteTasks) {
+            File taskFile = defaultPath.resolve(remoteTask.getName()).toFile();
+            if (!taskFile.mkdir()) throw new IOException();
+            Set<VirtualFile> virtualFiles = new HashSet<>();
+            RapidTask rapidTask = new RapidTaskImpl(remoteTask.getName(), virtualFiles);
+            List<ModuleInfo> moduleInfos = remoteTask.getModules().send();
+            for (ModuleInfo moduleInfo : moduleInfos) {
+                Module module = moduleInfo.getModule().send();
+                module.save(module.getName(), taskFile.getPath()).send();
+                VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByNioFile(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION));
+                virtualFiles.add(virtualFile);
+            }
+            rapidTasks.add(rapidTask);
+        }
+        this.tasks = rapidTasks;
+    }
+
+    public void retrieve() {
+        Path defaultPath = Path.of(PathManager.getSystemPath(), "robot");
+        File defaultFile = defaultPath.toFile();
+        List<RapidTask> rapidTasks = new ArrayList<>();
+        if (defaultFile.exists()) {
+            File[] taskFiles = defaultFile.listFiles();
+            if (taskFiles != null) {
+                for (File taskFile : taskFiles) {
+                    File[] moduleFiles = taskFile.listFiles();
+                    Set<VirtualFile> virtualFiles = new HashSet<>();
+                    RapidTask rapidTask = new RapidTaskImpl(taskFile.getName(), virtualFiles);
+                    if (moduleFiles != null) {
+                        for (File moduleFile : moduleFiles) {
+                            VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByIoFile(moduleFile);
+                            virtualFiles.add(virtualFile);
+                        }
+                    }
+                    rapidTasks.add(rapidTask);
+                }
+            }
+        }
+        this.tasks = rapidTasks;
+    }
+
+    @Override
+    public @Nullable RobotService getRobotService() {
+        return robotService;
+    }
+
+    @Override
+    public void reconnect() throws IOException, InterruptedException {
         URI path = URI.create(robotState.path);
         Credentials credentials = RobotUtil.getCredentials(path);
-        if (credentials == null) {
-            credentials = new Credentials("", "");
+        if (credentials != null) {
+            reconnect(credentials);
         }
-        controller = Controller.connect(path, credentials);
-        setRobotState(RobotUtil.getRobotState(controller));
-        symbols = RobotUtil.getSymbols(robotState);
-        RobotUtil.reload();
-        RobotEventListener.publish().afterRefresh(this);
     }
 
     @Override
-    public void reconnect(@NotNull Credentials credentials) throws IOException {
+    public void reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException {
         RobotEventListener.publish().beforeRefresh(this);
         URI path = URI.create(robotState.path);
-        controller = Controller.connect(path, credentials);
-        setRobotState(RobotUtil.getRobotState(controller));
+        RobotUtil.setCredentials(path, credentials);
+        robotService = RobotService.connect(path, credentials);
+        robotState = RobotUtil.getRobotState(robotService);
+        RemoteService.getInstance().setRobotState(robotState);
         symbols = RobotUtil.getSymbols(robotState);
+        retrieve();
         RobotUtil.reload();
         RobotEventListener.publish().afterRefresh(this);
     }
 
-    public void setRobotState(RobotState robotState) {
-        if (robotState.path == null) throw new IllegalArgumentException();
-        if (robotState.name == null) throw new IllegalArgumentException();
-        this.robotState = robotState;
-        RobotService.getInstance().setRobotState(robotState);
+    @Override
+    public void disconnect() throws IOException {
+        RobotEventListener.publish().beforeDisconnect(this);
+        if (getRobotService() != null) {
+            getRobotService().getNetworkClient().close();
+            this.robotService = null;
+        }
+        RobotEventListener.publish().afterDisconnect(this);
     }
 
-    @Override
-    public void disconnect() {
-        if (!ApplicationManager.getApplication().isDisposed()) {
-            RobotEventListener.publish().beforeDisconnect(this);
+    public void dispose() throws IOException {
+        if (getRobotService() != null) {
+            getRobotService().getNetworkClient().close();
+            this.robotService = null;
         }
-        controller = null;
-        if (!ApplicationManager.getApplication().isDisposed()) {
-            RobotEventListener.publish().afterDisconnect(this);
-        }
-    }
-
-    @Override
-    public boolean isConnected() {
-        return controller != null;
     }
 }

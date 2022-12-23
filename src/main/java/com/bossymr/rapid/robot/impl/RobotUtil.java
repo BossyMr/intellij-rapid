@@ -3,10 +3,16 @@ package com.bossymr.rapid.robot.impl;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.RobotState;
-import com.bossymr.rapid.robot.RobotState.SymbolState;
-import com.bossymr.rapid.robot.network.Controller;
+import com.bossymr.rapid.robot.PersistentRobotState;
+import com.bossymr.rapid.robot.PersistentRobotState.StorageSymbolState;
+import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.robot.ResponseStatusException;
+import com.bossymr.rapid.robot.Robot;
+import com.bossymr.rapid.robot.network.RobotService;
+import com.bossymr.rapid.robot.network.SymbolQueryBuilder;
+import com.bossymr.rapid.robot.network.SymbolState;
+import com.bossymr.rapid.robot.network.SymbolType;
+import com.bossymr.rapid.robot.network.query.Query;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.credentialStore.Credentials;
@@ -17,8 +23,10 @@ import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.search.FileTypeIndex;
@@ -26,19 +34,24 @@ import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
 
 import static com.intellij.credentialStore.CredentialAttributesKt.generateServiceName;
 
 public final class RobotUtil {
 
-    private RobotUtil() {}
+    private RobotUtil() {
+        throw new AssertionError();
+    }
 
-    private static CredentialAttributes createCredentialAttributes(String key) {
+    private static @NotNull CredentialAttributes createCredentialAttributes(String key) {
         return new CredentialAttributes(generateServiceName("Robot", key));
     }
 
@@ -62,34 +75,129 @@ public final class RobotUtil {
         });
     }
 
-    public static @NotNull RobotState getRobotState(@NotNull Controller controller) throws IOException {
-        RobotState robotState = new RobotState();
-        robotState.name = controller.getName();
-        robotState.path = String.valueOf(controller.getPath());
-        robotState.symbols = controller.getSymbols();
+    public static boolean isConnected(@Nullable Project project) {
+        if (project != null) {
+            RemoteService service = RemoteService.getInstance();
+            Robot robot = service.getRobot();
+            if (robot != null) {
+                return robot.getRobotService() != null;
+            }
+        }
+        return false;
+    }
+
+    public static void remove() throws IOException {
+        String homePath = PathManager.getSystemPath();
+        Path robotPath = Path.of(homePath, "robot");
+        File file = robotPath.toFile();
+        if (file.exists()) FileUtil.delete(robotPath);
+    }
+
+    public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull PersistentRobotState robotState) {
+        return new RobotSymbolFactory(robotState).getSymbols();
+    }
+
+    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolState symbolState) {
+        List<SymbolState> symbolStates = List.of(symbolState);
+        Map<String, VirtualSymbol> symbols = new RobotSymbolFactory(symbolStates).getSymbols();
+        List<VirtualSymbol> virtualSymbols = new ArrayList<>(symbols.values());
+        return virtualSymbols.get(0);
+    }
+
+    public static @NotNull PersistentRobotState getRobotState(@NotNull RobotService service) throws IOException, InterruptedException {
+        PersistentRobotState robotState = new PersistentRobotState();
+        Map<String, String> query = new SymbolQueryBuilder()
+                .setRecursive(true)
+                .setSymbolType(SymbolType.ANY)
+                .build();
+        try {
+            allOfExceptionally(
+                    service.getControllerService().getIdentity().sendAsync()
+                            .thenAcceptAsync(identity -> {
+                                robotState.name = identity.getName();
+                                URI self = identity.getLink("self");
+                                robotState.path = self.getScheme() + "://" + self.getHost() + ":" + self.getPort();
+                            }),
+                    service.getRobotWareService().getRapidService().findSymbols(query).sendAsync()
+                            .thenApplyAsync(symbols -> {
+                                robotState.symbols = symbols.stream()
+                                        .map(RobotUtil::getSymbolState)
+                                        .collect(Collectors.toSet());
+                                return symbols;
+                            }).thenComposeAsync(symbols -> {
+                                Map<String, Set<String>> states = new HashMap<>();
+                                for (SymbolState symbol : symbols) {
+                                    String address = symbol.getTitle().substring(0, symbol.getTitle().lastIndexOf('/'));
+                                    states.computeIfAbsent(address, (value) -> new HashSet<>());
+                                    states.get(address).add(symbol.getTitle().substring(symbol.getTitle().lastIndexOf('/') + 1));
+                                }
+                                List<CompletableFuture<?>> completableFutures = new ArrayList<>();
+                                for (Map.Entry<String, Set<String>> entry : states.entrySet()) {
+                                    if (entry.getKey().equals("RAPID")) continue;
+                                    String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
+                                    if (!states.get("RAPID").contains(name)) {
+                                        Query<SymbolState> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
+                                        CompletableFuture<Void> completableFuture = symbol.sendAsync()
+                                                .exceptionally((exception) -> {
+                                                    if (exception.getCause() instanceof ResponseStatusException responseStatusException) {
+                                                        if (responseStatusException.getStatusCode() == 400) {
+                                                            return null;
+                                                        }
+                                                    }
+                                                    if (exception instanceof RuntimeException runtimeException) {
+                                                        throw runtimeException;
+                                                    }
+                                                    throw new CompletionException(exception);
+                                                }).thenAcceptAsync((response) -> {
+                                                    if (response != null) {
+                                                        StorageSymbolState storageSymbolState = RobotUtil.getSymbolState(response);
+                                                        robotState.symbols.add(storageSymbolState);
+                                                    }
+                                                });
+                                        completableFutures.add(completableFuture);
+                                    }
+                                }
+                                return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
+                            })
+            ).join();
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof IOException) {
+                throw (IOException) e.getCause();
+            }
+            if (e.getCause() instanceof InterruptedException)
+                throw (InterruptedException) e.getCause();
+        }
         return robotState;
     }
 
-    public static @Nullable VirtualSymbol getSymbol(@NotNull SymbolState state) {
-        RobotSymbolFactory factory = new RobotSymbolFactory(Collections.singleton(state));
-        Map<String, VirtualSymbol> symbols = factory.getSymbols();
-        return symbols.get(state.name);
+    @SafeVarargs
+    public static @NotNull CompletableFuture<Void> allOfExceptionally(CompletableFuture<Void> @NotNull ... completableFutures) {
+        CompletableFuture<Void> collection = CompletableFuture.allOf(completableFutures);
+        for (CompletableFuture<Void> completableFuture : completableFutures) {
+            completableFuture.exceptionally(throwable -> {
+                // The collection of completable futures should fail as soon as any of its components fails.
+                if (collection.isCompletedExceptionally()) return null;
+                collection.completeExceptionally(throwable);
+                for (CompletableFuture<Void> future : completableFutures) {
+                    // In addition, all other completable futures are canceled as soon as any of its components fail.
+                    future.cancel(true);
+                }
+                return null;
+            });
+        }
+        return collection;
     }
 
-    public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull RobotState robotState) {
-        RobotSymbolFactory factory = new RobotSymbolFactory(robotState);
-        return factory.getSymbols();
-    }
-
-
-    public static void showNotification() {
-        RobotService instance = RobotService.getInstance();
-        assert instance.getRobot() != null;
-        showNotification(instance.getRobot().getPath());
-    }
-
-    public static void showNotification(@NotNull URI path) {
-        showNotification(null, path);
+    public static @NotNull StorageSymbolState getSymbolState(@NotNull SymbolState symbol) {
+        StorageSymbolState symbolState = new StorageSymbolState();
+        symbolState.title = symbol.getTitle();
+        symbolState.type = symbol.getType();
+        symbolState.fields = symbol.getFields();
+        symbolState.links = new HashMap<>();
+        for (Map.Entry<String, URI> entry : symbol.getLinks().entrySet()) {
+            symbolState.links.put(entry.getKey(), entry.getValue().toString());
+        }
+        return symbolState;
     }
 
     public static void showNotification(@Nullable Project project, @NotNull URI path) {
@@ -100,10 +208,12 @@ public final class RobotUtil {
                 .addAction(new NotificationAction(RapidBundle.message("notification.action.retry.connect")) {
                     @Override
                     public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+                        assert e.getProject() != null;
                         RobotConnectView connectView = new RobotConnectView(e.getProject(), path);
                         connectView.show();
                     }
                 })
                 .notify(project);
     }
+
 }

@@ -4,14 +4,15 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
-import com.bossymr.rapid.robot.RobotService;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
+import com.intellij.ide.util.treeView.NodeDescriptor;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.actionSystem.ex.ActionUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
+import com.intellij.psi.PsiElement;
 import com.intellij.ui.PopupHandler;
 import com.intellij.ui.ScrollPaneFactory;
 import com.intellij.ui.SimpleTextAttributes;
@@ -25,6 +26,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 
 public class RobotToolWindow implements Disposable {
@@ -73,7 +76,7 @@ public class RobotToolWindow implements Disposable {
                 SimpleTextAttributes.LINK_PLAIN_ATTRIBUTES,
                 e -> ActionUtil.invokeAction(action, panel, "RobotToolWindow", null, null));
 
-        project.getMessageBus().connect().subscribe(RobotService.TOPIC, new RobotEventListener() {
+        RobotEventListener.connect(new RobotEventListener() {
             @Override
             public void afterConnect(@NotNull Robot robot) {
                 model.invalidate();
@@ -100,19 +103,9 @@ public class RobotToolWindow implements Disposable {
         return content;
     }
 
-    private @Nullable AbstractTreeNode<?> getNode(@NotNull AbstractTreeNode<?> node, @NotNull Object element) {
-        if (node.getValue().equals(element)) return node;
-        for (AbstractTreeNode<?> child : node.getChildren()) {
-            AbstractTreeNode<?> result = getNode(child, element);
-            if (result != null) {
-                return result;
-            }
-        }
-        return null;
-    }
-
     @Override
-    public void dispose() {}
+    public void dispose() {
+    }
 
     public @NotNull JComponent createActionsToolbar() {
         ActionGroup actionGroup = (ActionGroup) ActionManager.getInstance().getAction(ROBOT_TOOL_WINDOW_GROUP);
@@ -121,10 +114,44 @@ public class RobotToolWindow implements Disposable {
         return actionToolbar.getComponent();
     }
 
-    private static final class RobotViewPanel extends JPanel implements DataProvider {
+    private final class RobotViewPanel extends JPanel implements DataProvider {
 
         @Override
         public @Nullable Object getData(@NotNull @NonNls String dataId) {
+            if (CommonDataKeys.PROJECT.is(dataId)) {
+                return project;
+            }
+            if (CommonDataKeys.PSI_ELEMENT.is(dataId)) {
+                PsiElement element = getSelectedElement();
+                return element != null && element.isValid() ? element : null;
+            }
+            return null;
+        }
+
+        private @Nullable PsiElement getSelectedElement() {
+            Object value = getSelectedValue();
+            return value instanceof PsiElement element ? element : null;
+        }
+
+        private @Nullable Object getSelectedValue() {
+            AbstractTreeNode<?> node = getSelectedNode();
+            if (node == null) return null;
+            return node.getValue();
+        }
+
+        private @Nullable AbstractTreeNode<?> getSelectedNode() {
+            TreePath treePath = tree.getSelectionPath();
+            if (treePath == null) return null;
+            Object component = treePath.getLastPathComponent();
+            if (component instanceof DefaultMutableTreeNode mutableTreeNode) {
+                Object userobject = mutableTreeNode.getUserObject();
+                if (userobject instanceof NodeDescriptor<?> node) {
+                    Object element = node.getElement();
+                    if (element instanceof AbstractTreeNode<?> abstractTreeNode) {
+                        return abstractTreeNode;
+                    }
+                }
+            }
             return null;
         }
     }

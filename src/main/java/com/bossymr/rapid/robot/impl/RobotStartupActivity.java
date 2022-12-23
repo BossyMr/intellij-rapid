@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.rapid.robot.RemoteService;
 import com.bossymr.rapid.robot.Robot;
-import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.StartupActivity;
 import org.jetbrains.annotations.NotNull;
@@ -12,15 +12,13 @@ public class RobotStartupActivity implements StartupActivity.DumbAware {
 
     @Override
     public void runActivity(@NotNull Project project) {
-        RobotService service = RobotService.getInstance();
+        RemoteService service = RemoteService.getInstance();
         Robot robot = service.getRobot();
         if (robot != null) {
-            if (!(robot.isConnected())) {
+            if (robot.getRobotService() == null) {
                 try {
                     robot.reconnect();
-                } catch (IOException e) {
-                    RobotUtil.showNotification();
-                }
+                } catch (IOException | InterruptedException ignored) {}
             }
         }
     }
