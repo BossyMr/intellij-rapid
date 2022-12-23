@@ -13,7 +13,7 @@ import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.LabeledComponent;
 import com.intellij.ui.SimpleListCellRenderer;
 import com.intellij.ui.components.JBPasswordField;
-import com.intellij.util.ui.JBUI;
+import com.intellij.util.ui.JBInsets;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,7 +26,7 @@ public class RobotConnectView extends DialogWrapper {
 
     private final Project project;
 
-    private final JPanel content;
+    private final JPanel contentPanel;
     private final JTextField userField;
     private final JPasswordField passwordField;
     private final JTextField hostField;
@@ -39,25 +39,44 @@ public class RobotConnectView extends DialogWrapper {
         this.project = project;
         setTitle(RapidBundle.message("robot.connect.dialog.title"));
 
-        content = new JPanel(new GridBagLayout());
+        contentPanel = new JPanel(new BorderLayout());
+
+        JPanel hostPanel = new JPanel(new GridBagLayout());
         hostField = new JTextField();
         portField = new JTextField();
-        AuthenticationType[] authenticationTypes = {AuthenticationType.DEFAULT, AuthenticationType.PASSWORD};
-        authenticationComboBox = new ComboBox<>(authenticationTypes);
+        authenticationComboBox = new ComboBox<>(new AuthenticationType[]{AuthenticationType.DEFAULT, AuthenticationType.PASSWORD});
 
         userPanel = new JPanel(new GridBagLayout());
         userField = new JTextField();
         passwordField = new JBPasswordField();
 
-        content.add(LabeledComponent.create(hostField, RapidBundle.message("robot.connect.host.label"), BorderLayout.WEST), new GridBagConstraints(0, 0, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
-        content.add(LabeledComponent.create(portField, RapidBundle.message("robot.connect.host.port"), BorderLayout.WEST), new GridBagConstraints(1, 0, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        constraints.fill = GridBagConstraints.HORIZONTAL;
+        constraints.weightx = 1;
+        constraints.weighty = 1;
+        constraints.anchor = GridBagConstraints.NORTHWEST;
+        constraints.insets = JBInsets.create(5, 5);
 
-        content.add(LabeledComponent.create(authenticationComboBox, RapidBundle.message("robot.connect.authentication.type"), BorderLayout.WEST), new GridBagConstraints(0, 1, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
+        userPanel.add(LabeledComponent.create(userField, RapidBundle.message("robot.connect.authentication.username"), BorderLayout.WEST), constraints);
+        constraints.gridy++;
+        userPanel.add(LabeledComponent.create(passwordField, RapidBundle.message("robot.connect.authentication.password"), BorderLayout.WEST), constraints);
 
-        userPanel.add(LabeledComponent.create(authenticationComboBox, RapidBundle.message("robot.connect.authentication.username"), BorderLayout.WEST), new GridBagConstraints(0, 0, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
-        userPanel.add(LabeledComponent.create(authenticationComboBox, RapidBundle.message("robot.connect.authentication.password"), BorderLayout.WEST), new GridBagConstraints(0, 1, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
+        constraints.gridx = 0;
+        constraints.gridy = 0;
 
-        content.add(userPanel, new GridBagConstraints(0, 2, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
+        hostPanel.add(LabeledComponent.create(hostField, RapidBundle.message("robot.connect.host.label"), BorderLayout.WEST), constraints);
+        constraints.gridx++;
+        hostPanel.add(LabeledComponent.create(portField, RapidBundle.message("robot.connect.host.port"), BorderLayout.WEST), constraints);
+
+        constraints.gridx = 0;
+        constraints.gridy++;
+
+        hostPanel.add(LabeledComponent.create(authenticationComboBox, RapidBundle.message("robot.connect.authentication.type"), BorderLayout.WEST), constraints);
+
+        contentPanel.add(hostPanel, BorderLayout.NORTH);
+        contentPanel.add(userPanel, BorderLayout.SOUTH);
 
         authenticationComboBox.setRenderer(SimpleListCellRenderer.create((label, value, index) -> label.setText(value.getDisplayName())));
         checkAuthenticationType(authenticationComboBox.getItem());
@@ -66,13 +85,20 @@ public class RobotConnectView extends DialogWrapper {
         init();
     }
 
+
+    public RobotConnectView(@NotNull Project project, @NotNull URI path) {
+        this(project);
+        hostField.setText(path.getHost());
+        portField.setText(String.valueOf(path.getPort()));
+    }
+
     private void checkAuthenticationType(@NotNull AuthenticationType authenticationType) {
         userPanel.setVisible(authenticationType.equals(AuthenticationType.PASSWORD));
     }
 
     @Override
     protected @Nullable JComponent createCenterPanel() {
-        return content;
+        return contentPanel;
     }
 
     @Override
@@ -86,7 +112,9 @@ public class RobotConnectView extends DialogWrapper {
                         new Credentials(userField.getText(), passwordField.getPassword());
                 try {
                     service.connect(path, credentials);
-                } catch (IOException | InterruptedException ignored) {}
+                } catch (IOException | InterruptedException ignored) {
+                    indicator.stop();
+                }
             }
         };
         ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));

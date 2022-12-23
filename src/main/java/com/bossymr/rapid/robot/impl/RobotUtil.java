@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.PersistentRobotState;
@@ -12,9 +13,15 @@ import com.bossymr.rapid.robot.network.SymbolQueryBuilder;
 import com.bossymr.rapid.robot.network.SymbolState;
 import com.bossymr.rapid.robot.network.SymbolType;
 import com.bossymr.rapid.robot.network.query.Query;
+import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.ide.passwordSafe.PasswordSafe;
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationAction;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.project.Project;
@@ -34,7 +41,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static com.intellij.credentialStore.CredentialAttributesKt.generateServiceName;
@@ -105,7 +111,7 @@ public final class RobotUtil {
                 .setSymbolType(SymbolType.ANY)
                 .build();
         try {
-            CompletableFuture.allOf(
+            allOfExceptionally(
                     service.getControllerService().getIdentity().sendAsync()
                             .thenAcceptAsync(identity -> {
                                 robotState.name = identity.getName();
@@ -153,14 +159,33 @@ public final class RobotUtil {
                                 }
                                 return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
                             })
-            ).get();
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof IOException ioException) {
-                throw ioException;
+            ).join();
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof IOException) {
+                throw (IOException) e.getCause();
             }
-            throw new RuntimeException(e);
+            if (e.getCause() instanceof InterruptedException)
+                throw (InterruptedException) e.getCause();
         }
         return robotState;
+    }
+
+    @SafeVarargs
+    public static @NotNull CompletableFuture<Void> allOfExceptionally(CompletableFuture<Void> @NotNull ... completableFutures) {
+        CompletableFuture<Void> collection = CompletableFuture.allOf(completableFutures);
+        for (CompletableFuture<Void> completableFuture : completableFutures) {
+            completableFuture.exceptionally(throwable -> {
+                // The collection of completable futures should fail as soon as any of its components fails.
+                if (collection.isCompletedExceptionally()) return null;
+                collection.completeExceptionally(throwable);
+                for (CompletableFuture<Void> future : completableFutures) {
+                    // In addition, all other completable futures are canceled as soon as any of its components fail.
+                    future.cancel(true);
+                }
+                return null;
+            });
+        }
+        return collection;
     }
 
     public static @NotNull StorageSymbolState getSymbolState(@NotNull SymbolState symbol) {
@@ -173,6 +198,22 @@ public final class RobotUtil {
             symbolState.links.put(entry.getKey(), entry.getValue().toString());
         }
         return symbolState;
+    }
+
+    public static void showNotification(@Nullable Project project, @NotNull URI path) {
+        NotificationGroupManager.getInstance()
+                .getNotificationGroup("Robot Connect Error")
+                .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)
+                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
+                .addAction(new NotificationAction(RapidBundle.message("notification.action.retry.connect")) {
+                    @Override
+                    public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+                        assert e.getProject() != null;
+                        RobotConnectView connectView = new RobotConnectView(e.getProject(), path);
+                        connectView.show();
+                    }
+                })
+                .notify(project);
     }
 
 }

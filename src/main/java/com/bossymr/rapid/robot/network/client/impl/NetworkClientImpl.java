@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network.client.impl;
 
 import com.bossymr.rapid.robot.ResponseStatusException;
+import com.bossymr.rapid.robot.impl.RobotUtil;
 import com.bossymr.rapid.robot.network.client.EntityInvocationHandler;
 import com.bossymr.rapid.robot.network.client.NetworkClient;
 import com.bossymr.rapid.robot.network.client.ServiceInvocationHandler;
@@ -125,7 +126,12 @@ public class NetworkClientImpl implements NetworkClient {
                 throw new RuntimeException(e);
             }
         }
-        response = httpClient.send(httpRequest, bodyHandler);
+        try {
+            response = httpClient.send(httpRequest, bodyHandler);
+        } catch (IOException e) {
+            RobotUtil.showNotification(null, httpRequest.uri());
+            throw e;
+        }
         locks.remove(lock);
         lock.complete(null);
         LOG.info("Request: '" + httpRequest + "' - Response: '" + response + "'");
@@ -174,6 +180,18 @@ public class NetworkClientImpl implements NetworkClient {
         }
         return (waiting != null ? CompletableFuture.anyOf(waiting) : CompletableFuture.completedFuture(null))
                 .thenComposeAsync((ignored) -> httpClient.sendAsync(httpRequest, bodyHandler))
+                .exceptionallyAsync((throwable) -> {
+                    if (throwable instanceof RuntimeException runtimeException) {
+                        if (runtimeException.getCause() instanceof IOException) {
+                            RobotUtil.showNotification(null, httpRequest.uri());
+                        }
+                        throw runtimeException;
+                    }
+                    if (throwable instanceof IOException) {
+                        RobotUtil.showNotification(null, httpRequest.uri());
+                    }
+                    throw new CompletionException(throwable);
+                })
                 .thenApplyAsync(response -> {
                     locks.remove(lock);
                     lock.complete(null);
