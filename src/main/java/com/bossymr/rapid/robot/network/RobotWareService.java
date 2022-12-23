@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network;
 
 import com.bossymr.rapid.robot.network.annotations.Service;
+import com.bossymr.rapid.robot.network.robotware.io.InputOutputService;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -19,5 +20,7 @@ public interface RobotWareService {
     @NotNull MastershipService getMastershipService();
 
     @NotNull RapidService getRapidService();
+
+    @NotNull InputOutputService getInputOutputService();
 
 }
