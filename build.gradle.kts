@@ -5,6 +5,8 @@ fun properties(key: String) = project.findProperty(key).toString()
 plugins {
     // Java support
     id("java")
+    // IntelliJ IDEA support
+    id("idea")
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.7.21"
     // Gradle IntelliJ Plugin
@@ -64,6 +66,14 @@ configurations {
     }
 }
 
+dependencies {
+    testImplementation(platform("org.junit:junit-bom:5.9.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
+    testImplementation("junit:junit:4.13.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.9.0")
+    testImplementation("org.junit.platform:junit-platform-launcher:1.9.0")
+}
+
 // Configure Gradle Changelog Plugin
 // Read more: https://github.com/JetBrains/gradle-changelog-plugin
 changelog {
@@ -77,6 +87,10 @@ changelog {
 tasks {
     wrapper {
         gradleVersion = properties("gradleVersion")
+    }
+
+    test {
+        useJUnitPlatform()
     }
 
     patchPluginXml {

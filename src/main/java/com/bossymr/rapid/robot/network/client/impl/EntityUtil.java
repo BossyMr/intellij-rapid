@@ -87,12 +87,9 @@ public final class EntityUtil {
     private static <T> @Nullable T convert(@NotNull NetworkClient networkClient, @NotNull List<Model> models, @NotNull Type returnType) {
         if (Void.class.equals(returnType)) return null;
         Class<?> entityType = getReturnType(returnType);
-        Map<String, Class<?>> entityTypes = getReturnTypes(entityType);
-        models = models.stream()
-                .filter(model -> entityTypes.containsKey(model.getType()))
-                .toList();
         List<?> entities = models.stream()
-                .map(model -> networkClient.newEntity(model, entityTypes.get(model.getType())))
+                .map(model -> networkClient.newEntity(model, entityType))
+                .filter(Objects::nonNull)
                 .toList();
         if (returnType instanceof ParameterizedType parameterizedType) {
             if (parameterizedType.getRawType() instanceof Class<?> classType) {
@@ -133,13 +130,14 @@ public final class EntityUtil {
         throw new IllegalArgumentException("'" + returnType + "' is not supported");
     }
 
-    public static @NotNull Map<String, Class<?>> getReturnTypes(Class<?> returnType) {
-        Map<String, Class<?>> entities = new HashMap<>();
+    public static <T> @NotNull Map<String, Class<? extends T>> getReturnTypes(Class<T> returnType) {
+        Map<String, Class<? extends T>> entities = new HashMap<>();
         getReturnTypes(entities, returnType);
         return Collections.unmodifiableMap(entities);
     }
 
-    private static void getReturnTypes(Map<String, Class<?>> entities, Class<?> returnType) {
+    @SuppressWarnings("unchecked")
+    private static <T> void getReturnTypes(Map<String, Class<? extends T>> entities, Class<? extends T> returnType) {
         validateType(returnType);
         Entity entity = returnType.getAnnotation(Entity.class);
         for (String name : entity.value()) {
@@ -152,7 +150,7 @@ public final class EntityUtil {
             if (returnType.equals(subtype)) {
                 throw new IllegalArgumentException("'" + subtype.getName() + "' cannot be declared as subtype of itself");
             } else if (returnType.isAssignableFrom(subtype)) {
-                getReturnTypes(entities, subtype);
+                getReturnTypes(entities, (Class<? extends T>) subtype);
             } else {
                 throw new IllegalArgumentException("'" + subtype.getName() + "' cannot be declared as subtype of '" + returnType.getName() + "' - type does not implement supertype");
             }

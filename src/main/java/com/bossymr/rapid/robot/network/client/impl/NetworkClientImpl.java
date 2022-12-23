@@ -16,6 +16,7 @@ import com.bossymr.rapid.robot.network.query.SubscriptionPriority;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
@@ -26,7 +27,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -61,7 +61,6 @@ public class NetworkClientImpl implements NetworkClient {
                 .executor(executorService)
                 .version(HttpClient.Version.HTTP_1_1)
                 .cookieHandler(COOKIE_MANAGER)
-                .connectTimeout(Duration.ofSeconds(5))
                 .build();
     }
 
@@ -81,11 +80,16 @@ public class NetworkClientImpl implements NetworkClient {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> @NotNull T newEntity(@NotNull Model model, @NotNull Class<T> entityType) {
-        return (T) Proxy.newProxyInstance(
-                entityType.getClassLoader(),
-                new Class[]{entityType},
-                new EntityInvocationHandler(entityType, this, model));
+    public <T> @Nullable T newEntity(@NotNull Model model, @NotNull Class<T> entityType) {
+        Map<String, Class<? extends T>> arguments = EntityUtil.getReturnTypes(entityType);
+        if (arguments.containsKey(model.getType())) {
+            Class<? extends T> returnType = arguments.get(model.getType());
+            return (T) Proxy.newProxyInstance(
+                    returnType.getClassLoader(),
+                    new Class[]{returnType},
+                    new EntityInvocationHandler(returnType, this, model));
+        }
+        return null;
     }
 
     @Override
@@ -268,20 +272,19 @@ public class NetworkClientImpl implements NetworkClient {
     }
 
     public void handleEntity(@NotNull Model model) {
-        String path = model.getLink("self").getPath();
         for (SubscriptionDetail<?> detail : details.values()) {
-            if (path.startsWith(detail.resource())) {
-                Map<String, Class<?>> entities = EntityUtil.getReturnTypes(detail.returnType());
-                if (entities.containsKey(model.getType())) {
-                    handleEntity(model, detail);
-                }
-            }
+            handleEntity(model, detail);
         }
     }
 
     public <T> void handleEntity(@NotNull Model model, @NotNull SubscriptionDetail<T> detail) {
-        T entity = newEntity(model, detail.returnType());
-        detail.callback().accept(entity);
+        String path = model.getLink("self").getPath();
+        if (path.startsWith(detail.resource())) {
+            T entity = newEntity(model, detail.returnType());
+            if (entity != null) {
+                detail.callback().accept(entity);
+            }
+        }
     }
 
     @Override

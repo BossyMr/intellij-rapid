@@ -2,7 +2,6 @@ package com.bossymr.rapid.robot;
 
 import com.bossymr.rapid.robot.network.SymbolState;
 import com.bossymr.rapid.robot.network.client.NetworkClient;
-import com.bossymr.rapid.robot.network.client.impl.EntityUtil;
 import com.bossymr.rapid.robot.network.client.model.Model;
 import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
@@ -33,13 +32,6 @@ public final class PersistentRobotState {
      */
     public @NotNull Set<String> cache = new HashSet<>();
 
-    public static @NotNull SymbolState getSymbolState(@NotNull StorageSymbolState symbolState) {
-        Map<String, Class<?>> returnTypes = EntityUtil.getReturnTypes(SymbolState.class);
-        Model model = getModel(symbolState);
-        assert returnTypes.containsKey(model.getType());
-        return (SymbolState) NetworkClient.newSimpleEntity(model, returnTypes.get(model.getType()));
-    }
-
     private static @NotNull Model getModel(@NotNull StorageSymbolState symbolState) {
         Map<String, URI> paths = symbolState.links.entrySet().stream()
                 .map(entry -> Map.entry(entry.getKey(), URI.create(entry.getValue())))
@@ -48,12 +40,12 @@ public final class PersistentRobotState {
     }
 
     public @NotNull Set<SymbolState> getSymbolStates() {
-        Map<String, Class<?>> returnTypes = EntityUtil.getReturnTypes(SymbolState.class);
         Set<SymbolState> symbolStates = new HashSet<>();
         for (StorageSymbolState storageSymbolState : symbols) {
             Model model = getModel(storageSymbolState);
-            if (returnTypes.containsKey(model.getType())) {
-                symbolStates.add((SymbolState) NetworkClient.newSimpleEntity(model, returnTypes.get(model.getType())));
+            SymbolState state = NetworkClient.newSimpleEntity(model, SymbolState.class);
+            if (state != null) {
+                symbolStates.add(state);
             }
         }
         return symbolStates;

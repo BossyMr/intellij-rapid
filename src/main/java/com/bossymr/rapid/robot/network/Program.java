@@ -22,4 +22,10 @@ public interface Program extends EntityModel {
             @NotNull @Field("path") String path
     );
 
+    @POST("{@self}?action=loadprog")
+    @NotNull Query<Void> load(
+            @NotNull @Field("progpath") String path,
+            @NotNull @Field("loadmode") LoadProgramMode mode
+    );
+
 }

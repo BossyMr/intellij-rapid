@@ -4,12 +4,16 @@ import com.bossymr.rapid.robot.ResponseStatusException;
 import com.bossymr.rapid.robot.network.EntityModel;
 import com.bossymr.rapid.robot.network.annotations.Entity;
 import com.bossymr.rapid.robot.network.annotations.Service;
+import com.bossymr.rapid.robot.network.client.impl.EntityUtil;
+import com.bossymr.rapid.robot.network.client.impl.NetworkClientImpl;
 import com.bossymr.rapid.robot.network.client.model.Model;
 import com.bossymr.rapid.robot.network.query.AsynchronousQuery;
 import com.bossymr.rapid.robot.network.query.Query;
 import com.bossymr.rapid.robot.network.query.SubscribableQuery;
 import com.bossymr.rapid.robot.network.query.SubscriptionPriority;
+import com.intellij.credentialStore.Credentials;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
@@ -18,6 +22,7 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -27,12 +32,21 @@ import java.util.function.Consumer;
  */
 public interface NetworkClient {
 
+    static @NotNull NetworkClient connect(@NotNull URI path, @NotNull Credentials credentials) {
+        return new NetworkClientImpl(path, credentials);
+    }
+
     @SuppressWarnings("unchecked")
-    static <T> @NotNull T newSimpleEntity(@NotNull Model model, @NotNull Class<T> entityType) {
-        return (T) Proxy.newProxyInstance(
-                entityType.getClassLoader(),
-                new Class[]{entityType},
-                new EntityInvocationHandler(entityType, null, model));
+    static <T> @Nullable T newSimpleEntity(@NotNull Model model, @NotNull Class<T> entityType) {
+        Map<String, Class<? extends T>> arguments = EntityUtil.getReturnTypes(entityType);
+        if (arguments.containsKey(model.getType())) {
+            Class<? extends T> returnType = arguments.get(model.getType());
+            return (T) Proxy.newProxyInstance(
+                    returnType.getClassLoader(),
+                    new Class[]{returnType},
+                    new EntityInvocationHandler(returnType, null, model));
+        }
+        return null;
     }
 
     /**
@@ -53,7 +67,7 @@ public interface NetworkClient {
      * @param <T> the entity type.
      * @return an entity of the specified type.
      */
-    <T> @NotNull T newEntity(@NotNull Model model, @NotNull Class<T> entityType);
+    <T> @Nullable T newEntity(@NotNull Model model, @NotNull Class<T> entityType);
 
     @NotNull URI getDefaultPath();
 

@@ -42,12 +42,23 @@ public final class ModelUtil {
         Document document = getDocument(response);
         Element element = document.getDocumentElement();
         String title = getElement(element, "title").getTextContent();
-        String type = getElement(element, "div").getAttribute("class");
+        List<Element> sections = getElements(element, "div");
+        Element section = sections.size() == 1 ? sections.get(0) : getSection(sections);
+        String type = section.getAttribute("class");
         URI defaultPath = getDefaultPath(element);
-        Map<String, URI> links = getLinks(defaultPath, getElement(element, "div"));
-        Map<String, String> fields = getFields(getElement(element, "div"));
+        Map<String, URI> links = getLinks(defaultPath, section);
+        Map<String, String> fields = getFields(section);
         List<Model> models = getModels(defaultPath, element);
         return new CollectionModel(title, type, fields, links, models);
+    }
+
+    private static @NotNull Element getSection(@NotNull List<Element> elements) {
+        for (Element element : elements) {
+            if (element.getAttribute("class").equals("status")) {
+                return element;
+            }
+        }
+        return elements.get(0);
     }
 
     private static @NotNull List<Model> getModels(@NotNull URI defaultPath, @NotNull Element element) {
@@ -90,7 +101,7 @@ public final class ModelUtil {
     private static @NotNull Element getElement(@NotNull Element element, @NotNull String tag) {
         List<Element> elements = getElements(element, tag);
         if (elements.size() != 1) {
-            throw new IllegalArgumentException("'" + element + "' contains multiple nodes of '" + tag + "'");
+            throw new IllegalArgumentException("'" + element + "' contains multiple nodes of type '" + tag + "'");
         }
         return elements.get(0);
     }

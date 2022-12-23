@@ -15,25 +15,24 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
-public class DisconnectAction extends AnAction {
+public class DownloadAction extends AnAction {
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         assert project != null;
-        Task.Backgroundable task = new Task.Backgroundable(project, "Disconnecting...") {
+        Task.Backgroundable task = new Task.Backgroundable(project, "Downloading...") {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
                 RemoteService service = RemoteService.getInstance();
                 Robot robot = service.getRobot();
                 assert robot != null;
                 try {
-                    robot.disconnect();
-                } catch (IOException ignored) {}
+                    robot.download();
+                } catch (IOException | InterruptedException ignored) {}
             }
         };
         ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));
-
     }
 
     @Override

@@ -31,7 +31,7 @@ public interface RemoteUserService {
     /**
      * Subscribes to changes for remote user connections.
      */
-    @Subscribable("/users/remoteuser")
+    @Subscribable("/users/remoteuserstate")
     @NotNull SubscribableQuery<RemoteUserEvent> onRequest();
 
 }

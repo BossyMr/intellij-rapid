@@ -3,10 +3,10 @@ package com.bossymr.rapid.robot.ui;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.RemoteService;
 import com.intellij.credentialStore.Credentials;
-import com.intellij.openapi.progress.EmptyProgressIndicator;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
+import com.intellij.openapi.progress.impl.BackgroundableProcessIndicator;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.DialogWrapper;
@@ -32,42 +32,32 @@ public class RobotConnectView extends DialogWrapper {
     private final JTextField hostField;
     private final JTextField portField;
     private final ComboBox<AuthenticationType> authenticationComboBox;
-    private final JPanel hostPanel;
+    private final JPanel userPanel;
 
     public RobotConnectView(@Nullable Project project) {
         super(project, false);
         this.project = project;
         setTitle(RapidBundle.message("robot.connect.dialog.title"));
 
-        GridBagConstraints constraints = new GridBagConstraints(0, 0, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.insets(1), 0, 0);
-
         content = new JPanel(new GridBagLayout());
-
         hostField = new JTextField();
-        content.add(LabeledComponent.create(hostField, RapidBundle.message("robot.connect.host.label")), constraints);
-        constraints.gridx++;
-
         portField = new JTextField();
-        content.add(LabeledComponent.create(portField, RapidBundle.message("robot.connect.host.port")), constraints);
-        constraints.gridy++;
-        constraints.gridx = 0;
-
         AuthenticationType[] authenticationTypes = {AuthenticationType.DEFAULT, AuthenticationType.PASSWORD};
         authenticationComboBox = new ComboBox<>(authenticationTypes);
-        content.add(LabeledComponent.create(authenticationComboBox, RapidBundle.message("robot.connect.authentication.type")), constraints);
-        constraints.gridy++;
 
-        GridBagConstraints hostConstraints = new GridBagConstraints(0, 0, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.insets(1), 0, 0);
-        hostPanel = new JPanel(new GridBagLayout());
-
+        userPanel = new JPanel(new GridBagLayout());
         userField = new JTextField();
-        hostPanel.add(LabeledComponent.create(userField, RapidBundle.message("robot.connect.authentication.username")), hostConstraints);
-        hostConstraints.gridy++;
-
         passwordField = new JBPasswordField();
-        hostPanel.add(LabeledComponent.create(passwordField, RapidBundle.message("robot.connect.authentication.password")), hostConstraints);
 
-        content.add(hostPanel, constraints);
+        content.add(LabeledComponent.create(hostField, RapidBundle.message("robot.connect.host.label"), BorderLayout.WEST), new GridBagConstraints(0, 0, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
+        content.add(LabeledComponent.create(portField, RapidBundle.message("robot.connect.host.port"), BorderLayout.WEST), new GridBagConstraints(1, 0, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
+
+        content.add(LabeledComponent.create(authenticationComboBox, RapidBundle.message("robot.connect.authentication.type"), BorderLayout.WEST), new GridBagConstraints(0, 1, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
+
+        userPanel.add(LabeledComponent.create(authenticationComboBox, RapidBundle.message("robot.connect.authentication.username"), BorderLayout.WEST), new GridBagConstraints(0, 0, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
+        userPanel.add(LabeledComponent.create(authenticationComboBox, RapidBundle.message("robot.connect.authentication.password"), BorderLayout.WEST), new GridBagConstraints(0, 1, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
+
+        content.add(userPanel, new GridBagConstraints(0, 2, 1, 1, 0, 0, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, JBUI.emptyInsets(), 0, 0));
 
         authenticationComboBox.setRenderer(SimpleListCellRenderer.create((label, value, index) -> label.setText(value.getDisplayName())));
         checkAuthenticationType(authenticationComboBox.getItem());
@@ -77,7 +67,7 @@ public class RobotConnectView extends DialogWrapper {
     }
 
     private void checkAuthenticationType(@NotNull AuthenticationType authenticationType) {
-        hostPanel.setVisible(authenticationType.equals(AuthenticationType.PASSWORD));
+        userPanel.setVisible(authenticationType.equals(AuthenticationType.PASSWORD));
     }
 
     @Override
@@ -87,7 +77,7 @@ public class RobotConnectView extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
-        ProgressManager.getInstance().runProcessWithProgressAsynchronously(new Task.Backgroundable(project, RapidBundle.message("robot.connect.progress.indicator.title", hostField.getText())) {
+        Task.Backgroundable task = new Task.Backgroundable(project, RapidBundle.message("robot.connect.progress.indicator.title", hostField.getText())) {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
                 RemoteService service = RemoteService.getInstance();
@@ -98,7 +88,8 @@ public class RobotConnectView extends DialogWrapper {
                     service.connect(path, credentials);
                 } catch (IOException | InterruptedException ignored) {}
             }
-        }, new EmptyProgressIndicator());
+        };
+        ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));
         super.doOKAction();
     }
 }

@@ -22,7 +22,7 @@ public class RemoteServiceImpl implements RemoteService {
 
     private @NotNull State state = new State();
 
-    private @Nullable Robot robot;
+    private @Nullable RobotImpl robot;
 
     @Override
     public @Nullable Robot getRobot() {
@@ -41,7 +41,7 @@ public class RemoteServiceImpl implements RemoteService {
         RobotEventListener.publish().beforeConnect();
         RobotUtil.setCredentials(path, credentials);
         RobotService service = RobotService.connect(path, credentials);
-        return new RobotImpl(service);
+        return robot = new RobotImpl(service);
     }
 
     @Override
@@ -61,7 +61,7 @@ public class RemoteServiceImpl implements RemoteService {
     public void dispose() {
         if (robot != null) {
             try {
-                robot.disconnect();
+                robot.dispose();
             } catch (IOException ignored) {}
         }
     }

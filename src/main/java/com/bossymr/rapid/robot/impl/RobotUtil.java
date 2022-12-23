@@ -1,13 +1,16 @@
 package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.PersistentRobotState;
 import com.bossymr.rapid.robot.PersistentRobotState.StorageSymbolState;
+import com.bossymr.rapid.robot.RemoteService;
 import com.bossymr.rapid.robot.ResponseStatusException;
-import com.bossymr.rapid.robot.network.Module;
-import com.bossymr.rapid.robot.network.*;
+import com.bossymr.rapid.robot.Robot;
+import com.bossymr.rapid.robot.network.RobotService;
+import com.bossymr.rapid.robot.network.SymbolQueryBuilder;
+import com.bossymr.rapid.robot.network.SymbolState;
+import com.bossymr.rapid.robot.network.SymbolType;
 import com.bossymr.rapid.robot.network.query.Query;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.credentialStore.Credentials;
@@ -17,7 +20,6 @@ import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.util.io.FileUtil;
-import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.search.FileTypeIndex;
@@ -67,68 +69,30 @@ public final class RobotUtil {
         });
     }
 
-    public static @NotNull List<RapidTask> download(@NotNull RobotService robotService) throws InterruptedException, IOException {
-        String homePath = PathManager.getSystemPath();
-        List<RapidTask> rapidTasks = new ArrayList<>();
-        List<Task> tasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
-        // TODO: 2022-12-20 Check if the user wants to save/upload existing (changed) content or overwrite
-        remove();
-        for (Task task : tasks) {
-            Set<VirtualFile> files = new HashSet<>();
-            RapidTask rapidTask = new RapidTaskImpl(task.getName(), files);
-            List<ModuleInfo> moduleInfos = task.getModules().send();
-            for (ModuleInfo moduleInfo : moduleInfos) {
-                Module module = moduleInfo.getModule().send();
-                Path path = Path.of(homePath, "robot", task.getName());
-                if (path.toFile().exists() || path.toFile().mkdirs()) {
-                    module.save(module.getName(), path.toString()).send();
-                    VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path.resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION));
-                    assert virtualFile != null;
-                    files.add(virtualFile);
-                }
-            }
-            rapidTasks.add(rapidTask);
-        }
-
-        return rapidTasks;
-    }
-
-    public static @NotNull List<RapidTask> download() {
-        String homePath = PathManager.getSystemPath();
-        List<RapidTask> rapidTasks = new ArrayList<>();
-        Path robotPath = Path.of(homePath, "robot");
-        if (robotPath.toFile().exists()) {
-            assert robotPath.toFile().isDirectory();
-            File[] files = robotPath.toFile().listFiles();
-            assert files != null;
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    Set<VirtualFile> virtualFiles = new HashSet<>();
-                    RapidTask rapidTask = new RapidTaskImpl(file.getName(), virtualFiles);
-                    File[] modules = file.listFiles();
-                    assert modules != null;
-                    for (File module : modules) {
-                        virtualFiles.add(LocalFileSystem.getInstance().findFileByIoFile(module));
-                    }
-                    rapidTasks.add(rapidTask);
-                }
+    public static boolean isConnected(@Nullable Project project) {
+        if (project != null) {
+            RemoteService service = RemoteService.getInstance();
+            Robot robot = service.getRobot();
+            if (robot != null) {
+                return robot.getRobotService() != null;
             }
         }
-        return rapidTasks;
+        return false;
     }
 
     public static void remove() throws IOException {
         String homePath = PathManager.getSystemPath();
         Path robotPath = Path.of(homePath, "robot");
-        if (robotPath.toFile().exists()) FileUtil.delete(robotPath);
+        File file = robotPath.toFile();
+        if (file.exists()) FileUtil.delete(robotPath);
     }
 
     public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull PersistentRobotState robotState) {
         return new RobotSymbolFactory(robotState).getSymbols();
     }
 
-    public static @NotNull VirtualSymbol getSymbol(@NotNull StorageSymbolState symbolState) {
-        List<SymbolState> symbolStates = List.of(PersistentRobotState.getSymbolState(symbolState));
+    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolState symbolState) {
+        List<SymbolState> symbolStates = List.of(symbolState);
         Map<String, VirtualSymbol> symbols = new RobotSymbolFactory(symbolStates).getSymbols();
         List<VirtualSymbol> virtualSymbols = new ArrayList<>(symbols.values());
         return virtualSymbols.get(0);

@@ -56,8 +56,6 @@
                            key="notification.group.robot.connect.error"/>
 
         <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
-
-        <fileDocumentManagerListener implementation="com.bossymr.rapid.robot.RobotFileDocumentManagerListener"/>
     </extensions>
 
     <actions>
@@ -79,6 +77,12 @@
             <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
         </action>
 
+        <action id="com.bossymr.rapid.robot.actions.DownloadAction" icon="AllIcons.Actions.CheckOut"
+                class="com.bossymr.rapid.robot.actions.DownloadAction" text="Download"/>
+
+        <action id="com.bossymr.rapid.robot.actions.UploadAction" icon="AllIcons.Vcs.Push"
+                class="com.bossymr.rapid.robot.actions.UploadAction" text="Upload"/>
+
         <group id="RobotContextMenu">
             <reference id="com.bossymr.rapid.robot.actions.ConnectAction"/>
             <reference id="com.bossymr.rapid.robot.actions.DeleteAction"/>
@@ -88,6 +92,9 @@
             <reference id="com.bossymr.rapid.robot.actions.ConnectAction"/>
             <reference id="com.bossymr.rapid.robot.actions.RefreshAction"/>
             <reference id="com.bossymr.rapid.robot.actions.DisconnectAction"/>
+            <separator/>
+            <reference id="com.bossymr.rapid.robot.actions.DownloadAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.UploadAction"/>
         </group>
     </actions>
 </idea-plugin>

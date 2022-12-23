@@ -14,10 +14,13 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.net.URI;
 import java.net.http.HttpRequest;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -32,7 +35,7 @@ public final class NetworkUtil {
         throw new UnsupportedOperationException("'NetworkUtil' cannot be instantiated");
     }
 
-    public static @NotNull Object newQuery(@NotNull Class<?> type, @NotNull NetworkClient networkClient, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
+    public static @NotNull Object newQuery(@NotNull Class<?> type, @NotNull NetworkClient networkClient, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (method.getReturnType().isAnnotationPresent(Service.class)) {
             return networkClient.newService(method.getReturnType());
         }
@@ -57,6 +60,9 @@ public final class NetworkUtil {
             if (annotation instanceof SubscribableQuery.Subscribable request) {
                 return newSubscribableQuery(networkClient, proxy, request.value(), method, args);
             }
+        }
+        if (method.isDefault()) {
+            return InvocationHandler.invokeDefault(proxy, method, args);
         }
         LOG.error("Cannot handle method '" + method.getName() + "' in '" + type.getName() + "'");
         throw new AssertionError();
@@ -171,6 +177,9 @@ public final class NetworkUtil {
         if (Double.class.equals(type)) return Double.parseDouble(value);
         if (Boolean.class.equals(type)) return Boolean.parseBoolean(value);
         if (Character.class.equals(type)) return value.charAt(0);
+        if (LocalDateTime.class.equals(type)) {
+            return LocalDateTime.parse(value.replaceAll(" ", ""), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        }
         if (Enum.class.isAssignableFrom(type)) {
             Map<String, Object> constants = new HashMap<>();
             for (Field field : type.getFields()) {

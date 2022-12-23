@@ -7,7 +7,6 @@ import com.bossymr.rapid.robot.network.query.Query;
 import com.intellij.credentialStore.Credentials;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.net.URI;
 
 /**
@@ -26,9 +25,8 @@ public interface RobotService extends ServiceModel {
      * @param path the path of the robot to connect to.
      * @param credentials the credentials to authenticate with.
      * @return a robot which is connected to the specified robot.
-     * @throws IOException if an I/O error occurs.
      */
-    static @NotNull RobotService connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException {
+    static @NotNull RobotService connect(@NotNull URI path, @NotNull Credentials credentials) {
         return new NetworkClientImpl(path, credentials).newService(RobotService.class);
     }
 
