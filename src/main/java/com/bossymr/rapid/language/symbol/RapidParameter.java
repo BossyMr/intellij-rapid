@@ -5,7 +5,6 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
 import com.intellij.lang.LighterASTNode;
-import com.intellij.navigation.TargetPresentation;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.LightTreeUtil;
 import com.intellij.psi.tree.IElementType;
@@ -13,17 +12,15 @@ import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
+import javax.swing.*;
 
 public interface RapidParameter extends RapidVariable {
 
     @NotNull Attribute getAttribute();
 
     @Override
-    default @NotNull TargetPresentation getTargetPresentation() {
-        return TargetPresentation.builder(Objects.requireNonNullElse(getName(), ""))
-                .icon(RapidIcons.PARAMETER)
-                .presentation();
+    default @NotNull Icon getIcon() {
+        return RapidIcons.PARAMETER;
     }
 
     enum Attribute {

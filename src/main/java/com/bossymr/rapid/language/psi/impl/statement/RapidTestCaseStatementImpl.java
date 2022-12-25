@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 
 public class RapidTestCaseStatementImpl extends RapidCompositeElement implements RapidTestCaseStatement {
@@ -19,8 +20,9 @@ public class RapidTestCaseStatementImpl extends RapidCompositeElement implements
     }
 
     @Override
-    public @Nullable RapidExpressionList getExpressionList() {
-        return (RapidExpressionList) findChildByType(RapidElementTypes.EXPRESSION_LIST);
+    public @Nullable List<RapidExpression> getExpressions() {
+        RapidExpressionList expressionList = (RapidExpressionList) findChildByType(RapidElementTypes.EXPRESSION_LIST);
+        return expressionList != null ? expressionList.getExpressions() : null;
     }
 
     @Override

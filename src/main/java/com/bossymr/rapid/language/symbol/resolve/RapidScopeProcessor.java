@@ -30,7 +30,7 @@ public final class RapidScopeProcessor implements Processor<RapidSymbol> {
 
     @Override
     public boolean process(@NotNull RapidSymbol symbol) {
-        if (!this.name.equals(symbol.getName())) {
+        if (!this.name.equalsIgnoreCase(symbol.getName())) {
             return true;
         }
         if (isAccessible(symbol)) {

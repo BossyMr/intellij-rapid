@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.rapid.language.psi.RapidFile;
-import com.bossymr.rapid.language.symbol.RapidModule;
 import com.bossymr.rapid.language.symbol.RapidTask;
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -34,9 +34,9 @@ public class RapidTaskImpl implements RapidTask {
     }
 
     @Override
-    public @NotNull Set<RapidModule> getModules(@NotNull Project project) {
+    public @NotNull Set<PhysicalModule> getModules(@NotNull Project project) {
         PsiManager psiManager = PsiManager.getInstance(project);
-        Set<RapidModule> modules = new HashSet<>();
+        Set<PhysicalModule> modules = new HashSet<>();
         NonProjectFileWritingAccessProvider.allowWriting(files);
         for (VirtualFile file : files) {
             PsiFile psiFile = psiManager.findFile(file);

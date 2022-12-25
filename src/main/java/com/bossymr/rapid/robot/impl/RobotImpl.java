@@ -25,7 +25,7 @@ import java.util.*;
 
 public class RobotImpl implements Robot {
 
-    private @NotNull PersistentRobotState robotState;
+    private @NotNull RobotState robotState;
     private @Nullable RobotService robotService;
 
     private @NotNull List<RapidTask> tasks;
@@ -52,7 +52,7 @@ public class RobotImpl implements Robot {
      *
      * @param robotState the persisted robot state.
      */
-    public RobotImpl(@NotNull PersistentRobotState robotState) {
+    public RobotImpl(@NotNull RobotState robotState) {
         this.robotState = robotState;
         RemoteService.getInstance().setRobotState(robotState);
         symbols = RobotUtil.getSymbols(robotState);
@@ -90,19 +90,19 @@ public class RobotImpl implements Robot {
                 if (robotState.cache.contains(name)) {
                     return null;
                 }
-                SymbolState symbolState;
+                Symbol symbol;
                 try {
-                    symbolState = robotService.getRobotWareService().getRapidService().findSymbol("RAPID" + "/" + name).send();
+                    symbol = robotService.getRobotWareService().getRapidService().findSymbol("RAPID" + "/" + name).send();
                 } catch (ResponseStatusException e) {
                     if (e.getStatusCode() == 400) {
-                        symbolState = null;
+                        symbol = null;
                     } else {
                         throw e;
                     }
                 }
-                if (symbolState != null) {
-                    PersistentRobotState.StorageSymbolState storageSymbolState = RobotUtil.getSymbolState(symbolState);
-                    VirtualSymbol virtualSymbol = RobotUtil.getSymbol(symbolState);
+                if (symbol != null) {
+                    RobotState.SymbolState storageSymbolState = RobotUtil.getSymbolState(symbol);
+                    VirtualSymbol virtualSymbol = RobotUtil.getSymbol(symbol);
                     symbols.put(virtualSymbol.getName(), virtualSymbol);
                     robotState.symbols.add(storageSymbolState);
                     RobotEventListener.publish().onSymbol(this, virtualSymbol);

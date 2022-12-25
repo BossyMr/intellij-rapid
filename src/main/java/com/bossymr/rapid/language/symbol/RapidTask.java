@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.symbol;
 
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
@@ -12,6 +13,6 @@ public interface RapidTask {
 
     @NotNull Set<VirtualFile> getFiles();
 
-    @NotNull Set<RapidModule> getModules(@NotNull Project project);
+    @NotNull Set<PhysicalModule> getModules(@NotNull Project project);
 
 }

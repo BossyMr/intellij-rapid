@@ -3,6 +3,8 @@ package com.bossymr.rapid.language.psi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 /**
  * Represents a test case statement in a test statement.
  */
@@ -20,7 +22,7 @@ public interface RapidTestCaseStatement extends RapidStatement {
      *
      * @return the expression list of this case statement.
      */
-    @Nullable RapidExpressionList getExpressionList();
+    @Nullable List<RapidExpression> getExpressions();
 
     /**
      * Returns the statements in this test case statement.

@@ -31,8 +31,9 @@ public class RapidStatementListImpl extends RapidCompositeElement implements Rap
     }
 
     @Override
-    public @Nullable RapidExpressionList getExpressionList() {
-        return (RapidExpressionList) findChildByType(RapidElementTypes.EXPRESSION_LIST);
+    public @Nullable List<RapidExpression> getExpressions() {
+        RapidExpressionList expressionList = (RapidExpressionList) findChildByType(RapidElementTypes.EXPRESSION_LIST);
+        return expressionList != null ? expressionList.getExpressions() : null;
     }
 
     @Override

@@ -46,7 +46,11 @@ public class RapidType {
         if (left.getDimensions() != right.getDimensions()) return false;
         RapidStructure leftStructure = left.getTargetStructure();
         RapidStructure rightStructure = right.getTargetStructure();
-        if (leftStructure == null || rightStructure == null) return false;
+        if (leftStructure == null || rightStructure == null) {
+            String leftText = left.getText();
+            String rightText = right.getText();
+            return leftText.equals(rightText);
+        }
         return Objects.equals(leftStructure, rightStructure);
     }
 
@@ -76,7 +80,11 @@ public class RapidType {
                 RapidAtomic atomic = (RapidAtomic) structure;
                 type = atomic.getType();
             }
-            structure = type != null ? type.getStructure() : null;
+            if (type != null) {
+                structure = type.getStructure();
+            } else {
+                break;
+            }
         }
         return structure;
     }

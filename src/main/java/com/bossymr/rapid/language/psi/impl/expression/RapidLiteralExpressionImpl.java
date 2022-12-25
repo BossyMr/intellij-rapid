@@ -7,7 +7,6 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.psi.tree.IElementType;
-import com.intellij.psi.util.PsiLiteralUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,6 +14,11 @@ public class RapidLiteralExpressionImpl extends RapidExpressionElement implement
 
     public RapidLiteralExpressionImpl() {
         super(RapidElementTypes.LITERAL_EXPRESSION);
+    }
+
+    @Override
+    public boolean isLiteral() {
+        return true;
     }
 
     @Override
@@ -30,6 +34,11 @@ public class RapidLiteralExpressionImpl extends RapidExpressionElement implement
             return RapidType.STRING;
         }
         return null;
+    }
+
+    @Override
+    public boolean isConstant() {
+        return true;
     }
 
     @Override
@@ -63,7 +72,7 @@ public class RapidLiteralExpressionImpl extends RapidExpressionElement implement
                 if (text.startsWith("0B") || text.startsWith("0b")) {
                     return Long.parseLong(text.substring(2), 2);
                 }
-                return PsiLiteralUtil.parseDouble(text);
+                return Double.parseDouble(text);
             } catch (NumberFormatException e) {
                 return null;
             }

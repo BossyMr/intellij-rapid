@@ -38,12 +38,7 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
 
     @Override
     public @NotNull Visibility getVisibility() {
-        RapidFieldStub stub = getGreenStub();
-        if (stub != null) {
-            return stub.getVisibility();
-        } else {
-            return Visibility.getVisibility(this);
-        }
+        return SymbolUtil.getVisibility(this);
     }
 
     @Override
@@ -104,9 +99,13 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
 
     @Override
     public @Nullable RapidType getType() {
-        RapidArray array = findChildByType(RapidElementTypes.ARRAY);
+        RapidArray array = getArray();
         int dimensions = array != null ? array.getDimensions().size() : 0;
         return SymbolUtil.getType(this, dimensions);
+    }
+
+    public @Nullable RapidArray getArray() {
+        return findChildByType(RapidElementTypes.ARRAY);
     }
 
     @Override

@@ -13,7 +13,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -134,7 +133,7 @@ public final class ModelUtil {
 
     private static @NotNull Document getDocument(byte @NotNull [] response) throws IOException {
         try {
-            return getBuilder().parse(new ByteArrayInputStream(new String(response).getBytes(StandardCharsets.UTF_8)));
+            return getBuilder().parse(new ByteArrayInputStream(response));
         } catch (SAXException e) {
             System.out.println(new String(response));
             throw new IOException(e);

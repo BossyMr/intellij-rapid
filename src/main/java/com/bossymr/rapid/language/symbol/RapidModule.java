@@ -5,16 +5,15 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
 import com.intellij.lang.LighterASTNode;
-import com.intellij.navigation.TargetPresentation;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.LightTreeUtil;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 
+import javax.swing.*;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 public interface RapidModule extends RapidSymbol {
@@ -36,10 +35,8 @@ public interface RapidModule extends RapidSymbol {
     @NotNull List<RapidRoutine> getRoutines();
 
     @Override
-    default @NotNull TargetPresentation getTargetPresentation() {
-        return TargetPresentation.builder(Objects.requireNonNullElse(getName(), ""))
-                .icon(hasAttribute(Attribute.SYSTEM_MODULE) ? RapidIcons.SYSTEM_MODULE : RapidIcons.MODULE)
-                .presentation();
+    default @NotNull Icon getIcon() {
+        return hasAttribute(Attribute.SYSTEM_MODULE) ? RapidIcons.SYSTEM_MODULE : RapidIcons.MODULE;
     }
 
     enum Attribute {
@@ -48,6 +45,8 @@ public interface RapidModule extends RapidSymbol {
         NO_STEP_IN(RapidTokenTypes.NOSTEPIN_KEYWORD, "NOSTEPIN"),
         VIEW_ONLY(RapidTokenTypes.VIEWONLY_KEYWORD, "VIEWONLY"),
         READ_ONLY(RapidTokenTypes.READONLY_KEYWORD, "READONLY");
+
+        public static final @NotNull TokenSet TOKEN_SET = TokenSet.create(RapidTokenTypes.SYSMODULE_KEYWORD, RapidTokenTypes.NOVIEW_KEYWORD, RapidTokenTypes.NOSTEPIN_KEYWORD, RapidTokenTypes.VIEWONLY_KEYWORD, RapidTokenTypes.READONLY_KEYWORD);
 
         private final IElementType elementType;
         private final String text;
@@ -58,8 +57,7 @@ public interface RapidModule extends RapidSymbol {
         }
 
         public static @NotNull Set<Attribute> getAttributes(@NotNull PsiElement element) {
-            TokenSet tokenSet = TokenSet.create(RapidTokenTypes.SYSMODULE_KEYWORD, RapidTokenTypes.NOVIEW_KEYWORD, RapidTokenTypes.NOSTEPIN_KEYWORD, RapidTokenTypes.VIEWONLY_KEYWORD, RapidTokenTypes.READONLY_KEYWORD);
-            ASTNode[] nodes = element.getNode().getChildren(tokenSet);
+            ASTNode[] nodes = element.getNode().getChildren(TOKEN_SET);
             Set<Attribute> attributes = EnumSet.noneOf(Attribute.class);
             for (ASTNode node : nodes) {
                 IElementType elementType = node.getElementType();
@@ -69,8 +67,7 @@ public interface RapidModule extends RapidSymbol {
         }
 
         public static @NotNull Set<Attribute> getAttributes(@NotNull LighterAST tree, @NotNull LighterASTNode node) {
-            TokenSet tokenSet = TokenSet.create(RapidTokenTypes.SYSMODULE_KEYWORD, RapidTokenTypes.NOVIEW_KEYWORD, RapidTokenTypes.NOSTEPIN_KEYWORD, RapidTokenTypes.VIEWONLY_KEYWORD, RapidTokenTypes.READONLY_KEYWORD);
-            List<LighterASTNode> nodes = LightTreeUtil.getChildrenOfType(tree, node, tokenSet);
+            List<LighterASTNode> nodes = LightTreeUtil.getChildrenOfType(tree, node, TOKEN_SET);
             Set<Attribute> attributes = EnumSet.noneOf(Attribute.class);
             for (LighterASTNode element : nodes) {
                 IElementType elementType = element.getTokenType();
@@ -79,7 +76,7 @@ public interface RapidModule extends RapidSymbol {
             return attributes;
         }
 
-        private static @NotNull Attribute getAttribute(@NotNull IElementType elementType) {
+        public static @NotNull Attribute getAttribute(@NotNull IElementType elementType) {
             if (elementType == RapidTokenTypes.SYSMODULE_KEYWORD) {
                 return Attribute.SYSTEM_MODULE;
             }

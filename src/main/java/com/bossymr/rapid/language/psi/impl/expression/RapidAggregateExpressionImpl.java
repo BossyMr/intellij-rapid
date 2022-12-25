@@ -17,6 +17,11 @@ public class RapidAggregateExpressionImpl extends RapidExpressionElement impleme
     }
 
     @Override
+    public boolean isConstant() {
+        return getExpressions().stream().allMatch(RapidExpression::isConstant);
+    }
+
+    @Override
     public @NotNull List<RapidExpression> getExpressions() {
         return PsiTreeUtil.getChildrenOfTypeAsList(this, RapidExpression.class);
     }

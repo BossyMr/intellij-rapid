@@ -3,14 +3,13 @@ package com.bossymr.rapid.robot.impl;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.PersistentRobotState;
-import com.bossymr.rapid.robot.PersistentRobotState.StorageSymbolState;
 import com.bossymr.rapid.robot.RemoteService;
 import com.bossymr.rapid.robot.ResponseStatusException;
 import com.bossymr.rapid.robot.Robot;
+import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.RobotService;
+import com.bossymr.rapid.robot.network.Symbol;
 import com.bossymr.rapid.robot.network.SymbolQueryBuilder;
-import com.bossymr.rapid.robot.network.SymbolState;
 import com.bossymr.rapid.robot.network.SymbolType;
 import com.bossymr.rapid.robot.network.query.Query;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
@@ -93,19 +92,19 @@ public final class RobotUtil {
         if (file.exists()) FileUtil.delete(robotPath);
     }
 
-    public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull PersistentRobotState robotState) {
+    public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull RobotState robotState) {
         return new RobotSymbolFactory(robotState).getSymbols();
     }
 
-    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolState symbolState) {
-        List<SymbolState> symbolStates = List.of(symbolState);
+    public static @NotNull VirtualSymbol getSymbol(@NotNull Symbol symbol) {
+        List<Symbol> symbolStates = List.of(symbol);
         Map<String, VirtualSymbol> symbols = new RobotSymbolFactory(symbolStates).getSymbols();
         List<VirtualSymbol> virtualSymbols = new ArrayList<>(symbols.values());
         return virtualSymbols.get(0);
     }
 
-    public static @NotNull PersistentRobotState getRobotState(@NotNull RobotService service) throws IOException, InterruptedException {
-        PersistentRobotState robotState = new PersistentRobotState();
+    public static @NotNull RobotState getRobotState(@NotNull RobotService service) throws IOException, InterruptedException {
+        RobotState robotState = new RobotState();
         Map<String, String> query = new SymbolQueryBuilder()
                 .setRecursive(true)
                 .setSymbolType(SymbolType.ANY)
@@ -126,7 +125,7 @@ public final class RobotUtil {
                                 return symbols;
                             }).thenComposeAsync(symbols -> {
                                 Map<String, Set<String>> states = new HashMap<>();
-                                for (SymbolState symbol : symbols) {
+                                for (Symbol symbol : symbols) {
                                     String address = symbol.getTitle().substring(0, symbol.getTitle().lastIndexOf('/'));
                                     states.computeIfAbsent(address, (value) -> new HashSet<>());
                                     states.get(address).add(symbol.getTitle().substring(symbol.getTitle().lastIndexOf('/') + 1));
@@ -136,7 +135,7 @@ public final class RobotUtil {
                                     if (entry.getKey().equals("RAPID")) continue;
                                     String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
                                     if (!states.get("RAPID").contains(name)) {
-                                        Query<SymbolState> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
+                                        Query<Symbol> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
                                         CompletableFuture<Void> completableFuture = symbol.sendAsync()
                                                 .exceptionally((exception) -> {
                                                     if (exception.getCause() instanceof ResponseStatusException responseStatusException) {
@@ -150,7 +149,7 @@ public final class RobotUtil {
                                                     throw new CompletionException(exception);
                                                 }).thenAcceptAsync((response) -> {
                                                     if (response != null) {
-                                                        StorageSymbolState storageSymbolState = RobotUtil.getSymbolState(response);
+                                                        RobotState.SymbolState storageSymbolState = RobotUtil.getSymbolState(response);
                                                         robotState.symbols.add(storageSymbolState);
                                                     }
                                                 });
@@ -188,8 +187,8 @@ public final class RobotUtil {
         return collection;
     }
 
-    public static @NotNull StorageSymbolState getSymbolState(@NotNull SymbolState symbol) {
-        StorageSymbolState symbolState = new StorageSymbolState();
+    public static @NotNull RobotState.SymbolState getSymbolState(@NotNull Symbol symbol) {
+        RobotState.SymbolState symbolState = new RobotState.SymbolState();
         symbolState.title = symbol.getTitle();
         symbolState.type = symbol.getType();
         symbolState.fields = symbol.getFields();

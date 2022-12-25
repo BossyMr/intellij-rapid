@@ -28,8 +28,8 @@ public class RapidTypeElementImpl extends RapidCompositeElement implements Rapid
         return CachedValuesManager.getProjectPsiDependentCache(this, (ignored) -> {
             RapidReferenceExpression expression = getReferenceExpression();
             if (expression != null) {
-                RapidSymbol element = expression.resolve();
-                return new RapidType(element instanceof RapidStructure ? (RapidStructure) element : null);
+                RapidSymbol element = expression.getSymbol();
+                return new RapidType(element instanceof RapidStructure ? (RapidStructure) element : null, expression.getText());
             } else {
                 return null;
             }

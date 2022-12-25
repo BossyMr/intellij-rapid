@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.ui.node;
 
 import com.bossymr.rapid.RapidIcons;
-import com.bossymr.rapid.language.symbol.RapidModule;
 import com.bossymr.rapid.language.symbol.RapidTask;
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.openapi.project.Project;
@@ -19,7 +19,7 @@ public class RobotViewTaskNode extends RobotViewNode<RapidTask> {
 
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
-        Set<RapidModule> modules = getValue().getModules(getProject());
+        Set<PhysicalModule> modules = getValue().getModules(getProject());
         return modules.stream()
                 .map(module -> new RobotViewModuleNode(getProject(), module))
                 .toList();

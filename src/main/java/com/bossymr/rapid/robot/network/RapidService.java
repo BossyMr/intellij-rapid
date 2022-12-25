@@ -23,7 +23,7 @@ public interface RapidService {
      * @return the symbols on this robot.
      */
     @POST("/symbols?action=search-symbols")
-    @NotNull Query<List<SymbolState>> findSymbols(
+    @NotNull Query<List<Symbol>> findSymbols(
             @FieldMap Map<String, String> fields
     );
 
@@ -35,7 +35,7 @@ public interface RapidService {
      * @return the symbol.
      */
     @GET("/symbol/properties/{symbol}")
-    @NotNull Query<SymbolState> findSymbol(
+    @NotNull Query<Symbol> findSymbol(
             @Path("symbol") String symbol
     );
 }

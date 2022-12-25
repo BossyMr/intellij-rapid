@@ -20,6 +20,11 @@ public class RapidEmptyExpressionImpl extends RapidExpressionElement implements 
     }
 
     @Override
+    public boolean isConstant() {
+        return true;
+    }
+
+    @Override
     public void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitExpression(this);
     }

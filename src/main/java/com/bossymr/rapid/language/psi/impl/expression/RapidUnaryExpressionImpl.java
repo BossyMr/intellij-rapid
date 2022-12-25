@@ -36,6 +36,11 @@ public class RapidUnaryExpressionImpl extends RapidExpressionElement implements 
     }
 
     @Override
+    public boolean isConstant() {
+        return getExpression() == null || getExpression().isConstant();
+    }
+
+    @Override
     public @Nullable RapidExpression getExpression() {
         return (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS);
     }

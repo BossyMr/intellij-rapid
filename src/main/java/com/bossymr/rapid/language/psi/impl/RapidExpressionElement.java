@@ -1,5 +1,10 @@
 package com.bossymr.rapid.language.psi.impl;
 
+import com.bossymr.rapid.language.psi.RapidBinaryExpression;
+import com.bossymr.rapid.language.psi.RapidElementTypes;
+import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.RapidUnaryExpression;
+import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.lang.ASTFactory;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
@@ -11,18 +16,21 @@ import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
 import com.intellij.util.CharTable;
-import com.bossymr.rapid.language.psi.RapidBinaryExpression;
-import com.bossymr.rapid.language.psi.RapidElementTypes;
-import com.bossymr.rapid.language.psi.RapidUnaryExpression;
 import org.jetbrains.annotations.NotNull;
 
 import static com.bossymr.rapid.language.psi.RapidElementTypes.*;
 import static com.bossymr.rapid.language.psi.RapidTokenTypes.*;
 
-public abstract class RapidExpressionElement extends RapidCompositeElement {
+public abstract class RapidExpressionElement extends RapidCompositeElement implements RapidExpression {
 
     protected RapidExpressionElement(IElementType type) {
         super(type);
+    }
+
+    @Override
+    public boolean isConditional() {
+        RapidType type = getType();
+        return type != null && RapidType.BOOLEAN.isAssignable(type);
     }
 
     private static boolean getParenthesis(@NotNull ASTNode oldElement, @NotNull ASTNode newElement) {

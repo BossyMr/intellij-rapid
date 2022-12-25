@@ -34,4 +34,9 @@ public class RapidIndexExpressionImpl extends RapidExpressionElement implements 
         RapidType type = getExpression().getType();
         return type != null ? type.createArrayType(0) : null;
     }
+
+    @Override
+    public boolean isConstant() {
+        return true;
+    }
 }

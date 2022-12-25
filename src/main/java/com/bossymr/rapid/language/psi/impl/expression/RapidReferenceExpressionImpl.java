@@ -2,13 +2,13 @@ package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
-import com.bossymr.rapid.language.symbol.RapidSymbol;
-import com.bossymr.rapid.language.symbol.RapidType;
-import com.bossymr.rapid.language.symbol.RapidVariable;
+import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.impl.source.tree.TreeElement;
+import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,13 +37,19 @@ public class RapidReferenceExpressionImpl extends RapidExpressionElement impleme
         if (parent instanceof RapidFunctionCallExpression) {
             return ((RapidFunctionCallExpression) parent).getType();
         }
-        RapidSymbol element = resolve();
+        RapidSymbol element = getSymbol();
         if (element != null) {
             if (element instanceof RapidVariable) {
                 return ((RapidVariable) element).getType();
             }
         }
         return null;
+    }
+
+    @Override
+    public boolean isConstant() {
+        RapidSymbol resolve = getSymbol();
+        return resolve instanceof RapidField field && field.getAttribute() == RapidField.Attribute.CONSTANT;
     }
 
     @Override
@@ -59,6 +65,41 @@ public class RapidReferenceExpressionImpl extends RapidExpressionElement impleme
     @Override
     public @NotNull String getCanonicalText() {
         return getText();
+    }
+
+    @Override
+    public PsiElement handleElementRename(@NotNull String newElementName) throws IncorrectOperationException {
+        PsiElement previous = getIdentifier();
+        if (previous == null) throw new IncorrectOperationException();
+        PsiElement identifier = RapidElementFactory.getInstance(getProject()).createIdentifier(newElementName);
+        previous.replace(identifier);
+        return this;
+    }
+
+    @Override
+    public PsiElement bindToElement(@NotNull PsiElement element) throws IncorrectOperationException {
+        if (isReferenceTo(element)) return this;
+        if (element instanceof RapidComponent) {
+            RapidRecord record = (RapidRecord) element.getParent();
+            String expression = record.getName() + "." + ((RapidComponent) element).getName();
+            RapidExpression reference = RapidElementFactory.getInstance(getProject()).createExpression(expression);
+            getTreeParent().replaceChildInternal(this, (TreeElement) reference.getNode());
+        } else if (element instanceof RapidSymbol) {
+            String expression = String.valueOf(((RapidSymbol) element).getName());
+            RapidExpression reference = RapidElementFactory.getInstance(getProject()).createExpression(expression);
+            getTreeParent().replaceChildInternal(this, (TreeElement) reference.getNode());
+        }
+        return this;
+    }
+
+    @Override
+    public boolean isReferenceTo(@NotNull PsiElement element) {
+        return element.getManager().areElementsEquivalent(element, resolve());
+    }
+
+    @Override
+    public boolean isSoft() {
+        return false;
     }
 
     @Override
@@ -83,15 +124,16 @@ public class RapidReferenceExpressionImpl extends RapidExpressionElement impleme
     }
 
     @Override
-    public @NotNull Collection<RapidSymbol> resolveReference() {
+    public @NotNull Collection<RapidSymbol> getSymbols() {
         PsiElement identifier = getIdentifier();
         if (identifier == null) return Collections.emptyList();
         String name = identifier.getText();
         return ResolveUtil.getSymbols(this, name);
     }
 
-    public @Nullable RapidSymbol resolve() {
-        Collection<RapidSymbol> symbols = resolveReference();
+    @Override
+    public @Nullable RapidSymbol getSymbol() {
+        Collection<RapidSymbol> symbols = getSymbols();
         return symbols.size() == 1 ? symbols.iterator().next() : null;
     }
 

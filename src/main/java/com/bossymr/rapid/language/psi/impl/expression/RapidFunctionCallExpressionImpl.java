@@ -18,8 +18,13 @@ public class RapidFunctionCallExpressionImpl extends RapidExpressionElement impl
 
     @Override
     public @Nullable RapidType getType() {
-        RapidSymbol element = getReferenceExpression().resolve();
+        RapidSymbol element = getReferenceExpression().getSymbol();
         return element instanceof RapidRoutine ? ((RapidRoutine) element).getType() : null;
+    }
+
+    @Override
+    public boolean isConstant() {
+        return false;
     }
 
     @Override

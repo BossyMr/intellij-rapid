@@ -7,7 +7,6 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
 import com.intellij.lang.LighterASTNode;
-import com.intellij.navigation.TargetPresentation;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.LightTreeUtil;
 import com.intellij.psi.tree.IElementType;
@@ -15,8 +14,8 @@ import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.List;
-import java.util.Objects;
 
 public interface RapidRoutine extends RapidAccessibleSymbol {
 
@@ -33,14 +32,12 @@ public interface RapidRoutine extends RapidAccessibleSymbol {
     @Nullable List<RapidStatement> getStatements(@NotNull RapidStatementList.Attribute attribute);
 
     @Override
-    default @NotNull TargetPresentation getTargetPresentation() {
-        return TargetPresentation.builder(Objects.requireNonNullElse(getName(), ""))
-                .icon(switch (getAttribute()) {
-                    case FUNCTION -> RapidIcons.FUNCTION;
-                    case PROCEDURE -> RapidIcons.PROCEDURE;
-                    case TRAP -> RapidIcons.TRAP;
-                })
-                .presentation();
+    default @NotNull Icon getIcon() {
+        return switch (getAttribute()) {
+            case FUNCTION -> RapidIcons.FUNCTION;
+            case PROCEDURE -> RapidIcons.PROCEDURE;
+            case TRAP -> RapidIcons.TRAP;
+        };
     }
 
     enum Attribute {

@@ -6,18 +6,18 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Entity(subtype = {
-        SymbolState.AtomicSymbolState.class,
-        SymbolState.RecordSymbolState.class,
-        SymbolState.AliasSymbolState.class,
-        SymbolState.ComponentSymbolState.class,
-        SymbolState.ConstantSymbolState.class,
-        SymbolState.VariableSymbolState.class,
-        SymbolState.PersistentSymbolState.class,
-        SymbolState.ParameterSymbolState.class,
-        SymbolState.FunctionSymbolState.class,
-        SymbolState.ProcedureSymbolState.class
+        Symbol.AtomicSymbol.class,
+        Symbol.RecordSymbol.class,
+        Symbol.AliasSymbol.class,
+        Symbol.ComponentSymbol.class,
+        Symbol.ConstantSymbol.class,
+        Symbol.VariableSymbol.class,
+        Symbol.PersistentSymbol.class,
+        Symbol.ParameterSymbol.class,
+        Symbol.FunctionSymbol.class,
+        Symbol.ProcedureSymbol.class
 })
-public interface SymbolState extends EntityModel {
+public interface Symbol extends EntityModel {
 
     @Property("symburl")
     @Nullable String getCanonicalName();
@@ -31,13 +31,13 @@ public interface SymbolState extends EntityModel {
     @Property("named")
     boolean isNamed();
 
-    interface VisibleSymbolState extends SymbolState {
+    interface VisibleSymbol extends Symbol {
 
         @Property("local")
         boolean isLocal();
     }
 
-    interface FieldSymbolState extends SymbolState, VisibleSymbolState {
+    interface FieldSymbol extends Symbol, VisibleSymbol {
 
         @Property("typurl")
         @Nullable String getCanonicalType();
@@ -49,14 +49,14 @@ public interface SymbolState extends EntityModel {
         int getSize();
     }
 
-    interface RoutineSymbolState extends SymbolState, VisibleSymbolState {
+    interface RoutineSymbol extends Symbol, VisibleSymbol {
 
         @Property("npar")
         int getSize();
     }
 
     @Entity({"rap-sympropatomic", "rap-sympropatomic-li"})
-    interface AtomicSymbolState extends SymbolState {
+    interface AtomicSymbol extends Symbol {
 
         @Property("size")
         int getSize();
@@ -73,7 +73,7 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-symproprecord", "rap-symproprecord-li"})
-    interface RecordSymbolState extends SymbolState, VisibleSymbolState {
+    interface RecordSymbol extends Symbol, VisibleSymbol {
 
         @Property("ncom")
         int getSize();
@@ -84,7 +84,7 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropalias", "rap-sympropalias-li"})
-    interface AliasSymbolState extends SymbolState, VisibleSymbolState {
+    interface AliasSymbol extends Symbol, VisibleSymbol {
 
         @Property("linked")
         boolean isLinked();
@@ -97,7 +97,7 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropreccomp", "rap-sympropreccomp-li"})
-    interface ComponentSymbolState extends SymbolState {
+    interface ComponentSymbol extends Symbol {
 
         @Property("comnum")
         int getIndex();
@@ -110,7 +110,7 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropconstant", "rap-sympropconstant-li"})
-    interface ConstantSymbolState extends SymbolState, VisibleSymbolState, FieldSymbolState {
+    interface ConstantSymbol extends Symbol, VisibleSymbol, FieldSymbol {
 
         @Property("linked")
         boolean isLinked();
@@ -118,7 +118,7 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropvar", "rap-sympropvar-li"})
-    interface VariableSymbolState extends SymbolState, VisibleSymbolState, FieldSymbolState {
+    interface VariableSymbol extends Symbol, VisibleSymbol, FieldSymbol {
 
         @Property("dim")
         @Nullable String getDimensions();
@@ -132,7 +132,7 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-symproppers", "rap-symproppers-li"})
-    interface PersistentSymbolState extends SymbolState, VisibleSymbolState, FieldSymbolState {
+    interface PersistentSymbol extends Symbol, VisibleSymbol, FieldSymbol {
 
         @Property("dim")
         @Nullable String getDimensions();
@@ -146,7 +146,7 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropparam", "rap-sympropparam-li"})
-    interface ParameterSymbolState extends SymbolState {
+    interface ParameterSymbol extends Symbol {
 
         @Property("altnum")
         int getAlternativeIndex();
@@ -172,7 +172,7 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropfunction", "rap-sympropfunction-li"})
-    interface FunctionSymbolState extends SymbolState, VisibleSymbolState, RoutineSymbolState {
+    interface FunctionSymbol extends Symbol, VisibleSymbol, RoutineSymbol {
 
         @Property("linked")
         boolean isLinked();
@@ -186,8 +186,8 @@ public interface SymbolState extends EntityModel {
     }
 
     @Entity({"rap-sympropproc", "rap-sympropproc-li"})
-    interface ProcedureSymbolState extends SymbolState, VisibleSymbolState, RoutineSymbolState {}
+    interface ProcedureSymbol extends Symbol, VisibleSymbol, RoutineSymbol {}
 
     @Entity({"rap-symproptask", "rap-symproptask-li"})
-    interface TaskSymbolState extends SymbolState {}
+    interface TaskSymbol extends Symbol {}
 }

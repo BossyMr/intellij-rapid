@@ -1,23 +1,26 @@
 package com.bossymr.rapid.language.symbol;
 
-import com.intellij.model.Pointer;
-import com.intellij.model.Symbol;
-import com.intellij.navigation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public interface RapidSymbol extends Symbol {
+import javax.swing.*;
 
+/**
+ * A {@code RapidSymbol} is a symbol.
+ */
+public interface RapidSymbol {
+
+    /**
+     * Returns the name of this symbol.
+     *
+     * @return the name of this symbol, or {@code null} if this symbol is not complete.
+     */
     @Nullable String getName();
 
-    @Override
-    @NotNull Pointer<? extends RapidSymbol> createPointer();
-
-    @NotNull TargetPresentation getTargetPresentation();
-
-    @Override
-    boolean equals(Object obj);
-
-    @Override
-    int hashCode();
+    /**
+     * Returns the icon of this symbol.
+     *
+     * @return the icon of this symbol.
+     */
+    @NotNull Icon getIcon();
 }

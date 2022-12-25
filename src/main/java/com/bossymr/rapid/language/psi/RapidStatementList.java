@@ -21,7 +21,7 @@ public interface RapidStatementList extends RapidElement {
      *
      * @return the expression list, or {@code null} if this statement list is not an error clause.
      */
-    @Nullable RapidExpressionList getExpressionList();
+    @Nullable List<RapidExpression> getExpressions();
 
     /**
      * Returns the statements contained in this statement list.
@@ -40,8 +40,8 @@ public interface RapidStatementList extends RapidElement {
         STATEMENT_LIST,
 
         /**
-         * This statement list is an error clause, and {@link #getExpressionList()} can be used to get the errors which
-         * are handled.
+         * This statement list is an error clause, and {@link #getExpressions()} can be used to get the errors which are
+         * handled.
          */
         ERROR_CLAUSE,
 

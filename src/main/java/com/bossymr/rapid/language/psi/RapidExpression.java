@@ -17,4 +17,12 @@ public interface RapidExpression extends RapidElement {
     @Contract(pure = true)
     @Nullable RapidType getType();
 
+    boolean isConstant();
+
+    default boolean isLiteral() {
+        return false;
+    }
+
+    boolean isConditional();
+
 }

@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.impl;
 
-import com.bossymr.rapid.robot.PersistentRobotState;
 import com.bossymr.rapid.robot.RemoteService;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
+import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.RobotService;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.components.State;
@@ -29,7 +29,7 @@ public class RemoteServiceImpl implements RemoteService {
         if (robot != null) {
             return robot;
         }
-        PersistentRobotState robotState = getRobotState();
+        RobotState robotState = getRobotState();
         if (robotState != null) {
             return robot = new RobotImpl(robotState);
         }
@@ -67,12 +67,12 @@ public class RemoteServiceImpl implements RemoteService {
     }
 
     @Override
-    public @Nullable PersistentRobotState getRobotState() {
+    public @Nullable RobotState getRobotState() {
         return getState().state;
     }
 
     @Override
-    public void setRobotState(@Nullable PersistentRobotState robotState) {
+    public void setRobotState(@Nullable RobotState robotState) {
         getState().state = robotState;
     }
 

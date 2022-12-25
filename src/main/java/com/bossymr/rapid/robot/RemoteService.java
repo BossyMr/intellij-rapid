@@ -50,11 +50,11 @@ public interface RemoteService extends PersistentStateComponent<RemoteService.St
      */
     void disconnect() throws IOException;
 
-    @Nullable PersistentRobotState getRobotState();
+    @Nullable RobotState getRobotState();
 
-    void setRobotState(@Nullable PersistentRobotState robotState);
+    void setRobotState(@Nullable RobotState robotState);
 
     class State {
-        public PersistentRobotState state;
+        public RobotState state;
     }
 }

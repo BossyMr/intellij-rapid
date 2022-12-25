@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.robot.Robot;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -19,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 public class RapidScopeVisitor extends RapidElementVisitor {
 
@@ -77,7 +79,7 @@ public class RapidScopeVisitor extends RapidElementVisitor {
     private @Nullable RapidRoutine getRoutine(@NotNull RapidArgument argument) {
         RapidReferenceExpression reference = getReference(argument);
         if (reference == null) return null;
-        RapidSymbol symbol = reference.resolve();
+        RapidSymbol symbol = reference.getSymbol();
         return symbol instanceof RapidRoutine routine ? routine : null;
     }
 
@@ -141,13 +143,40 @@ public class RapidScopeVisitor extends RapidElementVisitor {
             } else {
                 state = State.BREAK;
                 Project project = previous.getProject();
-                FileTypeIndex.processFiles(RapidFileType.INSTANCE, (virtualFile) -> {
-                    PsiFile psiFile = PsiManager.getInstance(project).findFile(virtualFile);
-                    if (psiFile != null) {
-                        visitFile(psiFile);
+
+                RemoteService remoteService = RemoteService.getInstance();
+                Robot robot = remoteService.getRobot();
+
+                PhysicalModule context = PsiTreeUtil.getParentOfType(element, PhysicalModule.class);
+
+                boolean remote = false;
+                if (robot != null) {
+                    for (RapidTask task : robot.getTasks()) {
+                        Set<PhysicalModule> modules = task.getModules(project);
+                        if (modules.contains(context)) {
+                            remote = true;
+                            for (PhysicalModule module : modules) {
+                                visitModule(module);
+                            }
+                        } else {
+                            for (PhysicalModule module : modules) {
+                                if (module.hasAttribute(RapidModule.Attribute.SYSTEM_MODULE)) {
+                                    visitModule(module);
+                                }
+                            }
+                        }
                     }
-                    return true;
-                }, GlobalSearchScope.projectScope(project));
+                }
+
+                if (!(remote)) {
+                    FileTypeIndex.processFiles(RapidFileType.INSTANCE, (virtualFile) -> {
+                        PsiFile psiFile = PsiManager.getInstance(project).findFile(virtualFile);
+                        if (psiFile != null) {
+                            visitFile(psiFile);
+                        }
+                        return true;
+                    }, GlobalSearchScope.projectScope(project));
+                }
 
                 if (this.state != State.HALT) {
                     RemoteService service = RemoteService.getInstance();

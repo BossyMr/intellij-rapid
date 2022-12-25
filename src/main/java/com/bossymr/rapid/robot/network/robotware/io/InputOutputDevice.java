@@ -7,6 +7,9 @@ import com.bossymr.rapid.robot.network.query.SubscribableQuery;
 import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
 import org.jetbrains.annotations.NotNull;
 
+import java.net.http.HttpRequest;
+import java.util.List;
+
 @Entity({"ios-device", "ios-device-li"})
 public interface InputOutputDevice extends EntityModel {
 
@@ -36,6 +39,15 @@ public interface InputOutputDevice extends EntityModel {
 
     @GET("{@network}")
     @NotNull Query<InputOutputNetwork> getNetwork();
+
+    default @NotNull Query<List<InputOutputSignal>> getSignals() {
+        String network = getTitle().substring(0, getTitle().lastIndexOf('/'));
+        String device = getTitle().substring(getTitle().lastIndexOf('/') + 1);
+        HttpRequest httpRequest = HttpRequest.newBuilder(getNetworkClient().getDefaultPath().resolve("/rw/iosystem/signals?action=signal-search"))
+                .POST(HttpRequest.BodyPublishers.ofString("network=" + network + "&device=" + device))
+                .build();
+        return getNetworkClient().newQuery(httpRequest, InputOutputSignal.class);
+    }
 
     @POST("{@self}?action=set")
     @NotNull Query<Void> setState(

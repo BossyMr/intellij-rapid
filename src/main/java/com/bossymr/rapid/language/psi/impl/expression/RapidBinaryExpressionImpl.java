@@ -74,6 +74,11 @@ public class RapidBinaryExpressionImpl extends RapidExpressionElement implements
     }
 
     @Override
+    public boolean isConstant() {
+        return getLeft().isConstant() && (getRight() == null || getRight().isLiteral());
+    }
+
+    @Override
     public void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitBinaryExpression(this);
     }
