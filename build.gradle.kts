@@ -45,7 +45,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
     testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.9.0")
-    testImplementation("org.junit.platform:junit-platform-launcher:1.9.0")
+    testImplementation("org.junit.platform:junit-platform-launcher:1.9.1")
 }
 
 tasks {
