@@ -4,8 +4,6 @@ import com.bossymr.rapid.language.psi.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
-
 public class RapidRequiredArgumentImpl extends RapidCompositeElement implements RapidRequiredArgument {
 
     public RapidRequiredArgumentImpl() {
@@ -14,12 +12,14 @@ public class RapidRequiredArgumentImpl extends RapidCompositeElement implements 
 
     @Override
     public @Nullable RapidReferenceExpression getParameter() {
-        return (RapidReferenceExpression) findChildByType(RapidElementTypes.REFERENCE_EXPRESSION);
+        RapidExpression[] expressions = getChildrenAsPsiElements(RapidElementTypes.EXPRESSIONS, RapidExpression[]::new);
+        return expressions.length == 2 ? (RapidReferenceExpression) expressions[0] : null;
     }
 
     @Override
     public @NotNull RapidExpression getArgument() {
-        return (RapidExpression) Objects.requireNonNull(findChildByType(RapidElementTypes.EXPRESSIONS));
+        RapidExpression[] expressions = getChildrenAsPsiElements(RapidElementTypes.EXPRESSIONS, RapidExpression[]::new);
+        return expressions.length == 2 ? expressions[1] : expressions[0];
     }
 
     @Override

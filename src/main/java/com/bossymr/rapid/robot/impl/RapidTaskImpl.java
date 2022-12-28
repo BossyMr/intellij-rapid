@@ -16,16 +16,23 @@ import java.util.Set;
 public class RapidTaskImpl implements RapidTask {
 
     private final String name;
+    private final VirtualFile directory;
     private final Set<VirtualFile> files;
 
-    public RapidTaskImpl(@NotNull String name, @NotNull Set<VirtualFile> files) {
+    public RapidTaskImpl(@NotNull String name, @NotNull VirtualFile directory, @NotNull Set<VirtualFile> files) {
         this.name = name;
+        this.directory = directory;
         this.files = files;
     }
 
     @Override
     public @NotNull String getName() {
         return name;
+    }
+
+    @Override
+    public @NotNull VirtualFile getDirectory() {
+        return directory;
     }
 
     @Override

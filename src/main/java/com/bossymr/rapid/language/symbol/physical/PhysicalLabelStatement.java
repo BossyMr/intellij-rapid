@@ -26,6 +26,11 @@ public class PhysicalLabelStatement extends RapidCompositeElement implements Rap
     }
 
     @Override
+    public @Nullable Icon getIcon(int flags) {
+        return getIcon();
+    }
+
+    @Override
     public @Nullable ItemPresentation getPresentation() {
         return new ColoredItemPresentation() {
             @Override

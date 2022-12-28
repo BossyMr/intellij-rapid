@@ -14,6 +14,7 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalTargetVariable extends RapidCompositeElement implements RapidTargetVariable, PhysicalSymbol {
@@ -25,6 +26,11 @@ public class PhysicalTargetVariable extends RapidCompositeElement implements Rap
     @Override
     public @Nullable PsiElement getNameIdentifier() {
         return findPsiChildByType(RapidTokenTypes.IDENTIFIER);
+    }
+
+    @Override
+    public @Nullable Icon getIcon(int flags) {
+        return getIcon();
     }
 
     @Override

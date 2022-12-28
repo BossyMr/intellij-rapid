@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiReference;
 import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
@@ -19,6 +20,11 @@ public class RapidReferenceExpressionImpl extends RapidExpressionElement impleme
 
     public RapidReferenceExpressionImpl() {
         super(RapidElementTypes.REFERENCE_EXPRESSION);
+    }
+
+    @Override
+    public @NotNull PsiReference getReference() {
+        return this;
     }
 
     @Override

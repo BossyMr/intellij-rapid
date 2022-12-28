@@ -14,6 +14,7 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -25,6 +26,11 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
 
     public PhysicalModule(@NotNull ASTNode node) {
         super(node);
+    }
+
+    @Override
+    public @Nullable Icon getIcon(int flags) {
+        return getIcon();
     }
 
     @Override

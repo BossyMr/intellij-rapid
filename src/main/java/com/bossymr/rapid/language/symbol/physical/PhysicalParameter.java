@@ -13,6 +13,7 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalParameter extends RapidStubElement<RapidParameterStub> implements RapidParameter, PhysicalSymbol {
@@ -23,6 +24,11 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
 
     public PhysicalParameter(@NotNull ASTNode node) {
         super(node);
+    }
+
+    @Override
+    public @Nullable Icon getIcon(int flags) {
+        return getIcon();
     }
 
     @Override

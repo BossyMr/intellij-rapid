@@ -19,6 +19,7 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalField extends RapidStubElement<RapidFieldStub> implements RapidField, PhysicalSymbol {
@@ -29,6 +30,11 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
 
     public PhysicalField(@NotNull ASTNode node) {
         super(node);
+    }
+
+    @Override
+    public @Nullable Icon getIcon(int flags) {
+        return getIcon();
     }
 
     @Override

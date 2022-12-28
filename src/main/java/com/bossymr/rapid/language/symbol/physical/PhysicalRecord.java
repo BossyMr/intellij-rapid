@@ -16,6 +16,7 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,6 +28,11 @@ public class PhysicalRecord extends RapidStubElement<RapidRecordStub> implements
 
     public PhysicalRecord(@NotNull ASTNode node) {
         super(node);
+    }
+
+    @Override
+    public @Nullable Icon getIcon(int flags) {
+        return getIcon();
     }
 
     @Override

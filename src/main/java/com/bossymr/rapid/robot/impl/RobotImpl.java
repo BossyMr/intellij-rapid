@@ -179,12 +179,16 @@ public class RobotImpl implements Robot {
             File taskFile = defaultPath.resolve(remoteTask.getName()).toFile();
             if (!taskFile.mkdir()) throw new IOException();
             Set<VirtualFile> virtualFiles = new HashSet<>();
-            RapidTask rapidTask = new RapidTaskImpl(remoteTask.getName(), virtualFiles);
+            LocalFileSystem instance = LocalFileSystem.getInstance();
+            VirtualFile taskVirtualFile = instance.refreshAndFindFileByIoFile(taskFile);
+            assert taskVirtualFile != null;
+            RapidTask rapidTask = new RapidTaskImpl(remoteTask.getName(), taskVirtualFile, virtualFiles);
             List<ModuleInfo> moduleInfos = remoteTask.getModules().send();
             for (ModuleInfo moduleInfo : moduleInfos) {
                 Module module = moduleInfo.getModule().send();
                 module.save(module.getName(), taskFile.getPath()).send();
-                VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByNioFile(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION));
+                VirtualFile virtualFile = instance.findFileByNioFile(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION));
+                assert virtualFile != null;
                 virtualFiles.add(virtualFile);
             }
             rapidTasks.add(rapidTask);
@@ -200,12 +204,15 @@ public class RobotImpl implements Robot {
             File[] taskFiles = defaultFile.listFiles();
             if (taskFiles != null) {
                 for (File taskFile : taskFiles) {
+                    VirtualFile taskVirtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(taskFile);
+                    assert taskVirtualFile != null;
                     File[] moduleFiles = taskFile.listFiles();
                     Set<VirtualFile> virtualFiles = new HashSet<>();
-                    RapidTask rapidTask = new RapidTaskImpl(taskFile.getName(), virtualFiles);
+                    RapidTask rapidTask = new RapidTaskImpl(taskFile.getName(), taskVirtualFile, virtualFiles);
                     if (moduleFiles != null) {
                         for (File moduleFile : moduleFiles) {
                             VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByIoFile(moduleFile);
+                            assert virtualFile != null;
                             virtualFiles.add(virtualFile);
                         }
                     }

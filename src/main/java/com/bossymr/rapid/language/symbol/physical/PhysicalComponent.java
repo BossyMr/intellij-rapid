@@ -15,6 +15,7 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalComponent extends RapidStubElement<RapidComponentStub> implements RapidComponent, PhysicalSymbol {
@@ -25,6 +26,11 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
 
     public PhysicalComponent(@NotNull ASTNode node) {
         super(node);
+    }
+
+    @Override
+    public @Nullable Icon getIcon(int flags) {
+        return getIcon();
     }
 
     @Override

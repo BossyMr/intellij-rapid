@@ -27,6 +27,20 @@
         <lang.syntaxHighlighterFactory language="RAPID"
                                        implementationClass="com.bossymr.rapid.ide.highlight.RapidHighlighterFactory"/>
 
+        <lang.findUsagesProvider language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidFindUsagesProvider"/>
+
+        <lang.psiStructureViewFactory language="RAPID"
+                                      implementationClass="com.bossymr.rapid.ide.structure.RapidStructureViewBuilderFactory"/>
+
+        <navbar implementation="com.bossymr.rapid.ide.RapidNavigationBar"/>
+
+        <!-- Refactoring -->
+
+        <lang.refactoringSupport language="RAPID"
+                                 implementationClass="com.bossymr.rapid.ide.refactor.RapidRefactoringSupportProvider"/>
+
+        <lang.namesValidator language="RAPID" implementationClass="com.bossymr.rapid.ide.refactor.RapidNamesValidator"/>
+
         <!-- PsiElement  -->
 
         <projectService serviceImplementation="com.bossymr.rapid.language.psi.RapidElementFactory"/>
@@ -56,6 +70,12 @@
                            key="notification.group.robot.connect.error"/>
 
         <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
+
+        <gotoSymbolContributor implementation="com.bossymr.rapid.ide.navigation.RapidSymbolNavigationContributor"/>
+        <gotoClassContributor implementation="com.bossymr.rapid.ide.navigation.RapidClassNavigationContributor"/>
+
+        <completion.contributor language="RAPID"
+                                implementationClass="com.bossymr.rapid.ide.completion.RapidCompletionContributor"/>
     </extensions>
 
     <actions>

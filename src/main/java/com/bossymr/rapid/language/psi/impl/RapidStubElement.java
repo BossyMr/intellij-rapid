@@ -7,6 +7,7 @@ import com.intellij.lang.ASTNode;
 import com.intellij.lang.Language;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.StubBasedPsiElement;
+import com.intellij.psi.impl.source.tree.CompositeElement;
 import com.intellij.psi.stubs.IStubElementType;
 import com.intellij.psi.stubs.StubElement;
 import org.jetbrains.annotations.NotNull;
@@ -19,6 +20,11 @@ public abstract class RapidStubElement<T extends StubElement<?>> extends StubBas
 
     public RapidStubElement(@NotNull ASTNode node) {
         super(node);
+    }
+
+    @Override
+    public int getTextOffset() {
+        return ((CompositeElement) getNode()).getTextOffset();
     }
 
     @Override

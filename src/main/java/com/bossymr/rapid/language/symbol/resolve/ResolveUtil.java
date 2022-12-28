@@ -9,12 +9,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 public final class ResolveUtil {
 
-    private ResolveUtil() {}
+    private ResolveUtil() {
+    }
 
     public static @Nullable RapidStructure getStructure(@NotNull PsiElement element, @NotNull String name) {
         Set<RapidSymbol> results = getSymbols(element, name);
@@ -32,7 +32,7 @@ public final class ResolveUtil {
                 if (structure instanceof RapidRecord record) {
                     Set<RapidSymbol> symbols = new HashSet<>();
                     for (RapidComponent component : record.getComponents()) {
-                        if (Objects.equals(component.getName(), name)) {
+                        if (name.equalsIgnoreCase(component.getName())) {
                             symbols.add(component);
                         }
                     }

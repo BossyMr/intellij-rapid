@@ -77,6 +77,10 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
         visitElement(array);
     }
 
+    public void visitArgumentList(@NotNull RapidArgumentList argumentList) {
+        visitElement(argumentList);
+    }
+
     public void visitArgument(@NotNull RapidArgument argument) {
         visitElement(argument);
     }

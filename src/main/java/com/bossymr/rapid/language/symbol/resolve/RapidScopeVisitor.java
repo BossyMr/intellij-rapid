@@ -62,13 +62,15 @@ public class RapidScopeVisitor extends RapidElementVisitor {
 
     @Override
     public void visitArgument(@NotNull RapidArgument argument) {
-        RapidRoutine routine = getRoutine(argument);
-        if (routine != null) {
-            List<RapidParameterGroup> parameters = routine.getParameters();
-            if (parameters != null) {
-                for (RapidParameterGroup group : parameters) {
-                    for (RapidParameter parameter : group.getParameters()) {
-                        process(parameter);
+        if (argument.getParameter() == previous) {
+            RapidRoutine routine = getRoutine(argument);
+            if (routine != null) {
+                List<RapidParameterGroup> parameters = routine.getParameters();
+                if (parameters != null) {
+                    for (RapidParameterGroup group : parameters) {
+                        for (RapidParameter parameter : group.getParameters()) {
+                            process(parameter);
+                        }
                     }
                 }
             }

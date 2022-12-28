@@ -22,6 +22,11 @@ public class RapidAggregateExpressionImpl extends RapidExpressionElement impleme
     }
 
     @Override
+    public boolean isLiteral() {
+        return getExpressions().stream().allMatch(RapidExpression::isLiteral);
+    }
+
+    @Override
     public @NotNull List<RapidExpression> getExpressions() {
         return PsiTreeUtil.getChildrenOfTypeAsList(this, RapidExpression.class);
     }

@@ -11,6 +11,8 @@ public interface RapidTask {
 
     @NotNull String getName();
 
+    @NotNull VirtualFile getDirectory();
+
     @NotNull Set<VirtualFile> getFiles();
 
     @NotNull Set<PhysicalModule> getModules(@NotNull Project project);

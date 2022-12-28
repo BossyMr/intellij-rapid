@@ -18,6 +18,11 @@ public class RapidUnaryExpressionImpl extends RapidExpressionElement implements 
     }
 
     @Override
+    public boolean isLiteral() {
+        return getExpression() == null || getExpression().isLiteral();
+    }
+
+    @Override
     public @Nullable RapidType getType() {
         RapidExpression expression = getExpression();
         if (expression != null) {
