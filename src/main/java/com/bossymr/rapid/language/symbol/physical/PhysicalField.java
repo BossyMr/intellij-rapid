@@ -131,6 +131,17 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     }
 
     @Override
+    public void deleteChildInternal(@NotNull ASTNode child) {
+        if (RapidElementTypes.EXPRESSIONS.contains(child.getElementType())) {
+            ASTNode equals = findChildByType(RapidTokenTypes.CEQ);
+            if (equals != null) {
+                deleteChildInternal(equals);
+            }
+        }
+        super.deleteChildInternal(child);
+    }
+
+    @Override
     public String toString() {
         return "PhysicalField:" + getName();
     }

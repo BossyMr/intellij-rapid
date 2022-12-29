@@ -1,8 +1,12 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
-import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.psi.RapidBinaryExpression;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
@@ -12,25 +16,26 @@ import java.util.List;
 
 import static com.bossymr.rapid.language.psi.RapidTokenTypes.*;
 
-public class RapidBinaryExpressionImpl extends RapidExpressionElement implements RapidBinaryExpression {
+public class RapidBinaryExpressionImpl extends RapidExpressionImpl implements RapidBinaryExpression {
 
-    public RapidBinaryExpressionImpl() {
-        super(RapidElementTypes.BINARY_EXPRESSION);
+    public RapidBinaryExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @NotNull RapidExpression getLeft() {
-        return (RapidExpression) getFirstChildNode();
+        return (RapidExpression) getFirstChild();
     }
 
     @Override
     public @Nullable RapidExpression getRight() {
-        return RapidElementTypes.EXPRESSIONS.contains(getLastChildNode().getElementType()) ? (RapidExpression) getLastChildNode() : null;
+        PsiElement element = getLastChild();
+        return element instanceof RapidExpression expression ? expression : null;
     }
 
     @Override
     public PsiElement getSign() {
-        return findPsiChildByType(RapidTokenTypes.OPERATIONS);
+        return findChildByType(RapidTokenTypes.OPERATIONS);
     }
 
     @Override

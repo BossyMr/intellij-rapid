@@ -1,27 +1,26 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
+public class RapidIndexExpressionImpl extends RapidExpressionImpl implements RapidIndexExpression {
 
-public class RapidIndexExpressionImpl extends RapidExpressionElement implements RapidIndexExpression {
-
-    public RapidIndexExpressionImpl() {
-        super(RapidElementTypes.INDEX_EXPRESSION);
+    public RapidIndexExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @NotNull RapidExpression getExpression() {
-        return (RapidExpression) Objects.requireNonNull(findChildByType(RapidElementTypes.EXPRESSIONS));
+        return findNotNullChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override
     public @NotNull RapidArray getArray() {
-        return (RapidArray) Objects.requireNonNull(findChildByType(RapidElementTypes.ARRAY));
+        return findNotNullChildByType(RapidElementTypes.ARRAY);
     }
 
     @Override
@@ -38,5 +37,10 @@ public class RapidIndexExpressionImpl extends RapidExpressionElement implements 
     @Override
     public boolean isConstant() {
         return true;
+    }
+
+    @Override
+    public String toString() {
+        return "RapidIndexExpression:" + getText();
     }
 }

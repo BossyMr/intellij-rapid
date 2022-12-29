@@ -8,7 +8,6 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.LightTreeUtil;
 import com.intellij.psi.stubs.ILightStubElementType;
 import com.intellij.psi.stubs.StubElement;
-import com.intellij.psi.tree.ICompositeElementType;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NonNls;
@@ -16,13 +15,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class RapidStubElementType<StubT extends StubElement<?>, PsiT extends PsiElement>
-        extends ILightStubElementType<StubT, PsiT> implements ICompositeElementType {
+        extends ILightStubElementType<StubT, PsiT> {
 
     public RapidStubElementType(@NotNull @NonNls String debugName) {
         super(debugName, RapidLanguage.INSTANCE);
     }
 
-    public abstract @NotNull PsiElement createPsi(@NotNull final ASTNode node);
+    public abstract @NotNull PsiElement createElement(@NotNull ASTNode node);
 
     @Override
     public @NotNull StubT createStub(@NotNull PsiT psi, StubElement<? extends PsiElement> parentStub) {
@@ -36,14 +35,6 @@ public abstract class RapidStubElementType<StubT extends StubElement<?>, PsiT ex
     protected @Nullable String getText(LighterAST tree, LighterASTNode node, TokenSet tokenSet) {
         LighterASTNode element = LightTreeUtil.firstChildOfType(tree, node, tokenSet);
         return element != null ? LightTreeUtil.toFilteredString(tree, element, null) : null;
-    }
-
-    protected boolean hasChild(LighterAST tree, LighterASTNode node, IElementType elementType) {
-        return hasChild(tree, node, TokenSet.create(elementType));
-    }
-
-    protected boolean hasChild(LighterAST tree, LighterASTNode node, TokenSet tokenSet) {
-        return LightTreeUtil.firstChildOfType(tree, node, tokenSet) != null;
     }
 
     @Override

@@ -7,15 +7,15 @@ import com.bossymr.rapid.language.psi.RapidTypeElement;
 import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.intellij.lang.ASTNode;
 import com.intellij.psi.util.CachedValuesManager;
-import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidTypeElementImpl extends RapidCompositeElement implements RapidTypeElement {
+public class RapidTypeElementImpl extends RapidElementImpl implements RapidTypeElement {
 
-    public RapidTypeElementImpl() {
-        super(RapidElementTypes.TYPE_ELEMENT);
+    public RapidTypeElementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
@@ -38,7 +38,7 @@ public class RapidTypeElementImpl extends RapidCompositeElement implements Rapid
 
     @Override
     public @Nullable RapidReferenceExpression getReferenceExpression() {
-        return PsiTreeUtil.findChildOfType(this, RapidReferenceExpression.class);
+        return findChildByType(RapidElementTypes.REFERENCE_EXPRESSION);
     }
 
     @Override

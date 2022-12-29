@@ -1,15 +1,15 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExitStatement;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 
-public class RapidExitStatementImpl extends RapidCompositeElement implements RapidExitStatement {
+public class RapidExitStatementImpl extends RapidElementImpl implements RapidExitStatement {
 
-    public RapidExitStatementImpl() {
-        super(RapidElementTypes.EXIT_STATEMENT);
+    public RapidExitStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override

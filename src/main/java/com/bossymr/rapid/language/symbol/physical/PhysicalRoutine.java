@@ -55,10 +55,6 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
         }
     }
 
-    public @Nullable RapidTypeElement getTypeElement() {
-        return findChildByType(RapidElementTypes.TYPE_ELEMENT);
-    }
-
     @Override
     public @Nullable RapidType getType() {
         return SymbolUtil.getType(this);
@@ -74,13 +70,9 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
         return parameterList != null ? parameterList.getParameters() : null;
     }
 
-    public @NotNull RapidFieldList getFieldList() {
-        return findNotNullChildByType(RapidElementTypes.FIELD_LIST);
-    }
-
     @Override
     public @NotNull List<RapidField> getFields() {
-        return getFieldList().getFields();
+        return List.of(findChildrenByClass(PhysicalField.class));
     }
 
     @Override

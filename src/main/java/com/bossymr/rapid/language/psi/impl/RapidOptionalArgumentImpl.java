@@ -1,25 +1,29 @@
 package com.bossymr.rapid.language.psi.impl;
 
 import com.bossymr.rapid.language.psi.*;
+import com.intellij.lang.ASTNode;
+import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidOptionalArgumentImpl extends RapidCompositeElement implements RapidOptionalArgument {
+import java.util.List;
 
-    public RapidOptionalArgumentImpl() {
-        super(RapidElementTypes.OPTIONAL_ARGUMENT);
+public class RapidOptionalArgumentImpl extends RapidElementImpl implements RapidOptionalArgument {
+
+    public RapidOptionalArgumentImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @NotNull RapidReferenceExpression getParameter() {
-        RapidExpression[] expressions = getChildrenAsPsiElements(RapidElementTypes.EXPRESSIONS, RapidExpression[]::new);
-        return (RapidReferenceExpression) expressions[0];
+        List<PsiElement> expressions = findChildrenByType(RapidElementTypes.EXPRESSIONS);
+        return (RapidReferenceExpression) expressions.get(0);
     }
 
     @Override
     public @Nullable RapidExpression getArgument() {
-        RapidExpression[] expressions = getChildrenAsPsiElements(RapidElementTypes.EXPRESSIONS, RapidExpression[]::new);
-        return expressions.length > 1 ? expressions[1] : null;
+        List<PsiElement> expressions = findChildrenByType(RapidElementTypes.EXPRESSIONS);
+        return expressions.size() >= 2 ? (RapidExpression) expressions.get(1) : null;
     }
 
     @Override

@@ -61,10 +61,6 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
         visitElement(statementList);
     }
 
-    public void visitFieldList(@NotNull RapidFieldList fieldList) {
-        visitElement(fieldList);
-    }
-
     public void visitParameterGroup(@NotNull PhysicalParameterGroup parameterGroup) {
         visitElement(parameterGroup);
     }
@@ -79,6 +75,10 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
 
     public void visitArgumentList(@NotNull RapidArgumentList argumentList) {
         visitElement(argumentList);
+    }
+
+    public void visitExpressionList(@NotNull RapidExpressionList expressionList) {
+        visitElement(expressionList);
     }
 
     public void visitArgument(@NotNull RapidArgument argument) {

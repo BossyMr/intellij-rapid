@@ -1,19 +1,18 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
+public class RapidFunctionCallExpressionImpl extends RapidExpressionImpl implements RapidFunctionCallExpression {
 
-public class RapidFunctionCallExpressionImpl extends RapidExpressionElement implements RapidFunctionCallExpression {
-
-    public RapidFunctionCallExpressionImpl() {
-        super(RapidElementTypes.FUNCTION_CALL_EXPRESSION);
+    public RapidFunctionCallExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
@@ -29,16 +28,21 @@ public class RapidFunctionCallExpressionImpl extends RapidExpressionElement impl
 
     @Override
     public @NotNull RapidArgumentList getArgumentList() {
-        return (RapidArgumentList) Objects.requireNonNull(findChildByType(RapidElementTypes.ARGUMENT_LIST));
+        return findNotNullChildByType(RapidElementTypes.ARGUMENT_LIST);
     }
 
     @Override
     public @NotNull RapidReferenceExpression getReferenceExpression() {
-        return (RapidReferenceExpression) Objects.requireNonNull(findChildByType(RapidElementTypes.REFERENCE_EXPRESSION));
+        return findNotNullChildByType(RapidElementTypes.REFERENCE_EXPRESSION);
     }
 
     @Override
     public void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitFunctionCallExpression(this);
+    }
+
+    @Override
+    public String toString() {
+        return "RapidFunctionCallExpression:" + getText();
     }
 }

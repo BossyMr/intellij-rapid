@@ -7,7 +7,6 @@ import com.bossymr.rapid.language.psi.stubs.RapidComponentStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
 import com.bossymr.rapid.language.psi.stubs.index.RapidComponentIndex;
 import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
-import com.bossymr.rapid.language.psi.stubs.node.RapidComponentElement;
 import com.bossymr.rapid.language.symbol.physical.PhysicalComponent;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
@@ -29,12 +28,7 @@ public class RapidComponentElementType extends RapidStubElementType<RapidCompone
     }
 
     @Override
-    public @NotNull ASTNode createCompositeNode() {
-        return new RapidComponentElement();
-    }
-
-    @Override
-    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
+    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
         return new PhysicalComponent(node);
     }
 

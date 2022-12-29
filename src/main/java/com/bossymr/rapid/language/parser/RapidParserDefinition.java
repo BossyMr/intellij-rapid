@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.parser;
 
 import com.bossymr.rapid.language.lexer.RapidLexer;
+import com.bossymr.rapid.language.psi.RapidElementType;
 import com.bossymr.rapid.language.psi.RapidStubElementType;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidFileImpl;
@@ -57,10 +58,13 @@ public class RapidParserDefinition implements ParserDefinition {
     }
 
     @Override
-    public @NotNull PsiElement createElement(ASTNode node) {
+    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
         final IElementType type = node.getElementType();
-        if (type instanceof RapidStubElementType) {
-            return ((RapidStubElementType<?, ?>) type).createPsi(node);
+        if (type instanceof RapidElementType elementType) {
+            return elementType.createElement(node);
+        }
+        if (type instanceof RapidStubElementType<?, ?> elementType) {
+            return elementType.createElement(node);
         }
         throw new IllegalArgumentException("Cannot create element for '" + node.getElementType() + "'");
     }

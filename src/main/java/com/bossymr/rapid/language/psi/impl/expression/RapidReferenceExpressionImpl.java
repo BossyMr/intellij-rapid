@@ -1,14 +1,13 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiReference;
-import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,10 +15,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 
-public class RapidReferenceExpressionImpl extends RapidExpressionElement implements RapidReferenceExpression {
+public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements RapidReferenceExpression {
 
-    public RapidReferenceExpressionImpl() {
-        super(RapidElementTypes.REFERENCE_EXPRESSION);
+    public RapidReferenceExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
@@ -60,12 +59,12 @@ public class RapidReferenceExpressionImpl extends RapidExpressionElement impleme
 
     @Override
     public @Nullable RapidExpression getQualifier() {
-        return (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS);
+        return findChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override
     public @Nullable PsiElement getIdentifier() {
-        return findPsiChildByType(RapidTokenTypes.IDENTIFIER);
+        return findChildByType(RapidTokenTypes.IDENTIFIER);
     }
 
     @Override
@@ -89,11 +88,11 @@ public class RapidReferenceExpressionImpl extends RapidExpressionElement impleme
             RapidRecord record = (RapidRecord) element.getParent();
             String expression = record.getName() + "." + ((RapidComponent) element).getName();
             RapidExpression reference = RapidElementFactory.getInstance(getProject()).createExpression(expression);
-            getTreeParent().replaceChildInternal(this, (TreeElement) reference.getNode());
+            replace(reference);
         } else if (element instanceof RapidSymbol) {
             String expression = String.valueOf(((RapidSymbol) element).getName());
             RapidExpression reference = RapidElementFactory.getInstance(getProject()).createExpression(expression);
-            getTreeParent().replaceChildInternal(this, (TreeElement) reference.getNode());
+            replace(reference);
         }
         return this;
     }

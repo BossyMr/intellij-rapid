@@ -1,15 +1,16 @@
 package com.bossymr.rapid.language.psi.impl;
 
 import com.bossymr.rapid.language.psi.*;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class RapidStatementListImpl extends RapidCompositeElement implements RapidStatementList {
+public class RapidStatementListImpl extends RapidElementImpl implements RapidStatementList {
 
-    public RapidStatementListImpl() {
-        super(RapidElementTypes.STATEMENT_LIST);
+    public RapidStatementListImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
@@ -32,12 +33,17 @@ public class RapidStatementListImpl extends RapidCompositeElement implements Rap
 
     @Override
     public @Nullable List<RapidExpression> getExpressions() {
-        RapidExpressionList expressionList = (RapidExpressionList) findChildByType(RapidElementTypes.EXPRESSION_LIST);
+        RapidExpressionList expressionList = findChildByType(RapidElementTypes.EXPRESSION_LIST);
         return expressionList != null ? expressionList.getExpressions() : null;
     }
 
     @Override
     public List<RapidStatement> getStatements() {
-        return List.of(getChildrenAsPsiElements(RapidElementTypes.STATEMENTS, RapidStatement[]::new));
+        return findChildrenByType(RapidElementTypes.STATEMENTS);
+    }
+
+    @Override
+    public String toString() {
+        return "RapidStatementList";
     }
 }

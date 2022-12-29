@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.psi.impl;
 import com.bossymr.rapid.language.psi.RapidAttributeList;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.stubs.RapidAttributeListStub;
 import com.bossymr.rapid.language.symbol.RapidModule.Attribute;
 import com.intellij.lang.ASTNode;
@@ -10,8 +11,10 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.CompositeElement;
 import com.intellij.psi.impl.source.tree.Factory;
 import com.intellij.psi.impl.source.tree.LeafElement;
+import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 
@@ -63,6 +66,34 @@ public class RapidAttributeListImpl extends RapidStubElement<RapidAttributeListS
                 child.delete();
             }
         }
+    }
+
+    @Override
+    public @Nullable ASTNode addInternal(@Nullable ASTNode first, @Nullable ASTNode last, @Nullable ASTNode anchor, @Nullable Boolean before) {
+        if (!(first instanceof TreeElement)) return null;
+        if (anchor == null) {
+            if (before == null || before) {
+                anchor = findChildByType(RapidTokenTypes.RPARENTH);
+                before = true;
+            } else {
+                anchor = findChildByType(RapidTokenTypes.LPARENTH);
+                before = false;
+            }
+        }
+        ASTNode treeElement = super.addInternal(first, last, anchor, before);
+        if (first == last && RapidTokenTypes.ATTRIBUTES.contains(first.getElementType())) {
+            RapidElementUtil.addSeparatingComma(this, first, RapidTokenTypes.ATTRIBUTES);
+        }
+        return treeElement;
+    }
+
+    @Override
+    public void deleteChildInternal(@NotNull ASTNode child) {
+        if (RapidTokenTypes.ATTRIBUTES.contains(child.getElementType())) {
+            RapidElementUtil.deleteSeparatingComma(this, child);
+            RapidElementUtil.ensureSurroundingParenthesis(this);
+        }
+        super.deleteChildInternal(child);
     }
 
     @Override

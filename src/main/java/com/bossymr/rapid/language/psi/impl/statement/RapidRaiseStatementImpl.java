@@ -1,19 +1,23 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
-import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.RapidElementTypes;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.RapidRaiseStatement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidRaiseStatementImpl extends RapidCompositeElement implements RapidRaiseStatement {
+public class RapidRaiseStatementImpl extends RapidElementImpl implements RapidRaiseStatement {
 
-    public RapidRaiseStatementImpl() {
-        super(RapidElementTypes.RAISE_STATEMENT);
+    public RapidRaiseStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @Nullable RapidExpression getExpression() {
-        return (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS);
+        return findChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override

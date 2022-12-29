@@ -7,7 +7,6 @@ import com.bossymr.rapid.language.psi.stubs.RapidAliasStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
 import com.bossymr.rapid.language.psi.stubs.index.RapidAliasIndex;
 import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
-import com.bossymr.rapid.language.psi.stubs.node.RapidAliasElement;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalAlias;
 import com.intellij.lang.ASTNode;
@@ -30,12 +29,7 @@ public class RapidAliasElementType extends RapidStubElementType<RapidAliasStub, 
     }
 
     @Override
-    public @NotNull ASTNode createCompositeNode() {
-        return new RapidAliasElement();
-    }
-
-    @Override
-    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
+    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
         return new PhysicalAlias(node);
     }
 

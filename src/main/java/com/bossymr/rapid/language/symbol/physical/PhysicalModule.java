@@ -1,15 +1,15 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.language.psi.RapidAttributeList;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidStubElementTypes;
-import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidModuleStub;
 import com.bossymr.rapid.language.symbol.*;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.impl.source.tree.TreeElement;
+import com.intellij.psi.tree.IElementType;
+import com.intellij.psi.tree.TokenSet;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -96,6 +96,41 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
     public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
         RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
         return this;
+    }
+
+    @Override
+    public @Nullable ASTNode addInternal(@Nullable ASTNode first, @Nullable ASTNode last, @Nullable ASTNode anchor, @Nullable Boolean before) {
+        if (!(first instanceof TreeElement)) return null;
+        if (anchor == null) {
+            if (first != last) {
+                anchor = findChildByType(RapidTokenTypes.ENDMODULE_KEYWORD);
+                before = true;
+            }
+            IElementType elementType = first.getElementType();
+            if (TokenSet.create(RapidElementTypes.ALIAS, RapidElementTypes.RECORD).contains(elementType)) {
+                if (before == null || before) {
+                    anchor = findChildByType(TokenSet.create(RapidElementTypes.FIELD, RapidElementTypes.ROUTINE, RapidTokenTypes.ENDMODULE_KEYWORD));
+                } else {
+                    anchor = findChildByType(TokenSet.create(RapidElementTypes.ALIAS, RapidElementTypes.RECORD, RapidElementTypes.FIELD, RapidElementTypes.ROUTINE, RapidTokenTypes.ENDMODULE_KEYWORD));
+                }
+                before = true;
+            } else if (TokenSet.create(RapidElementTypes.FIELD).contains(elementType)) {
+                if (before == null || before) {
+                    anchor = findChildByType(TokenSet.create(RapidElementTypes.ROUTINE, RapidTokenTypes.ENDMODULE_KEYWORD));
+                } else {
+                    anchor = findChildByType(TokenSet.create(RapidElementTypes.FIELD, RapidElementTypes.ROUTINE, RapidTokenTypes.ENDMODULE_KEYWORD));
+                }
+                before = true;
+            } else if (TokenSet.create(RapidElementTypes.ROUTINE).contains(elementType)) {
+                if (before == null || before) {
+                    anchor = findChildByType(RapidTokenTypes.ENDMODULE_KEYWORD);
+                } else {
+                    anchor = findChildByType(TokenSet.create(RapidElementTypes.ROUTINE, RapidTokenTypes.ENDMODULE_KEYWORD));
+                }
+                before = true;
+            }
+        }
+        return super.addInternal(first, last, anchor, before);
     }
 
     @Override

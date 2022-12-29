@@ -21,16 +21,10 @@ import org.jetbrains.annotations.NotNull;
 import static com.bossymr.rapid.language.psi.RapidElementTypes.*;
 import static com.bossymr.rapid.language.psi.RapidTokenTypes.*;
 
-public abstract class RapidExpressionElement extends RapidCompositeElement implements RapidExpression {
+public abstract class RapidExpressionImpl extends RapidElementImpl implements RapidExpression {
 
-    protected RapidExpressionElement(IElementType type) {
-        super(type);
-    }
-
-    @Override
-    public boolean isConditional() {
-        RapidType type = getType();
-        return type != null && RapidType.BOOLEAN.isAssignable(type);
+    protected RapidExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     private static boolean getParenthesis(@NotNull ASTNode oldElement, @NotNull ASTNode newElement) {
@@ -93,7 +87,15 @@ public abstract class RapidExpressionElement extends RapidCompositeElement imple
     }
 
     @Override
-    public void replaceChildInternal(@NotNull ASTNode child, @NotNull TreeElement newElement) {
+    public boolean isConditional() {
+        RapidType type = getType();
+        return type != null && RapidType.BOOLEAN.isAssignable(type);
+    }
+
+
+    @Override
+    public void replaceChildInternal(@NotNull PsiElement element, @NotNull TreeElement newElement) {
+        ASTNode child = element.getNode();
         boolean add = EXPRESSIONS.contains(child.getElementType()) && EXPRESSIONS.contains(newElement.getElementType()) &&
                 getParenthesis(child, newElement);
         if (add) {
@@ -115,9 +117,9 @@ public abstract class RapidExpressionElement extends RapidCompositeElement imple
             newElement.putUserData(CharTable.CHAR_TABLE_KEY, SharedImplUtil.findCharTableByTree(newElement));
             dummy.getTreeParent().replaceChild(dummy, newElement);
 
-            super.replaceChildInternal(child, parenthesised);
+            super.replaceChildInternal(element, parenthesised);
         } else {
-            super.replaceChildInternal(child, newElement);
+            super.replaceChildInternal(element, newElement);
         }
     }
 }

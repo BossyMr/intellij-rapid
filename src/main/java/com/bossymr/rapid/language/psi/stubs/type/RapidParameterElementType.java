@@ -5,7 +5,6 @@ import com.bossymr.rapid.language.psi.RapidStubElementType;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
-import com.bossymr.rapid.language.psi.stubs.node.RapidParameterElement;
 import com.bossymr.rapid.language.symbol.RapidParameter.Attribute;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameter;
 import com.intellij.lang.ASTNode;
@@ -27,12 +26,7 @@ public class RapidParameterElementType extends RapidStubElementType<RapidParamet
     }
 
     @Override
-    public @NotNull ASTNode createCompositeNode() {
-        return new RapidParameterElement();
-    }
-
-    @Override
-    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
+    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
         return new PhysicalParameter(node);
     }
 

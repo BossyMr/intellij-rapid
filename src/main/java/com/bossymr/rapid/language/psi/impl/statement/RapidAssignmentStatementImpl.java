@@ -1,27 +1,27 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
 import com.bossymr.rapid.language.psi.RapidAssignmentStatement;
-import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidAssignmentStatementImpl extends RapidCompositeElement implements RapidAssignmentStatement {
+public class RapidAssignmentStatementImpl extends RapidElementImpl implements RapidAssignmentStatement {
 
-    public RapidAssignmentStatementImpl() {
-        super(RapidElementTypes.ASSIGNMENT_STATEMENT);
+    public RapidAssignmentStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @Nullable RapidExpression getLeft() {
-        return RapidElementTypes.EXPRESSIONS.contains(getFirstChildNode().getElementType()) ? (RapidExpression) getFirstChildNode() : null;
+        return getFirstChild() instanceof RapidExpression expression ? expression : null;
     }
 
     @Override
     public @Nullable RapidExpression getRight() {
-        return RapidElementTypes.EXPRESSIONS.contains(getLastChildNode().getElementType()) ? (RapidExpression) getLastChildNode() : null;
+        return getLastChild() instanceof RapidExpression expression ? expression : null;
     }
 
     @Override

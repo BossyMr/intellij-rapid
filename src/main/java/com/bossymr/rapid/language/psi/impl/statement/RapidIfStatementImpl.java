@@ -1,29 +1,33 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
+import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.intellij.lang.ASTFactory;
 import com.intellij.lang.ASTNode;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.impl.source.SourceTreeToPsiMap;
 import com.intellij.psi.util.PsiTreeUtil;
-import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class RapidIfStatementImpl extends RapidCompositeElement implements RapidIfStatement {
+public class RapidIfStatementImpl extends RapidElementImpl implements RapidIfStatement {
 
-    public RapidIfStatementImpl() {
-        super(RapidElementTypes.IF_STATEMENT);
+    public RapidIfStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public void deleteChildInternal(@NotNull ASTNode child) {
-        if(child == getThenBranch()) {
-            replaceChildInternal(child, ASTFactory.composite(RapidElementTypes.STATEMENT_LIST));
+        RapidStatementList thenBranch = getThenBranch();
+        if (thenBranch != null && child == thenBranch.getNode()) {
+            replaceChildInternal(SourceTreeToPsiMap.treeElementToPsi(child), ASTFactory.composite(RapidElementTypes.STATEMENT_LIST));
         }
-        if(child == getElseBranch()) {
+        RapidStatementList elseBranch = getElseBranch();
+        if (elseBranch != null && child == elseBranch.getNode()) {
             ASTNode keyword = findChildByType(RapidTokenTypes.ELSE_KEYWORD);
-            if(keyword != null) {
+            if (keyword != null) {
                 super.deleteChildInternal(keyword);
             }
         }
@@ -32,18 +36,21 @@ public class RapidIfStatementImpl extends RapidCompositeElement implements Rapid
 
     @Override
     public @Nullable RapidExpression getCondition() {
-        return (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS);
+        return findChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override
     public @Nullable RapidStatementList getThenBranch() {
-        return (RapidStatementList) findChildByType(RapidElementTypes.STATEMENT_LIST, getFirstChildNode());
+        return findChildByType(RapidElementTypes.STATEMENT_LIST);
     }
 
     @Override
     public @Nullable RapidStatementList getElseBranch() {
-        ASTNode keyword = findChildByType(RapidTokenTypes.ELSE_KEYWORD);
-        return keyword != null ? (RapidStatementList) findChildByType(RapidElementTypes.STATEMENT_LIST, keyword) : null;
+        PsiElement keyword = findChildByType(RapidTokenTypes.ELSE_KEYWORD);
+        if (keyword != null) {
+            return PsiTreeUtil.getNextSiblingOfType(keyword, RapidStatementList.class);
+        }
+        return null;
     }
 
     @Override

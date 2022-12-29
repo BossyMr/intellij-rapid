@@ -4,19 +4,20 @@ import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidGotoStatement;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidGotoStatementImpl extends RapidCompositeElement implements RapidGotoStatement {
+public class RapidGotoStatementImpl extends RapidElementImpl implements RapidGotoStatement {
 
-    public RapidGotoStatementImpl() {
-        super(RapidElementTypes.GOTO_STATEMENT);
+    public RapidGotoStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @Nullable RapidReferenceExpression getReferenceExpression() {
-        return (RapidReferenceExpression) findChildByType(RapidElementTypes.REFERENCE_EXPRESSION);
+        return findChildByType(RapidElementTypes.REFERENCE_EXPRESSION);
     }
 
     @Override

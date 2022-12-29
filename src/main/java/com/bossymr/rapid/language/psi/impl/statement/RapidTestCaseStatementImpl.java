@@ -1,33 +1,33 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Objects;
 
-public class RapidTestCaseStatementImpl extends RapidCompositeElement implements RapidTestCaseStatement {
+public class RapidTestCaseStatementImpl extends RapidElementImpl implements RapidTestCaseStatement {
 
-    public RapidTestCaseStatementImpl() {
-        super(RapidElementTypes.TEST_CASE_STATEMENT);
+    public RapidTestCaseStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public boolean isDefault() {
-        return getFirstChildNode().getElementType().equals(RapidTokenTypes.DEFAULT_KEYWORD);
+        return getFirstChild().getNode().getElementType().equals(RapidTokenTypes.DEFAULT_KEYWORD);
     }
 
     @Override
     public @Nullable List<RapidExpression> getExpressions() {
-        RapidExpressionList expressionList = (RapidExpressionList) findChildByType(RapidElementTypes.EXPRESSION_LIST);
+        RapidExpressionList expressionList = findChildByType(RapidElementTypes.EXPRESSION_LIST);
         return expressionList != null ? expressionList.getExpressions() : null;
     }
 
     @Override
     public @NotNull RapidStatementList getStatements() {
-        return (RapidStatementList) Objects.requireNonNull(findChildByType(RapidElementTypes.STATEMENT_LIST));
+        return findNotNullChildByType(RapidElementTypes.STATEMENT_LIST);
     }
 
     @Override

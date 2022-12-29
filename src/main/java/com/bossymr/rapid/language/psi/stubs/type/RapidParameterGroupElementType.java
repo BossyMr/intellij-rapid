@@ -4,7 +4,6 @@ import com.bossymr.rapid.language.psi.RapidStubElementType;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterGroupStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
-import com.bossymr.rapid.language.psi.stubs.node.RapidParameterGroupElement;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
@@ -25,12 +24,7 @@ public class RapidParameterGroupElementType extends RapidStubElementType<RapidPa
     }
 
     @Override
-    public @NotNull ASTNode createCompositeNode() {
-        return new RapidParameterGroupElement();
-    }
-
-    @Override
-    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
+    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
         return new PhysicalParameterGroup(node);
     }
 

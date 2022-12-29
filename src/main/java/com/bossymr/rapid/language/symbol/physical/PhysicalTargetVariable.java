@@ -1,10 +1,9 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidTargetVariable;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
@@ -17,15 +16,15 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.Objects;
 
-public class PhysicalTargetVariable extends RapidCompositeElement implements RapidTargetVariable, PhysicalSymbol {
+public class PhysicalTargetVariable extends RapidElementImpl implements RapidTargetVariable, PhysicalSymbol {
 
-    public PhysicalTargetVariable() {
-        super(RapidElementTypes.TARGET_VARIABLE);
+    public PhysicalTargetVariable(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @Nullable PsiElement getNameIdentifier() {
-        return findPsiChildByType(RapidTokenTypes.IDENTIFIER);
+        return findChildByType(RapidTokenTypes.IDENTIFIER);
     }
 
     @Override

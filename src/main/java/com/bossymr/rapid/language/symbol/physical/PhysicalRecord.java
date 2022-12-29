@@ -12,6 +12,7 @@ import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -69,6 +70,21 @@ public class PhysicalRecord extends RapidStubElement<RapidRecordStub> implements
     public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
         RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
         return this;
+    }
+
+    @Override
+    public @Nullable ASTNode addInternal(@Nullable ASTNode first, @Nullable ASTNode last, @Nullable ASTNode anchor, @Nullable Boolean before) {
+        if (!(first instanceof TreeElement)) return null;
+        if (anchor == null) {
+            if (before == null || before) {
+                anchor = findChildByType(RapidTokenTypes.ENDRECORD_KEYWORD);
+                before = true;
+            } else {
+                anchor = findChildByType(RapidTokenTypes.IDENTIFIER);
+                before = false;
+            }
+        }
+        return super.addInternal(first, last, anchor, before);
     }
 
     @Override

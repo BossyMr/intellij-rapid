@@ -1,17 +1,17 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidEmptyExpressionImpl extends RapidExpressionElement implements RapidExpression {
+public class RapidEmptyExpressionImpl extends RapidExpressionImpl implements RapidExpression {
 
-    public RapidEmptyExpressionImpl() {
-        super(RapidElementTypes.EMPTY_EXPRESSION);
+    public RapidEmptyExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override

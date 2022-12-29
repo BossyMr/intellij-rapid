@@ -1,6 +1,8 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidStubElementTypes;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidAliasStub;
@@ -28,6 +30,11 @@ public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements R
     }
 
     @Override
+    public int getTextOffset() {
+        return super.getTextOffset();
+    }
+
+    @Override
     public @Nullable Icon getIcon(int flags) {
         return getIcon();
     }
@@ -45,10 +52,6 @@ public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements R
     @Override
     public @Nullable RapidType getType() {
         return SymbolUtil.getType(this);
-    }
-
-    public @Nullable RapidTypeElement getTypeElement() {
-        return findChildByType(RapidElementTypes.TYPE_ELEMENT);
     }
 
     @Override

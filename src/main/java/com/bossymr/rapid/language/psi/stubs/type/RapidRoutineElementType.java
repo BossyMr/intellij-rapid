@@ -7,7 +7,6 @@ import com.bossymr.rapid.language.psi.stubs.RapidRoutineStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
 import com.bossymr.rapid.language.psi.stubs.index.RapidRoutineIndex;
 import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
-import com.bossymr.rapid.language.psi.stubs.node.RapidRoutineElement;
 import com.bossymr.rapid.language.symbol.RapidRoutine.Attribute;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
@@ -31,12 +30,7 @@ public class RapidRoutineElementType extends RapidStubElementType<RapidRoutineSt
     }
 
     @Override
-    public @NotNull ASTNode createCompositeNode() {
-        return new RapidRoutineElement();
-    }
-
-    @Override
-    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
+    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
         return new PhysicalRoutine(node);
     }
 

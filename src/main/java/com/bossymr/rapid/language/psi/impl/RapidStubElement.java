@@ -2,12 +2,13 @@ package com.bossymr.rapid.language.psi.impl;
 
 import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.extapi.psi.StubBasedPsiElementBase;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.Language;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.StubBasedPsiElement;
-import com.intellij.psi.impl.source.tree.CompositeElement;
 import com.intellij.psi.stubs.IStubElementType;
 import com.intellij.psi.stubs.StubElement;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +25,8 @@ public abstract class RapidStubElement<T extends StubElement<?>> extends StubBas
 
     @Override
     public int getTextOffset() {
-        return ((CompositeElement) getNode()).getTextOffset();
+        PsiElement element = findChildByType(RapidTokenTypes.IDENTIFIER);
+        return element != null ? element.getTextOffset() : super.getTextOffset();
     }
 
     @Override

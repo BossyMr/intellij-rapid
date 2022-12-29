@@ -1,11 +1,9 @@
 package com.bossymr.rapid.language.psi.stubs.type;
 
 import com.bossymr.rapid.language.psi.RapidAttributeList;
-import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidStubElementType;
 import com.bossymr.rapid.language.psi.impl.RapidAttributeListImpl;
 import com.bossymr.rapid.language.psi.stubs.RapidAttributeListStub;
-import com.bossymr.rapid.language.psi.stubs.node.RapidAttributeListElement;
 import com.bossymr.rapid.language.symbol.RapidModule.Attribute;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
@@ -27,12 +25,7 @@ public class RapidAttributeListElementType extends RapidStubElementType<RapidAtt
     }
 
     @Override
-    public @NotNull ASTNode createCompositeNode() {
-        return new RapidAttributeListElement(RapidElementTypes.ATTRIBUTE_LIST);
-    }
-
-    @Override
-    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
+    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
         return new RapidAttributeListImpl(node);
     }
 

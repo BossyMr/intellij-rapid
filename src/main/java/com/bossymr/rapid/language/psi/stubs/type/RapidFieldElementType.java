@@ -7,7 +7,6 @@ import com.bossymr.rapid.language.psi.stubs.RapidFieldStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
 import com.bossymr.rapid.language.psi.stubs.index.RapidFieldIndex;
 import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
-import com.bossymr.rapid.language.psi.stubs.node.RapidFieldElement;
 import com.bossymr.rapid.language.symbol.RapidField.Attribute;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
@@ -30,12 +29,7 @@ public class RapidFieldElementType extends RapidStubElementType<RapidFieldStub, 
     }
 
     @Override
-    public @NotNull ASTNode createCompositeNode() {
-        return new RapidFieldElement();
-    }
-
-    @Override
-    public @NotNull PhysicalField createPsi(@NotNull ASTNode node) {
+    public @NotNull PhysicalField createElement(@NotNull ASTNode node) {
         return new PhysicalField(node);
     }
 

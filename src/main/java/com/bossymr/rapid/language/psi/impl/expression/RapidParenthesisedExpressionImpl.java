@@ -4,15 +4,16 @@ import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidParenthesisedExpression;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidParenthesisedExpressionImpl extends RapidExpressionElement implements RapidParenthesisedExpression {
+public class RapidParenthesisedExpressionImpl extends RapidExpressionImpl implements RapidParenthesisedExpression {
 
-    public RapidParenthesisedExpressionImpl() {
-        super(RapidElementTypes.PARENTHESISED_EXPRESSION);
+    public RapidParenthesisedExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
@@ -27,7 +28,7 @@ public class RapidParenthesisedExpressionImpl extends RapidExpressionElement imp
 
     @Override
     public @Nullable RapidExpression getExpression() {
-        return (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS);
+        return findChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override

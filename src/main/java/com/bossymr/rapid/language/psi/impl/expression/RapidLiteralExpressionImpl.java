@@ -1,19 +1,19 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidLiteralExpression;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.intellij.lang.ASTNode;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidLiteralExpressionImpl extends RapidExpressionElement implements RapidLiteralExpression {
+public class RapidLiteralExpressionImpl extends RapidExpressionImpl implements RapidLiteralExpression {
 
-    public RapidLiteralExpressionImpl() {
-        super(RapidElementTypes.LITERAL_EXPRESSION);
+    public RapidLiteralExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
@@ -83,5 +83,10 @@ public class RapidLiteralExpressionImpl extends RapidExpressionElement implement
     @Override
     public void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitLiteralExpression(this);
+    }
+
+    @Override
+    public String toString() {
+        return "RapidLiteralExpression:" + getText();
     }
 }

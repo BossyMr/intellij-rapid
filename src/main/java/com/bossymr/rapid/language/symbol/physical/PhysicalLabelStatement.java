@@ -1,16 +1,12 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.symbol.RapidLabelStatement;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
-import com.intellij.navigation.ColoredItemPresentation;
-import com.intellij.navigation.ItemPresentation;
-import com.intellij.navigation.NavigationRequest;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
+import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
@@ -19,35 +15,15 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.Objects;
 
-public class PhysicalLabelStatement extends RapidCompositeElement implements RapidLabelStatement, PhysicalSymbol {
+public class PhysicalLabelStatement extends RapidElementImpl implements RapidLabelStatement, PhysicalSymbol {
 
-    public PhysicalLabelStatement() {
-        super(RapidElementTypes.LABEL_STATEMENT);
+    public PhysicalLabelStatement(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @Nullable Icon getIcon(int flags) {
         return getIcon();
-    }
-
-    @Override
-    public @Nullable ItemPresentation getPresentation() {
-        return new ColoredItemPresentation() {
-            @Override
-            public @Nullable TextAttributesKey getTextAttributesKey() {
-                return null;
-            }
-
-            @Override
-            public @Nullable String getPresentableText() {
-                return getName();
-            }
-
-            @Override
-            public @Nullable Icon getIcon(boolean unused) {
-                return null;
-            }
-        };
     }
 
     @Override
@@ -57,7 +33,7 @@ public class PhysicalLabelStatement extends RapidCompositeElement implements Rap
 
     @Override
     public @Nullable PsiElement getNameIdentifier() {
-        return findPsiChildByType(RapidTokenTypes.IDENTIFIER);
+        return findChildByType(RapidTokenTypes.IDENTIFIER);
     }
 
     @Override
@@ -72,7 +48,7 @@ public class PhysicalLabelStatement extends RapidCompositeElement implements Rap
     }
 
     @Override
-    public @Nullable NavigationRequest navigationRequest() {
-        return super.navigationRequest();
+    public String toString() {
+        return "PhysicalLabelStatement:" + getName();
     }
 }

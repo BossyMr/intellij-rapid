@@ -1,20 +1,19 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
+public class RapidUnaryExpressionImpl extends RapidExpressionImpl implements RapidUnaryExpression {
 
-public class RapidUnaryExpressionImpl extends RapidExpressionElement implements RapidUnaryExpression {
-
-    public RapidUnaryExpressionImpl() {
-        super(RapidElementTypes.UNARY_EXPRESSION);
+    public RapidUnaryExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
@@ -47,16 +46,21 @@ public class RapidUnaryExpressionImpl extends RapidExpressionElement implements 
 
     @Override
     public @Nullable RapidExpression getExpression() {
-        return (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS);
+        return findChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override
     public @NotNull PsiElement getSign() {
-        return Objects.requireNonNull(findPsiChildByType(RapidTokenTypes.OPERATIONS));
+        return findNotNullChildByType(RapidTokenTypes.OPERATIONS);
     }
 
     @Override
     public void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitUnaryExpression(this);
+    }
+
+    @Override
+    public String toString() {
+        return "RapidUnaryExpression:" + getText();
     }
 }

@@ -15,6 +15,7 @@ import java.util.function.Function;
 public final class RapidElementUtil {
 
     private RapidElementUtil() {
+        throw new AssertionError();
     }
 
     public static void setName(@NotNull PsiElement element, @NotNull String name) throws UnsupportedOperationException {
@@ -22,17 +23,86 @@ public final class RapidElementUtil {
         element.replace(identifier);
     }
 
+    /**
+     * Checks if the specified element is surrounded by parenthesis, otherwise, it automatically surrounds the specified
+     * element with both a left and right parenthesis.
+     *
+     * @param element the element.
+     * @throws IllegalArgumentException if the node of the specified element does not implement {@link CompositeElement}
+     * (if the node is a leaf).
+     */
+    public static void ensureSurroundingParenthesis(@NotNull PsiElement element) {
+        ASTNode node = element.getNode();
+        if (!(node instanceof CompositeElement compositeElement)) {
+            throw new IllegalArgumentException();
+        }
+        ensureSurroundingParenthesis(compositeElement);
+    }
+
+
+    /**
+     * Checks if the specified element is surrounded by parenthesis, otherwise, it automatically surrounds the specified
+     * element with both a left and right parenthesis.
+     *
+     * @param node the element.
+     */
     public static void ensureSurroundingParenthesis(@NotNull CompositeElement node) {
         if (node.findChildByType(RapidTokenTypes.LPARENTH) != null) return;
         node.addLeaf(RapidTokenTypes.LPARENTH, "(", node.getFirstChildNode());
         node.addLeaf(RapidTokenTypes.RPARENTH, ")", null);
     }
 
-    public static void deleteSeparatingComma(@NotNull CompositeElement element, @NotNull ASTNode child) {
-        deleteSeparatingComma(element, child, RapidTokenTypes.COMMA);
+    /**
+     * Deletes the comma separating the specified child.
+     *
+     * @param element the list element.
+     * @param child the child element.
+     * @throws IllegalArgumentException if the node of the specified element does not implement {@link CompositeElement}
+     * (if the node is a leaf).
+     */
+    public static void deleteSeparatingComma(@NotNull PsiElement element, @NotNull ASTNode child) {
+        ASTNode node = element.getNode();
+        if (!(node instanceof CompositeElement compositeElement)) {
+            throw new IllegalArgumentException();
+        }
+        deleteSeparatingComma(compositeElement, child);
     }
 
-    public static void deleteSeparatingComma(@NotNull CompositeElement element, @NotNull ASTNode child, @NotNull IElementType separator) {
+    /**
+     * Deletes the comma separating the specified child.
+     *
+     * @param element the list element.
+     * @param child the child element.
+     */
+    public static void deleteSeparatingComma(@NotNull CompositeElement element, @NotNull ASTNode child) {
+        deleteSeparator(element, child, RapidTokenTypes.COMMA);
+    }
+
+    /**
+     * Deletes the separator of the specified type separating the specified child.
+     *
+     * @param element the list element.
+     * @param child the child element.
+     * @param separator the separator type.
+     * @throws IllegalArgumentException if the node of the specified element does not implement {@link CompositeElement}
+     * (if the node is a leaf).
+     */
+    public static void deleteSeparator(@NotNull PsiElement element, @NotNull ASTNode child, @NotNull IElementType separator) {
+        ASTNode node = element.getNode();
+        if (!(node instanceof CompositeElement compositeElement)) {
+            throw new IllegalArgumentException();
+        }
+        deleteSeparator(compositeElement, child, separator);
+    }
+
+    /**
+     * Deletes a separator of the specified type separating the specified child.
+     *
+     * @param element the list element.
+     * @param child the child element.
+     * @param separator the separator type.
+     */
+    public static void deleteSeparator(@NotNull CompositeElement element, @NotNull ASTNode child, @NotNull IElementType separator) {
         ASTNode next = PsiImplUtil.skipWhitespaceAndComments(child.getTreeNext());
         if (next != null && next.getElementType() == separator) {
             element.deleteChildInternal(next);
@@ -44,11 +114,61 @@ public final class RapidElementUtil {
         }
     }
 
+    /**
+     * Adds a comma separating the specified node.
+     *
+     * @param element the list element.
+     * @param child the child element.
+     * @param tokenSet a TokenSet containing the element type of elements in the list.
+     * @throws IllegalArgumentException if the node of the specified element does not implement {@link CompositeElement}
+     * (if the node is a leaf).
+     */
+    public static void addSeparatingComma(@NotNull PsiElement element, @NotNull ASTNode child, @NotNull TokenSet tokenSet) {
+        ASTNode node = element.getNode();
+        if (!(node instanceof CompositeElement compositeElement)) {
+            throw new IllegalArgumentException();
+        }
+        addSeparatingComma(compositeElement, child, tokenSet);
+    }
 
+    /**
+     * Adds a separator of the specified type, separating the specified node.
+     *
+     * @param element the list element.
+     * @param child the child element.
+     * @param separator the separator type.
+     * @param tokenSet a TokenSet containing the element type of elements in the list.
+     * @throws IllegalArgumentException if the node of the specified element does not implement {@link CompositeElement}
+     * (if the node is a leaf).
+     */
+    public static void addSeparatingComma(@NotNull PsiElement element, @NotNull ASTNode child, @NotNull IElementType separator, @NotNull TokenSet tokenSet) {
+        ASTNode node = element.getNode();
+        if (!(node instanceof CompositeElement compositeElement)) {
+            throw new IllegalArgumentException();
+        }
+        addSeparatingComma(compositeElement, child, separator, tokenSet);
+    }
+
+
+    /**
+     * Adds a separating comma separating the specified node.
+     *
+     * @param element the list element.
+     * @param child the child element.
+     * @param tokenSet a TokenSet containing the element type of elements in the list.
+     */
     public static void addSeparatingComma(@NotNull CompositeElement element, @NotNull ASTNode child, @NotNull TokenSet tokenSet) {
         addSeparatingComma(element, child, RapidTokenTypes.COMMA, tokenSet);
     }
 
+    /**
+     * Adds a separator of the specified type, separating the specified node.
+     *
+     * @param element the list element.
+     * @param child the child element.
+     * @param separator the separator type.
+     * @param tokenSet a TokenSet containing the element type of elements in the list.
+     */
     public static void addSeparatingComma(@NotNull CompositeElement element, @NotNull ASTNode child, @NotNull IElementType separator, @NotNull TokenSet tokenSet) {
         addSeparatingComma(element, child, separator, tokenSet, true);
         addSeparatingComma(element, child, separator, tokenSet, false);

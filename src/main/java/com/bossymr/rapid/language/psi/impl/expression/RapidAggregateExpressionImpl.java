@@ -1,19 +1,23 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
-import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidExpressionElement;
+import com.bossymr.rapid.language.psi.RapidAggregateExpression;
+import com.bossymr.rapid.language.psi.RapidAssignmentStatement;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.RapidVariable;
+import com.intellij.lang.ASTNode;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class RapidAggregateExpressionImpl extends RapidExpressionElement implements RapidAggregateExpression {
+public class RapidAggregateExpressionImpl extends RapidExpressionImpl implements RapidAggregateExpression {
 
-    public RapidAggregateExpressionImpl() {
-        super(RapidElementTypes.AGGREGATE_EXPRESSION);
+    public RapidAggregateExpressionImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
@@ -33,12 +37,12 @@ public class RapidAggregateExpressionImpl extends RapidExpressionElement impleme
 
     @Override
     public @Nullable RapidType getType() {
-        if (getTreeParent() instanceof RapidVariable) {
-            return ((RapidVariable) getTreeParent()).getType();
-        } else if (getTreeParent() instanceof RapidAggregateExpression) {
-            return ((RapidAggregateExpression) getTreeParent()).getType();
-        } else if (getTreeParent() instanceof RapidAssignmentStatement) {
-            RapidExpression left = ((RapidAssignmentStatement) getTreeParent()).getLeft();
+        if (getParent() instanceof RapidVariable) {
+            return ((RapidVariable) getParent()).getType();
+        } else if (getParent() instanceof RapidAggregateExpression) {
+            return ((RapidAggregateExpression) getParent()).getType();
+        } else if (getParent() instanceof RapidAssignmentStatement) {
+            RapidExpression left = ((RapidAssignmentStatement) getParent()).getLeft();
             return left != null ? left.getType() : null;
         }
         return null;

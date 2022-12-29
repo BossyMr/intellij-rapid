@@ -1,24 +1,25 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidWhileStatementImpl extends RapidCompositeElement implements RapidWhileStatement {
+public class RapidWhileStatementImpl extends RapidElementImpl implements RapidWhileStatement {
 
-    public RapidWhileStatementImpl() {
-        super(RapidElementTypes.WHILE_STATEMENT);
+    public RapidWhileStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @Nullable RapidExpression getCondition() {
-        return (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS);
+        return findChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override
     public @Nullable RapidStatementList getStatementList() {
-        return (RapidStatementList) findChildByType(RapidElementTypes.STATEMENT_LIST);
+        return findChildByType(RapidElementTypes.STATEMENT_LIST);
     }
 
     @Override

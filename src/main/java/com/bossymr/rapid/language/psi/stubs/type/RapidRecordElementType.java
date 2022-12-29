@@ -6,7 +6,6 @@ import com.bossymr.rapid.language.psi.stubs.RapidRecordStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
 import com.bossymr.rapid.language.psi.stubs.index.RapidRecordIndex;
 import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
-import com.bossymr.rapid.language.psi.stubs.node.RapidRecordElement;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRecord;
 import com.intellij.lang.ASTNode;
@@ -29,12 +28,7 @@ public class RapidRecordElementType extends RapidStubElementType<RapidRecordStub
     }
 
     @Override
-    public @NotNull ASTNode createCompositeNode() {
-        return new RapidRecordElement();
-    }
-
-    @Override
-    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
+    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
         return new PhysicalRecord(node);
     }
 

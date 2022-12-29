@@ -1,43 +1,51 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
-import com.intellij.lang.ASTNode;
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.intellij.lang.ASTNode;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.tree.IElementType;
+import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidForStatementImpl extends RapidCompositeElement implements RapidForStatement {
+public class RapidForStatementImpl extends RapidElementImpl implements RapidForStatement {
 
-    public RapidForStatementImpl() {
-        super(RapidElementTypes.FOR_STATEMENT);
+    public RapidForStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @Nullable RapidTargetVariable getVariable() {
-        return (RapidTargetVariable) findChildByType(RapidElementTypes.TARGET_VARIABLE);
+        return findChildByType(RapidElementTypes.TARGET_VARIABLE);
     }
 
     @Override
     public @Nullable RapidExpression getFromExpression() {
-        ASTNode keyword = findChildByType(RapidTokenTypes.FROM_KEYWORD);
-        return keyword != null ? (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS, keyword) : null;
+        return getNextExpression(RapidTokenTypes.FROM_KEYWORD);
     }
 
     @Override
     public @Nullable RapidExpression getToExpression() {
-        ASTNode keyword = findChildByType(RapidTokenTypes.TO_KEYWORD);
-        return keyword != null ? (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS, keyword) : null;
+        return getNextExpression(RapidTokenTypes.TO_KEYWORD);
     }
 
     @Override
     public @Nullable RapidExpression getStepExpression() {
-        ASTNode keyword = findChildByType(RapidTokenTypes.STEP_KEYWORD);
-        return keyword != null ? (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS, keyword) : null;
+        return getNextExpression(RapidTokenTypes.STEP_KEYWORD);
+    }
+
+    private @Nullable RapidExpression getNextExpression(@NotNull IElementType elementType) {
+        PsiElement keyword = findChildByType(elementType);
+        if (keyword != null) {
+            return PsiTreeUtil.getNextSiblingOfType(keyword, RapidExpression.class);
+        }
+        return null;
     }
 
     @Override
     public @Nullable RapidStatementList getStatementList() {
-        return (RapidStatementList) findChildByType(RapidElementTypes.STATEMENT_LIST);
+        return findChildByType(RapidElementTypes.STATEMENT_LIST);
     }
 
     @Override

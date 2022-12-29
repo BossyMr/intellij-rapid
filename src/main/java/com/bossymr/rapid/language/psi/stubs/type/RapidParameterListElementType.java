@@ -1,11 +1,9 @@
 package com.bossymr.rapid.language.psi.stubs.type;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidParameterList;
 import com.bossymr.rapid.language.psi.RapidStubElementType;
 import com.bossymr.rapid.language.psi.impl.RapidParameterListImpl;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterListStub;
-import com.bossymr.rapid.language.psi.stubs.node.RapidParameterListElement;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
 import com.intellij.lang.LighterASTNode;
@@ -25,12 +23,7 @@ public class RapidParameterListElementType extends RapidStubElementType<RapidPar
     }
 
     @Override
-    public @NotNull ASTNode createCompositeNode() {
-        return new RapidParameterListElement(RapidElementTypes.PARAMETER_LIST);
-    }
-
-    @Override
-    public @NotNull PsiElement createPsi(@NotNull ASTNode node) {
+    public @NotNull PsiElement createElement(@NotNull ASTNode node) {
         return new RapidParameterListImpl(node);
     }
 

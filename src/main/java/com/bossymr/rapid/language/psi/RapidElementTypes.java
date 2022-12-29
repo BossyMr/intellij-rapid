@@ -39,7 +39,6 @@ public interface RapidElementTypes {
     RapidElementType UNARY_EXPRESSION = new RapidElementType("UNARY_EXPRESSION", RapidUnaryExpressionImpl::new);
     RapidElementType LITERAL_EXPRESSION = new RapidElementType("LITERAL_EXPRESSION", RapidLiteralExpressionImpl::new);
 
-    RapidElementType FIELD_LIST = new RapidElementType("FIELD_LIST", RapidFieldListImpl::new);
     RapidElementType STATEMENT_LIST = new RapidElementType("STATEMENT_LIST", RapidStatementListImpl::new);
     RapidElementType TEST_CASE_STATEMENT = new RapidElementType("TEST_CASE_STATEMENT", RapidTestCaseStatementImpl::new);
 

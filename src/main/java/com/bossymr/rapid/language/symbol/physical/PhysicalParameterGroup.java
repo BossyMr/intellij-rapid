@@ -1,15 +1,16 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.language.psi.RapidElement;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidStubElementTypes;
-import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterGroupStub;
 import com.bossymr.rapid.language.symbol.RapidParameter;
 import com.bossymr.rapid.language.symbol.RapidParameterGroup;
 import com.intellij.lang.ASTNode;
+import com.intellij.psi.impl.source.tree.TreeElement;
+import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -41,6 +42,25 @@ public class PhysicalParameterGroup extends RapidStubElement<RapidParameterGroup
     @Override
     public @NotNull List<RapidParameter> getParameters() {
         return List.of(getStubOrPsiChildren(RapidStubElementTypes.PARAMETER, new PhysicalParameter[0]));
+    }
+
+    @Override
+    public @Nullable ASTNode addInternal(@Nullable ASTNode first, @Nullable ASTNode last, @Nullable ASTNode anchor, @Nullable Boolean before) {
+        if (!(first instanceof TreeElement)) return null;
+        ASTNode treeElement = super.addInternal(first, last, anchor, before);
+        if (first == last && first.getElementType().equals(RapidElementTypes.PARAMETER)) {
+            RapidElementUtil.addSeparatingComma(this, first, RapidTokenTypes.LINE, TokenSet.create(RapidElementTypes.PARAMETER));
+        }
+        return treeElement;
+
+    }
+
+    @Override
+    public void deleteChildInternal(@NotNull ASTNode child) {
+        if (child.getElementType().equals(RapidElementTypes.PARAMETER)) {
+            RapidElementUtil.deleteSeparator(this, child, RapidTokenTypes.LINE);
+        }
+        super.deleteChildInternal(child);
     }
 
     @Override

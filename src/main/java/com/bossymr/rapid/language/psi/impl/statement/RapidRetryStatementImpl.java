@@ -1,15 +1,15 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidRetryStatement;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 
-public class RapidRetryStatementImpl extends RapidCompositeElement implements RapidRetryStatement {
+public class RapidRetryStatementImpl extends RapidElementImpl implements RapidRetryStatement {
 
-    public RapidRetryStatementImpl() {
-        super(RapidElementTypes.RETRY_STATEMENT);
+    public RapidRetryStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override

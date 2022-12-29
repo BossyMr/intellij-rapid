@@ -4,19 +4,20 @@ import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidReturnStatement;
-import com.bossymr.rapid.language.psi.impl.RapidCompositeElement;
+import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidReturnStatementImpl extends RapidCompositeElement implements RapidReturnStatement {
+public class RapidReturnStatementImpl extends RapidElementImpl implements RapidReturnStatement {
 
-    public RapidReturnStatementImpl() {
-        super(RapidElementTypes.RETURN_STATEMENT);
+    public RapidReturnStatementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
     public @Nullable RapidExpression getExpression() {
-        return (RapidExpression) findChildByType(RapidElementTypes.EXPRESSIONS);
+        return findChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override

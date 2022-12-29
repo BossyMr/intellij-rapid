@@ -1,16 +1,19 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.intellij.psi.PsiElementVisitor;
-import com.intellij.psi.impl.source.tree.CompositePsiElement;
-import com.intellij.psi.tree.IElementType;
 import com.bossymr.rapid.language.psi.RapidElement;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.intellij.extapi.psi.ASTWrapperPsiElement;
+import com.intellij.lang.ASTNode;
+import com.intellij.psi.PsiElementVisitor;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class RapidCompositeElement extends CompositePsiElement implements RapidElement {
+/**
+ * A standard implementation for a {@link RapidElement}.
+ */
+public abstract class RapidElementImpl extends ASTWrapperPsiElement implements RapidElement {
 
-    protected RapidCompositeElement(IElementType type) {
-        super(type);
+    protected RapidElementImpl(@NotNull ASTNode node) {
+        super(node);
     }
 
     @Override
@@ -23,4 +26,7 @@ public abstract class RapidCompositeElement extends CompositePsiElement implemen
     }
 
     public abstract void accept(@NotNull RapidElementVisitor visitor);
+
+    @Override
+    public abstract String toString();
 }

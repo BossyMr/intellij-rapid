@@ -1,49 +1,49 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.intellij.lang.ASTNode;
-import com.intellij.psi.impl.source.tree.CompositePsiElement;
-import com.intellij.psi.impl.source.tree.TreeElement;
-import com.intellij.psi.tree.IElementType;
-import com.intellij.psi.tree.TokenSet;
+import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.intellij.lang.ASTNode;
+import com.intellij.psi.impl.source.tree.TreeElement;
+import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class RapidArgumentListElement extends CompositePsiElement {
+public abstract class RapidElementListImpl extends RapidElementImpl {
 
     private final TokenSet tokenSet;
 
-    protected RapidArgumentListElement(IElementType type, TokenSet tokenSet) {
-        super(type);
+    protected RapidElementListImpl(@NotNull ASTNode node, @NotNull TokenSet tokenSet) {
+        super(node);
         this.tokenSet = tokenSet;
     }
 
     @Override
-    public TreeElement addInternal(TreeElement first, ASTNode last, @Nullable ASTNode anchor, @Nullable Boolean before) {
+    public @Nullable ASTNode addInternal(@Nullable ASTNode first, @Nullable ASTNode last, @Nullable ASTNode anchor, @Nullable Boolean before) {
+        if (!(first instanceof TreeElement)) return null;
         if (anchor == null) {
             if (before == null || before) {
                 anchor = findChildByType(RapidTokenTypes.RPARENTH);
                 if (anchor == null) {
-                    anchor = getLastChildNode();
+                    anchor = getNode().getLastChildNode();
                     before = false;
                 } else {
                     before = true;
                 }
             } else {
                 anchor = findChildByType(RapidTokenTypes.LPARENTH);
-                if(anchor == null) {
-                    anchor = getFirstChildNode();
+                if (anchor == null) {
+                    anchor = getNode().getFirstChildNode();
                     before = true;
                 } else {
                     before = false;
                 }
             }
         }
-        TreeElement treeElement = super.addInternal(first, last, anchor, before);
-        if (first == last && tokenSet.contains(first.getElementType())) {
-            RapidElementUtil.addSeparatingComma(this, first, tokenSet);
+        ASTNode node = super.addInternal(first, last, anchor, before);
+        if (first == last && RapidElementTypes.ARGUMENTS.contains(first.getElementType())) {
+            RapidElementUtil.addSeparatingComma(this, first, RapidElementTypes.ARGUMENTS);
         }
-        return treeElement;
+        return node;
     }
 
     @Override
