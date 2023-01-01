@@ -3,8 +3,11 @@ package com.bossymr.rapid.language.psi.impl.statement;
 import com.bossymr.rapid.language.psi.RapidAssignmentStatement;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.intellij.lang.ASTNode;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,12 +19,16 @@ public class RapidAssignmentStatementImpl extends RapidElementImpl implements Ra
 
     @Override
     public @Nullable RapidExpression getLeft() {
-        return getFirstChild() instanceof RapidExpression expression ? expression : null;
+        return PsiTreeUtil.getPrevSiblingOfType(getEquals(), RapidExpression.class);
     }
 
     @Override
     public @Nullable RapidExpression getRight() {
-        return getLastChild() instanceof RapidExpression expression ? expression : null;
+        return PsiTreeUtil.getNextSiblingOfType(getEquals(), RapidExpression.class);
+    }
+
+    public @NotNull PsiElement getEquals() {
+        return findNotNullChildByType(RapidTokenTypes.CEQ);
     }
 
     @Override

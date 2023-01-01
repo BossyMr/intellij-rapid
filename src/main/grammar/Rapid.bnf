@@ -130,7 +130,7 @@
 
     consumeTokenMethod(".*_recovery|.*expression") = 'consumeTokenFast'
 
-    // hooks('module|alias|record|component|routine|field') = [ leftBinder = "ADJACENT_LINE_COMMENTS" ]
+    hooks('module|alias|record|component|routine|field') = [ leftBinder = "ADJACENT_LINE_COMMENTS" ]
 }
 
 file ::= !(<<eof>>) (module_with_recovery)* {pin=1}
@@ -199,11 +199,11 @@ private array_expression_recovery ::= !(',' | '}' | ':=' | ';') symbol_recovery
 
 routine ::= procedure | function | trap
 
-private procedure ::= visibility? 'PROC' identifier parameter_list? statement_list [backward_clause] [error_clause] [undo_clause] 'ENDPROC' {pin=2}
+private procedure ::= visibility? 'PROC' identifier parameter_list? field_list statement_list [backward_clause] [error_clause] [undo_clause] 'ENDPROC' {pin=2}
 
-private function ::= visibility? 'FUNC' type_element identifier parameter_list? statement_list [backward_clause] [error_clause] [undo_clause] 'ENDFUNC' {pin=2}
+private function ::= visibility? 'FUNC' type_element identifier parameter_list? field_list statement_list [backward_clause] [error_clause] [undo_clause] 'ENDFUNC' {pin=2}
 
-private trap ::= visibility? 'TRAP' identifier parameter_list? statement_list [backward_clause] [error_clause] [undo_clause] 'ENDTRAP' {pin=2}
+private trap ::= visibility? 'TRAP' identifier parameter_list? field_list statement_list [backward_clause] [error_clause] [undo_clause] 'ENDTRAP' {pin=2}
 
 backward_clause ::= 'BACKWARD' statement_list {pin=1 elementType=statement_list}
 
@@ -218,6 +218,8 @@ private error ::= () (empty_expression) {pin=1 recoverWhile=error_recovery}
 private error_recovery ::= !(',' | ')') statement_recovery
 
 undo_clause ::= 'UNDO' statement_list {pin=1 elementType=statement_list}
+
+field_list ::= (local_variable)*
 
 private local_variable ::= field {recoverWhile=local_variable_recovery}
 
@@ -327,11 +329,11 @@ statement_list ::= (statement_with_recovery)*
 
 private statement_with_recovery ::= !('ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'UNDO' | 'ERROR' | 'BACKWARD' | 'DEFAULT') statement {pin=1 recoverWhile=statement_recovery}
 
-private parameter_statement_recovery ::= !('<SMT>' | '<DDN>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD' | 'LOCAL' | 'TASK' |  'CONST') symbol_recovery
+private parameter_statement_recovery ::= !('<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD') symbol_recovery
 
 private statement_recovery ::= !(IDENTIFIER) parameter_statement_recovery
 
-private statement ::= '<SMT>' | '<DDN>' | local_variable | simple_statement | compound_statement | label_statement {recoverWhile=statement_recovery}
+private statement ::= '<SMT>' | simple_statement | compound_statement | label_statement {recoverWhile=statement_recovery}
 
 private simple_statement ::= procedure_call_statement |
                              assignment_statement |

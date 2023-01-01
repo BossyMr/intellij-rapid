@@ -187,7 +187,7 @@ public class RobotImpl implements Robot {
             for (ModuleInfo moduleInfo : moduleInfos) {
                 Module module = moduleInfo.getModule().send();
                 module.save(module.getName(), taskFile.getPath()).send();
-                VirtualFile virtualFile = instance.findFileByNioFile(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION));
+                VirtualFile virtualFile = instance.refreshAndFindFileByNioFile(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION));
                 assert virtualFile != null;
                 virtualFiles.add(virtualFile);
             }
@@ -211,7 +211,7 @@ public class RobotImpl implements Robot {
                     RapidTask rapidTask = new RapidTaskImpl(taskFile.getName(), taskVirtualFile, virtualFiles);
                     if (moduleFiles != null) {
                         for (File moduleFile : moduleFiles) {
-                            VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByIoFile(moduleFile);
+                            VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(moduleFile);
                             assert virtualFile != null;
                             virtualFiles.add(virtualFile);
                         }

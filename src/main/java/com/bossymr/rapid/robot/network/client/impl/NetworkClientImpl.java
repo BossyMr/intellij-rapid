@@ -28,6 +28,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -57,9 +58,10 @@ public class NetworkClientImpl implements NetworkClient {
         // different NetworkClient. Additionally, only a single NetworkClient should be instantiated at once.
         COOKIE_MANAGER.getCookieStore().removeAll();
         ThreadFactory threadFactory = Executors.defaultThreadFactory();
-        this.executorService = Executors.newFixedThreadPool(2, threadFactory);
+        this.executorService = Executors.newSingleThreadExecutor(threadFactory);
         this.httpClient = HttpClient.newBuilder()
                 .executor(executorService)
+                .connectTimeout(Duration.ofMillis(100))
                 .version(HttpClient.Version.HTTP_1_1)
                 .cookieHandler(COOKIE_MANAGER)
                 .build();
@@ -114,8 +116,7 @@ public class NetworkClientImpl implements NetworkClient {
         return response;
     }
 
-    private <T> @NotNull HttpResponse<T> notify(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
-        HttpResponse<T> response;
+    private synchronized <T> @NotNull HttpResponse<T> notify(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
         CompletableFuture<Void> lock = new CompletableFuture<>();
         locks.add(lock);
         int index = locks.indexOf(lock);
@@ -126,11 +127,17 @@ public class NetworkClientImpl implements NetworkClient {
                 throw new RuntimeException(e);
             }
         }
+        HttpResponse<T> response = null;
         try {
             response = httpClient.send(httpRequest, bodyHandler);
+            assert response != null;
         } catch (IOException e) {
             RobotUtil.showNotification(null, httpRequest.uri());
             throw e;
+        } finally {
+            locks.remove(lock);
+            lock.complete(null);
+            LOG.info("Request: '" + httpRequest + "'" + (response != null ? " - Response: '" + response + "'" : ""));
         }
         locks.remove(lock);
         lock.complete(null);
@@ -167,20 +174,25 @@ public class NetworkClientImpl implements NetworkClient {
                 });
     }
 
-    private <T> @NotNull CompletableFuture<HttpResponse<T>> notifyAsync(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
+    private synchronized <T> @NotNull CompletableFuture<HttpResponse<T>> notifyAsync(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
         assert httpRequest.headers().allValues("Authorization").size() <= 1;
         CompletableFuture<Void> waiting = null;
         CompletableFuture<Void> lock = new CompletableFuture<>();
-        synchronized (locks) {
-            locks.add(lock);
-            int index = locks.indexOf(lock);
-            if (index >= MAX_CONNECTIONS) {
-                waiting = locks.get(index - 1);
-            }
+        locks.add(lock);
+        int index = locks.indexOf(lock);
+        if (index >= MAX_CONNECTIONS) {
+            waiting = locks.get(index - 1);
         }
-        return (waiting != null ? CompletableFuture.anyOf(waiting) : CompletableFuture.completedFuture(null))
+        if (waiting == null) {
+            waiting = new CompletableFuture<>();
+            waiting.complete(null);
+        }
+        return waiting
                 .thenComposeAsync((ignored) -> httpClient.sendAsync(httpRequest, bodyHandler))
                 .exceptionallyAsync((throwable) -> {
+                    locks.remove(lock);
+                    lock.complete(null);
+                    LOG.info("Request: '" + httpRequest + "' - Failed: '" + throwable + "'");
                     if (throwable instanceof RuntimeException runtimeException) {
                         if (runtimeException.getCause() instanceof IOException) {
                             RobotUtil.showNotification(null, httpRequest.uri());

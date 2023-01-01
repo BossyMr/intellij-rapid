@@ -8,12 +8,13 @@ import com.intellij.lang.ASTNode;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiReference;
+import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements RapidReferenceExpression {
 
@@ -129,17 +130,22 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
     }
 
     @Override
-    public @NotNull Collection<RapidSymbol> getSymbols() {
+    public @NotNull List<RapidSymbol> getSymbols() {
+        return CachedValuesManager.getProjectPsiDependentCache(this, (ignored) -> doResolve());
+    }
+
+    private @NotNull List<RapidSymbol> doResolve() {
         PsiElement identifier = getIdentifier();
         if (identifier == null) return Collections.emptyList();
         String name = identifier.getText();
         return ResolveUtil.getSymbols(this, name);
     }
 
+
     @Override
     public @Nullable RapidSymbol getSymbol() {
-        Collection<RapidSymbol> symbols = getSymbols();
-        return symbols.size() == 1 ? symbols.iterator().next() : null;
+        List<RapidSymbol> symbols = getSymbols();
+        return symbols.size() > 0 ? symbols.get(0) : null;
     }
 
     @Override

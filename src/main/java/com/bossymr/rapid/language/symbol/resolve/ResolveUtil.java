@@ -7,30 +7,31 @@ import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 public final class ResolveUtil {
 
     private ResolveUtil() {
+        throw new UnsupportedOperationException();
     }
 
     public static @Nullable RapidStructure getStructure(@NotNull PsiElement element, @NotNull String name) {
-        Set<RapidSymbol> results = getSymbols(element, name);
+        List<RapidSymbol> results = getSymbols(element, name);
         if (results.size() == 0) return null;
         RapidSymbol symbol = results.iterator().next();
         return symbol instanceof RapidStructure structure ? structure : null;
     }
 
-    public static @NotNull Set<RapidSymbol> getSymbols(@NotNull RapidReferenceExpression expression, @NotNull String name) {
+    public static @NotNull List<RapidSymbol> getSymbols(@NotNull RapidReferenceExpression expression, @NotNull String name) {
         RapidExpression qualifier = expression.getQualifier();
         if (qualifier != null) {
             RapidType dataType = qualifier.getType();
             if (dataType != null) {
                 RapidStructure structure = dataType.getTargetStructure();
                 if (structure instanceof RapidRecord record) {
-                    Set<RapidSymbol> symbols = new HashSet<>();
+                    List<RapidSymbol> symbols = new ArrayList<>();
                     for (RapidComponent component : record.getComponents()) {
                         if (name.equalsIgnoreCase(component.getName())) {
                             symbols.add(component);
@@ -39,19 +40,20 @@ public final class ResolveUtil {
                     return symbols;
                 }
             }
-            return Collections.emptySet();
+            return Collections.emptyList();
         }
         return getSymbols((PsiElement) expression, name);
     }
 
 
-    public static @NotNull Set<RapidSymbol> getSymbols(@NotNull PsiElement element, @NotNull String name) {
-        return getSymbols(element, new RapidScopeProcessor(element, name));
+    public static @NotNull List<RapidSymbol> getSymbols(@NotNull PsiElement element, @NotNull String name) {
+        return getSymbols(element, new ResolveScopeProcessor(element, name));
     }
 
-    public static @NotNull Set<RapidSymbol> getSymbols(@NotNull PsiElement element, @NotNull RapidScopeProcessor processor) {
-        element.accept(new RapidScopeVisitor(processor));
-        return processor.getSymbols();
+    public static @NotNull List<RapidSymbol> getSymbols(@NotNull PsiElement element, @NotNull ResolveScopeProcessor processor) {
+        ResolveScopeVisitor visitor = new ResolveScopeVisitor(element, processor);
+        visitor.process();
+        return processor.getSymbol();
     }
 
 }

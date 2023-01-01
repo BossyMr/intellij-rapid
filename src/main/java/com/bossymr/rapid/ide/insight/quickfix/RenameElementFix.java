@@ -3,16 +3,14 @@ package com.bossymr.rapid.ide.insight.quickfix;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.intellij.codeInsight.intention.IntentionAction;
-import com.intellij.codeInspection.LocalQuickFix;
-import com.intellij.codeInspection.ProblemDescriptor;
+import com.intellij.codeInsight.intention.impl.BaseIntentionAction;
+import com.intellij.codeInsight.intention.preview.IntentionPreviewInfo;
 import com.intellij.codeInspection.util.IntentionFamilyName;
 import com.intellij.codeInspection.util.IntentionName;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.SmartPointerManager;
-import com.intellij.psi.SmartPsiElementPointer;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.refactoring.RefactoringFactory;
 import com.intellij.refactoring.RenameRefactoring;
 import com.intellij.util.IncorrectOperationException;
@@ -22,27 +20,25 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A quick fix which renames a specified element to a specified new name.
  */
-public class RenameElementFix implements IntentionAction, LocalQuickFix {
+public final class RenameElementFix implements IntentionAction {
 
-    private final String previousName, newName;
-    private final SmartPsiElementPointer<PhysicalSymbol> pointer;
+    private final String newName;
+    private final PhysicalSymbol symbol;
 
     /**
      * Creates a new quick which will rename the specified symbol to the specified name.
      *
-     * @param element the element to rename.
-     * @param newName the new element name.
+     * @param symbol the symbol to rename.
+     * @param newName the new symbol name.
      */
-    public RenameElementFix(@NotNull PhysicalSymbol element, @NotNull String newName) {
-        this.previousName = element.getName();
-        assert previousName != null;
+    public RenameElementFix(@NotNull PhysicalSymbol symbol, @NotNull String newName) {
         this.newName = newName;
-        this.pointer = SmartPointerManager.createPointer(element);
+        this.symbol = symbol;
     }
 
     @Override
     public @IntentionName @NotNull String getText() {
-        return RapidBundle.message("quick.fix.text.rename.element", previousName, newName);
+        return RapidBundle.message("quick.fix.text.rename.element", symbol.getName(), newName);
     }
 
     @Override
@@ -51,35 +47,26 @@ public class RenameElementFix implements IntentionAction, LocalQuickFix {
     }
 
     @Override
-    public @IntentionName @NotNull String getName() {
-        return getText();
-    }
-
-    @Override
-    public void applyFix(@NotNull Project project, @NotNull ProblemDescriptor descriptor) {
-        invoke(project, null, null);
-    }
-
-    @Override
     public void invoke(@NotNull Project project, @Nullable Editor editor, @Nullable PsiFile file) throws IncorrectOperationException {
-        if (isAvailable(project, editor, file)) {
-            RefactoringFactory refactoringFactory = RefactoringFactory.getInstance(project);
-            PsiElement element = pointer.getElement();
-            if (element != null) {
-                RenameRefactoring refactoring = refactoringFactory.createRename(element, newName);
-                refactoring.run();
-            }
-        }
+        RefactoringFactory refactoringFactory = RefactoringFactory.getInstance(project);
+        RenameRefactoring refactoring = refactoringFactory.createRename(symbol, newName);
+        refactoring.run();
     }
 
     @Override
-    public boolean isAvailable(@NotNull Project project, @Nullable Editor editor, @Nullable PsiFile file) {
-        PsiElement element = pointer.getElement();
-        return element != null;
+    public boolean isAvailable(@NotNull Project project, Editor editor, PsiFile file) {
+        return symbol.isValid() && BaseIntentionAction.canModify(symbol);
+    }
+
+    @Override
+    public @NotNull IntentionPreviewInfo generatePreview(@NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file) {
+        PhysicalSymbol element = PsiTreeUtil.findSameElementInCopy(symbol, file);
+        element.setName(newName);
+        return IntentionPreviewInfo.DIFF;
     }
 
     @Override
     public boolean startInWriteAction() {
-        return false;
+        return true;
     }
 }

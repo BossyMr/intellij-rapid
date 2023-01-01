@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 
 public interface RapidReferenceExpression extends RapidExpression, PsiPolyVariantReference {
 
@@ -26,7 +27,7 @@ public interface RapidReferenceExpression extends RapidExpression, PsiPolyVarian
      */
     @Nullable PsiElement getIdentifier();
 
-    @NotNull Collection<RapidSymbol> getSymbols();
+    @NotNull List<RapidSymbol> getSymbols();
 
     @Nullable RapidSymbol getSymbol();
 

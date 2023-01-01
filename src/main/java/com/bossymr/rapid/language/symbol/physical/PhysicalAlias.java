@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.Objects;
 
-public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements RapidAlias, PhysicalSymbol {
+public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements RapidAlias, PhysicalStructure {
 
     public PhysicalAlias(@NotNull RapidAliasStub stub) {
         super(stub, RapidStubElementTypes.ALIAS);

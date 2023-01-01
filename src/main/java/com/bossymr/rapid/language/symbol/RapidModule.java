@@ -12,13 +12,13 @@ import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import java.util.EnumSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 public interface RapidModule extends RapidSymbol {
 
-    @NotNull Set<Attribute> getAttributes();
+    @NotNull List<Attribute> getAttributes();
 
     boolean hasAttribute(@NotNull Attribute attribute);
 
@@ -46,7 +46,15 @@ public interface RapidModule extends RapidSymbol {
         VIEW_ONLY(RapidTokenTypes.VIEWONLY_KEYWORD, "VIEWONLY"),
         READ_ONLY(RapidTokenTypes.READONLY_KEYWORD, "READONLY");
 
-        public static final @NotNull TokenSet TOKEN_SET = TokenSet.create(RapidTokenTypes.SYSMODULE_KEYWORD, RapidTokenTypes.NOVIEW_KEYWORD, RapidTokenTypes.NOSTEPIN_KEYWORD, RapidTokenTypes.VIEWONLY_KEYWORD, RapidTokenTypes.READONLY_KEYWORD);
+        public static final Map<Attribute, List<Attribute>> MUTUALLY_EXCLUSIVE = Map.of(
+                NO_VIEW, List.of(NO_STEP_IN, VIEW_ONLY, READ_ONLY),
+                NO_STEP_IN, List.of(NO_VIEW),
+                VIEW_ONLY, List.of(NO_VIEW, READ_ONLY),
+                READ_ONLY, List.of(NO_VIEW, VIEW_ONLY)
+        );
+
+
+        public static final TokenSet TOKEN_SET = TokenSet.create(RapidTokenTypes.SYSMODULE_KEYWORD, RapidTokenTypes.NOVIEW_KEYWORD, RapidTokenTypes.NOSTEPIN_KEYWORD, RapidTokenTypes.VIEWONLY_KEYWORD, RapidTokenTypes.READONLY_KEYWORD);
 
         private final IElementType elementType;
         private final String text;
@@ -56,9 +64,9 @@ public interface RapidModule extends RapidSymbol {
             this.text = text;
         }
 
-        public static @NotNull Set<Attribute> getAttributes(@NotNull PsiElement element) {
+        public static @NotNull List<Attribute> getAttributes(@NotNull PsiElement element) {
             ASTNode[] nodes = element.getNode().getChildren(TOKEN_SET);
-            Set<Attribute> attributes = EnumSet.noneOf(Attribute.class);
+            List<Attribute> attributes = new ArrayList<>();
             for (ASTNode node : nodes) {
                 IElementType elementType = node.getElementType();
                 attributes.add(getAttribute(elementType));
@@ -66,9 +74,9 @@ public interface RapidModule extends RapidSymbol {
             return attributes;
         }
 
-        public static @NotNull Set<Attribute> getAttributes(@NotNull LighterAST tree, @NotNull LighterASTNode node) {
+        public static @NotNull List<Attribute> getAttributes(@NotNull LighterAST tree, @NotNull LighterASTNode node) {
             List<LighterASTNode> nodes = LightTreeUtil.getChildrenOfType(tree, node, TOKEN_SET);
-            Set<Attribute> attributes = EnumSet.noneOf(Attribute.class);
+            List<Attribute> attributes = new ArrayList<>();
             for (LighterASTNode element : nodes) {
                 IElementType elementType = element.getTokenType();
                 attributes.add(getAttribute(elementType));

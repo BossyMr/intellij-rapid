@@ -21,7 +21,7 @@ import javax.swing.*;
 import java.util.List;
 import java.util.Objects;
 
-public class PhysicalRecord extends RapidStubElement<RapidRecordStub> implements RapidRecord, PhysicalSymbol {
+public class PhysicalRecord extends RapidStubElement<RapidRecordStub> implements RapidRecord, PhysicalStructure {
 
     public PhysicalRecord(@NotNull RapidRecordStub stub) {
         super(stub, RapidStubElementTypes.RECORD);

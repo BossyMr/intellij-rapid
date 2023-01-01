@@ -8,24 +8,29 @@ import com.intellij.psi.PsiElement;
 import com.intellij.util.Processor;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
-public final class RapidScopeProcessor implements Processor<RapidSymbol> {
+public class ResolveScopeProcessor implements Processor<RapidSymbol> {
 
-    private final Set<RapidSymbol> symbols;
+    private final List<RapidSymbol> symbols;
+
     private final PsiElement context;
     private final String name;
 
-    public RapidScopeProcessor(@NotNull PsiElement context, @NotNull String name) {
-        this.symbols = new HashSet<>();
+    public ResolveScopeProcessor(@NotNull PsiElement context, @NotNull String name) {
+        this.symbols = new ArrayList<>();
         this.context = context;
         this.name = name;
     }
 
     public @NotNull String getName() {
         return name;
+    }
+
+    public @NotNull PsiElement getContext() {
+        return context;
     }
 
     @Override
@@ -56,7 +61,8 @@ public final class RapidScopeProcessor implements Processor<RapidSymbol> {
         return true;
     }
 
-    public @NotNull Set<RapidSymbol> getSymbols() {
+    public @NotNull List<RapidSymbol> getSymbol() {
         return symbols;
     }
+
 }

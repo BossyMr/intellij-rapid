@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.symbol.virtual.VirtualRecord;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -52,6 +53,35 @@ public class RapidType {
             return leftText.equals(rightText);
         }
         return Objects.equals(leftStructure, rightStructure);
+    }
+
+    public @Nullable ValueType getValueType() {
+        if (structure == null) return null;
+        if (this == RapidType.NUMBER) return ValueType.VALUE_TYPE;
+        if (this == RapidType.DOUBLE) return ValueType.VALUE_TYPE;
+        if (this == RapidType.BOOLEAN) return ValueType.VALUE_TYPE;
+        if (this == RapidType.STRING) return ValueType.VALUE_TYPE;
+        if (structure instanceof RapidAtomic atomic) {
+            return atomic.getType() != null ? ValueType.SEMI_VALUE_TYPE : ValueType.NON_VALUE_TYPE;
+        }
+        if (structure instanceof RapidAlias alias) {
+            RapidType type = alias.getType();
+            return type != null ? type.getValueType() : null;
+        }
+        if (structure instanceof RapidRecord record) {
+            List<ValueType> valueTypes = new ArrayList<>();
+            for (RapidComponent component : record.getComponents()) {
+                RapidType type = component.getType();
+                if (type == null) return null;
+                valueTypes.add(type.getValueType());
+            }
+            if (valueTypes.contains(null)) return null;
+            if (valueTypes.contains(ValueType.NON_VALUE_TYPE)) return ValueType.NON_VALUE_TYPE;
+            if (valueTypes.stream().allMatch(valueType -> valueType.equals(ValueType.VALUE_TYPE)))
+                return ValueType.VALUE_TYPE;
+            return ValueType.SEMI_VALUE_TYPE;
+        }
+        throw new IllegalStateException();
     }
 
     public boolean isAssignable(@NotNull RapidType type) {

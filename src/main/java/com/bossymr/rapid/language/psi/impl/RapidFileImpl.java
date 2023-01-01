@@ -7,6 +7,8 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.psi.FileViewProvider;
+import com.intellij.psi.PsiElement;
+import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,6 +19,20 @@ public class RapidFileImpl extends PsiFileBase implements RapidFile {
 
     public RapidFileImpl(@NotNull FileViewProvider viewProvider) {
         super(viewProvider, RapidLanguage.INSTANCE);
+    }
+
+    @Override
+    public void deleteChildRange(@Nullable PsiElement first, @Nullable PsiElement last) throws IncorrectOperationException {
+        if (first != null && first == last) {
+            if (first instanceof PhysicalModule) {
+                List<PhysicalModule> modules = getModules();
+                if (modules.size() == 1) {
+                    delete();
+                    return;
+                }
+            }
+        }
+        super.deleteChildRange(first, last);
     }
 
     @Override

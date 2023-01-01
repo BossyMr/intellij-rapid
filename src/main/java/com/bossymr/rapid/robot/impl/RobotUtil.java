@@ -130,7 +130,7 @@ public final class RobotUtil {
                                     states.computeIfAbsent(address, (value) -> new HashSet<>());
                                     states.get(address).add(symbol.getTitle().substring(symbol.getTitle().lastIndexOf('/') + 1));
                                 }
-                                List<CompletableFuture<?>> completableFutures = new ArrayList<>();
+                                List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
                                 for (Map.Entry<String, Set<String>> entry : states.entrySet()) {
                                     if (entry.getKey().equals("RAPID")) continue;
                                     String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
@@ -156,7 +156,7 @@ public final class RobotUtil {
                                         completableFutures.add(completableFuture);
                                     }
                                 }
-                                return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
+                                return allOfExceptionally(completableFutures.toArray(new CompletableFuture[0]));
                             })
             ).join();
         } catch (CompletionException e) {
@@ -169,15 +169,14 @@ public final class RobotUtil {
         return robotState;
     }
 
-    @SafeVarargs
-    public static @NotNull CompletableFuture<Void> allOfExceptionally(CompletableFuture<Void> @NotNull ... completableFutures) {
+    public static @NotNull CompletableFuture<Void> allOfExceptionally(CompletableFuture<?> @NotNull ... completableFutures) {
         CompletableFuture<Void> collection = CompletableFuture.allOf(completableFutures);
-        for (CompletableFuture<Void> completableFuture : completableFutures) {
+        for (CompletableFuture<?> completableFuture : completableFutures) {
             completableFuture.exceptionally(throwable -> {
                 // The collection of completable futures should fail as soon as any of its components fails.
                 if (collection.isCompletedExceptionally()) return null;
                 collection.completeExceptionally(throwable);
-                for (CompletableFuture<Void> future : completableFutures) {
+                for (CompletableFuture<?> future : completableFutures) {
                     // In addition, all other completable futures are canceled as soon as any of its components fail.
                     future.cancel(true);
                 }
@@ -200,6 +199,15 @@ public final class RobotUtil {
     }
 
     public static void showNotification(@Nullable Project project, @NotNull URI path) {
+        RemoteService remoteService = RemoteService.getInstance();
+        Robot robot = remoteService.getRobot();
+        if (robot != null) {
+            if (robot.getRobotService() != null) {
+                try {
+                    robot.disconnect();
+                } catch (IOException ignored) {}
+            }
+        }
         NotificationGroupManager.getInstance()
                 .getNotificationGroup("Robot Connect Error")
                 .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)

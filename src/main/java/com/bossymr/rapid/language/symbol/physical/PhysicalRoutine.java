@@ -70,24 +70,36 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
         return parameterList != null ? parameterList.getParameters() : null;
     }
 
+    public @NotNull RapidFieldList getFieldList() {
+        return findNotNullChildByType(RapidElementTypes.FIELD_LIST);
+    }
+
     @Override
     public @NotNull List<RapidField> getFields() {
-        return List.of(findChildrenByClass(PhysicalField.class));
+        return getFieldList().getFields();
     }
 
     @Override
     public @NotNull List<RapidStatement> getStatements() {
-        List<RapidStatement> statements = getStatements(RapidStatementList.Attribute.STATEMENT_LIST);
-        assert statements != null;
-        return statements;
+        return getStatementList().getStatements();
+    }
+
+    public @NotNull RapidStatementList getStatementList() {
+        RapidStatementList statementList = getStatementList(RapidStatementList.Attribute.STATEMENT_LIST);
+        return Objects.requireNonNull(statementList);
     }
 
     @Override
     public @Nullable List<RapidStatement> getStatements(@NotNull RapidStatementList.Attribute attribute) {
+        RapidStatementList statementList = getStatementList(attribute);
+        return statementList != null ? statementList.getStatements() : null;
+    }
+
+    public @Nullable RapidStatementList getStatementList(@NotNull RapidStatementList.Attribute attribute) {
         List<RapidStatementList> statementLists = findChildrenByType(RapidElementTypes.STATEMENT_LIST);
         for (RapidStatementList statementList : statementLists) {
             if (attribute == statementList.getAttribute()) {
-                return statementList.getStatements();
+                return statementList;
             }
         }
         return null;

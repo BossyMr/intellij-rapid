@@ -76,6 +76,11 @@
 
         <completion.contributor language="RAPID"
                                 implementationClass="com.bossymr.rapid.ide.completion.RapidCompletionContributor"/>
+
+        <localInspection language="RAPID" enabledByDefault="true" level="WARNING"
+                         groupPath="Rapid" groupKey="inspection.group.declaration.redundancy"
+                         bundle="messages.RapidBundle" key="inspection.name.unused.declaration"
+                         implementationClass="com.bossymr.rapid.ide.inspection.UnusedDeclarationInspection"/>
     </extensions>
 
     <actions>

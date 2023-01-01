@@ -79,22 +79,22 @@ public class RobotToolWindow implements Disposable {
         RobotEventListener.connect(new RobotEventListener() {
             @Override
             public void afterConnect(@NotNull Robot robot) {
-                model.invalidate();
+                model.invalidateAsync();
             }
 
             @Override
             public void afterRefresh(@NotNull Robot robot) {
-                model.invalidate();
+                model.invalidateAsync();
             }
 
             @Override
             public void afterRemoval() {
-                model.invalidate();
+                model.invalidateAsync();
             }
 
             @Override
             public void onSymbol(@NotNull Robot robot, @NotNull VirtualSymbol symbol) {
-                model.invalidate();
+                model.invalidateAsync();
             }
         });
     }

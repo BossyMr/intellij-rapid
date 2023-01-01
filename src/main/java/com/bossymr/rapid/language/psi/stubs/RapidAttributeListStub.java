@@ -9,9 +9,9 @@ import com.intellij.util.BitUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.EnumSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 public class RapidAttributeListStub extends StubBase<RapidAttributeList> {
 
@@ -22,7 +22,7 @@ public class RapidAttributeListStub extends StubBase<RapidAttributeList> {
         this.mask = mask;
     }
 
-    public RapidAttributeListStub(@Nullable StubElement<?> parent, @NotNull Set<Attribute> attributes) {
+    public RapidAttributeListStub(@Nullable StubElement<?> parent, @NotNull List<Attribute> attributes) {
         super(parent, RapidStubElementTypes.ATTRIBUTE_LIST);
         int mask = 0;
         for (Attribute attribute : attributes) {
@@ -39,8 +39,8 @@ public class RapidAttributeListStub extends StubBase<RapidAttributeList> {
         return mask;
     }
 
-    public @NotNull Set<Attribute> getAttributes() {
-        Set<Attribute> attributes = EnumSet.noneOf(Attribute.class);
+    public @NotNull List<Attribute> getAttributes() {
+        List<Attribute> attributes = new ArrayList<>();
         for (Attribute attribute : Attribute.values()) {
             if (hasAttribute(attribute)) {
                 attributes.add(attribute);

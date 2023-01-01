@@ -6,7 +6,9 @@ import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidModuleStub;
 import com.bossymr.rapid.language.symbol.*;
 import com.intellij.lang.ASTNode;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
@@ -43,9 +45,9 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
     }
 
     @Override
-    public @NotNull Set<Attribute> getAttributes() {
+    public @NotNull List<Attribute> getAttributes() {
         RapidAttributeList attributeList = getAttributeList();
-        return attributeList != null ? attributeList.getAttributes() : Collections.emptySet();
+        return attributeList != null ? attributeList.getAttributes() : Collections.emptyList();
     }
 
     @Override
@@ -95,6 +97,16 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
     @Override
     public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
         RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
+        String previousName = getName();
+        PsiFile containingFile = getContainingFile();
+        VirtualFile virtualFile = getContainingFile().getVirtualFile();
+        if (virtualFile != null) {
+            String fileName = virtualFile.getNameWithoutExtension();
+            if (fileName.equals(previousName)) {
+                String extension = virtualFile.getExtension();
+                containingFile.setName(name + "." + extension);
+            }
+        }
         return this;
     }
 

@@ -16,7 +16,7 @@ import com.intellij.psi.stubs.StubOutputStream;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.Set;
+import java.util.List;
 
 public class RapidAttributeListElementType extends RapidStubElementType<RapidAttributeListStub, RapidAttributeList> {
 
@@ -36,7 +36,7 @@ public class RapidAttributeListElementType extends RapidStubElementType<RapidAtt
 
     @Override
     public @NotNull RapidAttributeListStub createStub(@NotNull LighterAST tree, @NotNull LighterASTNode node, @NotNull StubElement<?> parentStub) {
-        Set<Attribute> attributeSet = Attribute.getAttributes(tree, node);
+        List<Attribute> attributeSet = Attribute.getAttributes(tree, node);
         return new RapidAttributeListStub(parentStub, attributeSet);
     }
 

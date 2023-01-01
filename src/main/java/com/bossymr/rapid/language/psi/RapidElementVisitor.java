@@ -1,8 +1,6 @@
 package com.bossymr.rapid.language.psi;
 
 import com.bossymr.rapid.language.symbol.RapidLabelStatement;
-import com.bossymr.rapid.language.symbol.RapidStructure;
-import com.bossymr.rapid.language.symbol.RapidVariable;
 import com.bossymr.rapid.language.symbol.physical.*;
 import com.intellij.psi.PsiElementVisitor;
 import org.jetbrains.annotations.NotNull;
@@ -25,7 +23,7 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
         visitSymbol(component);
     }
 
-    public <T extends RapidStructure & PhysicalSymbol> void visitStructure(@NotNull T structure) {
+    public void visitStructure(@NotNull PhysicalStructure structure) {
         visitSymbol(structure);
     }
 
@@ -33,7 +31,7 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
         visitVariable(field);
     }
 
-    public <T extends RapidVariable & PhysicalSymbol> void visitVariable(@NotNull T variable) {
+    public void visitVariable(@NotNull PhysicalVariable variable) {
         visitSymbol(variable);
     }
 
@@ -199,5 +197,9 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
 
     public void visitLabel(@NotNull RapidLabelStatement statement) {
         visitStatement(statement);
+    }
+
+    public void visitFieldList(RapidFieldList element) {
+        visitElement(element);
     }
 }

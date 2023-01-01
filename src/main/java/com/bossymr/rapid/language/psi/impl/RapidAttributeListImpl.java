@@ -16,7 +16,7 @@ import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Set;
+import java.util.List;
 
 public class RapidAttributeListImpl extends RapidStubElement<RapidAttributeListStub> implements RapidAttributeList {
 
@@ -34,7 +34,7 @@ public class RapidAttributeListImpl extends RapidStubElement<RapidAttributeListS
     }
 
     @Override
-    public @NotNull Set<Attribute> getAttributes() {
+    public @NotNull List<Attribute> getAttributes() {
         RapidAttributeListStub stub = getGreenStub();
         if (stub != null) {
             return stub.getAttributes();

@@ -16,7 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.Objects;
 
-public class PhysicalTargetVariable extends RapidElementImpl implements RapidTargetVariable, PhysicalSymbol {
+public class PhysicalTargetVariable extends RapidElementImpl implements RapidTargetVariable, PhysicalVariable {
 
     public PhysicalTargetVariable(@NotNull ASTNode node) {
         super(node);

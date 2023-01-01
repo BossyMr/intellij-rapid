@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.Objects;
 
-public class PhysicalField extends RapidStubElement<RapidFieldStub> implements RapidField, PhysicalSymbol {
+public class PhysicalField extends RapidStubElement<RapidFieldStub> implements RapidField, PhysicalVariable {
 
     public PhysicalField(@NotNull RapidFieldStub stub) {
         super(stub, RapidStubElementTypes.FIELD);
