@@ -27,7 +27,6 @@ public interface RapidElementTypes {
     RapidElementType REQUIRED_ARGUMENT = new RapidElementType("REQUIRED_ARGUMENT", RapidRequiredArgumentImpl::new);
     RapidElementType CONDITIONAL_ARGUMENT = new RapidElementType("CONDITIONAL_ARGUMENT", RapidConditionalArgumentImpl::new);
     RapidElementType OPTIONAL_ARGUMENT = new RapidElementType("OPTIONAL_ARGUMENT", RapidOptionalArgumentImpl::new);
-    RapidElementType FIELD_LIST = new RapidElementType("FIELD_LIST", RapidFieldListImpl::new);
 
     RapidElementType EXPRESSION_LIST = new RapidElementType("EXPRESSION_LIST", RapidExpressionListImpl::new);
     RapidElementType EMPTY_EXPRESSION = new RapidElementType("EMPTY_EXPRESSION", RapidEmptyExpressionImpl::new);

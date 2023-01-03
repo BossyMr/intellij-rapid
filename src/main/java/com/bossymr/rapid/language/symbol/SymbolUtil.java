@@ -49,24 +49,26 @@ public final class SymbolUtil {
 
 
     public static <T extends RapidStubElement<? extends RapidTypeStub>> @Nullable RapidType getType(@NotNull T element, int dimensions) {
-        return CachedValuesManager.getProjectPsiDependentCache(element, (value) -> {
-            RapidTypeStub stub = element.getGreenStub();
-            if (stub != null) {
-                String name = stub.getType();
-                if (name == null) return null;
-                RapidStructure structure = ResolveUtil.getStructure(element, name);
-                return new RapidType(structure, name, stub.getDimensions());
-            } else {
-                RapidTypeElement typeElement = PsiTreeUtil.getChildOfType(element, RapidTypeElement.class);
-                RapidType type = typeElement != null ? typeElement.getType() : null;
-                if (type != null) {
-                    if (dimensions > 0) {
-                        type = type.createArrayType(dimensions);
-                    }
+        return CachedValuesManager.getProjectPsiDependentCache(element, (value) -> calculateType(value, dimensions));
+    }
+
+    private static <T extends RapidStubElement<? extends RapidTypeStub>> @Nullable RapidType calculateType(@NotNull T element, int dimensions) {
+        RapidTypeStub stub = element.getGreenStub();
+        if (stub != null) {
+            String name = stub.getType();
+            if (name == null) return null;
+            RapidStructure structure = ResolveUtil.getStructure(element, name);
+            return new RapidType(structure, name, stub.getDimensions());
+        } else {
+            RapidTypeElement typeElement = PsiTreeUtil.getChildOfType(element, RapidTypeElement.class);
+            RapidType type = typeElement != null ? typeElement.getType() : null;
+            if (type != null) {
+                if (dimensions > 0) {
+                    type = type.createArrayType(dimensions);
                 }
-                return type;
             }
-        });
+            return type;
+        }
     }
 
 }

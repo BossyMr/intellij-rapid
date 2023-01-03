@@ -45,7 +45,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
 
     private void process(@Nullable RapidSymbol symbol) {
         if (symbol != null) {
-            halt = halt || !(processor.process(symbol));
+            halt = halt || (!(processor.process(symbol)) && processor.getName() != null);
         }
     }
 
@@ -185,9 +185,11 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         RemoteService service = RemoteService.getInstance();
         Robot robot = service.getRobot();
         if (robot != null) {
-            try {
-                process(robot.getSymbol(processor.getName()));
-            } catch (IOException | InterruptedException ignored) {}
+            if (processor.getName() != null) {
+                try {
+                    process(robot.getSymbol(processor.getName()));
+                } catch (IOException | InterruptedException ignored) {}
+            }
         }
     }
 }

@@ -17,6 +17,24 @@ public final class ResolveUtil {
         throw new UnsupportedOperationException();
     }
 
+    public static @NotNull List<RapidSymbol> getSymbols(@NotNull RapidReferenceExpression expression) {
+        RapidExpression qualifier = expression.getQualifier();
+        if (qualifier != null) {
+            RapidType dataType = qualifier.getType();
+            if (dataType != null) {
+                RapidStructure structure = dataType.getTargetStructure();
+                if (structure instanceof RapidRecord record) {
+                    return new ArrayList<>(record.getComponents());
+                }
+            }
+            return Collections.emptyList();
+        }
+        ResolveScopeProcessor processor = new ResolveScopeProcessor(expression, null);
+        ResolveScopeVisitor visitor = new ResolveScopeVisitor(expression, processor);
+        visitor.process();
+        return processor.getSymbol();
+    }
+
     public static @Nullable RapidStructure getStructure(@NotNull PsiElement element, @NotNull String name) {
         List<RapidSymbol> results = getSymbols(element, name);
         if (results.size() == 0) return null;

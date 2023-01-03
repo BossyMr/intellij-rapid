@@ -198,8 +198,4 @@ public abstract class RapidElementVisitor extends PsiElementVisitor {
     public void visitLabel(@NotNull RapidLabelStatement statement) {
         visitStatement(statement);
     }
-
-    public void visitFieldList(RapidFieldList element) {
-        visitElement(element);
-    }
 }

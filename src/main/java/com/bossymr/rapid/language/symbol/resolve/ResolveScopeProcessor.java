@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.Processor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,13 +20,13 @@ public class ResolveScopeProcessor implements Processor<RapidSymbol> {
     private final PsiElement context;
     private final String name;
 
-    public ResolveScopeProcessor(@NotNull PsiElement context, @NotNull String name) {
+    public ResolveScopeProcessor(@NotNull PsiElement context, @Nullable String name) {
         this.symbols = new ArrayList<>();
         this.context = context;
         this.name = name;
     }
 
-    public @NotNull String getName() {
+    public @Nullable String getName() {
         return name;
     }
 
@@ -35,7 +36,7 @@ public class ResolveScopeProcessor implements Processor<RapidSymbol> {
 
     @Override
     public boolean process(@NotNull RapidSymbol symbol) {
-        if (!this.name.equalsIgnoreCase(symbol.getName())) {
+        if (this.name != null && !(this.name.equalsIgnoreCase(symbol.getName()))) {
             return true;
         }
         if (isAccessible(symbol)) {
