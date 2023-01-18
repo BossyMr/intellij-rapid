@@ -27,11 +27,11 @@ public class RapidUnaryExpressionImpl extends RapidExpressionImpl implements Rap
         if (expression != null) {
             RapidType rapidType = expression.getType();
             IElementType sign = getSign().getNode().getElementType();
+            if (rapidType == null) return null;
             if (TokenSet.create(RapidTokenTypes.PLUS, RapidTokenTypes.MINUS).contains(sign)) {
-                if (rapidType == null) return null;
                 return RapidType.NUMBER.isAssignable(rapidType) || RapidType.DOUBLE.isAssignable(rapidType) ? rapidType : null;
             } else if (RapidTokenTypes.NOT_KEYWORD.equals(sign)) {
-                return RapidType.BOOLEAN;
+                return RapidType.BOOLEAN.isAssignable(rapidType) ? rapidType : null;
             }
             throw new RuntimeException();
         } else {

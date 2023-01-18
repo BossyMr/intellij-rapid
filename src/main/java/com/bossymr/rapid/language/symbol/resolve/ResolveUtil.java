@@ -32,7 +32,7 @@ public final class ResolveUtil {
         ResolveScopeProcessor processor = new ResolveScopeProcessor(expression, null);
         ResolveScopeVisitor visitor = new ResolveScopeVisitor(expression, processor);
         visitor.process();
-        return processor.getSymbol();
+        return processor.getSymbols();
     }
 
     public static @Nullable RapidStructure getStructure(@NotNull PsiElement element, @NotNull String name) {
@@ -71,7 +71,7 @@ public final class ResolveUtil {
     public static @NotNull List<RapidSymbol> getSymbols(@NotNull PsiElement element, @NotNull ResolveScopeProcessor processor) {
         ResolveScopeVisitor visitor = new ResolveScopeVisitor(element, processor);
         visitor.process();
-        return processor.getSymbol();
+        return processor.getSymbols();
     }
 
 }

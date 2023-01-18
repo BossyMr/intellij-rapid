@@ -39,7 +39,7 @@ public class RobotImpl implements Robot {
     public RobotImpl(@NotNull RobotService robotService) throws IOException, InterruptedException {
         this.robotService = robotService;
         robotState = RobotUtil.getRobotState(robotService);
-        RemoteService.getInstance().setRobotState(robotState);
+        RemoteRobotService.getInstance().setRobotState(robotState);
         symbols = RobotUtil.getSymbols(robotState);
         tasks = new ArrayList<>();
         download();
@@ -54,7 +54,7 @@ public class RobotImpl implements Robot {
      */
     public RobotImpl(@NotNull RobotState robotState) {
         this.robotState = robotState;
-        RemoteService.getInstance().setRobotState(robotState);
+        RemoteRobotService.getInstance().setRobotState(robotState);
         symbols = RobotUtil.getSymbols(robotState);
         tasks = new ArrayList<>();
         retrieve();
@@ -82,6 +82,7 @@ public class RobotImpl implements Robot {
 
     @Override
     public @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException {
+        name = name.toLowerCase();
         if (symbols.containsKey(name)) {
             return symbols.get(name);
         } else {
@@ -204,6 +205,7 @@ public class RobotImpl implements Robot {
             File[] taskFiles = defaultFile.listFiles();
             if (taskFiles != null) {
                 for (File taskFile : taskFiles) {
+                    // TODO: 2023-01-13 Change to using File
                     VirtualFile taskVirtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(taskFile);
                     assert taskVirtualFile != null;
                     File[] moduleFiles = taskFile.listFiles();
@@ -244,7 +246,7 @@ public class RobotImpl implements Robot {
         RobotUtil.setCredentials(path, credentials);
         robotService = RobotService.connect(path, credentials);
         robotState = RobotUtil.getRobotState(robotService);
-        RemoteService.getInstance().setRobotState(robotState);
+        RemoteRobotService.getInstance().setRobotState(robotState);
         symbols = RobotUtil.getSymbols(robotState);
         retrieve();
         RobotUtil.reload();

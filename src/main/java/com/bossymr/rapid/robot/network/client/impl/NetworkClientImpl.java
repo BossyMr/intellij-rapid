@@ -118,14 +118,10 @@ public class NetworkClientImpl implements NetworkClient {
 
     private synchronized <T> @NotNull HttpResponse<T> notify(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
         CompletableFuture<Void> lock = new CompletableFuture<>();
-        locks.add(lock);
-        int index = locks.indexOf(lock);
-        if (index >= MAX_CONNECTIONS) {
-            try {
-                locks.get(index - 1).get();
-            } catch (ExecutionException e) {
-                throw new RuntimeException(e);
-            }
+        try {
+            getLock(lock).get();
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
         }
         HttpResponse<T> response = null;
         try {
@@ -139,9 +135,6 @@ public class NetworkClientImpl implements NetworkClient {
             lock.complete(null);
             LOG.info("Request: '" + httpRequest + "'" + (response != null ? " - Response: '" + response + "'" : ""));
         }
-        locks.remove(lock);
-        lock.complete(null);
-        LOG.info("Request: '" + httpRequest + "' - Response: '" + response + "'");
         return response;
     }
 
@@ -174,20 +167,19 @@ public class NetworkClientImpl implements NetworkClient {
                 });
     }
 
-    private synchronized <T> @NotNull CompletableFuture<HttpResponse<T>> notifyAsync(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
-        assert httpRequest.headers().allValues("Authorization").size() <= 1;
-        CompletableFuture<Void> waiting = null;
-        CompletableFuture<Void> lock = new CompletableFuture<>();
+    private synchronized @NotNull CompletableFuture<Void> getLock(@NotNull CompletableFuture<Void> lock) {
         locks.add(lock);
         int index = locks.indexOf(lock);
         if (index >= MAX_CONNECTIONS) {
-            waiting = locks.get(index - 1);
+            return locks.get(index - 1);
         }
-        if (waiting == null) {
-            waiting = new CompletableFuture<>();
-            waiting.complete(null);
-        }
-        return waiting
+        return CompletableFuture.completedFuture(null);
+    }
+
+    private synchronized <T> @NotNull CompletableFuture<HttpResponse<T>> notifyAsync(@NotNull HttpRequest httpRequest, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
+        assert httpRequest.headers().allValues("Authorization").size() <= 1;
+        CompletableFuture<Void> lock = new CompletableFuture<>();
+        return getLock(lock)
                 .thenComposeAsync((ignored) -> httpClient.sendAsync(httpRequest, bodyHandler))
                 .exceptionallyAsync((throwable) -> {
                     locks.remove(lock);

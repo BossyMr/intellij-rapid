@@ -49,6 +49,6 @@ public class PhysicalLabelStatement extends RapidElementImpl implements RapidLab
 
     @Override
     public String toString() {
-        return "PhysicalLabelStatement:" + getName();
+        return "PhysicalLabelStatement:" + this.getName();
     }
 }

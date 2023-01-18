@@ -4,8 +4,10 @@ import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
+import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
-import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.Robot;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
@@ -64,21 +66,25 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     }
 
     @Override
-    public void visitArgument(@NotNull RapidArgument argument) {
-        if (previous.equals(argument.getParameter())) {
-            RapidRoutine routine = getRoutine(argument);
-            if (routine != null) {
-                List<RapidParameterGroup> parameters = routine.getParameters();
-                if (parameters != null) {
-                    for (RapidParameterGroup group : parameters) {
-                        for (RapidParameter parameter : group.getParameters()) {
-                            process(parameter);
-                        }
+    public void visitRoutine(@NotNull PhysicalRoutine routine) {
+        if (previous instanceof RapidStatementList) {
+            List<PhysicalParameterGroup> groups = routine.getParameters();
+            if (groups != null) {
+                for (RapidParameterGroup group : groups) {
+                    for (RapidParameter parameter : group.getParameters()) {
+                        process(parameter);
                     }
                 }
             }
+            Collection<RapidLabelStatement> labelStatements = PsiTreeUtil.findChildrenOfType(routine, RapidLabelStatement.class);
+            for (RapidLabelStatement labelStatement : labelStatements) {
+                process(labelStatement);
+            }
+            for (RapidField field : routine.getFields()) {
+                process(field);
+            }
         }
-        super.visitArgument(argument);
+        super.visitRoutine(routine);
     }
 
     private @Nullable RapidRoutine getRoutine(@NotNull RapidArgument argument) {
@@ -118,31 +124,27 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     }
 
     @Override
-    public void visitRoutine(@NotNull PhysicalRoutine routine) {
-        if (previous instanceof RapidStatementList) {
-            List<RapidParameterGroup> groups = routine.getParameters();
-            if (groups != null) {
-                for (RapidParameterGroup group : groups) {
-                    for (RapidParameter parameter : group.getParameters()) {
-                        process(parameter);
+    public void visitArgument(@NotNull RapidArgument argument) {
+        if (previous.equals(argument.getParameter())) {
+            RapidRoutine routine = getRoutine(argument);
+            if (routine != null) {
+                List<? extends RapidParameterGroup> parameters = routine.getParameters();
+                if (parameters != null) {
+                    for (RapidParameterGroup group : parameters) {
+                        for (RapidParameter parameter : group.getParameters()) {
+                            process(parameter);
+                        }
                     }
                 }
             }
-            Collection<RapidLabelStatement> labelStatements = PsiTreeUtil.findChildrenOfType(routine, RapidLabelStatement.class);
-            for (RapidLabelStatement labelStatement : labelStatements) {
-                process(labelStatement);
-            }
-            for (RapidField field : routine.getFields()) {
-                process(field);
-            }
         }
-        super.visitRoutine(routine);
+        super.visitArgument(argument);
     }
 
     private void visitProject(@NotNull PsiElement context) {
         PhysicalModule physicalModule = PsiTreeUtil.getParentOfType(context, PhysicalModule.class);
         boolean isRemoteFile = isRemoteFile(context);
-        RemoteService service = RemoteService.getInstance();
+        RemoteRobotService service = RemoteRobotService.getInstance();
         Robot robot = service.getRobot();
         if (robot != null) {
             for (RapidTask task : robot.getTasks()) {
@@ -157,7 +159,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         }
         if (!(isRemoteFile)) {
             PsiManager manager = PsiManager.getInstance(context.getProject());
-            for (VirtualFile virtualFile : FileTypeIndex.getFiles(RapidFileType.INSTANCE, GlobalSearchScope.projectScope(context.getProject()))) {
+            for (VirtualFile virtualFile : FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(context.getProject()))) {
                 PsiFile file = manager.findFile(virtualFile);
                 if (file != null) {
                     visitFile(file);
@@ -169,7 +171,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     private boolean isRemoteFile(@NotNull PsiElement element) {
         PsiFile containingFile = element.getContainingFile();
         VirtualFile virtualFile = containingFile.getVirtualFile();
-        RemoteService service = RemoteService.getInstance();
+        RemoteRobotService service = RemoteRobotService.getInstance();
         Robot robot = service.getRobot();
         if (robot != null) {
             for (RapidTask task : robot.getTasks()) {
@@ -182,13 +184,18 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     }
 
     private void visitRobot() {
-        RemoteService service = RemoteService.getInstance();
+        RemoteRobotService service = RemoteRobotService.getInstance();
         Robot robot = service.getRobot();
         if (robot != null) {
-            if (processor.getName() != null) {
-                try {
+            try {
+                if (processor.getName() != null) {
                     process(robot.getSymbol(processor.getName()));
-                } catch (IOException | InterruptedException ignored) {}
+                } else {
+                    for (VirtualSymbol symbol : robot.getSymbols()) {
+                        process(symbol);
+                    }
+                }
+            } catch (IOException | InterruptedException ignored) {
             }
         }
     }

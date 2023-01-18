@@ -36,6 +36,9 @@ public class ResolveScopeProcessor implements Processor<RapidSymbol> {
 
     @Override
     public boolean process(@NotNull RapidSymbol symbol) {
+        if (symbols.contains(symbol)) {
+            throw new IllegalArgumentException();
+        }
         if (this.name != null && !(this.name.equalsIgnoreCase(symbol.getName()))) {
             return true;
         }
@@ -62,7 +65,7 @@ public class ResolveScopeProcessor implements Processor<RapidSymbol> {
         return true;
     }
 
-    public @NotNull List<RapidSymbol> getSymbol() {
+    public @NotNull List<RapidSymbol> getSymbols() {
         return symbols;
     }
 

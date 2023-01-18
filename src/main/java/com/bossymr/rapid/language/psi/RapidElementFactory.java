@@ -26,7 +26,7 @@ public final class RapidElementFactory {
     }
 
     private @NotNull RapidFile createDummyFile(@NotNull String text) {
-        return (RapidFile) PsiFileFactory.getInstance(project).createFileFromText(DUMMY_FILE_NAME, RapidFileType.INSTANCE, text);
+        return (RapidFile) PsiFileFactory.getInstance(project).createFileFromText(DUMMY_FILE_NAME, RapidFileType.getInstance(), text);
     }
 
     /**

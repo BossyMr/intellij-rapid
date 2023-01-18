@@ -6,4 +6,8 @@ public interface RapidVariable extends RapidSymbol {
 
     @Nullable RapidType getType();
 
+    default boolean readOnly() {
+        return false;
+    }
+
 }

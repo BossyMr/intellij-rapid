@@ -31,7 +31,10 @@ public class RapidIndexExpressionImpl extends RapidExpressionImpl implements Rap
     @Override
     public @Nullable RapidType getType() {
         RapidType type = getExpression().getType();
-        return type != null ? type.createArrayType(0) : null;
+        if (type == null) return null;
+        int dimensions = getArray().getDimensions().size();
+        if (type.getDimensions() < dimensions) return null;
+        return type.createArrayType(type.getDimensions() - dimensions);
     }
 
     @Override

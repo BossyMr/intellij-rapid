@@ -124,7 +124,7 @@ public interface Symbol extends EntityModel {
         @Nullable String getDimensions();
 
         @Property("rdonly")
-        boolean isRead();
+        boolean isReadOnly();
 
         @Property("taskvar")
         boolean isTask();
@@ -138,7 +138,7 @@ public interface Symbol extends EntityModel {
         @Nullable String getDimensions();
 
         @Property("rdonly")
-        boolean isRead();
+        boolean isReadOnly();
 
         @Property("taskpers")
         boolean isTask();

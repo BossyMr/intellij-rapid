@@ -331,7 +331,7 @@ private inner_statement_list ::= (local_variable | statement_with_recovery)*
 
 private statement_with_recovery ::= !('ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'UNDO' | 'ERROR' | 'BACKWARD' | 'DEFAULT') statement {pin=1 recoverWhile=statement_recovery}
 
-private parameter_statement_recovery ::= !('LOCAL' | 'TASK' | 'CONST' | '<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD') symbol_recovery
+private parameter_statement_recovery ::= !('LOCAL' | 'TASK' | 'CONST' | '<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD' | "MODULE" | 'ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>' | 'ALIAS' | 'RECORD' | 'FUNC' | 'PROC' | 'TRAP')
 
 private statement_recovery ::= !(IDENTIFIER) parameter_statement_recovery
 

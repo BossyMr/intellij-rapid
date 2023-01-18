@@ -47,7 +47,7 @@ public class RapidFileImpl extends PsiFileBase implements RapidFile {
 
     @Override
     public @NotNull FileType getFileType() {
-        return RapidFileType.INSTANCE;
+        return RapidFileType.getInstance();
     }
 
     @Override

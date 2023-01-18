@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.ui;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.robot.RemoteRobotService;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
@@ -106,7 +106,7 @@ public class RobotConnectView extends DialogWrapper {
         Task.Backgroundable task = new Task.Backgroundable(project, RapidBundle.message("robot.connect.progress.indicator.title", hostField.getText())) {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
-                RemoteService service = RemoteService.getInstance();
+                RemoteRobotService service = RemoteRobotService.getInstance();
                 URI path = URI.create("http" + "://" + hostField.getText() + ":" + portField.getText());
                 Credentials credentials = authenticationComboBox.getItem().equals(AuthenticationType.DEFAULT) ? new Credentials("Default User", "robotics".toCharArray()) :
                         new Credentials(userField.getText(), passwordField.getPassword());

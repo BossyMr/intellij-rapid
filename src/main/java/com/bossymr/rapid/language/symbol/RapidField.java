@@ -36,7 +36,25 @@ public interface RapidField extends RapidVariable, RapidAccessibleSymbol {
     }
 
     enum Attribute {
-        VARIABLE, CONSTANT, PERSISTENT;
+        VARIABLE(RapidTokenTypes.VAR_KEYWORD, "VAR"),
+        CONSTANT(RapidTokenTypes.CONST_KEYWORD, "CONST"),
+        PERSISTENT(RapidTokenTypes.PERS_KEYWORD, "PERS");
+
+        private final IElementType elementType;
+        private final String text;
+
+        Attribute(@NotNull IElementType elementType, @NotNull String text) {
+            this.elementType = elementType;
+            this.text = text;
+        }
+
+        public @NotNull IElementType getElementType() {
+            return elementType;
+        }
+
+        public @NotNull String getText() {
+            return text;
+        }
 
         public static @NotNull Attribute getAttribute(@NotNull PsiElement element) {
             TokenSet tokenSet = TokenSet.create(RapidTokenTypes.VAR_KEYWORD, RapidTokenTypes.CONST_KEYWORD, RapidTokenTypes.PERS_KEYWORD);

@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.symbol.ValueType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
@@ -44,8 +45,16 @@ public class RapidBinaryExpressionImpl extends RapidExpressionImpl implements Ra
         RapidType right = getRight() != null ? getRight().getType() : null;
         IElementType sign = getSign().getNode().getElementType();
         if (left == null || right == null) return null;
-        if (List.of(OR_KEYWORD, XOR_KEYWORD, AND_KEYWORD, LT, LE, EQ, GT, GE, LTGT).contains(sign)) {
+        if (left.getDimensions() == 0 && right.getDimensions() == 0 && List.of(OR_KEYWORD, XOR_KEYWORD, AND_KEYWORD, LT, LE, GT, GE).contains(sign)) {
             return RapidType.BOOLEAN;
+        }
+        if (sign == LTGT) {
+            return RapidType.BOOLEAN;
+        }
+        if (sign == EQ) {
+            if (left.isAssignable(right) && left.getValueType() != null && left.getValueType() == ValueType.VALUE_TYPE) {
+                return RapidType.BOOLEAN;
+            }
         }
         if (left.isAssignable(RapidType.NUMBER) && right.isAssignable(RapidType.NUMBER))
             return RapidType.NUMBER;

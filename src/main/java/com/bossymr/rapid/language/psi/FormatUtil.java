@@ -239,7 +239,7 @@ public class FormatUtil {
         if (options.contains(Option.SHOW_PARAMETERS)) {
             if (routine.getParameters() != null) {
                 buffer.append('(');
-                List<RapidParameterGroup> groups = routine.getParameters();
+                List<? extends RapidParameterGroup> groups = routine.getParameters();
                 for (int i = 0; i < Math.min(groups.size(), length); i++) {
                     if (i > 0) {
                         buffer.append(", ");
@@ -265,7 +265,7 @@ public class FormatUtil {
         if (options.contains(Option.SHOW_VISIBILITY)) {
             if (group.isOptional()) buffer.append('\\');
         }
-        List<RapidParameter> parameters = group.getParameters();
+        List<? extends RapidParameter> parameters = group.getParameters();
         for (int i = 0; i < parameters.size(); i++) {
             if (i > 0) buffer.append(" | ");
             RapidParameter parameter = parameters.get(i);

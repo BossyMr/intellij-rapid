@@ -97,7 +97,7 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
     @Override
     public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
         RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
-        String previousName = getName();
+        String previousName = this.getName();
         PsiFile containingFile = getContainingFile();
         VirtualFile virtualFile = getContainingFile().getVirtualFile();
         if (virtualFile != null) {
@@ -147,6 +147,6 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
 
     @Override
     public String toString() {
-        return "PhysicalModule:" + getName();
+        return "PhysicalModule:" + this.getName();
     }
 }

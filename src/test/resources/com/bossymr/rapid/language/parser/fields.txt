@@ -1,0 +1,43 @@
+RapidFile:fields.mod
+  PhysicalModule:DUMMY
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    PsiWhiteSpace('\n\n    ')
+    RapidAttributeList:
+      <empty list>
+    PhysicalField:DUMMY
+      PsiElement(Rapid:LOCAL)('LOCAL')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:VAR)('VAR')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:TYPE
+        RapidReferenceExpression:TYPE
+          PsiElement(Rapid:IDENTIFIER)('TYPE')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('DUMMY')
+      RapidArray:{size}
+        PsiElement(Rapid:{)('{')
+        RapidReferenceExpression:size
+          PsiElement(Rapid:IDENTIFIER)('size')
+        PsiElement(Rapid:})('}')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid::=)(':=')
+      PsiWhiteSpace(' ')
+      RapidLiteralExpression:""
+        PsiElement(Rapid:STRING_LITERAL)('""')
+      PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalField:null
+      PsiElement(Rapid:TASK)('TASK')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:PERS)('PERS')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:NO_TYPE
+        RapidReferenceExpression:NO_TYPE
+          PsiElement(Rapid:IDENTIFIER)('NO_TYPE')
+      PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got ';'
+        <empty list>
+      PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n\n')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')

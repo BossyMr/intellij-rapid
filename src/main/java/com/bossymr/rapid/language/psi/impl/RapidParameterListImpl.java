@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.psi.impl;
 
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterListStub;
-import com.bossymr.rapid.language.symbol.RapidParameterGroup;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.impl.source.tree.TreeElement;
@@ -27,7 +26,7 @@ public class RapidParameterListImpl extends RapidStubElement<RapidParameterListS
     }
 
     @Override
-    public @NotNull List<RapidParameterGroup> getParameters() {
+    public @NotNull List<PhysicalParameterGroup> getParameters() {
         return List.of(getStubOrPsiChildren(RapidStubElementTypes.PARAMETER_GROUP, new PhysicalParameterGroup[0]));
     }
 

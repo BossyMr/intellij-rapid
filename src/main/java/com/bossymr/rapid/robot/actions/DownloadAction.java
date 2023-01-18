@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.actions;
 
-import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.impl.RobotUtil;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
@@ -24,7 +24,7 @@ public class DownloadAction extends AnAction {
         Task.Backgroundable task = new Task.Backgroundable(project, "Downloading...") {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
-                RemoteService service = RemoteService.getInstance();
+                RemoteRobotService service = RemoteRobotService.getInstance();
                 Robot robot = service.getRobot();
                 assert robot != null;
                 try {

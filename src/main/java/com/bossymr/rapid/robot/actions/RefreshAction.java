@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.actions;
 
-import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.Robot;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -16,24 +16,6 @@ import java.io.IOException;
 
 public class RefreshAction extends AnAction {
     @Override
-    public void actionPerformed(@NotNull AnActionEvent e) {
-        Project project = e.getProject();
-        assert project != null;
-        Task.Backgroundable task = new Task.Backgroundable(project, "Refreshing...") {
-            @Override
-            public void run(@NotNull ProgressIndicator indicator) {
-                RemoteService service = RemoteService.getInstance();
-                Robot robot = service.getRobot();
-                assert robot != null;
-                try {
-                    robot.reconnect();
-                } catch (IOException | InterruptedException ignored) {}
-            }
-        };
-        ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));
-    }
-
-    @Override
     public @NotNull ActionUpdateThread getActionUpdateThread() {
         return ActionUpdateThread.BGT;
     }
@@ -42,6 +24,24 @@ public class RefreshAction extends AnAction {
     public void update(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         e.getPresentation().setEnabled(project != null &&
-                RemoteService.getInstance().getRobot() != null);
+                RemoteRobotService.getInstance().getRobot() != null);
+    }
+
+    @Override
+    public void actionPerformed(@NotNull AnActionEvent e) {
+        Project project = e.getProject();
+        assert project != null;
+        Task.Backgroundable task = new Task.Backgroundable(project, "Refreshing...") {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                RemoteRobotService service = RemoteRobotService.getInstance();
+                Robot robot = service.getRobot();
+                assert robot != null;
+                try {
+                    robot.reconnect();
+                } catch (IOException | InterruptedException ignored) {}
+            }
+        };
+        ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));
     }
 }

@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static com.intellij.patterns.PlatformPatterns.psiElement;
 
-public class RapidCompletionContributor extends CompletionContributor {
+public class RapidKeywordCompletionContributor extends CompletionContributor {
 
     public static PsiElementPattern<? extends PsiElement, ?> INSIDE_ATTRIBUTE_LIST = psiElement()
             .withAncestor(2, psiElement(RapidAttributeList.class).withParent(PhysicalModule.class));
@@ -111,7 +111,7 @@ public class RapidCompletionContributor extends CompletionContributor {
                     psiElement().withSuperParent(3, psiElement(RapidStatementList.class).withParent(RapidTestCaseStatement.class))
             );
 
-    public RapidCompletionContributor() {
+    public RapidKeywordCompletionContributor() {
         extend(CompletionType.BASIC, INSIDE_ATTRIBUTE_LIST, new RapidKeywordCompletionProvider("SYSMODULE", "NOVIEW", "NOSTEPIN", "VIEWONLY", "READONLY"));
         extend(CompletionType.BASIC, INSIDE_MODULE.andNot(psiElement().afterLeaf("LOCAL", "TASK")), new RapidKeywordCompletionProvider("<TDN>", "<DDN>", "<RDN>", "LOCAL", "TASK", "ALIAS", "RECORD", "VAR", "PERS", "CONST", "FUNC", "PROC", "TRAP", "ENDMODULE"));
 

@@ -33,6 +33,11 @@ public class PhysicalTargetVariable extends RapidElementImpl implements RapidTar
     }
 
     @Override
+    public boolean readOnly() {
+        return true;
+    }
+
+    @Override
     public int getTextOffset() {
         ASTNode name = findChildByType(RapidTokenTypes.IDENTIFIER);
         return name != null ? name.getStartOffset() : super.getTextOffset();
@@ -61,6 +66,6 @@ public class PhysicalTargetVariable extends RapidElementImpl implements RapidTar
 
     @Override
     public String toString() {
-        return "RapidTargetVariable:" + getName();
+        return "RapidTargetVariable:" + this.getName();
     }
 }

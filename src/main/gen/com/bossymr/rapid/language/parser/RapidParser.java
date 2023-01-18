@@ -1763,30 +1763,19 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // !('LOCAL' | 'TASK' | 'CONST' | '<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD') symbol_recovery
+  // !('LOCAL' | 'TASK' | 'CONST' | '<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD' | "MODULE" | 'ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>' | 'ALIAS' | 'RECORD' | 'FUNC' | 'PROC' | 'TRAP')
   static boolean parameter_statement_recovery(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "parameter_statement_recovery")) return false;
     boolean result_;
-    Marker marker_ = enter_section_(builder_);
-    result_ = parameter_statement_recovery_0(builder_, level_ + 1);
-    result_ = result_ && symbol_recovery(builder_, level_ + 1);
-    exit_section_(builder_, marker_, null, result_);
-    return result_;
-  }
-
-  // !('LOCAL' | 'TASK' | 'CONST' | '<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD')
-  private static boolean parameter_statement_recovery_0(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "parameter_statement_recovery_0")) return false;
-    boolean result_;
     Marker marker_ = enter_section_(builder_, level_, _NOT_);
-    result_ = !parameter_statement_recovery_0_0(builder_, level_ + 1);
+    result_ = !parameter_statement_recovery_0(builder_, level_ + 1);
     exit_section_(builder_, level_, marker_, result_, false, null);
     return result_;
   }
 
-  // 'LOCAL' | 'TASK' | 'CONST' | '<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD'
-  private static boolean parameter_statement_recovery_0_0(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "parameter_statement_recovery_0_0")) return false;
+  // 'LOCAL' | 'TASK' | 'CONST' | '<SMT>' | 'GOTO' | 'RETURN' |'RAISE' | 'EXIT' | 'RETRY' | 'CONNECT' | 'TRYNEXT' | '%' | 'IF' | 'FOR' | 'WHILE' | 'TEST' | 'ENDFUNC' | 'ENDPROC' | 'ENDTRAP' | 'ENDIF' | 'ELSEIF' | 'ELSE' | 'ENDFOR' | 'ENDWHILE' | 'ENDTEST' | 'CASE' | 'DEFAULT' | 'UNDO' | 'ERROR' | 'BACKWARD' | "MODULE" | 'ENDMODULE' | '<TDN>' | '<DDN>' | '<RDN>' | 'ALIAS' | 'RECORD' | 'FUNC' | 'PROC' | 'TRAP'
+  private static boolean parameter_statement_recovery_0(PsiBuilder builder_, int level_) {
+    if (!recursion_guard_(builder_, level_, "parameter_statement_recovery_0")) return false;
     boolean result_;
     result_ = consumeTokenFast(builder_, LOCAL_KEYWORD);
     if (!result_) result_ = consumeTokenFast(builder_, TASK_KEYWORD);
@@ -1818,6 +1807,16 @@ public class RapidParser implements PsiParser, LightPsiParser {
     if (!result_) result_ = consumeTokenFast(builder_, UNDO_KEYWORD);
     if (!result_) result_ = consumeTokenFast(builder_, ERROR_KEYWORD);
     if (!result_) result_ = consumeTokenFast(builder_, BACKWARD_KEYWORD);
+    if (!result_) result_ = consumeTokenFast(builder_, MODULE_KEYWORD);
+    if (!result_) result_ = consumeTokenFast(builder_, ENDMODULE_KEYWORD);
+    if (!result_) result_ = consumeTokenFast(builder_, TDN_PLACEHOLDER);
+    if (!result_) result_ = consumeTokenFast(builder_, DDN_PLACEHOLDER);
+    if (!result_) result_ = consumeTokenFast(builder_, RDN_PLACEHOLDER);
+    if (!result_) result_ = consumeTokenFast(builder_, ALIAS_KEYWORD);
+    if (!result_) result_ = consumeTokenFast(builder_, RECORD_KEYWORD);
+    if (!result_) result_ = consumeTokenFast(builder_, FUNC_KEYWORD);
+    if (!result_) result_ = consumeTokenFast(builder_, PROC_KEYWORD);
+    if (!result_) result_ = consumeTokenFast(builder_, TRAP_KEYWORD);
     return result_;
   }
 

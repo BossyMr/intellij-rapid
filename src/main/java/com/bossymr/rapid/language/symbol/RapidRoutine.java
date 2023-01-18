@@ -19,13 +19,17 @@ import java.util.List;
 
 public interface RapidRoutine extends RapidAccessibleSymbol {
 
+    static boolean isRoutine(@NotNull RapidSymbol symbol, @NotNull Attribute attribute) {
+        return symbol instanceof RapidRoutine routine && routine.getAttribute() == attribute;
+    }
+
     @NotNull Attribute getAttribute();
 
     @Nullable RapidType getType();
 
-    @Nullable List<RapidParameterGroup> getParameters();
+    @Nullable List<? extends RapidParameterGroup> getParameters();
 
-    @NotNull List<RapidField> getFields();
+    @NotNull List<? extends RapidField> getFields();
 
     @NotNull List<RapidStatement> getStatements();
 
@@ -41,7 +45,17 @@ public interface RapidRoutine extends RapidAccessibleSymbol {
     }
 
     enum Attribute {
-        FUNCTION, PROCEDURE, TRAP;
+        FUNCTION(RapidTokenTypes.FUNC_KEYWORD, "FUNC"),
+        PROCEDURE(RapidTokenTypes.PROC_KEYWORD, "PROC"),
+        TRAP(RapidTokenTypes.TRAP_KEYWORD, "TRAP");
+
+        private final IElementType elementType;
+        private final String text;
+
+        Attribute(@NotNull IElementType elementType, @NotNull String text) {
+            this.elementType = elementType;
+            this.text = text;
+        }
 
         public static @NotNull Attribute getAttribute(@NotNull PsiElement element) {
             TokenSet tokenSet = TokenSet.create(RapidTokenTypes.FUNC_KEYWORD, RapidTokenTypes.PROC_KEYWORD, RapidTokenTypes.TRAP_KEYWORD);
@@ -74,6 +88,14 @@ public interface RapidRoutine extends RapidAccessibleSymbol {
                 return Attribute.TRAP;
             }
             throw new AssertionError();
+        }
+
+        public @NotNull IElementType getElementType() {
+            return elementType;
+        }
+
+        public @NotNull String getText() {
+            return text;
         }
     }
 

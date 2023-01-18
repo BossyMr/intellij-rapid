@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterStub;
 import com.bossymr.rapid.language.symbol.RapidParameter;
+import com.bossymr.rapid.language.symbol.RapidParameterGroup;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.intellij.lang.ASTNode;
@@ -24,6 +25,11 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
 
     public PhysicalParameter(@NotNull ASTNode node) {
         super(node);
+    }
+
+    @Override
+    public @NotNull RapidParameterGroup getParameterGroup() {
+        return Objects.requireNonNull(getStubOrPsiParentOfType(PhysicalParameterGroup.class));
     }
 
     @Override
@@ -72,8 +78,9 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
         return this;
     }
 
+
     @Override
     public String toString() {
-        return "PhysicalParameter:" + getName();
+        return "PhysicalParameter:" + this.getName();
     }
 }

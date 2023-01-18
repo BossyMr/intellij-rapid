@@ -11,6 +11,10 @@ public class RapidLanguage extends Language {
         super("RAPID");
     }
 
+    public static @NotNull RapidLanguage getInstance() {
+        return INSTANCE;
+    }
+
     @Override
     public @NotNull String getDisplayName() {
         return "Rapid";

@@ -18,6 +18,8 @@ public interface RapidParameter extends RapidVariable {
 
     @NotNull Attribute getAttribute();
 
+    @NotNull RapidParameterGroup getParameterGroup();
+
     @Override
     default @NotNull Icon getIcon() {
         return RapidIcons.PARAMETER;

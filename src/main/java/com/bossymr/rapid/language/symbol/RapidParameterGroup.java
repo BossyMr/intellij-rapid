@@ -8,5 +8,5 @@ public interface RapidParameterGroup {
 
     boolean isOptional();
 
-    @NotNull List<RapidParameter> getParameters();
+    @NotNull List<? extends RapidParameter> getParameters();
 }

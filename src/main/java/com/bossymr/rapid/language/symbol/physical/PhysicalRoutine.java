@@ -4,9 +4,13 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidRoutineStub;
-import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.symbol.RapidRoutine;
+import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.symbol.SymbolUtil;
+import com.bossymr.rapid.language.symbol.Visibility;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -65,14 +69,14 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     }
 
     @Override
-    public @Nullable List<RapidParameterGroup> getParameters() {
+    public @Nullable List<PhysicalParameterGroup> getParameters() {
         RapidParameterList parameterList = getParameterList();
         return parameterList != null ? parameterList.getParameters() : null;
     }
 
     @Override
-    public @NotNull List<RapidField> getFields() {
-        return List.of(findChildrenByClass(PhysicalField.class));
+    public @NotNull List<PhysicalField> getFields() {
+        return PsiTreeUtil.getChildrenOfTypeAsList(getStatementList(), PhysicalField.class);
     }
 
     @Override
@@ -119,6 +123,6 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
 
     @Override
     public String toString() {
-        return "PhysicalRoutine:" + getName();
+        return "PhysicalRoutine:" + this.getName();
     }
 }

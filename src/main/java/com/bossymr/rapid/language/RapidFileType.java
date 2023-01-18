@@ -18,6 +18,10 @@ public class RapidFileType extends LanguageFileType {
 
     public static final RapidFileType INSTANCE = new RapidFileType();
 
+    public static @NotNull RapidFileType getInstance() {
+        return INSTANCE;
+    }
+
     protected RapidFileType() {
         super(RapidLanguage.INSTANCE);
     }

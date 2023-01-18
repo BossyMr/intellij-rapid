@@ -58,8 +58,8 @@
 
         <!-- Robot -->
 
-        <applicationService serviceInterface="com.bossymr.rapid.robot.RemoteService"
-                            serviceImplementation="com.bossymr.rapid.robot.impl.RemoteServiceImpl"/>
+        <applicationService serviceInterface="com.bossymr.rapid.robot.RemoteRobotService"
+                            serviceImplementation="com.bossymr.rapid.robot.impl.RemoteRobotServiceImpl"/>
 
         <toolWindow id="Robot" anchor="right" icon="com.bossymr.rapid.RapidIcons.ROBOT_TOOL_WINDOW"
                     factoryClass="com.bossymr.rapid.robot.ui.RobotToolWindowFactory"/>
@@ -75,12 +75,25 @@
         <gotoClassContributor implementation="com.bossymr.rapid.ide.navigation.RapidClassNavigationContributor"/>
 
         <completion.contributor language="RAPID"
-                                implementationClass="com.bossymr.rapid.ide.completion.RapidCompletionContributor"/>
+                                implementationClass="com.bossymr.rapid.ide.completion.RapidKeywordCompletionContributor"/>
+        <completion.contributor language="RAPID"
+                                implementationClass="com.bossymr.rapid.ide.completion.RapidSymbolCompletionContributor"/>
 
         <localInspection language="RAPID" enabledByDefault="true" level="WARNING"
                          groupPath="Rapid" groupKey="inspection.group.declaration.redundancy"
                          bundle="messages.RapidBundle" key="inspection.name.unused.declaration"
                          implementationClass="com.bossymr.rapid.ide.inspection.UnusedDeclarationInspection"/>
+        <documentationProvider implementation="com.bossymr.rapid.ide.documentation.RapidDocumentationProvider"/>
+
+        <langCodeStyleSettingsProvider
+                implementation="com.bossymr.rapid.ide.codeStyle.RapidLanguageCodeStyleSettingsProvider"/>
+
+        <lang.formatter language="RAPID"
+                        implementationClass="com.bossymr.rapid.ide.codeStyle.RapidFormattingModelBuilder"/>
+
+        <lang.commenter language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidCommenter"/>
+        <lang.braceMatcher language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidBraceMatcher"/>
+        <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.RapidQuoteHandler"/>
     </extensions>
 
     <actions>

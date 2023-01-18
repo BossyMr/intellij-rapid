@@ -4,7 +4,6 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterGroupStub;
-import com.bossymr.rapid.language.symbol.RapidParameter;
 import com.bossymr.rapid.language.symbol.RapidParameterGroup;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.impl.source.tree.TreeElement;
@@ -40,7 +39,7 @@ public class PhysicalParameterGroup extends RapidStubElement<RapidParameterGroup
     }
 
     @Override
-    public @NotNull List<RapidParameter> getParameters() {
+    public @NotNull List<PhysicalParameter> getParameters() {
         return List.of(getStubOrPsiChildren(RapidStubElementTypes.PARAMETER, new PhysicalParameter[0]));
     }
 

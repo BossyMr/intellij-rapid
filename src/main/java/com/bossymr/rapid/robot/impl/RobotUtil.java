@@ -3,7 +3,7 @@ package com.bossymr.rapid.robot.impl;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.ResponseStatusException;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotState;
@@ -68,7 +68,7 @@ public final class RobotUtil {
         ApplicationManager.getApplication().invokeLater(() -> {
             Project[] projects = ProjectManager.getInstance().getOpenProjects();
             for (Project project : projects) {
-                Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.INSTANCE, GlobalSearchScope.projectScope(project));
+                Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(project));
                 PsiDocumentManager.getInstance(project).reparseFiles(virtualFiles, true);
             }
         });
@@ -76,7 +76,7 @@ public final class RobotUtil {
 
     public static boolean isConnected(@Nullable Project project) {
         if (project != null) {
-            RemoteService service = RemoteService.getInstance();
+            RemoteRobotService service = RemoteRobotService.getInstance();
             Robot robot = service.getRobot();
             if (robot != null) {
                 return robot.getRobotService() != null;
@@ -188,7 +188,7 @@ public final class RobotUtil {
 
     public static @NotNull RobotState.SymbolState getSymbolState(@NotNull Symbol symbol) {
         RobotState.SymbolState symbolState = new RobotState.SymbolState();
-        symbolState.title = symbol.getTitle();
+        symbolState.title = symbol.getTitle().toLowerCase();
         symbolState.type = symbol.getType();
         symbolState.fields = symbol.getFields();
         symbolState.links = new HashMap<>();
@@ -199,7 +199,7 @@ public final class RobotUtil {
     }
 
     public static void showNotification(@Nullable Project project, @NotNull URI path) {
-        RemoteService remoteService = RemoteService.getInstance();
+        RemoteRobotService remoteService = RemoteRobotService.getInstance();
         Robot robot = remoteService.getRobot();
         if (robot != null) {
             if (robot.getRobotService() != null) {

@@ -61,6 +61,6 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
 
     @Override
     public String toString() {
-        return "PhysicalComponent:" + getName();
+        return "PhysicalComponent:" + this.getName();
     }
 }

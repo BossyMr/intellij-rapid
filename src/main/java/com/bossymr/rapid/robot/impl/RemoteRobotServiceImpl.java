@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.impl;
 
-import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotState;
@@ -18,7 +18,7 @@ import java.net.URI;
         storages = {
                 @Storage("robot.xml")
         })
-public class RemoteServiceImpl implements RemoteService {
+public class RemoteRobotServiceImpl implements RemoteRobotService {
 
     private @NotNull State state = new State();
 

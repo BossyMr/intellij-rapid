@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.ui.node;
 
-import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.Robot;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.openapi.project.Project;
@@ -19,7 +19,7 @@ public class RobotViewRobotListNode extends RobotViewNode<Project> {
     @Override
     public @NotNull Collection<RobotViewRobotNode> getChildren() {
         List<RobotViewRobotNode> nodes = new ArrayList<>();
-        RemoteService service = RemoteService.getInstance();
+        RemoteRobotService service = RemoteRobotService.getInstance();
         Robot robot = service.getRobot();
         if (robot != null) {
             nodes.add(new RobotViewRobotNode(getProject(), robot));

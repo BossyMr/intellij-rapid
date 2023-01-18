@@ -135,7 +135,6 @@ public final class ModelUtil {
         try {
             return getBuilder().parse(new ByteArrayInputStream(response));
         } catch (SAXException e) {
-            System.out.println(new String(response));
             throw new IOException(e);
         }
     }

@@ -6,8 +6,9 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 
-public interface RapidComponent extends RapidSymbol {
+public interface RapidComponent extends RapidSymbol, RapidVariable {
 
+    @Override
     @Nullable RapidType getType();
 
     @Override

@@ -2,39 +2,45 @@ package com.bossymr.rapid.robot;
 
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.network.NetworkTestUtil;
-import com.intellij.testFramework.LightIdeaTestCase;
+import com.intellij.testFramework.junit5.TestApplication;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 @EnabledIf("com.bossymr.rapid.robot.network.NetworkTestUtil#doNetworkTest")
-public class RobotTest extends LightIdeaTestCase {
+@TestApplication
+public class RobotTest {
 
     private static Robot robot;
 
-    @Override
-    public void setUp() throws Exception {
-        super.setUp();
-        RemoteService remoteService = RemoteService.getInstance();
+    @BeforeEach
+    void setUp() throws IOException, InterruptedException {
+        RemoteRobotService remoteService = RemoteRobotService.getInstance();
         robot = remoteService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
     }
 
-    @Override
-    public void tearDown() throws Exception {
-        super.tearDown();
-        RemoteService remoteService = RemoteService.getInstance();
+    @AfterEach
+    void tearDown() throws IOException {
+        RemoteRobotService remoteService = RemoteRobotService.getInstance();
         remoteService.disconnect();
     }
 
-    public void testSymbol() throws IOException, InterruptedException {
+    @Test
+    public void symbol() throws IOException, InterruptedException {
         Set<VirtualSymbol> symbols = robot.getSymbols();
         VirtualSymbol symbol = robot.getSymbol("num");
         assertTrue(symbols.contains(symbol));
     }
 
-    public void testFetchSymbol() throws IOException, InterruptedException {
+    @Test
+    public void fetchSymbol() throws IOException, InterruptedException {
         String symbolName = "TPErase";
         Set<String> names = robot.getSymbols().stream()
                 .map(VirtualSymbol::getName)

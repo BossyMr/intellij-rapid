@@ -20,7 +20,7 @@ public final class RobotSymbolFactory {
     public RobotSymbolFactory(@NotNull Collection<Symbol> symbols) {
         this.states = new HashMap<>();
         for (Symbol symbol : symbols) {
-            String address = symbol.getTitle().substring(0, symbol.getTitle().lastIndexOf('/'));
+            String address = symbol.getTitle().toLowerCase().substring(0, symbol.getTitle().lastIndexOf('/'));
             states.computeIfAbsent(address, (value) -> new HashMap<>());
             states.get(address).put(getName(symbol), symbol);
         }
@@ -32,14 +32,15 @@ public final class RobotSymbolFactory {
     }
 
     private @NotNull String getName(@NotNull Symbol symbol) {
-        return symbol.getTitle().substring(symbol.getTitle().lastIndexOf('/') + 1);
+        return symbol.getTitle().toLowerCase().substring(symbol.getTitle().lastIndexOf('/') + 1);
     }
 
-    public Map<String, VirtualSymbol> getSymbols() {
-        for (String name : states.get("RAPID").keySet()) {
+    public @NotNull Map<String, VirtualSymbol> getSymbols() {
+        if (states.isEmpty()) return new HashMap<>();
+        for (String name : states.get("rapid").keySet()) {
             getSymbol(name);
         }
-        states.remove("RAPID");
+        states.remove("rapid");
         states.entrySet().removeIf(entry -> processed.contains(entry.getKey()));
         assert states.isEmpty() : states;
         return symbols;
@@ -47,7 +48,7 @@ public final class RobotSymbolFactory {
 
     private @Nullable RapidSymbol getSymbol(@NotNull String name) {
         if (symbols.containsKey(name)) return symbols.get(name);
-        Symbol state = states.get("RAPID").get(name);
+        Symbol state = states.get("rapid").get(name);
         if (state == null) {
             return null;
         }
@@ -102,8 +103,7 @@ public final class RobotSymbolFactory {
 
     private @NotNull RapidAlias getAlias(@NotNull Symbol.AliasSymbol state) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
-        Visibility visibility = state.isLocal() ? Visibility.LOCAL : Visibility.GLOBAL;
-        return getSymbol(new VirtualAlias(visibility, getName(state), dataType));
+        return getSymbol(new VirtualAlias(Visibility.GLOBAL, getName(state), dataType));
     }
 
     private @NotNull RapidComponent getComponent(@NotNull Symbol.ComponentSymbol state) {
@@ -113,27 +113,17 @@ public final class RobotSymbolFactory {
 
     private @NotNull RapidField getField(@NotNull Symbol.FieldSymbol state, @NotNull RapidField.Attribute attribute) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
-        return getSymbol(new VirtualField(getFieldVisibility(state), attribute, getName(state), dataType));
+        boolean readOnly = false;
+        if (state instanceof Symbol.PersistentSymbol persistentSymbol) {
+            readOnly = persistentSymbol.isReadOnly();
+        }
+        if (state instanceof Symbol.VariableSymbol variableSymbol) {
+            readOnly = variableSymbol.isReadOnly();
+        }
+        return getSymbol(new VirtualField(Visibility.GLOBAL, attribute, getName(state), dataType, readOnly));
     }
 
-    private @NotNull Visibility getFieldVisibility(@NotNull Symbol.FieldSymbol state) {
-        if (state instanceof VariableSymbol variableSymbolState) {
-            if (variableSymbolState.isTask()) {
-                return Visibility.TASK;
-            }
-        }
-        if (state instanceof PersistentSymbol persistentSymbolState) {
-            if (persistentSymbolState.isTask()) {
-                return Visibility.TASK;
-            }
-        }
-        if (state.isLocal()) {
-            return Visibility.LOCAL;
-        }
-        return Visibility.GLOBAL;
-    }
-
-    private @NotNull RapidParameter getParameter(@NotNull Symbol.ParameterSymbol state) {
+    private @NotNull VirtualParameter getParameter(@NotNull RapidParameterGroup parameterGroup, @NotNull Symbol.ParameterSymbol state) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
         RapidParameter.Attribute attribute = switch (state.getMode()) {
             case "in" -> RapidParameter.Attribute.INPUT;
@@ -143,14 +133,14 @@ public final class RobotSymbolFactory {
             case "inout" -> RapidParameter.Attribute.INOUT;
             default -> throw new IllegalStateException("Unexpected mode: " + state.getMode());
         };
-        return new VirtualParameter(attribute, getName(state), dataType);
+        return new VirtualParameter(parameterGroup, attribute, getName(state), dataType);
     }
 
     private @NotNull RapidRoutine getRoutine(@NotNull Symbol.RoutineSymbol state, @NotNull RapidRoutine.Attribute attribute) {
-        List<RapidParameterGroup> groups = new ArrayList<>();
+        List<VirtualParameterGroup> groups = new ArrayList<>();
         Map<String, Symbol> parameters = this.states.get(state.getTitle());
         Collection<Symbol> states = parameters != null ? parameters.values() : List.of();
-        assert states.size() == state.getSize();
+        assert states.size() == state.getSize() : state;
         processed.add(state.getTitle());
         for (int i = 0; i < state.getSize(); i++) {
             groups.add(null);
@@ -158,18 +148,18 @@ public final class RobotSymbolFactory {
         for (Symbol symbol : states) {
             assert symbol instanceof ParameterSymbol;
             ParameterSymbol parameterSymbolState = (ParameterSymbol) symbol;
-            if (groups.get(parameterSymbolState.getIndex() - 1) != null) {
-                groups.get(parameterSymbolState.getIndex() - 1).getParameters().add(getParameter(parameterSymbolState));
+            int index = parameterSymbolState.getIndex() - 1;
+            if (groups.get(index) != null) {
+                groups.get(index).getParameters().add(getParameter(groups.get(index), parameterSymbolState));
             } else {
-                groups.set(parameterSymbolState.getIndex() - 1, new VirtualParameterGroup(!parameterSymbolState.isRequired(), new ArrayList<>()));
-                groups.get(parameterSymbolState.getIndex() - 1).getParameters().add(getParameter(parameterSymbolState));
+                groups.set(index, new VirtualParameterGroup(!parameterSymbolState.isRequired(), new ArrayList<>()));
+                groups.get(index).getParameters().add(getParameter(groups.get(index), parameterSymbolState));
             }
         }
         RapidType dataType = state instanceof FunctionSymbol functionSymbolState && functionSymbolState.getDataType().length() > 0 ? new RapidType(getStructure(functionSymbolState.getDataType())) : null;
         groups.removeIf(Objects::isNull);
         assert !groups.contains(null);
-        Visibility visibility = state.isLocal() ? Visibility.LOCAL : Visibility.GLOBAL;
-        VirtualRoutine routine = new VirtualRoutine(visibility, attribute, getName(state), dataType, groups);
+        VirtualRoutine routine = new VirtualRoutine(Visibility.GLOBAL, attribute, getName(state), dataType, groups);
         return getSymbol(routine);
     }
 }

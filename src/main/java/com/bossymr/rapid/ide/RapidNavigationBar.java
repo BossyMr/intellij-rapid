@@ -8,7 +8,7 @@ import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
-import com.bossymr.rapid.robot.RemoteService;
+import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.Robot;
 import com.intellij.ide.navigationToolbar.StructureAwareNavBarModelExtension;
 import com.intellij.lang.Language;
@@ -49,7 +49,7 @@ public class RapidNavigationBar extends StructureAwareNavBarModelExtension {
     public @Nullable PsiElement adjustElement(@NotNull PsiElement element) {
         if (element instanceof PsiDirectory directory) {
             VirtualFile virtualFile = directory.getVirtualFile();
-            RemoteService remoteService = RemoteService.getInstance();
+            RemoteRobotService remoteService = RemoteRobotService.getInstance();
             Robot robot = remoteService.getRobot();
             if (robot != null) {
                 for (RapidTask task : robot.getTasks()) {

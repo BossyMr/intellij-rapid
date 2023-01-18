@@ -16,10 +16,10 @@ import java.util.stream.Collectors;
 public final class RobotState {
 
     @Attribute("name")
-    public String name;
+    public @NotNull String name = "";
 
     @Attribute("path")
-    public String path;
+    public @NotNull String path = "";
 
     public @NotNull Set<SymbolState> symbols = new HashSet<>();
 
@@ -187,7 +187,7 @@ public final class RobotState {
             Map<String, URI> paths = links.entrySet().stream()
                     .map(entry -> Map.entry(entry.getKey(), URI.create(entry.getValue())))
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-            return new Model(title, type, fields, paths);
+            return new Model(title.toLowerCase(), type, fields, paths);
         }
 
         @Override
