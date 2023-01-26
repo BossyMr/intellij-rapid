@@ -15,9 +15,9 @@ public interface SubscribableNetworkCall<T> {
      * close the endpoint.
      *
      * @param priority the subscription priority.
-     * @param onEvent the subscription callback.
+     * @param listener the subscription callback.
      * @return an entity used to unsubscribe.
      */
-    @NotNull SubscriptionEntity subscribe(@NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<T> onEvent);
+    @NotNull SubscriptionEntity subscribe(@NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<T> listener);
 
 }

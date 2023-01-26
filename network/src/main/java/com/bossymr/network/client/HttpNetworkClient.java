@@ -4,8 +4,8 @@ import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionListener;
 import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.client.impl.model.CollectionModel;
-import com.bossymr.network.client.impl.model.Model;
+import com.bossymr.network.client.model.CollectionModel;
+import com.bossymr.network.client.model.Model;
 import com.bossymr.network.client.security.Authenticator;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.network.client.security.impl.DigestAuthenticator;
@@ -21,10 +21,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
 import java.util.function.Supplier;
 
 /**
@@ -34,7 +31,7 @@ import java.util.function.Supplier;
 public class HttpNetworkClient implements NetworkClient {
 
     public static final String WEBSOCKET_PROTOCOl = "robapi2_subscription";
-    private static final String FORM_BODY_CONTENT_TYPE = "application/x-www-form-urlencoded";
+    public static final String FORM_BODY_CONTENT_TYPE = "application/x-www-form-urlencoded";
 
     private final int MAX_CONNECTIONS = 2;
     private final Semaphore channel = new Semaphore(MAX_CONNECTIONS);
@@ -162,7 +159,7 @@ public class HttpNetworkClient implements NetworkClient {
     }
 
     @Override
-    public <T> @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<T> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
+    public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
         SubscriptionEntity entity = new SubscriptionEntity(this, event, priority, listener);
         subscriptions.add(entity);
         if (subscriptions.size() > 1) {
@@ -214,9 +211,9 @@ public class HttpNetworkClient implements NetworkClient {
         }
     }
 
-    private void closeSubscription() {
+    private @NotNull CompletableFuture<Void> closeSubscription() {
         if (webSocket != null && subscriptionGroup != null) {
-            CompletableFuture.completedFuture(null)
+            return CompletableFuture.completedFuture(null)
                     .thenComposeAsync(ignored -> {
                         try {
                             group.acquire();
@@ -233,6 +230,7 @@ public class HttpNetworkClient implements NetworkClient {
                         group.release();
                     });
         }
+        return CompletableFuture.completedFuture(null);
     }
 
     private void updateSubscription() {
@@ -267,7 +265,15 @@ public class HttpNetworkClient implements NetworkClient {
     public void close() throws IOException, InterruptedException {
         subscriptions.clear();
         if (subscriptionGroup != null && webSocket != null) {
-            closeSubscription();
+            try {
+                closeSubscription().get();
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof IOException ioException) {
+                    throw ioException;
+                }
+                throw new RuntimeException(cause);
+            }
         }
     }
 

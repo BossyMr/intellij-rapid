@@ -2,10 +2,8 @@ package com.bossymr.network;
 
 import com.bossymr.network.client.NetworkClient;
 import com.bossymr.network.client.SubscribableEvent;
-import com.bossymr.network.client.impl.model.Model;
+import com.bossymr.network.client.model.Model;
 import org.jetbrains.annotations.NotNull;
-
-import java.io.IOException;
 
 /**
  * A {@code SubscriptionEntity} represents an ongoing subscription.
@@ -53,11 +51,8 @@ public class SubscriptionEntity {
 
     /**
      * Unsubscribes from this subscription.
-     *
-     * @throws InterruptedException if this {@code SubscriptionEntity} is interrupted.
-     * @throws IOException if an I/O error has occurred.
      */
-    public void unsubscribe() throws InterruptedException, IOException {
+    public void unsubscribe() {
         networkClient.unsubscribe(this);
     }
 }

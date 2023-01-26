@@ -3,7 +3,7 @@ package com.bossymr.network.client;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionListener;
 import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.client.impl.model.Model;
+import com.bossymr.network.client.model.Model;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -43,7 +43,7 @@ public interface NetworkClient extends AutoCloseable {
      * @param listener the listener.
      * @return an entity representing this subscription.
      */
-    <T> @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<T> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener);
+    @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener);
 
     /**
      * Unsubscribes from the subscription associated with the specified entity.
