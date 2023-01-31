@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * A {@code NetworkAction} represents a certain policy for handling either successful or unsuccessful responses.
  * <h2>Usage</h2>
- * A {@code NetworkAction} defines the methods, {@link #send(NetworkCall)} and @link #sendAsync(NetworkCall)} to send
+ * A {@code NetworkAction} defines the methods, {@link #send(NetworkCall)} and {@link #sendAsync(NetworkCall)} to send
  * requests both synchronously and asynchronously, {@link #join()} to wait for all asynchronous requests to complete,
  * and {@link #shutdown()} to close this {@code NetworkAction} and cancel all remaining incomplete requests.
  * <h2>Extending NetworkAction</h2>
@@ -116,7 +116,6 @@ public class NetworkAction<T> {
             Throwable cause = e.getCause();
             if (cause instanceof IOException checkedException) throw checkedException;
             if (cause instanceof RuntimeException uncheckedException) throw uncheckedException;
-            // A request should not be able to throw a checked exception.
             throw new IllegalStateException(cause);
         }
     }

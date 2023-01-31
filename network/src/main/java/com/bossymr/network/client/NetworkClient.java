@@ -3,19 +3,24 @@ package com.bossymr.network.client;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionListener;
 import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.client.model.Model;
+import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * A {@code NetworkClient} is used to send both synchronous and asynchronous requests, as well as to subscribe to an
- * event.
+ * A {@code NetworkClient} can send synchronous and asynchronous requests, as well as subscribe to a
+ * {@link SubscribableEvent}.
  */
 public interface NetworkClient extends AutoCloseable {
+
+    @NotNull URI getDefaultPath();
+
+    @NotNull RequestBuilder createRequest();
 
     /**
      * Sends the specified request synchronously.
@@ -43,18 +48,18 @@ public interface NetworkClient extends AutoCloseable {
      * @param listener the listener.
      * @return an entity representing this subscription.
      */
-    @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener);
+    @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener);
 
     /**
      * Unsubscribes from the subscription associated with the specified entity.
      *
      * @param entity the entity.
-     * @throws IllegalArgumentException if a subscription is not associated with the specified entity.
      */
-    void unsubscribe(@NotNull SubscriptionEntity entity);
+    @NotNull CompletableFuture<Void> unsubscribe(@NotNull SubscriptionEntity entity);
 
     /**
-     * Closes this {@code NetworkClient} and unsubscribes from all ongoing subscriptions.
+     * Closes this {@code NetworkClient}. All ongoing subscriptions are unsubscribed and all ongoing requests are
+     * interrupted.
      *
      * @throws IOException if an I/O error occurs.
      * @throws InterruptedException if this {@code NetworkClient} is interrupted.

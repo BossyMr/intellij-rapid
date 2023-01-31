@@ -8,7 +8,7 @@ import java.net.URI;
  * A {@code SubscribableEvent} represents a subscribable endpoint.
  *
  * @param <T> the type of event.
- * @see NetworkFactory#createSubscribableNetworkCall(SubscribableEvent)
+ * @see NetworkEngine#createSubscribableNetworkCall(SubscribableEvent)
  */
 public class SubscribableEvent<T> {
 

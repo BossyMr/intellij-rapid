@@ -4,14 +4,12 @@ import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionListener;
 import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.client.model.CollectionModel;
-import com.bossymr.network.client.model.Model;
 import com.bossymr.network.client.security.Authenticator;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.network.client.security.impl.DigestAuthenticator;
+import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.Unmodifiable;
 
 import java.io.IOException;
 import java.net.CookieManager;
@@ -19,40 +17,56 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.http.WebSocket;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 
 /**
- * A {@code HttpNetworkClient} is a simple implementation of a {@link NetworkClient} which delegates requests to a
- * {@link HttpClient}.
+ * A {@code HttpNetworkKClient} is an implementation of a {@link NetworkClient} with authentication support, support for
+ * enforcing a set amount of max connections.
  */
 public class HttpNetworkClient implements NetworkClient {
 
-    public static final String WEBSOCKET_PROTOCOl = "robapi2_subscription";
-    public static final String FORM_BODY_CONTENT_TYPE = "application/x-www-form-urlencoded";
-
     private final int MAX_CONNECTIONS = 2;
-    private final Semaphore channel = new Semaphore(MAX_CONNECTIONS);
-    private final Semaphore group = new Semaphore(1);
+    private final Semaphore semaphore = new Semaphore(MAX_CONNECTIONS);
 
-    private final HttpClient httpClient;
+    private final @NotNull HttpClient httpClient;
+    private final @NotNull Authenticator authenticator;
+    private final @NotNull ExecutorService executorService;
     private final URI defaultPath;
 
-    private final Authenticator authenticator;
+    private @Nullable SubscriptionGroup group;
 
-    private final Set<SubscriptionEntity> subscriptions = new HashSet<>();
-    private @Nullable URI subscriptionGroup;
-    private @Nullable WebSocket webSocket;
-
+    /**
+     * Creates a new {@code HttpNetworkClient} with the specified default path and credentials.
+     *
+     * @param defaultPath the path to connect to.
+     * @param credentials the credentials to connect with.
+     */
     public HttpNetworkClient(@NotNull URI defaultPath, @NotNull Supplier<Credentials> credentials) {
         this.defaultPath = defaultPath;
         this.authenticator = new DigestAuthenticator(credentials);
+        this.executorService = Executors.newCachedThreadPool(Executors.defaultThreadFactory());
         this.httpClient = HttpClient.newBuilder()
+                .executor(executorService)
                 .version(HttpClient.Version.HTTP_1_1)
                 .cookieHandler(new CookieManager())
                 .build();
+    }
+
+    public @NotNull RequestBuilder createRequest() {
+        return new RequestBuilder(getDefaultPath());
+    }
+
+    @Override
+    public @NotNull URI getDefaultPath() {
+        return defaultPath;
+    }
+
+    public @NotNull HttpClient getHttpClient() {
+        return httpClient;
     }
 
     @Override
@@ -77,11 +91,11 @@ public class HttpNetworkClient implements NetworkClient {
     }
 
     private <T> @NotNull HttpResponse<T> send(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
-        channel.acquire();
+        semaphore.acquire();
         try {
             return httpClient.send(request, bodyHandler);
         } finally {
-            channel.release();
+            semaphore.release();
         }
     }
 
@@ -114,14 +128,14 @@ public class HttpNetworkClient implements NetworkClient {
         return CompletableFuture.completedFuture(null)
                 .thenComposeAsync(ignored -> {
                     try {
-                        channel.acquire();
+                        semaphore.acquire();
                         return httpClient.sendAsync(request, bodyHandler);
                     } catch (InterruptedException e) {
                         throw new CompletionException(e);
                     }
                 })
                 .handleAsync((response, throwable) -> {
-                    channel.release();
+                    semaphore.release();
                     if (throwable != null) {
                         throw throwable instanceof CompletionException ?
                                 ((CompletionException) throwable) :
@@ -131,168 +145,48 @@ public class HttpNetworkClient implements NetworkClient {
                 });
     }
 
-    private @NotNull String toBody() {
-        StringJoiner result = new StringJoiner("&");
-        List<SubscriptionEntity> entities = getUniqueEntities();
-        for (int i = 0; i < entities.size(); i++) {
-            SubscriptionEntity entity = entities.get(i);
-            result.add("resources=" + i);
-            result.add(i + "=" + entity.getEvent().getResource());
-            result.add(i + "-p=" + entity.getPriority().ordinal());
-        }
-        return result.toString();
-    }
-
-    private @NotNull @Unmodifiable List<SubscriptionEntity> getUniqueEntities() {
-        Map<URI, SubscriptionEntity> cache = new HashMap<>();
-        for (SubscriptionEntity entity : subscriptions) {
-            URI resource = entity.getEvent().getResource();
-            if (cache.containsKey(resource)) {
-                SubscriptionEntity cached = cache.get(resource);
-                if (entity.getPriority().ordinal() <= cached.getPriority().ordinal()) {
-                    continue;
-                }
-            }
-            cache.put(resource, entity);
-        }
-        return List.copyOf(cache.values());
-    }
-
     @Override
-    public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
+    public @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
         SubscriptionEntity entity = new SubscriptionEntity(this, event, priority, listener);
-        subscriptions.add(entity);
-        if (subscriptions.size() > 1) {
-            updateSubscription();
+        if (group != null) {
+            group.getEntities().add(entity);
+            return group.update().thenApplyAsync(ignored -> entity);
         } else {
-            startSubscription();
+            Set<SubscriptionEntity> entities = new HashSet<>();
+            return SubscriptionGroup.start(this, entities, defaultPath)
+                    .thenApplyAsync(result -> {
+                        this.group = result;
+                        return entity;
+                    });
         }
-        return entity;
     }
 
     @Override
-    public void unsubscribe(@NotNull SubscriptionEntity entity) {
-        if (!(subscriptions.contains(entity))) throw new IllegalArgumentException();
-        subscriptions.remove(entity);
-        if (subscriptions.size() > 0) {
-            updateSubscription();
-        } else {
-            closeSubscription();
-        }
-    }
-
-    private void startSubscription() {
-        if (webSocket == null && subscriptionGroup == null) {
-            HttpRequest request = HttpRequest.newBuilder(defaultPath.resolve("/subscription"))
-                    .POST(HttpRequest.BodyPublishers.ofString(toBody()))
-                    .setHeader("Content-Type", FORM_BODY_CONTENT_TYPE)
-                    .build();
-            CompletableFuture.completedFuture(null)
-                    .thenComposeAsync(ignored -> {
-                        try {
-                            group.acquire();
-                            return sendAsync(request);
-                        } catch (InterruptedException e) {
-                            throw new CompletionException(e);
-                        }
-                    })
-                    .thenComposeAsync(response -> {
-                        CollectionModel collectionModel = CollectionModel.convert(response.body());
-                        for (Model model : collectionModel.getModels()) {
-                            handleEntity(model);
-                        }
-                        URI path = URI.create(response.headers().firstValue("Location").orElseThrow());
-                        subscriptionGroup = collectionModel.getLink("group");
-                        return httpClient.newWebSocketBuilder()
-                                .subprotocols(WEBSOCKET_PROTOCOl)
-                                .buildAsync(path, new WebSocketListener());
-                    })
-                    .thenRunAsync(group::release);
-        }
-    }
-
-    private @NotNull CompletableFuture<Void> closeSubscription() {
-        if (webSocket != null && subscriptionGroup != null) {
-            return CompletableFuture.completedFuture(null)
-                    .thenComposeAsync(ignored -> {
-                        try {
-                            group.acquire();
-                            HttpRequest request = HttpRequest.newBuilder(subscriptionGroup).DELETE().build();
-                            this.subscriptionGroup = null;
-                            return sendAsync(request);
-                        } catch (InterruptedException e) {
-                            throw new CompletionException(e);
-                        }
-                    })
-                    .thenComposeAsync((response) -> webSocket.sendClose(WebSocket.NORMAL_CLOSURE, ""))
-                    .thenRunAsync(() -> {
-                        this.webSocket = null;
-                        group.release();
-                    });
+    public @NotNull CompletableFuture<Void> unsubscribe(@NotNull SubscriptionEntity entity) {
+        if (group != null) {
+            group.getEntities().remove(entity);
+            if (group.getEntities().isEmpty()) {
+                return group.close().thenRunAsync(() -> group = null);
+            } else {
+                return group.update();
+            }
         }
         return CompletableFuture.completedFuture(null);
     }
 
-    private void updateSubscription() {
-        if (webSocket != null && subscriptionGroup != null) {
-            HttpRequest request = HttpRequest.newBuilder(subscriptionGroup)
-                    .PUT(HttpRequest.BodyPublishers.ofString(toBody()))
-                    .setHeader("Content-Type", FORM_BODY_CONTENT_TYPE)
-                    .build();
-            CompletableFuture.completedFuture(null)
-                    .thenComposeAsync(ignored -> {
-                        try {
-                            group.acquire();
-                            return sendAsync(request);
-                        } catch (InterruptedException e) {
-                            throw new CompletionException(e);
-                        }
-                    })
-                    .thenRunAsync(group::release);
-        }
-    }
-
-    public void handleEntity(@NotNull Model model) {
-        for (SubscriptionEntity entity : subscriptions) {
-            String path = model.getLink("self").getPath();
-            if (path.startsWith(entity.getEvent().getResource().toString())) {
-                entity.onEvent(model);
-            }
-        }
-    }
-
     @Override
     public void close() throws IOException, InterruptedException {
-        subscriptions.clear();
-        if (subscriptionGroup != null && webSocket != null) {
+        if (group != null) {
             try {
-                closeSubscription().get();
+                group.close().get();
+                executorService.shutdownNow();
             } catch (ExecutionException e) {
                 Throwable cause = e.getCause();
-                if (cause instanceof IOException ioException) {
-                    throw ioException;
-                }
-                throw new RuntimeException(cause);
+                if (cause instanceof IOException checkedException) throw checkedException;
+                if (cause instanceof RuntimeException uncheckedException) throw uncheckedException;
+                throw new IllegalStateException(cause);
             }
         }
     }
 
-    private class WebSocketListener implements WebSocket.Listener {
-
-        private StringBuilder stringBuilder = new StringBuilder();
-
-        @Override
-        public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-            stringBuilder.append(data);
-            if (last) {
-                String event = stringBuilder.toString();
-                CollectionModel collectionModel = CollectionModel.convert(event.getBytes());
-                for (Model model : collectionModel.getModels()) {
-                    handleEntity(model);
-                }
-                stringBuilder = new StringBuilder();
-            }
-            return WebSocket.Listener.super.onText(webSocket, data, last);
-        }
-    }
 }

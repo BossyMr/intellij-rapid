@@ -2,13 +2,16 @@ package com.bossymr.network.client;
 
 import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
-import com.bossymr.network.client.model.CollectionModel;
-import com.bossymr.network.client.model.Model;
+import com.bossymr.network.entity.EntityInvocationHandler;
+import com.bossymr.network.entity.ServiceInvocationHandler;
+import com.bossymr.network.model.CollectionModel;
+import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -17,12 +20,12 @@ import java.util.concurrent.CompletableFuture;
 
 public class EntityFactory {
 
-    private final @NotNull NetworkFactory networkFactory;
-    private final @NotNull NetworkClient networkClient;
+    private final @NotNull NetworkEngine engine;
+    private final @NotNull NetworkClient client;
 
-    public EntityFactory(@NotNull NetworkFactory networkFactory, @NotNull NetworkClient networkClient) {
-        this.networkFactory = networkFactory;
-        this.networkClient = networkClient;
+    public EntityFactory(@NotNull NetworkEngine engine, @NotNull NetworkClient client) {
+        this.engine = engine;
+        this.client = client;
     }
 
     public static <T> @NotNull Map<String, Class<? extends T>> getEntityType(Class<T> entityType) {
@@ -61,6 +64,27 @@ public class EntityFactory {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public <T> @NotNull T createService(@NotNull Class<T> serviceType) {
+        return (T) Proxy.newProxyInstance(
+                serviceType.getClassLoader(),
+                new Class[]{serviceType},
+                new ServiceInvocationHandler(engine));
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> @Nullable T createEntity(@NotNull Class<T> entityType, @NotNull Model model) {
+        Map<String, Class<? extends T>> arguments = EntityFactory.getEntityType(entityType);
+        if (arguments.containsKey(model.getType())) {
+            Class<? extends T> returnType = arguments.get(model.getType());
+            return (T) Proxy.newProxyInstance(
+                    returnType.getClassLoader(),
+                    new Class[]{returnType},
+                    new EntityInvocationHandler(engine, model));
+        }
+        return null;
+    }
+
     public <T> @Nullable T convert(@NotNull HttpRequest request, @NotNull Type returnType) throws IOException, InterruptedException {
         List<Model> models = get(request);
         if (models == null) return null;
@@ -78,9 +102,9 @@ public class EntityFactory {
     @SuppressWarnings("unchecked")
     private <T> @Nullable T convert(@NotNull List<Model> models, @NotNull Type returnType) {
         if (returnType == Void.class) return null;
-        Class<?> entityType = getReturnType(returnType);
+        Class<? extends EntityModel> entityType = getReturnType(returnType);
         List<?> entities = models.stream()
-                .map(model -> networkFactory.createEntity(entityType, model))
+                .map(model -> engine.createEntity(entityType, model))
                 .filter(Objects::nonNull)
                 .toList();
         if (returnType instanceof ParameterizedType parameterizedType) {
@@ -102,10 +126,11 @@ public class EntityFactory {
         throw new IllegalArgumentException("Could not convert '" + models + "' into '" + returnType + "'");
     }
 
-    private @NotNull Class<?> getReturnType(@NotNull Type returnType) {
+    @SuppressWarnings("unchecked")
+    private @NotNull Class<? extends EntityModel> getReturnType(@NotNull Type returnType) {
         if (returnType instanceof Class<?> classType) {
             validateType(classType);
-            return classType;
+            return (Class<? extends EntityModel>) classType;
         }
         if (returnType instanceof ParameterizedType parameterizedType) {
             Type[] arguments = parameterizedType.getActualTypeArguments();
@@ -114,7 +139,7 @@ public class EntityFactory {
                     Type argument = arguments[0];
                     if (argument instanceof Class<?> classType) {
                         validateType(classType);
-                        return classType;
+                        return (Class<? extends EntityModel>) classType;
                     }
                 }
             }
@@ -123,7 +148,7 @@ public class EntityFactory {
     }
 
     private @Nullable List<Model> get(@NotNull HttpRequest request) throws IOException, InterruptedException {
-        HttpResponse<byte[]> response = networkClient.send(request);
+        HttpResponse<byte[]> response = client.send(request);
         byte[] body = response.body();
         if (body.length == 0) return null;
         CollectionModel collectionModel = CollectionModel.convert(body);
@@ -133,7 +158,7 @@ public class EntityFactory {
             HttpRequest next = HttpRequest.newBuilder(request, (n, v) -> true)
                     .uri(collectionModel.getLink("next"))
                     .build();
-            response = networkClient.send(next);
+            response = client.send(next);
             collectionModel = CollectionModel.convert(response.body());
             models.addAll(collectionModel.getModels());
         }
@@ -141,7 +166,7 @@ public class EntityFactory {
     }
 
     private @NotNull CompletableFuture<List<Model>> getAsync(@NotNull HttpRequest request, @NotNull List<Model> models) {
-        return networkClient.sendAsync(request)
+        return client.sendAsync(request)
                 .thenComposeAsync(response -> {
                     byte[] body = response.body();
                     if (body.length == 0) return CompletableFuture.completedFuture(null);

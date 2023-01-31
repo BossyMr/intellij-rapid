@@ -1,4 +1,4 @@
-package com.bossymr.network.client.entity;
+package com.bossymr.network.entity;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

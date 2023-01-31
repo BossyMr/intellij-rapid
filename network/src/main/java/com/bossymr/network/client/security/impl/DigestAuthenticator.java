@@ -20,7 +20,7 @@ public class DigestAuthenticator implements Authenticator {
     private final String unique;
 
     private boolean isProxy;
-    private Credentials credentials;
+    private @Nullable Credentials credentials;
     private Challenge challenge;
     private int usages = 0;
 
@@ -70,7 +70,7 @@ public class DigestAuthenticator implements Authenticator {
 
     @Override
     public @Nullable HttpRequest authenticate(@NotNull HttpRequest request) {
-        if (challenge == null) return null;
+        if (challenge == null || credentials == null) return null;
         Charset charset = getCharset();
         String algorithm = challenge.values().getOrDefault("algorithm", "MD5");
         boolean session = algorithm.endsWith("-sess");

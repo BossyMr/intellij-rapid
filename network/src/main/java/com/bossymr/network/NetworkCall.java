@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @param <T> the type of response body.
  */
-public interface NetworkCall<T> {
+public interface NetworkCall<T> extends AutoCloseable {
 
     /**
      * Sends the request synchronously.
@@ -34,4 +34,9 @@ public interface NetworkCall<T> {
      */
     @NotNull CompletableFuture<T> sendAsync();
 
+    /**
+     * Closes this {@code NetworkCall} and cancels all ongoing requests.
+     */
+    @Override
+    void close();
 }

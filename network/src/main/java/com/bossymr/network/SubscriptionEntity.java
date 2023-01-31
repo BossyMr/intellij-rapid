@@ -2,8 +2,11 @@ package com.bossymr.network;
 
 import com.bossymr.network.client.NetworkClient;
 import com.bossymr.network.client.SubscribableEvent;
-import com.bossymr.network.client.model.Model;
+import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A {@code SubscriptionEntity} represents an ongoing subscription.
@@ -13,7 +16,9 @@ public class SubscriptionEntity {
     private final NetworkClient networkClient;
     private final SubscribableEvent<?> event;
     private final SubscriptionPriority priority;
+
     private final SubscriptionListener<Model> listener;
+    private @Nullable Runnable unsubscribe;
 
     public SubscriptionEntity(@NotNull NetworkClient networkClient, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
         this.networkClient = networkClient;
@@ -51,8 +56,10 @@ public class SubscriptionEntity {
 
     /**
      * Unsubscribes from this subscription.
+     *
+     * @return the request.
      */
-    public void unsubscribe() {
-        networkClient.unsubscribe(this);
+    public CompletableFuture<Void> unsubscribe() {
+        return networkClient.unsubscribe(this);
     }
 }

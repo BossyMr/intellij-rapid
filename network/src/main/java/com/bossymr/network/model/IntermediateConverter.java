@@ -1,4 +1,4 @@
-package com.bossymr.network.client.model;
+package com.bossymr.network.model;
 
 import org.jetbrains.annotations.NotNull;
 import org.w3c.dom.Document;

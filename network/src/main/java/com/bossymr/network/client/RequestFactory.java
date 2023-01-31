@@ -20,15 +20,15 @@ import java.util.regex.Pattern;
 
 public class RequestFactory {
 
-    private final @NotNull NetworkFactory networkFactory;
+    private final @NotNull NetworkEngine engine;
 
-    public RequestFactory(@NotNull NetworkFactory networkFactory) {
-        this.networkFactory = networkFactory;
+    public RequestFactory(@NotNull NetworkEngine engine) {
+        this.engine = engine;
     }
 
     public @NotNull Object createQuery(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (method.getReturnType().isAnnotationPresent(Service.class)) {
-            return networkFactory.createService(method.getReturnType());
+            return engine.createService(method.getReturnType());
         }
         Class<?> type = proxy.getClass().getInterfaces()[0];
         Service service = type.getAnnotation(Service.class);
@@ -57,20 +57,20 @@ public class RequestFactory {
     }
 
     private @NotNull NetworkCall<?> createNetworkCall(@NotNull String command, @NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
-        HttpRequest request = networkFactory.createRequest()
+        HttpRequest request = engine.createRequest()
                 .setMethod(command)
-                .setResource(URI.create(interpolate(path, proxy, method, args)))
+                .setPath(URI.create(interpolate(path, proxy, method, args)))
                 .setFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
                 .setArguments(collect(method, args, annotation -> annotation instanceof Argument argument ? argument.value() : null))
                 .build();
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        return networkFactory.createNetworkCall(request, returnType);
+        return engine.createNetworkCall(request, returnType);
     }
 
     private @NotNull SubscribableNetworkCall<?> createSubscribableNetworkCall(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         Class<?> returnType = (Class<?>) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
         SubscribableEvent<?> event = new SubscribableEvent<>(URI.create(interpolate(path, proxy, method, args)), returnType);
-        return networkFactory.createSubscribableNetworkCall(event);
+        return engine.createSubscribableNetworkCall(event);
     }
 
     private @NotNull String interpolate(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {

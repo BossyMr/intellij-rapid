@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 /**
  * A {@code RequestBuilder} is used to build a {@link HttpRequest}.
  *
- * @see NetworkFactory#createRequest()
+ * @see NetworkEngine#createRequest()
  */
 public class RequestBuilder {
 
@@ -21,18 +21,18 @@ public class RequestBuilder {
     private @NotNull MultiMap<String, String> fields = new MultiMap<>();
     private @NotNull MultiMap<String, String> arguments = new MultiMap<>();
     private @NotNull String method;
-    private @NotNull URI resource;
+    private @NotNull URI path;
 
     /**
      * Creates a new {@code RequestBuilder} with the specified default path, which all paths are resolved against.
      *
      * @param defaultPath the default path.
-     * @see NetworkFactory#createRequest()
+     * @see NetworkEngine#createRequest()
      */
     public RequestBuilder(@NotNull URI defaultPath) {
         this.method = "GET";
         this.defaultPath = defaultPath;
-        this.resource = defaultPath;
+        this.path = defaultPath;
     }
 
     public @NotNull RequestBuilder setMethod(@NotNull String method) {
@@ -40,8 +40,8 @@ public class RequestBuilder {
         return this;
     }
 
-    public @NotNull RequestBuilder setResource(@NotNull URI resource) {
-        this.resource = defaultPath.resolve(resource);
+    public @NotNull RequestBuilder setPath(@NotNull URI path) {
+        this.path = defaultPath.resolve(path);
         return this;
     }
 
@@ -77,15 +77,13 @@ public class RequestBuilder {
 
     public @NotNull HttpRequest build() {
         String body = getBody(fields);
-        HttpRequest.BodyPublisher bodyPublisher = null;
+        HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.noBody();
+        HttpRequest.Builder builder = HttpRequest.newBuilder(getResource(path, arguments));
         if (body != null) {
+            builder.setHeader("Content-Type", "application/x-www-form-urlencoded");
             bodyPublisher = HttpRequest.BodyPublishers.ofString(body);
         }
-        HttpRequest.Builder builder = HttpRequest.newBuilder(getResource(resource, arguments))
-                .method(method, bodyPublisher);
-        if (bodyPublisher != null) {
-            builder.setHeader("Content-Type", HttpNetworkClient.FORM_BODY_CONTENT_TYPE);
-        }
+        builder = builder.method(method, bodyPublisher);
         return builder.build();
     }
 

@@ -19,4 +19,6 @@ public interface SubscriptionListener<T> extends EventListener {
      */
     void onEvent(@NotNull SubscriptionEntity entity, @NotNull T event);
 
+    void onUnsubscribe(@NotNull SubscriptionEntity entity);
+
 }

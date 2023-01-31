@@ -1,11 +1,11 @@
-package com.bossymr.network.client.entity;
+package com.bossymr.network.entity;
 
 import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Deserializable;
 import com.bossymr.network.annotations.Property;
-import com.bossymr.network.client.HttpNetworkFactory;
-import com.bossymr.network.client.model.CollectionModel;
-import com.bossymr.network.client.model.Model;
+import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.model.CollectionModel;
+import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,18 +22,18 @@ import java.util.Map;
 
 public class EntityInvocationHandler extends AbstractInvocationHandler {
 
-    private final @NotNull HttpNetworkFactory networkFactory;
+    private final @NotNull NetworkEngine engine;
     private @NotNull Model model;
 
-    public EntityInvocationHandler(@NotNull HttpNetworkFactory networkFactory, @NotNull Model model) {
+    public EntityInvocationHandler(@NotNull NetworkEngine engine, @NotNull Model model) {
         this.model = model;
-        this.networkFactory = networkFactory;
+        this.engine = engine;
     }
 
     @Override
     public @Nullable Object execute(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
-        if (isMethod(method, EntityModel.class, "getNetworkFactory")) {
-            return networkFactory;
+        if (isMethod(method, EntityModel.class, "getNetworkEngine")) {
+            return engine;
         }
         if (isMethod(method, EntityModel.class, "getTitle")) {
             return model.getTitle();
@@ -48,7 +48,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             return model.getFields();
         }
         if (isMethod(method, EntityModel.class, "getNetworkFactory")) {
-            return networkFactory;
+            return engine;
         }
         if (isMethod(method, EntityModel.class, "getLink", String.class)) {
             return getLink((String) args[0]);
@@ -66,7 +66,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
                 return null;
             }
         }
-        return networkFactory.getRequestFactory().createQuery(proxy, method, args);
+        return engine.getRequestFactory().createQuery(proxy, method, args);
     }
 
     private @NotNull Object convert(@NotNull String value, @NotNull Class<?> type) throws IllegalAccessException {
@@ -149,7 +149,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         }
         HttpRequest httpRequest = HttpRequest.newBuilder(model.getLink("self")).build();
         try {
-            HttpResponse<byte[]> response = networkFactory.getNetworkClient().send(httpRequest);
+            HttpResponse<byte[]> response = engine.getNetworkClient().send(httpRequest);
             CollectionModel collectionModel = CollectionModel.convert(response.body());
             if (collectionModel.getModels().size() != 1) {
                 return false;

@@ -1,6 +1,6 @@
 package com.bossymr.network;
 
-import com.bossymr.network.client.NetworkFactory;
+import com.bossymr.network.client.NetworkEngine;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
@@ -11,7 +11,7 @@ import java.util.Map;
  */
 public interface EntityModel {
 
-    @NotNull NetworkFactory getNetworkFactory();
+    @NotNull NetworkEngine getNetworkEngine();
 
     /**
      * Returns the title of this entity.

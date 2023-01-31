@@ -1,7 +1,7 @@
-package com.bossymr.network.client.entity;
+package com.bossymr.network.entity;
 
 import com.bossymr.network.ServiceModel;
-import com.bossymr.network.client.HttpNetworkFactory;
+import com.bossymr.network.client.NetworkEngine;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -9,18 +9,18 @@ import java.lang.reflect.Method;
 
 public class ServiceInvocationHandler extends AbstractInvocationHandler {
 
-    private final @NotNull HttpNetworkFactory networkFactory;
+    private final @NotNull NetworkEngine engine;
 
-    public ServiceInvocationHandler(@NotNull HttpNetworkFactory networkFactory) {
-        this.networkFactory = networkFactory;
+    public ServiceInvocationHandler(@NotNull NetworkEngine networkFactory) {
+        this.engine = networkFactory;
     }
 
     @Override
     public @Nullable Object execute(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
-        if (isMethod(method, ServiceModel.class, "getNetworkFactory")) {
-            return networkFactory;
+        if (isMethod(method, ServiceModel.class, "getNetworkEngine")) {
+            return engine;
         }
-        return networkFactory.getRequestFactory().createQuery(proxy, method, args);
+        return engine.getRequestFactory().createQuery(proxy, method, args);
     }
 
     @Override
