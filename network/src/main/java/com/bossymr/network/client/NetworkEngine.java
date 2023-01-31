@@ -1,6 +1,7 @@
 package com.bossymr.network.client;
 
-import com.bossymr.network.*;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Service;
 import com.bossymr.network.client.security.Credentials;
@@ -16,16 +17,20 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 /**
- * A {@code NetworkClient} is used to create instances of {@link NetworkCall} and {@link SubscribableNetworkCall}, which
- * can be invoked synchronously or asynchronously.
+ * A {@code NetworkEngine} is used to create services and entities, as-well as instances of {@link NetworkCall} and
+ * {@link SubscribableNetworkCall}.
+ * <p>
+ * A {@code NetworkEngine} can be closed using {@link #close()}. This will close any {@link NetworkCall} and
+ * {@link SubscribableNetworkCall} created with this {@code NetworkEngine}, which will prohibit any new requests being
+ * called. Additionally, any attempt to create a new {@code NetworkCall} or {@code SubscribableNetworkCall} will fail.
+ * <p>
+ * A {@link DelegatingNetworkEngine} can be created to subclass this {@code NetworkEngine} with a specific policy for
+ * handling successful and unsuccessful responses.
  */
 public class NetworkEngine implements AutoCloseable {
 
@@ -36,7 +41,7 @@ public class NetworkEngine implements AutoCloseable {
     private final @NotNull EntityFactory entityFactory;
     private final @NotNull RequestFactory requestFactory;
 
-    private boolean closed;
+    private volatile boolean closed;
 
     protected NetworkEngine(@NotNull NetworkClient client, @NotNull EntityFactory entityFactory, @NotNull RequestFactory requestFactory) {
         this.client = client;
@@ -50,20 +55,15 @@ public class NetworkEngine implements AutoCloseable {
         this.requestFactory = new RequestFactory(this);
     }
 
-    /**
-     * Returns the underlying {@code NetworkClient} of this {@code NetworkEngine}.
-     *
-     * @return the underlying {@code NetworkClient}.
-     */
     public @NotNull NetworkClient getNetworkClient() {
         return client;
     }
 
-    public @NotNull NetworkEngine getNetworkEngine() {
+    protected @NotNull NetworkEngine getNetworkEngine() {
         return this;
     }
 
-    public @NotNull EntityFactory getEntityFactory() {
+    protected @NotNull EntityFactory getEntityFactory() {
         return entityFactory;
     }
 
@@ -112,7 +112,7 @@ public class NetworkEngine implements AutoCloseable {
      * specified type.
      *
      * @param request the request.
-     * @param returnType the response type, which should be the same as {@code T}.
+     * @param returnType the response type.
      * @param <T> the response type.
      * @return a new {@code NetworkCall}.
      */
@@ -121,8 +121,10 @@ public class NetworkEngine implements AutoCloseable {
     }
 
     protected <T> @NotNull NetworkCall<T> createNetworkCall(@NotNull NetworkEngine engine, @NotNull HttpRequest request, @NotNull Type returnType) {
-        if (closed) throw new IllegalArgumentException();
-        HttpNetworkCall<T> networkCall = new HttpNetworkCall<>(engine, request, returnType);
+        if (closed) {
+            throw new IllegalArgumentException();
+        }
+        HttpNetworkCall<T> networkCall = new HttpNetworkCall<>(engine.getEntityFactory(), request, returnType);
         requests.add(networkCall);
         return networkCall;
     }
@@ -160,97 +162,6 @@ public class NetworkEngine implements AutoCloseable {
         requests.forEach(NetworkCall::close);
         for (SubscribableNetworkCall<?> subscription : subscriptions) {
             subscription.close();
-        }
-    }
-
-    private static class HttpNetworkCall<T> implements NetworkCall<T> {
-
-        private final @NotNull Set<CompletableFuture<?>> requests = ConcurrentHashMap.newKeySet();
-
-        private final @NotNull NetworkEngine engine;
-        private final @NotNull HttpRequest request;
-        private final @NotNull Type returnType;
-
-        private boolean closed;
-
-        public HttpNetworkCall(@NotNull NetworkEngine engine, @NotNull HttpRequest request, @NotNull Type returnType) {
-            this.engine = engine;
-            this.request = request;
-            this.returnType = returnType;
-        }
-
-        @Override
-        public @Nullable T send() throws IOException, InterruptedException {
-            if (closed) throw new IllegalArgumentException();
-            return engine.getEntityFactory().convert(request, returnType);
-        }
-
-        @Override
-        public @NotNull CompletableFuture<T> sendAsync() {
-            if (closed) throw new IllegalArgumentException();
-            CompletableFuture<T> request = engine.getEntityFactory().convertAsync(this.request, returnType);
-            requests.add(request);
-            return request.thenApplyAsync((response) -> {
-                requests.remove(request);
-                return response;
-            });
-        }
-
-        @Override
-        public void close() {
-            if (closed) return;
-            closed = true;
-            requests.forEach(request -> request.cancel(true));
-        }
-
-    }
-
-    private static class HttpSubscribableNetworkCall<T> implements SubscribableNetworkCall<T> {
-
-        private final @NotNull Set<SubscriptionEntity> entities = ConcurrentHashMap.newKeySet();
-        private final @NotNull NetworkEngine engine;
-        private final @NotNull SubscribableEvent<T> event;
-        private boolean closed;
-
-        public HttpSubscribableNetworkCall(@NotNull NetworkEngine engine, @NotNull SubscribableEvent<T> event) {
-            this.engine = engine;
-            this.event = event;
-        }
-
-        @Override
-        public @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<T> listener) {
-            if (closed) throw new IllegalArgumentException();
-            return engine.getNetworkClient().subscribe(event, priority, new SubscriptionListener<Model>() {
-                @Override
-                public void onEvent(@NotNull SubscriptionEntity entity, @NotNull Model model) {
-                    listener.onEvent(entity, Objects.requireNonNull(engine.createEntity(event.getEventType(), model)));
-                }
-
-                @Override
-                public void onUnsubscribe(@NotNull SubscriptionEntity entity) {
-                    listener.onUnsubscribe(entity);
-                    entities.remove(entity);
-                }
-            }).thenApplyAsync(entity -> {
-                entities.add(entity);
-                return entity;
-            });
-        }
-
-        @Override
-        public void close() throws IOException, InterruptedException {
-            if (closed) return;
-            this.closed = true;
-            for (SubscriptionEntity entity : entities) {
-                try {
-                    entity.unsubscribe().get();
-                } catch (ExecutionException e) {
-                    Throwable cause = e.getCause();
-                    if (cause instanceof IOException checkedException) throw checkedException;
-                    if (cause instanceof RuntimeException uncheckedException) throw uncheckedException;
-                    throw new IllegalStateException(cause);
-                }
-            }
         }
     }
 }

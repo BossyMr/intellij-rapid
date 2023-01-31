@@ -14,11 +14,16 @@ public interface SubscriptionListener<T> extends EventListener {
     /**
      * This method is called for each received event.
      *
-     * @param entity the subscription, to unsubscribe.
+     * @param entity the subscription.
      * @param event the event.
      */
     void onEvent(@NotNull SubscriptionEntity entity, @NotNull T event);
 
-    void onUnsubscribe(@NotNull SubscriptionEntity entity);
+    /**
+     * This method is called when this subscription is closed.
+     *
+     * @param entity the subscription.
+     */
+    default void onClose(@NotNull SubscriptionEntity entity) {}
 
 }

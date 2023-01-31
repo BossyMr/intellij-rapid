@@ -4,7 +4,6 @@ import com.bossymr.network.client.NetworkClient;
 import com.bossymr.network.client.SubscribableEvent;
 import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -18,7 +17,6 @@ public class SubscriptionEntity {
     private final SubscriptionPriority priority;
 
     private final SubscriptionListener<Model> listener;
-    private @Nullable Runnable unsubscribe;
 
     public SubscriptionEntity(@NotNull NetworkClient networkClient, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
         this.networkClient = networkClient;
@@ -32,7 +30,7 @@ public class SubscriptionEntity {
      *
      * @return the event to which this entity is subscribed.
      */
-    public SubscribableEvent<?> getEvent() {
+    public @NotNull SubscribableEvent<?> getEvent() {
         return event;
     }
 
@@ -41,7 +39,7 @@ public class SubscriptionEntity {
      *
      * @return the priority with which this entity is subscribed.
      */
-    public SubscriptionPriority getPriority() {
+    public @NotNull SubscriptionPriority getPriority() {
         return priority;
     }
 
