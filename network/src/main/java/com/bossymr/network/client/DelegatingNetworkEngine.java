@@ -24,7 +24,7 @@ public class DelegatingNetworkEngine extends NetworkEngine {
     private final @NotNull NetworkEngine engine;
     private boolean closed;
 
-    private DelegatingNetworkEngine(@NotNull NetworkEngine engine) {
+    public DelegatingNetworkEngine(@NotNull NetworkEngine engine) {
         super(engine.getNetworkClient(), engine.getEntityFactory(), engine.getRequestFactory());
         this.engine = engine;
     }

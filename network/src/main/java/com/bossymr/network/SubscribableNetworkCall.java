@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @param <T> the type of event body.
  */
-public interface SubscribableNetworkCall<T> extends AutoCloseable {
+public interface SubscribableNetworkCall<T> {
 
     /**
      * Subscribes to this resource with the specified priority. The specified callback will be called, for each event
@@ -29,6 +29,5 @@ public interface SubscribableNetworkCall<T> extends AutoCloseable {
      * @throws IOException if an I/O error has occurred.
      * @throws InterruptedException if this {@code SubscribableNetworkCall} is unsubscribed.
      */
-    @Override
     void close() throws IOException, InterruptedException;
 }

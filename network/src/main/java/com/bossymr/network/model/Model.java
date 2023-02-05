@@ -12,18 +12,13 @@ public class Model {
     private final String type;
 
     private final Map<String, String> fields;
-    private final Map<String, URI> paths;
+    private final Map<String, URI> links;
 
-    public Model(
-            @NotNull String title,
-            @NotNull String type,
-            @NotNull Map<String, String> fields,
-            @NotNull Map<String, URI> paths
-    ) {
+    public Model(@NotNull String title, @NotNull String type, @NotNull Map<String, String> fields, @NotNull Map<String, URI> links) {
         this.title = title;
         this.type = type;
         this.fields = fields;
-        this.paths = paths;
+        this.links = links;
     }
 
     public @NotNull String getTitle() {
@@ -43,7 +38,7 @@ public class Model {
     }
 
     public @NotNull Map<String, URI> getLinks() {
-        return paths;
+        return links;
     }
 
     public URI getLink(@NotNull String type) {
@@ -55,12 +50,12 @@ public class Model {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Model model = (Model) o;
-        return Objects.equals(getTitle(), model.getTitle()) && Objects.equals(getType(), model.getType()) && Objects.equals(getFields(), model.getFields()) && Objects.equals(paths, model.paths);
+        return Objects.equals(getTitle(), model.getTitle()) && Objects.equals(getType(), model.getType()) && Objects.equals(getFields(), model.getFields()) && Objects.equals(links, model.links);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getTitle(), getType(), getFields(), paths);
+        return Objects.hash(getTitle(), getType(), getFields(), links);
     }
 
     @Override
@@ -69,7 +64,7 @@ public class Model {
                 "title='" + title + '\'' +
                 ", type='" + type + '\'' +
                 ", fields=" + fields +
-                ", paths=" + paths +
+                ", paths=" + links +
                 ", links=" + getLinks() +
                 '}';
     }

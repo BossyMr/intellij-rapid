@@ -49,10 +49,18 @@ public class NetworkEngine implements AutoCloseable {
         this.requestFactory = requestFactory;
     }
 
-    public NetworkEngine(@NotNull URI defaultPath, @NotNull Supplier<Credentials> credentials) {
+    private NetworkEngine(@NotNull URI defaultPath, @NotNull Supplier<Credentials> credentials) {
         this.client = new HttpNetworkClient(defaultPath, credentials);
         this.entityFactory = new EntityFactory(this, client);
         this.requestFactory = new RequestFactory(this);
+    }
+
+    public static @NotNull NetworkEngine connect(@NotNull URI defaultPath, @NotNull Supplier<Credentials> credentials) {
+        return new NetworkEngine(defaultPath, credentials);
+    }
+
+    public static @NotNull NetworkEngine connect(@NotNull String defaultPath, @NotNull Supplier<Credentials> credentials) {
+        return new NetworkEngine(URI.create(defaultPath), credentials);
     }
 
     public @NotNull NetworkClient getNetworkClient() {

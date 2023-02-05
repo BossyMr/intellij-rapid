@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Arrays;
 
 /**
  * A {@code ResponseStatusException} indicates an unsuccessful response was received. The exception contains information
@@ -30,7 +29,7 @@ public class ResponseStatusException extends IOException {
 
     @Override
     public @NotNull String getMessage() {
-        return Arrays.toString(response.body());
+        return new String(response.body());
     }
 
     @Override

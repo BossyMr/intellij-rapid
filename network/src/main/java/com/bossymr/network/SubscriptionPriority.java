@@ -2,9 +2,6 @@ package com.bossymr.network;
 
 /**
  * A {@code SubscriptionPriority} indicates the priority with which to subscribe to a resource.
- *
- * @implNote {@code SubscriptionPriority} constants are ordered so that each constant ordinal is equal to its priority
- * value, as such constants should not be reordered.
  */
 public enum SubscriptionPriority {
 

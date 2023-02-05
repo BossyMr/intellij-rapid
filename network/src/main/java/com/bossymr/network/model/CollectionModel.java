@@ -15,10 +15,10 @@ public class CollectionModel extends Model {
             @NotNull String title,
             @NotNull String type,
             @NotNull Map<String, String> fields,
-            @NotNull Map<String, URI> paths,
+            @NotNull Map<String, URI> links,
             @NotNull List<Model> models
     ) {
-        super(title, type, fields, paths);
+        super(title, type, fields, links);
         this.models = models;
     }
 

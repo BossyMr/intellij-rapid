@@ -69,12 +69,3 @@ public interface ProductEntity {
 
 }
 ```
-
-## Architecture
-
-A NetworkEngine is used to create an implementation of a service, using a ServiceInvocationHandler, which uses the
-NetworkEngine to create NetworkCalls and SubscribableNetworkCalls. NetworkCalls also use the NetworkEngine, to create an
-implementation of the response entity.
-
-A NetworkClient is used to send and receive requests, and is used to handle authentication, simultaneous connection
-limits as well as subscriptions.

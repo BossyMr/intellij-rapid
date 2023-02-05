@@ -132,7 +132,7 @@ public class IntermediateConverter {
         try {
             return builder.parse(new ByteArrayInputStream(body));
         } catch (SAXException | IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(new String(body), e);
         }
     }
 }
