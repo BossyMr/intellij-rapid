@@ -1,11 +1,10 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotState;
-import com.bossymr.rapid.robot.network.RobotService;
-import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import org.jetbrains.annotations.NotNull;
@@ -39,13 +38,12 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
     @Override
     public @NotNull Robot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         RobotEventListener.publish().beforeConnect();
-        RobotUtil.setCredentials(path, credentials);
-        RobotService service = RobotService.connect(path, credentials);
-        return robot = new RobotImpl(service);
+        RobotUtil.setCredentials(path, credentials.username(), credentials.password());
+        return robot = new RobotImpl(path, credentials.username(), credentials.password());
     }
 
     @Override
-    public void disconnect() throws IOException {
+    public void disconnect() throws IOException, InterruptedException {
         Robot robot = getRobot();
         if (robot != null) {
             RobotEventListener.publish().beforeRemoval(robot);
@@ -62,7 +60,8 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
         if (robot != null) {
             try {
                 robot.dispose();
-            } catch (IOException ignored) {}
+            } catch (IOException | InterruptedException ignored) {
+            }
         }
     }
 

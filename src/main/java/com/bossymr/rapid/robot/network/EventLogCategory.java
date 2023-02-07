@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.*;
-import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,7 +27,7 @@ public interface EventLogCategory extends EntityModel {
      * @return all messages in this event log category.
      */
     @GET("{@self}")
-    @NotNull Query<List<EventLogMessage>> getMessages();
+    @NotNull NetworkCall<List<EventLogMessage>> getMessages();
 
     /**
      * Returns all messages in this event log category, starting with the specified message.
@@ -36,7 +36,7 @@ public interface EventLogCategory extends EntityModel {
      * @return all messages in this event log category, starting with the specified message.
      */
     @GET("{@self}")
-    @NotNull Query<List<EventLogMessage>> getMessages(
+    @NotNull NetworkCall<List<EventLogMessage>> getMessages(
             @Argument("elogseqnum") int message
     );
 
@@ -47,7 +47,7 @@ public interface EventLogCategory extends EntityModel {
      * @return the message in this category with the specified sequence identifier.
      */
     @GET("{@self}/{message}")
-    @NotNull Query<EventLogMessage> getMessage(
+    @NotNull NetworkCall<EventLogMessage> getMessage(
             @Path("message") int message
     );
 
@@ -55,12 +55,12 @@ public interface EventLogCategory extends EntityModel {
      * Clears all messages in this category.
      */
     @POST("{@self}?action=clear")
-    @NotNull Query<Void> clear();
+    @NotNull NetworkCall<Void> clear();
 
     /**
      * Subscribes to new events in this category.
      */
     @Subscribable("{@self}")
-    @NotNull SubscribableQuery<EventLogMessageEvent> onMessage();
+    @NotNull SubscribableNetworkCall<EventLogMessageEvent> onMessage();
 
 }

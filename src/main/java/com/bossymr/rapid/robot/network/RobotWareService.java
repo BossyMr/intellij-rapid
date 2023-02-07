@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Service;
+import com.bossymr.network.annotations.Service;
 import com.bossymr.rapid.robot.network.robotware.io.InputOutputService;
 import org.jetbrains.annotations.NotNull;
 

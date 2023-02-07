@@ -1,13 +1,11 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.network.EntityModel;
-import com.bossymr.rapid.robot.network.annotations.*;
-import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.net.http.HttpRequest;
 import java.util.List;
 
 @Entity({"ios-device", "ios-device-li"})
@@ -38,27 +36,30 @@ public interface InputOutputDevice extends EntityModel {
     @NotNull String getOutputMask();
 
     @GET("{@network}")
-    @NotNull Query<InputOutputNetwork> getNetwork();
+    @NotNull NetworkCall<InputOutputNetwork> getNetwork();
 
-    default @NotNull Query<List<InputOutputSignal>> getSignals() {
+    @POST("/rw/iosystem/signals?action=signal-search")
+    @NotNull NetworkCall<List<InputOutputSignal>> getSignals(
+            @Field("network") String network,
+            @Field("device") String device
+    );
+
+    default @NotNull NetworkCall<List<InputOutputSignal>> getSignals() {
         String network = getTitle().substring(0, getTitle().lastIndexOf('/'));
         String device = getTitle().substring(getTitle().lastIndexOf('/') + 1);
-        HttpRequest httpRequest = HttpRequest.newBuilder(getNetworkClient().getDefaultPath().resolve("/rw/iosystem/signals?action=signal-search"))
-                .POST(HttpRequest.BodyPublishers.ofString("network=" + network + "&device=" + device))
-                .build();
-        return getNetworkClient().newQuery(httpRequest, InputOutputSignal.class);
+        return getSignals(network, device);
     }
 
     @POST("{@self}?action=set")
-    @NotNull Query<Void> setState(
+    @NotNull NetworkCall<Void> setState(
             @NotNull InputOutputLogicalState logicalState
     );
 
     @Subscribable("{@self};state")
-    @NotNull SubscribableQuery<InputOutputNetworkEvent> onState();
+    @NotNull SubscribableNetworkCall<InputOutputNetworkEvent> onState();
 
     @POST("{@self}?action=set-inputdata")
-    @NotNull Query<Void> setInputData(
+    @NotNull NetworkCall<Void> setInputData(
             @Field("startbyte") int index,
             @Field("signaldata") byte data,
             @Field("datamask") byte mask
@@ -66,7 +67,7 @@ public interface InputOutputDevice extends EntityModel {
 
 
     @POST("{@self}?action=set-outputdata")
-    @NotNull Query<Void> setOutputData(
+    @NotNull NetworkCall<Void> setOutputData(
             @Field("startbyte") int index,
             @Field("signaldata") byte data,
             @Field("datamask") byte mask

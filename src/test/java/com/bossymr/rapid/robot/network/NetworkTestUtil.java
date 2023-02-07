@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
-import com.intellij.credentialStore.Credentials;
+import com.bossymr.network.client.security.Credentials;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -10,7 +10,7 @@ import java.net.http.HttpResponse;
 public final class NetworkTestUtil {
 
     public static URI DEFAULT_PATH = URI.create("http://localhost:80");
-    public static Credentials DEFAULT_CREDENTIALS = new Credentials("Default User", "robotics");
+    public static Credentials DEFAULT_CREDENTIALS = new Credentials("Default User", "robotics".toCharArray());
 
     private NetworkTestUtil() {
         throw new AssertionError();

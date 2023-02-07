@@ -35,7 +35,7 @@ public class DeleteAction extends AnAction {
         RemoteRobotService service = RemoteRobotService.getInstance();
         try {
             service.disconnect();
-        } catch (IOException ignored) {
+        } catch (IOException | InterruptedException ignored) {
         }
     }
 }

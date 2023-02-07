@@ -1,11 +1,11 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.GET;
-import com.bossymr.rapid.robot.network.annotations.POST;
-import com.bossymr.rapid.robot.network.annotations.Service;
-import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.annotations.GET;
+import com.bossymr.network.annotations.POST;
+import com.bossymr.network.annotations.Service;
+import com.bossymr.network.annotations.Subscribable;
 import org.jetbrains.annotations.NotNull;
 
 @Service("/rw/mastership")
@@ -18,25 +18,25 @@ public interface MastershipService {
      * {@link ManualModePrivilegeService}.
      */
     @POST("?action=request")
-    @NotNull Query<Void> request();
+    @NotNull NetworkCall<Void> request();
 
     /**
      * Releases mastership for all domains.
      */
     @POST("?action=release")
-    @NotNull Query<Void> release();
+    @NotNull NetworkCall<Void> release();
 
     @Subscribable("/rw/mastership")
-    @NotNull SubscribableQuery<MastershipEvent> onRequest();
+    @NotNull SubscribableNetworkCall<MastershipEvent> onRequest();
 
     @GET("/cfg")
-    @NotNull Query<MastershipDomain> getConfigurationDomain();
+    @NotNull NetworkCall<MastershipDomain> getConfigurationDomain();
 
     @GET("/motion")
-    @NotNull Query<MastershipDomain> getMotionDomain();
+    @NotNull NetworkCall<MastershipDomain> getMotionDomain();
 
     @GET("/rapid")
-    @NotNull Query<MastershipDomain> getRapidDomain();
+    @NotNull NetworkCall<MastershipDomain> getRapidDomain();
 
 
 }

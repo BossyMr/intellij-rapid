@@ -1,12 +1,13 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.model.Model;
 import com.bossymr.rapid.robot.network.Symbol;
-import com.bossymr.rapid.robot.network.client.NetworkClient;
-import com.bossymr.rapid.robot.network.client.model.Model;
 import com.bossymr.rapid.robot.network.robotware.io.InputOutputSignalType;
 import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 import java.util.*;
@@ -31,13 +32,11 @@ public final class RobotState {
      */
     public @NotNull Set<String> cache = new HashSet<>();
 
-    public @NotNull Set<NetworkState> networks = new HashSet<>();
-
-    public @NotNull Set<Symbol> getSymbols() {
+    public @NotNull Set<Symbol> getSymbols(@Nullable NetworkEngine networkEngine) {
         Set<Symbol> symbols = new HashSet<>();
         for (SymbolState symbolState : this.symbols) {
             Model model = symbolState.toModel();
-            Symbol state = NetworkClient.newSimpleEntity(model, Symbol.class);
+            Symbol state = NetworkEngine.createEntity(networkEngine, Symbol.class, model);
             if (state != null) {
                 symbols.add(state);
             }

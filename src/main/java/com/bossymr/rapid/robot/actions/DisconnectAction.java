@@ -29,7 +29,8 @@ public class DisconnectAction extends AnAction {
                 assert robot != null;
                 try {
                     robot.disconnect();
-                } catch (IOException ignored) {}
+                } catch (IOException | InterruptedException ignored) {
+                }
             }
         };
         ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));

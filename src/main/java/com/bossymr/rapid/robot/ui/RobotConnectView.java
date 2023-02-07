@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.ui;
 
+import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;

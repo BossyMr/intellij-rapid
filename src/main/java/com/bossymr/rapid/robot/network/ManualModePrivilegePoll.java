@@ -1,7 +1,8 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Entity;
-import com.bossymr.rapid.robot.network.annotations.Property;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.annotations.Entity;
+import com.bossymr.network.annotations.Property;
 
 /**
  * A Request Manual Mode Privilege (RMMP) poll update which contains information regarding the status of a requested

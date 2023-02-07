@@ -27,7 +27,7 @@ public class RobotTest {
     }
 
     @AfterEach
-    void tearDown() throws IOException {
+    void tearDown() throws IOException, InterruptedException {
         RemoteRobotService remoteService = RemoteRobotService.getInstance();
         remoteService.disconnect();
     }

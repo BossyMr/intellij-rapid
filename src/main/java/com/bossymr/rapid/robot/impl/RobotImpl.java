@@ -1,12 +1,18 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.network.ResponseStatusException;
+import com.bossymr.network.client.DelegatingNetworkEngine;
+import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.*;
+import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.Robot;
+import com.bossymr.rapid.robot.RobotEventListener;
+import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.Module;
 import com.bossymr.rapid.robot.network.*;
-import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.util.io.FileUtil;
@@ -22,25 +28,22 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class RobotImpl implements Robot {
 
     private @NotNull RobotState robotState;
-    private @Nullable RobotService robotService;
+    private @Nullable NetworkEngine networkEngine;
 
     private @NotNull List<RapidTask> tasks;
     private @NotNull Map<String, VirtualSymbol> symbols;
 
-    /**
-     * Creates a new {@code Robot} which is connected to the remote robot through the specified service.
-     *
-     * @param robotService the robot service.
-     */
-    public RobotImpl(@NotNull RobotService robotService) throws IOException, InterruptedException {
-        this.robotService = robotService;
-        robotState = RobotUtil.getRobotState(robotService);
+    public RobotImpl(@NotNull URI path, @NotNull String username, char @NotNull [] password) throws IOException, InterruptedException {
+        NetworkEngine engine = new NetworkEngine(path, () -> new Credentials(username, password));
+        this.networkEngine = new RobotDelegatingNetworkEngine(engine);
+        robotState = RobotUtil.getRobotState(networkEngine);
         RemoteRobotService.getInstance().setRobotState(robotState);
-        symbols = RobotUtil.getSymbols(robotState);
+        symbols = RobotUtil.getSymbols(networkEngine, robotState);
         tasks = new ArrayList<>();
         download();
         RobotUtil.reload();
@@ -55,7 +58,7 @@ public class RobotImpl implements Robot {
     public RobotImpl(@NotNull RobotState robotState) {
         this.robotState = robotState;
         RemoteRobotService.getInstance().setRobotState(robotState);
-        symbols = RobotUtil.getSymbols(robotState);
+        symbols = RobotUtil.getSymbols(null, robotState);
         tasks = new ArrayList<>();
         retrieve();
     }
@@ -86,8 +89,8 @@ public class RobotImpl implements Robot {
         if (symbols.containsKey(name)) {
             return symbols.get(name);
         } else {
-            RobotService robotService = getRobotService();
-            if (robotService != null) {
+            if (getNetworkEngine() != null) {
+                RobotService robotService = getNetworkEngine().createService(RobotService.class);
                 if (robotState.cache.contains(name)) {
                     return null;
                 }
@@ -95,7 +98,7 @@ public class RobotImpl implements Robot {
                 try {
                     symbol = robotService.getRobotWareService().getRapidService().findSymbol("RAPID" + "/" + name).send();
                 } catch (ResponseStatusException e) {
-                    if (e.getStatusCode() == 400) {
+                    if (e.getResponse().statusCode() == 400) {
                         symbol = null;
                     } else {
                         throw e;
@@ -118,9 +121,11 @@ public class RobotImpl implements Robot {
 
     @Override
     public void upload() throws IOException, InterruptedException {
-        if (robotService == null) throw new IllegalStateException();
+        if (networkEngine == null) throw new IllegalStateException();
         for (RapidTask task : getTasks()) {
-            Set<VirtualFile> modules = task.getFiles();
+            Set<VirtualFile> modules = task.getFiles().stream()
+                    .map(file -> LocalFileSystem.getInstance().findFileByIoFile(file))
+                    .collect(Collectors.toSet());
             upload(task, modules);
         }
     }
@@ -143,58 +148,59 @@ public class RobotImpl implements Robot {
     }
 
     private void doUpload(@NotNull RapidTask task, @NotNull Set<VirtualFile> modules) throws IOException, InterruptedException {
-        if (robotService == null) throw new IllegalStateException();
-        File directory = FileUtil.createTempDirectory("robot", "upload");
-        VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(directory);
-        assert virtualFile != null;
-        List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
-        for (Task remoteTask : remoteTasks) {
-            if (remoteTask.getName().equals(task.getName())) {
-                String programName = remoteTask.getProgram().send().getName();
-                File programFile = directory.toPath().resolve(programName + ".pgf").toFile();
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(programFile))) {
-                    writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
-                    writer.write("<Program>\r\n");
-                    for (VirtualFile module : modules) {
-                        writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
-                        module.copy(this, virtualFile, module.getName());
+        if (networkEngine == null) throw new IllegalStateException();
+        try (NetworkEngine delegating = new DelegatingNetworkEngine.ShutdownOnFailure(networkEngine)) {
+            RobotService robotService = delegating.createService(RobotService.class);
+            File directory = FileUtil.createTempDirectory("robot", "upload");
+            VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(directory);
+            assert virtualFile != null;
+            List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
+            for (Task remoteTask : remoteTasks) {
+                if (remoteTask.getName().equals(task.getName())) {
+                    String programName = remoteTask.getProgram().send().getName();
+                    File programFile = directory.toPath().resolve(programName + ".pgf").toFile();
+                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(programFile))) {
+                        writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
+                        writer.write("<Program>\r\n");
+                        for (VirtualFile module : modules) {
+                            writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
+                            module.copy(this, virtualFile, module.getName());
+                        }
+                        writer.write("</Program>");
                     }
-                    writer.write("</Program>");
+                    remoteTask.getProgram().send().load(programFile.getPath(), LoadProgramMode.REPLACE).send();
+                    return;
                 }
-                remoteTask.getProgram().send().load(programFile.getPath(), LoadProgramMode.REPLACE).send();
-                return;
             }
         }
     }
 
     @Override
     public void download() throws IOException, InterruptedException {
-        if (robotService == null) throw new IllegalStateException();
-        List<RapidTask> rapidTasks = new ArrayList<>();
-        Path defaultPath = Path.of(PathManager.getSystemPath(), "robot");
-        File defaultFile = defaultPath.toFile();
-        if (defaultFile.exists()) FileUtil.delete(defaultFile);
-        if (!defaultFile.mkdir()) throw new IOException();
-        List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
-        for (Task remoteTask : remoteTasks) {
-            File taskFile = defaultPath.resolve(remoteTask.getName()).toFile();
-            if (!taskFile.mkdir()) throw new IOException();
-            Set<VirtualFile> virtualFiles = new HashSet<>();
-            LocalFileSystem instance = LocalFileSystem.getInstance();
-            VirtualFile taskVirtualFile = instance.refreshAndFindFileByIoFile(taskFile);
-            assert taskVirtualFile != null;
-            RapidTask rapidTask = new RapidTaskImpl(remoteTask.getName(), taskVirtualFile, virtualFiles);
-            List<ModuleInfo> moduleInfos = remoteTask.getModules().send();
-            for (ModuleInfo moduleInfo : moduleInfos) {
-                Module module = moduleInfo.getModule().send();
-                module.save(module.getName(), taskFile.getPath()).send();
-                VirtualFile virtualFile = instance.refreshAndFindFileByNioFile(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION));
-                assert virtualFile != null;
-                virtualFiles.add(virtualFile);
+        if (networkEngine == null) throw new IllegalStateException();
+        try (NetworkEngine delegating = new DelegatingNetworkEngine.ShutdownOnFailure(networkEngine)) {
+            RobotService robotService = delegating.createService(RobotService.class);
+            List<RapidTask> rapidTasks = new ArrayList<>();
+            Path defaultPath = Path.of(PathManager.getSystemPath(), "robot");
+            File defaultFile = defaultPath.toFile();
+            if (defaultFile.exists()) FileUtil.delete(defaultFile);
+            if (!defaultFile.mkdir()) throw new IOException();
+            List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
+            for (Task remoteTask : remoteTasks) {
+                File taskFile = defaultPath.resolve(remoteTask.getName()).toFile();
+                if (!taskFile.mkdir()) throw new IOException();
+                Set<File> virtualFiles = new HashSet<>();
+                RapidTask rapidTask = new RapidTaskImpl(remoteTask.getName(), taskFile, virtualFiles);
+                List<ModuleInfo> moduleInfos = remoteTask.getModules().send();
+                for (ModuleInfo moduleInfo : moduleInfos) {
+                    Module module = moduleInfo.getModule().send();
+                    module.save(module.getName(), taskFile.getPath()).send();
+                    virtualFiles.add(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile());
+                }
+                rapidTasks.add(rapidTask);
             }
-            rapidTasks.add(rapidTask);
+            this.tasks = rapidTasks;
         }
-        this.tasks = rapidTasks;
     }
 
     public void retrieve() {
@@ -205,18 +211,11 @@ public class RobotImpl implements Robot {
             File[] taskFiles = defaultFile.listFiles();
             if (taskFiles != null) {
                 for (File taskFile : taskFiles) {
-                    // TODO: 2023-01-13 Change to using File
-                    VirtualFile taskVirtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(taskFile);
-                    assert taskVirtualFile != null;
                     File[] moduleFiles = taskFile.listFiles();
-                    Set<VirtualFile> virtualFiles = new HashSet<>();
-                    RapidTask rapidTask = new RapidTaskImpl(taskFile.getName(), taskVirtualFile, virtualFiles);
+                    Set<File> virtualFiles = new HashSet<>();
+                    RapidTask rapidTask = new RapidTaskImpl(taskFile.getName(), taskFile, virtualFiles);
                     if (moduleFiles != null) {
-                        for (File moduleFile : moduleFiles) {
-                            VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(moduleFile);
-                            assert virtualFile != null;
-                            virtualFiles.add(virtualFile);
-                        }
+                        virtualFiles.addAll(Arrays.asList(moduleFiles));
                     }
                     rapidTasks.add(rapidTask);
                 }
@@ -226,8 +225,8 @@ public class RobotImpl implements Robot {
     }
 
     @Override
-    public @Nullable RobotService getRobotService() {
-        return robotService;
+    public @Nullable NetworkEngine getNetworkEngine() {
+        return networkEngine;
     }
 
     @Override
@@ -243,30 +242,31 @@ public class RobotImpl implements Robot {
     public void reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException {
         RobotEventListener.publish().beforeRefresh(this);
         URI path = URI.create(robotState.path);
-        RobotUtil.setCredentials(path, credentials);
-        robotService = RobotService.connect(path, credentials);
-        robotState = RobotUtil.getRobotState(robotService);
+        RobotUtil.setCredentials(path, credentials.username(), credentials.password());
+        NetworkEngine engine = new NetworkEngine(path, () -> credentials);
+        this.networkEngine = new RobotDelegatingNetworkEngine(engine);
+        robotState = RobotUtil.getRobotState(networkEngine);
         RemoteRobotService.getInstance().setRobotState(robotState);
-        symbols = RobotUtil.getSymbols(robotState);
+        symbols = RobotUtil.getSymbols(networkEngine, robotState);
         retrieve();
         RobotUtil.reload();
         RobotEventListener.publish().afterRefresh(this);
     }
 
     @Override
-    public void disconnect() throws IOException {
+    public void disconnect() throws IOException, InterruptedException {
         RobotEventListener.publish().beforeDisconnect(this);
-        if (getRobotService() != null) {
-            getRobotService().getNetworkClient().close();
-            this.robotService = null;
+        if (getNetworkEngine() != null) {
+            getNetworkEngine().close();
+            this.networkEngine = null;
         }
         RobotEventListener.publish().afterDisconnect(this);
     }
 
-    public void dispose() throws IOException {
-        if (getRobotService() != null) {
-            getRobotService().getNetworkClient().close();
-            this.robotService = null;
+    public void dispose() throws IOException, InterruptedException {
+        if (getNetworkEngine() != null) {
+            getNetworkEngine().close();
+            this.networkEngine = null;
         }
     }
 }

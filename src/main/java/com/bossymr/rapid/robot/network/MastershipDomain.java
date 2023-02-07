@@ -1,11 +1,12 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Entity;
-import com.bossymr.rapid.robot.network.annotations.POST;
-import com.bossymr.rapid.robot.network.annotations.Property;
-import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.annotations.Entity;
+import com.bossymr.network.annotations.POST;
+import com.bossymr.network.annotations.Property;
+import com.bossymr.network.annotations.Subscribable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,12 +39,12 @@ public interface MastershipDomain extends EntityModel {
     boolean isHolding();
 
     @POST("{@self}?action=request")
-    @NotNull Query<Void> request();
+    @NotNull NetworkCall<Void> request();
 
     @POST("{@self}?action=release")
-    @NotNull Query<Void> release();
+    @NotNull NetworkCall<Void> release();
 
     @Subscribable("{@self}}")
-    @NotNull SubscribableQuery<MastershipEvent> onRequest();
+    @NotNull SubscribableNetworkCall<MastershipEvent> onRequest();
 
 }

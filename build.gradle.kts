@@ -8,9 +8,7 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.8.0"
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.11.0"
-    // Gradle GrammarKit Plugin
-    id("org.jetbrains.grammarkit") version "2022.3"
+    id("org.jetbrains.intellij") version "1.12.0"
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
@@ -41,6 +39,7 @@ configurations {
 }
 
 dependencies {
+    implementation(project(mapOf("path" to ":network")))
     testImplementation(platform("org.junit:junit-bom:5.9.0"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
     testImplementation("junit:junit:4.13.2")
@@ -85,24 +84,5 @@ tasks {
         // Specify pre-release label to publish the plugin in a custom Release Channel automatically. Read more:
         // https://plugins.jetbrains.com/docs/intellij/deployment.html#specifying-a-release-channel
         channels.set(listOf(properties("pluginVersion").split('-').getOrElse(1) { "default" }.split('.').first()))
-    }
-
-    // Configure GrammarKit plugin
-    // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-grammar-kit-plugin.html
-    generateLexer {
-        source.set("src/main/grammar/Rapid.flex")
-        targetDir.set("src/main/gen/com/bossymr/rapid/language/lexer")
-        targetClass.set("_RapidLexer")
-        purgeOldFiles.set(true)
-    }
-
-    // Configure GrammarKit plugin
-    // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-grammar-kit-plugin.html
-    generateParser {
-        source.set("src/main/grammar/Rapid.bnf")
-        targetRoot.set("src/main/gen")
-        pathToParser.set("/com/bossymr/rapid/language/parser/RapidParser.java")
-        pathToPsiRoot.set("/com/bossymr/rapid/language/psi")
-        purgeOldFiles.set(true)
     }
 }

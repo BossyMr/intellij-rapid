@@ -1,10 +1,10 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.network.annotations.Field;
-import com.bossymr.rapid.robot.network.annotations.GET;
-import com.bossymr.rapid.robot.network.annotations.POST;
-import com.bossymr.rapid.robot.network.annotations.Service;
-import com.bossymr.rapid.robot.network.query.Query;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.annotations.Field;
+import com.bossymr.network.annotations.GET;
+import com.bossymr.network.annotations.POST;
+import com.bossymr.network.annotations.Service;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -16,31 +16,31 @@ import java.util.List;
 public interface InputOutputService {
 
     @GET("/networks/{network}")
-    @NotNull Query<InputOutputNetwork> getNetwork(
+    @NotNull NetworkCall<InputOutputNetwork> getNetwork(
             @NotNull @Field("network") String network
     );
 
     @GET("/networks")
-    @NotNull Query<List<InputOutputNetwork>> getNetworks();
+    @NotNull NetworkCall<List<InputOutputNetwork>> getNetworks();
 
     @GET("/devices")
-    @NotNull Query<List<InputOutputDevice>> getDevices();
+    @NotNull NetworkCall<List<InputOutputDevice>> getDevices();
 
     @GET("/devices/{device}")
-    @NotNull Query<InputOutputNetwork> getDevices(
+    @NotNull NetworkCall<InputOutputNetwork> getDevices(
             @NotNull @Field("device") String device
     );
 
     @GET("/signals")
-    @NotNull Query<List<InputOutputSignal>> getSignals();
+    @NotNull NetworkCall<List<InputOutputSignal>> getSignals();
 
     @GET("/signals/{network}/{device}/{signal}")
-    @NotNull Query<InputOutputSignal> getSignal(
+    @NotNull NetworkCall<InputOutputSignal> getSignal(
             @NotNull @Field("network") String network,
             @NotNull @Field("device") String device,
             @NotNull @Field("signal") String signal
     );
 
     @POST("/signals?action=unblock-signals")
-    @NotNull Query<Void> unblockSignals();
+    @NotNull NetworkCall<Void> unblockSignals();
 }

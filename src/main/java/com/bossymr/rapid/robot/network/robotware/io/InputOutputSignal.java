@@ -1,13 +1,9 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.network.EntityModel;
-import com.bossymr.rapid.robot.network.annotations.Entity;
-import com.bossymr.rapid.robot.network.annotations.GET;
-import com.bossymr.rapid.robot.network.annotations.POST;
-import com.bossymr.rapid.robot.network.annotations.Property;
-import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"ios-signal-li", "ios-signal"})
@@ -53,13 +49,13 @@ public interface InputOutputSignal extends EntityModel {
     int getSignalQuality();
 
     @GET("{@device}")
-    @NotNull Query<InputOutputDevice> getDevice();
+    @NotNull NetworkCall<InputOutputDevice> getDevice();
 
     @POST("{@self}?action=set")
-    @NotNull Query<Void> setState(
+    @NotNull NetworkCall<Void> setState(
             @NotNull InputOutputSignalLogicalState logicalState
     );
 
     @Subscribable("{@self};state")
-    @NotNull SubscribableQuery<InputOutputSignalEvent> onState();
+    @NotNull SubscribableNetworkCall<InputOutputSignalEvent> onState();
 }

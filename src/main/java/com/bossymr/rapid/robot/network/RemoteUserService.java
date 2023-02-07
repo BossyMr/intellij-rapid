@@ -1,10 +1,10 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.POST;
-import com.bossymr.rapid.robot.network.annotations.Service;
-import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.annotations.POST;
+import com.bossymr.network.annotations.Service;
+import com.bossymr.network.annotations.Subscribable;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -20,18 +20,18 @@ public interface RemoteUserService {
      * The grant "UAS_REMOTE_LOGIN" is required.
      */
     @POST("?action=remotelogin")
-    @NotNull Query<Void> login();
+    @NotNull NetworkCall<Void> login();
 
     /**
      * Requests the TPU to logout of the current user.
      */
     @POST("?action=remotelogout ")
-    @NotNull Query<Void> logout();
+    @NotNull NetworkCall<Void> logout();
 
     /**
      * Subscribes to changes for remote user connections.
      */
     @Subscribable("/users/remoteuserstate")
-    @NotNull SubscribableQuery<RemoteUserEvent> onRequest();
+    @NotNull SubscribableNetworkCall<RemoteUserEvent> onRequest();
 
 }
