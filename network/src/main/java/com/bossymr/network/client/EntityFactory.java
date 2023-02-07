@@ -2,8 +2,6 @@ package com.bossymr.network.client;
 
 import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
-import com.bossymr.network.entity.EntityInvocationHandler;
-import com.bossymr.network.entity.ServiceInvocationHandler;
 import com.bossymr.network.model.CollectionModel;
 import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
@@ -11,7 +9,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -62,27 +59,6 @@ public class EntityFactory {
         if (!(EntityModel.class.isAssignableFrom(entityType))) {
             throw new IllegalArgumentException("'" + entityType.getName() + "' does not implement EntityModel");
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    public <T> @NotNull T createService(@NotNull Class<T> serviceType) {
-        return (T) Proxy.newProxyInstance(
-                serviceType.getClassLoader(),
-                new Class[]{serviceType},
-                new ServiceInvocationHandler(engine));
-    }
-
-    @SuppressWarnings("unchecked")
-    public <T> @Nullable T createEntity(@NotNull Class<T> entityType, @NotNull Model model) {
-        Map<String, Class<? extends T>> arguments = EntityFactory.getEntityType(entityType);
-        if (arguments.containsKey(model.getType())) {
-            Class<? extends T> returnType = arguments.get(model.getType());
-            return (T) Proxy.newProxyInstance(
-                    returnType.getClassLoader(),
-                    new Class[]{returnType},
-                    new EntityInvocationHandler(engine, model));
-        }
-        return null;
     }
 
     public <T> @Nullable T convert(@NotNull HttpRequest request, @NotNull Type returnType) throws IOException, InterruptedException {

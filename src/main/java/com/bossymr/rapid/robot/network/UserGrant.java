@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Entity;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.annotations.Entity;
 
 /**
  * A {@code UserGrant} represents a grant. The name of the grant is retrieved using {@link #getTitle()}.

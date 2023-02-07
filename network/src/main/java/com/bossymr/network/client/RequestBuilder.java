@@ -88,8 +88,15 @@ public class RequestBuilder {
     }
 
     private @NotNull URI getResource(@NotNull URI resource, @NotNull MultiMap<String, String> arguments) {
+        if (arguments.isEmpty()) {
+            return resource;
+        }
         String query = resource.getQuery();
-        query = query != null ? query + "&" : "";
+        if (query == null) {
+            query = "";
+        } else {
+            query += "&";
+        }
         query += arguments.stream()
                 .map(entry -> entry.getKey() + "=" + entry.getValue())
                 .collect(Collectors.joining("&"));

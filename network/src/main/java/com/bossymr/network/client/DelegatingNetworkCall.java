@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.net.http.HttpRequest;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -15,6 +16,11 @@ public abstract class DelegatingNetworkCall<T> extends CloseableNetworkCall<T> {
 
     protected DelegatingNetworkCall(@NotNull NetworkCall<T> networkCall) {
         this.networkCall = networkCall;
+    }
+
+    @Override
+    public @NotNull HttpRequest request() {
+        return networkCall.request();
     }
 
     protected abstract void onSuccess(@Nullable T response);

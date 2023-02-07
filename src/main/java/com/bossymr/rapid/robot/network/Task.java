@@ -1,9 +1,10 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Entity;
-import com.bossymr.rapid.robot.network.annotations.GET;
-import com.bossymr.rapid.robot.network.annotations.Property;
-import com.bossymr.rapid.robot.network.query.Query;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.annotations.Entity;
+import com.bossymr.network.annotations.GET;
+import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -12,10 +13,10 @@ import java.util.List;
 public interface Task extends EntityModel {
 
     @GET("{@modules}")
-    @NotNull Query<List<ModuleInfo>> getModules();
+    @NotNull NetworkCall<List<ModuleInfo>> getModules();
 
     @GET("{@program}")
-    @NotNull Query<Program> getProgram();
+    @NotNull NetworkCall<Program> getProgram();
 
     @Property("name")
     @NotNull String getName();

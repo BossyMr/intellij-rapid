@@ -12,6 +12,7 @@
       <option name="taskNames">
         <list>
           <option value="check"/>
+          <option value="network:check"/>
         </list>
       </option>
       <option name="vmOptions" value="" />

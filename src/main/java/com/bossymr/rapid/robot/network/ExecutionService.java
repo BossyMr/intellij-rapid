@@ -1,22 +1,18 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Field;
-import com.bossymr.rapid.robot.network.annotations.GET;
-import com.bossymr.rapid.robot.network.annotations.POST;
-import com.bossymr.rapid.robot.network.annotations.Service;
-import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
 @Service("/rw/rapid/execution")
 public interface ExecutionService {
 
     @GET("")
-    @NotNull Query<ExecutionStatus> getStatus();
+    @NotNull NetworkCall<ExecutionStatus> getStatus();
 
     @POST("?action=start")
-    @NotNull Query<Void> start(
+    @NotNull NetworkCall<Void> start(
             @NotNull @Field("regain") RegainState regainState,
             @NotNull @Field("execmode") ExecutionMode executionMode,
             @NotNull @Field("cycle") ExecutionCycle executionCycle,
@@ -26,31 +22,31 @@ public interface ExecutionService {
     );
 
     @POST("?action=stop")
-    @NotNull Query<Void> stop(
+    @NotNull NetworkCall<Void> stop(
             @NotNull @Field("stopmode") StopMode stopMode,
             @NotNull @Field("usetsp") UseTSPMode useTSPMode
     );
 
     @POST("?action=startprodentry")
-    @NotNull Query<Void> startProduction();
+    @NotNull NetworkCall<Void> startProduction();
 
     @POST("?action=resetpp")
-    @NotNull Query<Void> resetPointer();
+    @NotNull NetworkCall<Void> resetPointer();
 
     @POST("?action=setcycle")
-    @NotNull Query<Void> setCycles(
+    @NotNull NetworkCall<Void> setCycles(
             @NotNull @Field("cycle") ExecutionCycle executionCycle
     );
 
     @Subscribable("/rw/rapid/execution;ctrlexecstate")
-    @NotNull SubscribableQuery<ExecutionStateEvent> onExecutionState();
+    @NotNull SubscribableNetworkCall<ExecutionStateEvent> onExecutionState();
 
 
     @Subscribable("/rw/rapid/execution;rapidexeccycle")
-    @NotNull SubscribableQuery<ExecutionCycleEvent> onExecutionCycle();
+    @NotNull SubscribableNetworkCall<ExecutionCycleEvent> onExecutionCycle();
 
     @Subscribable("/rw/rapid/execution;hdtrun")
-    @NotNull SubscribableQuery<HoldToRunEvent> onHoldToRun();
+    @NotNull SubscribableNetworkCall<HoldToRunEvent> onHoldToRun();
 
     /**
      * Sets the hold to run state. To start execution of a program, the state must be set to
@@ -65,7 +61,7 @@ public interface ExecutionService {
      * @param mode the new state.
      */
     @POST("?action=holdtorun-state")
-    @NotNull Query<Void> setHoldToRun(
+    @NotNull NetworkCall<Void> setHoldToRun(
             @NotNull @Field("state") HoldToRunMode mode
     );
 }

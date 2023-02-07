@@ -10,6 +10,8 @@ import com.bossymr.network.client.security.impl.DigestAuthenticator;
 import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.CookieManager;
@@ -28,6 +30,8 @@ import java.util.function.Supplier;
  * enforcing a set amount of max connections.
  */
 public class HttpNetworkClient implements NetworkClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(HttpNetworkClient.class);
 
     private final int MAX_CONNECTIONS = 2;
     private final Semaphore semaphore = new Semaphore(MAX_CONNECTIONS);
@@ -72,6 +76,7 @@ public class HttpNetworkClient implements NetworkClient {
     @Override
     public @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
         HttpResponse<byte[]> response = retry(request, HttpResponse.BodyHandlers.ofByteArray());
+        logger.atInfo().log("Sending request '{} synchronously with response '{}'", request, response);
         if (response.statusCode() >= 300) {
             throw new ResponseStatusException(response);
         }
@@ -84,8 +89,10 @@ public class HttpNetworkClient implements NetworkClient {
         if (response.statusCode() == 401 || response.statusCode() == 407) {
             HttpRequest retry = authenticator.authenticate(response);
             if (retry != null) {
+                logger.atDebug().log("Re-authenticated request '{}' with authenticator '{}'", request, authenticator);
                 return send(retry, bodyHandler);
             }
+            logger.atDebug().log("Failed to re-authenticated request '{}' with authenticator '{}'", request, authenticator);
         }
         return response;
     }
@@ -103,6 +110,7 @@ public class HttpNetworkClient implements NetworkClient {
     public @NotNull CompletableFuture<HttpResponse<byte[]>> sendAsync(@NotNull HttpRequest request) {
         return retryAsync(request, HttpResponse.BodyHandlers.ofByteArray())
                 .thenApplyAsync(response -> {
+                    logger.atInfo().log("Sending request '{} synchronously with response '{}'", request, response);
                     if (response.statusCode() >= 300) {
                         throw new CompletionException(new ResponseStatusException(response));
                     }
@@ -117,42 +125,46 @@ public class HttpNetworkClient implements NetworkClient {
                     if (response.statusCode() == 401 || response.statusCode() == 407) {
                         HttpRequest retry = authenticator.authenticate(response);
                         if (retry != null) {
+                            logger.atDebug().log("Re-authenticated request '{}' with authenticator '{}'", request, authenticator);
                             return sendAsync(retry, bodyHandler);
                         }
+                        logger.atDebug().log("Failed to re-authenticate request '{}' with authenticator '{}'", request, authenticator);
                     }
                     return CompletableFuture.completedFuture(response);
                 });
     }
 
     private <T> @NotNull CompletableFuture<HttpResponse<T>> sendAsync(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
-        return CompletableFuture.completedFuture(null)
-                .thenComposeAsync(ignored -> {
-                    try {
-                        semaphore.acquire();
-                        return httpClient.sendAsync(request, bodyHandler);
-                    } catch (InterruptedException e) {
-                        throw new CompletionException(e);
-                    }
-                })
-                .handleAsync((response, throwable) -> {
-                    semaphore.release();
-                    if (throwable != null) {
-                        throw throwable instanceof CompletionException ?
-                                ((CompletionException) throwable) :
-                                new CompletionException(throwable);
-                    }
-                    return response;
-                });
+        CompletableFuture<HttpResponse<T>> completableFuture = new CompletableFuture<>();
+        executorService.submit(() -> {
+            semaphore.acquire();
+            logger.atDebug().log("Acquired semaphore for request '{}'; available permits: {}; queue length: {}", request, semaphore.availablePermits(), semaphore.getQueueLength());
+            httpClient.sendAsync(request, bodyHandler)
+                    .handleAsync(((response, throwable) -> {
+                        semaphore.release();
+                        logger.atDebug().log("Released semaphore for request '{}'", request);
+                        if (throwable != null) {
+                            completableFuture.completeExceptionally(throwable);
+                            throw new CompletionException(throwable);
+                        }
+                        completableFuture.complete(response);
+                        return response;
+                    }));
+            return null;
+        });
+        return completableFuture;
     }
 
     @Override
     public @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
+        logger.atInfo().log("Subscribing to {} with priority {}", event.getResource(), priority);
         SubscriptionEntity entity = new SubscriptionEntity(this, event, priority, listener);
         if (group != null) {
             group.getEntities().add(entity);
             return group.update().thenApplyAsync(ignored -> entity);
         } else {
             Set<SubscriptionEntity> entities = new HashSet<>();
+            entities.add(entity);
             return SubscriptionGroup.start(this, entities, defaultPath)
                     .thenApplyAsync(result -> {
                         this.group = result;
@@ -164,13 +176,15 @@ public class HttpNetworkClient implements NetworkClient {
     @Override
     public @NotNull CompletableFuture<Void> unsubscribe(@NotNull SubscriptionEntity entity) {
         if (group != null) {
-            group.getEntities().remove(entity);
-            if (group.getEntities().isEmpty()) {
-                return group.close().thenRunAsync(() -> group = null);
-            } else {
-                return group.update();
+            if (group.getEntities().remove(entity)) {
+                if (group.getEntities().isEmpty()) {
+                    return group.close().thenRunAsync(() -> group = null);
+                } else {
+                    return group.update();
+                }
             }
         }
+        logger.warn("Attempting to close a previously closed subscription");
         return CompletableFuture.completedFuture(null);
     }
 
@@ -188,5 +202,4 @@ public class HttpNetworkClient implements NetworkClient {
             }
         }
     }
-
 }

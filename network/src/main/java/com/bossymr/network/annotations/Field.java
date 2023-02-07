@@ -17,5 +17,5 @@ public @interface Field {
      *
      * @return the name of the field.
      */
-    @NotNull String value();
+    @NotNull String value() default "";
 }

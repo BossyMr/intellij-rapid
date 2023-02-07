@@ -11,10 +11,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 @WireMockTest
 public class NetworkClientTest {
@@ -41,6 +44,23 @@ public class NetworkClientTest {
                     .setPath(URI.create("/"))
                     .build();
             assertThrows(ResponseStatusException.class, () -> networkClient.send(request));
+        }
+    }
+
+    @Test
+    void semaphore(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
+        stubFor(get(urlEqualTo("/")).willReturn(ok()));
+        try (HttpNetworkClient networkClient = createNetworkClient(runtimeInfo)) {
+            HttpRequest request = networkClient.createRequest()
+                    .setPath(URI.create("/"))
+                    .build();
+            List<CompletableFuture<?>> requests = new ArrayList<>();
+            for (int i = 0; i < 10; i++) {
+                requests.add(networkClient.sendAsync(request));
+            }
+            CompletableFuture<Void> completableFuture = CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new));
+            completableFuture.join();
+            assertTimeoutPreemptively(Duration.ofMillis(1000), () -> completableFuture.get());
         }
     }
 

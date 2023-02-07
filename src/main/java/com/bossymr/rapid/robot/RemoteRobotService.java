@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot;
 
-import com.intellij.credentialStore.Credentials;
+import com.bossymr.network.client.security.Credentials;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
@@ -48,7 +48,7 @@ public interface RemoteRobotService extends PersistentStateComponent<RemoteRobot
      *
      * @throws IOException if an I/O error occurs.
      */
-    void disconnect() throws IOException;
+    void disconnect() throws IOException, InterruptedException;
 
     @Nullable RobotState getRobotState();
 

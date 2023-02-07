@@ -1,10 +1,11 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Entity;
-import com.bossymr.rapid.robot.network.annotations.Field;
-import com.bossymr.rapid.robot.network.annotations.POST;
-import com.bossymr.rapid.robot.network.annotations.Property;
-import com.bossymr.rapid.robot.network.query.Query;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.annotations.Entity;
+import com.bossymr.network.annotations.Field;
+import com.bossymr.network.annotations.POST;
+import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"rap-module"})
@@ -17,13 +18,13 @@ public interface Module extends EntityModel {
     @NotNull String getFileName();
 
     @POST("{@self}&action=save")
-    @NotNull Query<Void> save(
+    @NotNull NetworkCall<Void> save(
             @NotNull @Field("name") String name,
             @NotNull @Field("path") String path
     );
 
     @POST("{@self}&action=set-module-text")
-    @NotNull Query<UpdateModuleText> setText(
+    @NotNull NetworkCall<UpdateModuleText> setText(
             @NotNull @Field("text") String text
     );
 

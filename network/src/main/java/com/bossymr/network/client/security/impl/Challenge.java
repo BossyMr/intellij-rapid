@@ -43,13 +43,16 @@ public record Challenge(@NotNull String scheme, @NotNull Map<String, String> val
 
     private static @NotNull Map<String, String> getSections(@NotNull String arguments) throws IllegalArgumentException {
         Map<String, String> sections = new HashMap<>();
-        Pattern pattern = Pattern.compile("([^ ]*)=((\"(.*)\")|([^ ]*))");
+        Pattern pattern = Pattern.compile("([^ \"]*)=((\"([^\"]*)\")|([^ ]*))");
         Matcher matcher = pattern.matcher(arguments);
         matcher.results().forEach(result -> {
             String group = result.group();
             String name = group.split("=")[0];
-            String value = group.split("=")[1];
-            sections.put(name, value.substring(1, value.length() - 1));
+            String value = group.substring(name.length() + 1);
+            if (value.startsWith("\"") && value.endsWith("\"")) {
+                value = value.substring(1, value.length() - 1);
+            }
+            sections.put(name, value);
         });
         return sections;
     }

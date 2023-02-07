@@ -49,18 +49,14 @@ public class NetworkEngine implements AutoCloseable {
         this.requestFactory = requestFactory;
     }
 
-    private NetworkEngine(@NotNull URI defaultPath, @NotNull Supplier<Credentials> credentials) {
+    public NetworkEngine(@NotNull URI defaultPath, @NotNull Supplier<Credentials> credentials) {
         this.client = new HttpNetworkClient(defaultPath, credentials);
         this.entityFactory = new EntityFactory(this, client);
         this.requestFactory = new RequestFactory(this);
     }
 
-    public static @NotNull NetworkEngine connect(@NotNull URI defaultPath, @NotNull Supplier<Credentials> credentials) {
-        return new NetworkEngine(defaultPath, credentials);
-    }
-
-    public static @NotNull NetworkEngine connect(@NotNull String defaultPath, @NotNull Supplier<Credentials> credentials) {
-        return new NetworkEngine(URI.create(defaultPath), credentials);
+    public NetworkEngine(@NotNull String defaultPath, @NotNull Supplier<Credentials> credentials) {
+        this(URI.create(defaultPath), credentials);
     }
 
     public @NotNull NetworkClient getNetworkClient() {
@@ -96,6 +92,16 @@ public class NetworkEngine implements AutoCloseable {
         return (T) Proxy.newProxyInstance(serviceType.getClassLoader(), new Class[]{serviceType}, new ServiceInvocationHandler(getNetworkEngine()));
     }
 
+    @SuppressWarnings("unchecked")
+    public static <T> @Nullable T createEntity(@Nullable NetworkEngine networkEngine, @NotNull Class<T> entityType, @NotNull Model model) {
+        Map<String, Class<? extends T>> arguments = EntityFactory.getEntityType(entityType);
+        if (arguments.containsKey(model.getType())) {
+            Class<? extends T> returnType = arguments.get(model.getType());
+            return (T) Proxy.newProxyInstance(returnType.getClassLoader(), new Class[]{returnType}, new EntityInvocationHandler(networkEngine, model));
+        }
+        return null;
+    }
+
     /**
      * Creates a new entity of the specified type and the specified underlying intermediate model.
      *
@@ -105,14 +111,8 @@ public class NetworkEngine implements AutoCloseable {
      * @return a new entity, or {@code null} if the specified model could not be converted to the specified type.
      * @throws IllegalArgumentException if the type is not annotated with {@link Entity}.
      */
-    @SuppressWarnings("unchecked")
     public <T> @Nullable T createEntity(@NotNull Class<T> entityType, @NotNull Model model) {
-        Map<String, Class<? extends T>> arguments = EntityFactory.getEntityType(entityType);
-        if (arguments.containsKey(model.getType())) {
-            Class<? extends T> returnType = arguments.get(model.getType());
-            return (T) Proxy.newProxyInstance(returnType.getClassLoader(), new Class[]{returnType}, new EntityInvocationHandler(getNetworkEngine(), model));
-        }
-        return null;
+        return createEntity(getNetworkEngine(), entityType, model);
     }
 
     /**

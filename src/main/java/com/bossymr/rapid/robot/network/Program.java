@@ -1,10 +1,11 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Entity;
-import com.bossymr.rapid.robot.network.annotations.Field;
-import com.bossymr.rapid.robot.network.annotations.POST;
-import com.bossymr.rapid.robot.network.annotations.Property;
-import com.bossymr.rapid.robot.network.query.Query;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.annotations.Entity;
+import com.bossymr.network.annotations.Field;
+import com.bossymr.network.annotations.POST;
+import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,12 +19,12 @@ public interface Program extends EntityModel {
     @Nullable String getEntryPoint();
 
     @POST("{@self}?action=save")
-    @NotNull Query<Void> save(
+    @NotNull NetworkCall<Void> save(
             @NotNull @Field("path") String path
     );
 
     @POST("{@self}?action=loadprog")
-    @NotNull Query<Void> load(
+    @NotNull NetworkCall<Void> load(
             @NotNull @Field("progpath") String path,
             @NotNull @Field("loadmode") LoadProgramMode mode
     );

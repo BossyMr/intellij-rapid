@@ -1,10 +1,9 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.network.EntityModel;
-import com.bossymr.rapid.robot.network.annotations.*;
-import com.bossymr.rapid.robot.network.query.Query;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery;
-import com.bossymr.rapid.robot.network.query.SubscribableQuery.Subscribable;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -22,26 +21,26 @@ public interface InputOutputNetwork extends EntityModel {
     @NotNull InputOutputLogicalState getLogicalState();
 
     @GET("{@devices}")
-    @NotNull Query<List<InputOutputDevice>> getDevices();
+    @NotNull NetworkCall<List<InputOutputDevice>> getDevices();
 
     @POST("{@self}?action=set")
-    @NotNull Query<Void> setState(
+    @NotNull NetworkCall<Void> setState(
             @NotNull InputOutputLogicalState logicalState
     );
 
     @Subscribable("{@self};state")
-    @NotNull SubscribableQuery<InputOutputNetworkEvent> onState();
+    @NotNull SubscribableNetworkCall<InputOutputNetworkEvent> onState();
 
     @GET("{@self}?resource=config")
-    @NotNull Query<InputOutputNetworkConfiguration> getConfigurationType();
+    @NotNull NetworkCall<InputOutputNetworkConfiguration> getConfigurationType();
 
     @GET("{@self}?resource=config")
-    @NotNull Query<InputOutputNetworkConfiguration> getConfigurationType(
+    @NotNull NetworkCall<InputOutputNetworkConfiguration> getConfigurationType(
             @NotNull @Field("configtype") InputOutputNetworkConfigurationRealm configurationType
     );
 
     @POST("{@self}?action=config")
-    @NotNull Query<Void> setConfigurationType(
+    @NotNull NetworkCall<Void> setConfigurationType(
             @NotNull @Field("config-type") InputOutputNetworkConfigurationType configurationType
     );
 

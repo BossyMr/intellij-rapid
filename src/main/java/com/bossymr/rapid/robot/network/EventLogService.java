@@ -1,9 +1,10 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.*;
-import com.bossymr.rapid.robot.network.query.AsynchronousQuery;
-import com.bossymr.rapid.robot.network.query.AsynchronousQuery.Asynchronous;
-import com.bossymr.rapid.robot.network.query.Query;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.annotations.Argument;
+import com.bossymr.network.annotations.GET;
+import com.bossymr.network.annotations.POST;
+import com.bossymr.network.annotations.Service;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,7 +24,7 @@ public interface EventLogService {
      * @return all categories in this event log.
      */
     @GET("?resource=count")
-    @NotNull Query<List<EventLogCategory>> getCategories(
+    @NotNull NetworkCall<List<EventLogCategory>> getCategories(
             @Nullable @Argument("lang") String languageCode
     );
 
@@ -31,15 +32,5 @@ public interface EventLogService {
      * Clears all messages in this event log.
      */
     @POST("?action=clearall")
-    @NotNull Query<Void> clearAll();
-
-    /**
-     * Dumps the event log into a file with the specified path.
-     *
-     * @param path the path, which can include environment variables.
-     */
-    @Asynchronous("?action=saveraw")
-    @NotNull AsynchronousQuery dump(
-            @NotNull @Field("path") String path
-    );
+    @NotNull NetworkCall<Void> clearAll();
 }

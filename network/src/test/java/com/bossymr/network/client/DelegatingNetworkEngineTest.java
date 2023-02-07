@@ -34,7 +34,7 @@ public class DelegatingNetworkEngineTest {
                 .build().build();
         wireMock.register(get("/success").willReturn(ModelTestUtil.response(URI.create(runtimeInfo.getHttpBaseUrl()), collectionModel)));
         wireMock.register(get("/fail").willReturn(badRequest()));
-        try (NetworkEngine networkEngine = NetworkEngine.connect(runtimeInfo.getHttpBaseUrl(), () -> null)) {
+        try (NetworkEngine networkEngine = new NetworkEngine(runtimeInfo.getHttpBaseUrl(), () -> null)) {
             final int[] counts = new int[2];
             final DelegatingNetworkEngine delegatingNetworkEngine = new DelegatingNetworkEngine(networkEngine) {
                 @Override

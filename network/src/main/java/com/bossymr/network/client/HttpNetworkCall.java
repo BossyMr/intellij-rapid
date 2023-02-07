@@ -35,6 +35,11 @@ public class HttpNetworkCall<T> extends CloseableNetworkCall<T> {
     }
 
     @Override
+    public @NotNull HttpRequest request() {
+        return request;
+    }
+
+    @Override
     protected @Nullable T create() throws IOException, InterruptedException {
         return factory.convert(request, returnType);
     }

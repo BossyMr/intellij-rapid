@@ -1,8 +1,7 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.ResponseStatusException;
-import com.bossymr.rapid.robot.network.annotations.*;
-import com.bossymr.rapid.robot.network.query.Query;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -19,23 +18,23 @@ public interface RapidService {
      * Searches for symbols on this robot, according to the specified arguments. To build a correctly formatted argument
      * map, use {@link SymbolQueryBuilder}.
      *
-     * @param fields the query arguments.
+     * @param fields the NetworkCall arguments.
      * @return the symbols on this robot.
      */
     @POST("/symbols?action=search-symbols")
-    @NotNull Query<List<Symbol>> findSymbols(
-            @FieldMap Map<String, String> fields
+    @NotNull NetworkCall<List<Symbol>> findSymbols(
+            @Field Map<String, String> fields
     );
 
     /**
      * Returns the symbol with the specified path. If a symbol with the specified path does not exist, a
-     * {@link ResponseStatusException} will be thrown, with the status code 400.
+     * {@link com.bossymr.network.ResponseStatusException} will be thrown, with the status code 400.
      *
      * @param symbol the path of the symbol.
      * @return the symbol.
      */
     @GET("/symbol/properties/{symbol}")
-    @NotNull Query<Symbol> findSymbol(
+    @NotNull NetworkCall<Symbol> findSymbol(
             @Path("symbol") String symbol
     );
 }

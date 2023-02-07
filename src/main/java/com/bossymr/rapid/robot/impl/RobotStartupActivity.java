@@ -15,10 +15,11 @@ public class RobotStartupActivity implements StartupActivity.DumbAware {
         RemoteRobotService service = RemoteRobotService.getInstance();
         Robot robot = service.getRobot();
         if (robot != null) {
-            if (robot.getRobotService() == null) {
+            if (robot.getNetworkEngine() == null) {
                 try {
                     robot.reconnect();
-                } catch (IOException | InterruptedException ignored) {}
+                } catch (IOException | InterruptedException ignored) {
+                }
             }
         }
     }

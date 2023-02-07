@@ -1,7 +1,8 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.query.SubscriptionEntity;
-import com.bossymr.rapid.robot.network.query.SubscriptionPriority;
+import com.bossymr.network.SubscriptionEntity;
+import com.bossymr.network.SubscriptionPriority;
+import com.bossymr.network.client.NetworkEngine;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -23,7 +25,8 @@ class RobotServiceTest {
 
     @BeforeAll
     static void beforeAll() {
-        robotService = RobotService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
+        robotService = new NetworkEngine(NetworkTestUtil.DEFAULT_PATH, () -> NetworkTestUtil.DEFAULT_CREDENTIALS)
+                .createService(RobotService.class);
     }
 
     @DisplayName("Test User Service")
@@ -32,10 +35,12 @@ class RobotServiceTest {
         UserService userService = robotService.getUserService();
         userService.getGrants().send();
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        SubscriptionEntity subscriptionEntity = userService.getRemoteUserService().onRequest().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> countDownLatch.countDown());
+        CompletableFuture<SubscriptionEntity> subscriptionEntity = userService.getRemoteUserService().onRequest()
+                .subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> countDownLatch.countDown());
         userService.getRemoteUserService().login().send();
+        SubscriptionEntity entity = subscriptionEntity.join();
         assertTrue(countDownLatch.await(5000, TimeUnit.MILLISECONDS));
-        subscriptionEntity.unsubscribe();
+        entity.unsubscribe().join();
     }
 
     @DisplayName("Test Controller Service")

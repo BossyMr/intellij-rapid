@@ -1,9 +1,10 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.network.annotations.Argument;
-import com.bossymr.rapid.robot.network.annotations.Entity;
-import com.bossymr.rapid.robot.network.annotations.GET;
-import com.bossymr.rapid.robot.network.query.Query;
+import com.bossymr.network.EntityModel;
+import com.bossymr.network.NetworkCall;
+import com.bossymr.network.annotations.Argument;
+import com.bossymr.network.annotations.Entity;
+import com.bossymr.network.annotations.GET;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 public interface EventLogMessageEvent extends EntityModel {
 
     @GET("{@self}")
-    @NotNull Query<EventLogMessage> getMessage(
+    @NotNull NetworkCall<EventLogMessage> getMessage(
             @Nullable @Argument("lang") String languageCode
     );
 

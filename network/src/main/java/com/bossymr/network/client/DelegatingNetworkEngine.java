@@ -109,4 +109,29 @@ public class DelegatingNetworkEngine extends NetworkEngine {
         }
     }
 
+    public static class ShutdownOnFailure extends DelegatingNetworkEngine {
+
+        public ShutdownOnFailure(@NotNull NetworkEngine engine) {
+            super(engine);
+        }
+
+        @Override
+        protected void onFailure(@NotNull NetworkCall<?> request, @NotNull Throwable throwable) {
+            try {
+                close();
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        protected void onFailure(@NotNull Throwable throwable) {
+            try {
+                close();
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
 }

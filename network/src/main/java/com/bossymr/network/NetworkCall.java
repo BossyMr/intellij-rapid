@@ -1,9 +1,9 @@
 package com.bossymr.network;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.net.http.HttpRequest;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -13,6 +13,8 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface NetworkCall<T> {
 
+    @NotNull HttpRequest request();
+
     /**
      * Sends the request synchronously.
      *
@@ -21,7 +23,7 @@ public interface NetworkCall<T> {
      * @throws InterruptedException if this {@code NetworkCall} is interrupted.
      * @throws IllegalArgumentException if this {@code NetworkCall} is closed.
      */
-    @Nullable T send() throws IOException, InterruptedException;
+    T send() throws IOException, InterruptedException;
 
     /**
      * Sends the request asynchronously.

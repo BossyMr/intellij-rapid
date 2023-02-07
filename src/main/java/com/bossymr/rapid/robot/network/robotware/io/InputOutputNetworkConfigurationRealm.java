@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.network.annotations.Deserializable;
+import com.bossymr.network.annotations.Deserializable;
 
 public enum InputOutputNetworkConfigurationRealm {
     @Deserializable("1") RUNTIME,

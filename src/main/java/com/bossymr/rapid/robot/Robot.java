@@ -1,9 +1,10 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.network.RobotService;
-import com.intellij.credentialStore.Credentials;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -59,12 +60,7 @@ public interface Robot {
      */
     @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException;
 
-    /**
-     * Returns the controller to the connected robot, if the robot is currently connected.
-     *
-     * @return the controller to the connected robot, or {@code null} if the robot is not currently connected.
-     */
-    @Nullable RobotService getRobotService();
+    @Nullable NetworkEngine getNetworkEngine();
 
     /**
      * Reconnects to this robot, using the persisted path and credentials.
@@ -115,6 +111,6 @@ public interface Robot {
      *
      * @throws IOException if an I/O error occurs.
      */
-    void disconnect() throws IOException;
+    void disconnect() throws IOException, InterruptedException;
 
 }

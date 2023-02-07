@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.*;
 import com.bossymr.rapid.robot.RobotState;
@@ -27,8 +28,8 @@ public final class RobotSymbolFactory {
         this.symbols = new HashMap<>();
     }
 
-    public RobotSymbolFactory(@NotNull RobotState robotState) {
-        this(robotState.getSymbols());
+    public RobotSymbolFactory(@Nullable NetworkEngine networkEngine, @NotNull RobotState robotState) {
+        this(robotState.getSymbols(networkEngine));
     }
 
     private @NotNull String getName(@NotNull Symbol symbol) {

@@ -22,10 +22,10 @@ import java.util.Map;
 
 public class EntityInvocationHandler extends AbstractInvocationHandler {
 
-    private final @NotNull NetworkEngine engine;
+    private final @Nullable NetworkEngine engine;
     private @NotNull Model model;
 
-    public EntityInvocationHandler(@NotNull NetworkEngine engine, @NotNull Model model) {
+    public EntityInvocationHandler(@Nullable NetworkEngine engine, @NotNull Model model) {
         this.model = model;
         this.engine = engine;
     }
@@ -65,6 +65,9 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             } else {
                 return null;
             }
+        }
+        if (engine == null) {
+            throw new IllegalStateException();
         }
         return engine.getRequestFactory().createQuery(proxy, method, args);
     }
@@ -144,6 +147,9 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     }
 
     private boolean fetch() {
+        if (engine == null) {
+            throw new IllegalStateException();
+        }
         if (model.getLink("self") == null) {
             return false;
         }

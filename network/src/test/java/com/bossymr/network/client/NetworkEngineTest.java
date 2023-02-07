@@ -47,7 +47,7 @@ public class NetworkEngineTest {
                 .build().build();
         wireMock.register(get("/default/entities").willReturn(ModelTestUtil.response(URI.create(runtimeInfo.getHttpBaseUrl()), original)));
         wireMock.register(get("/default/entity").willReturn(ModelTestUtil.response(URI.create(runtimeInfo.getHttpBaseUrl()), complete)));
-        try (NetworkEngine networkEngine = NetworkEngine.connect(runtimeInfo.getHttpBaseUrl(), () -> null)) {
+        try (NetworkEngine networkEngine = new NetworkEngine(runtimeInfo.getHttpBaseUrl(), () -> null)) {
             MyService service = networkEngine.createService(MyService.class);
             NetworkCall<List<MyEntityModel>> networkCall = service.getEntities();
             List<MyEntityModel> entityModel = networkCall.send();
