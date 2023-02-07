@@ -39,12 +39,11 @@ public class RobotToolWindow implements Disposable {
     private final SimpleToolWindowPanel panel;
 
     private final DnDAwareTree tree;
-    private final RobotViewTreeStructure structure;
 
     public RobotToolWindow(@NotNull Project project) {
         this.project = project;
 
-        structure = new RobotViewTreeStructure(project);
+        RobotViewTreeStructure structure = new RobotViewTreeStructure(project);
         StructureTreeModel<RobotViewTreeStructure> model = new StructureTreeModel<>(structure, this);
         this.tree = new DnDAwareTree(new AsyncTreeModel(model, this));
         this.tree.setRootVisible(false);
@@ -104,8 +103,7 @@ public class RobotToolWindow implements Disposable {
     }
 
     @Override
-    public void dispose() {
-    }
+    public void dispose() {}
 
     public @NotNull JComponent createActionsToolbar() {
         ActionGroup actionGroup = (ActionGroup) ActionManager.getInstance().getAction(ROBOT_TOOL_WINDOW_GROUP);
@@ -121,6 +119,13 @@ public class RobotToolWindow implements Disposable {
             if (CommonDataKeys.PROJECT.is(dataId)) {
                 return project;
             }
+            if (PlatformCoreDataKeys.BGT_DATA_PROVIDER.is(dataId)) {
+                return (DataProvider) this::getSlowData;
+            }
+            return null;
+        }
+
+        private @Nullable Object getSlowData(@NotNull @NonNls String dataId) {
             if (CommonDataKeys.PSI_ELEMENT.is(dataId)) {
                 PsiElement element = getSelectedElement();
                 return element != null && element.isValid() ? element : null;
