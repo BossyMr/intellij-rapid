@@ -59,6 +59,13 @@ public interface Robot {
     boolean isConnected();
 
     /**
+     * Returns a {@code RobotService} if this robot is connected.
+     *
+     * @return a {@code RobotService}, or {@code null} if this robot is not connected.
+     */
+    @Nullable RobotService getRobotService();
+
+    /**
      * Reconnects to this robot, using the persisted path and credentials.
      *
      * @throws IOException if an I/O error occurs.

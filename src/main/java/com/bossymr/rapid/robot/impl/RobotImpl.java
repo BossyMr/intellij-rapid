@@ -225,6 +225,15 @@ public class RobotImpl implements Robot, Disposable {
         return getNetworkEngine() != null;
     }
 
+    @Override
+    public @Nullable RobotService getRobotService() {
+        if (networkEngine != null) {
+            return networkEngine.createService(RobotService.class);
+        } else {
+            return null;
+        }
+    }
+
     public @Nullable NetworkEngine getNetworkEngine() {
         return networkEngine;
     }
