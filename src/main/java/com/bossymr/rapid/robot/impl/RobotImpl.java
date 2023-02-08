@@ -13,6 +13,7 @@ import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.Module;
 import com.bossymr.rapid.robot.network.*;
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.util.io.FileUtil;
@@ -30,7 +31,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class RobotImpl implements Robot {
+public class RobotImpl implements Robot, Disposable {
 
     private @NotNull RobotState robotState;
     private @Nullable NetworkEngine networkEngine;
@@ -66,11 +67,6 @@ public class RobotImpl implements Robot {
     @Override
     public @NotNull String getName() {
         return robotState.name;
-    }
-
-    @Override
-    public @NotNull URI getPath() {
-        return URI.create(robotState.path);
     }
 
     @Override
@@ -225,6 +221,10 @@ public class RobotImpl implements Robot {
     }
 
     @Override
+    public boolean isConnected() {
+        return getNetworkEngine() != null;
+    }
+
     public @Nullable NetworkEngine getNetworkEngine() {
         return networkEngine;
     }
@@ -263,9 +263,14 @@ public class RobotImpl implements Robot {
         RobotEventListener.publish().afterDisconnect(this);
     }
 
-    public void dispose() throws IOException, InterruptedException {
+    @Override
+    public void dispose() {
         if (getNetworkEngine() != null) {
-            getNetworkEngine().close();
+            try {
+                getNetworkEngine().close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException ignored) {}
             this.networkEngine = null;
         }
     }

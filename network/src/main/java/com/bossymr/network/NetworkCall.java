@@ -21,7 +21,7 @@ public interface NetworkCall<T> {
      * @return the response, or {@code null} if a response body was not received.
      * @throws IOException if an I/O error has occurred.
      * @throws InterruptedException if this {@code NetworkCall} is interrupted.
-     * @throws IllegalArgumentException if this {@code NetworkCall} is closed.
+     * @throws IllegalStateException if this {@code NetworkCall} is closed.
      */
     T send() throws IOException, InterruptedException;
 

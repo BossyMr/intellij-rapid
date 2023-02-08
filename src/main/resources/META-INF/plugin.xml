@@ -66,7 +66,7 @@
 
         <editorNotificationProvider implementation="com.bossymr.rapid.robot.ui.RobotNotificationProvider"/>
 
-        <notificationGroup displayType="STICKY_BALLOON" id="Robot Connect Error" bundle="messages.RapidBundle"
+        <notificationGroup displayType="STICKY_BALLOON" id="Robot Connection Error" bundle="messages.RapidBundle"
                            key="notification.group.robot.connect.error"/>
 
         <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>

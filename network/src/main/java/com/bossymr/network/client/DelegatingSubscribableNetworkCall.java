@@ -8,7 +8,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 public abstract class DelegatingSubscribableNetworkCall<T> extends CloseableSubscribableNetworkCall<T> {
 
@@ -25,7 +24,7 @@ public abstract class DelegatingSubscribableNetworkCall<T> extends CloseableSubs
         return networkCall.subscribe(priority, listener).handleAsync((entity, throwable) -> {
             if (throwable != null) {
                 onFailure(throwable);
-                throw new CompletionException(throwable);
+                throw HttpNetworkClient.getThrowable(throwable);
             }
             return entity;
         });

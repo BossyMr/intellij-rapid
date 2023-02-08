@@ -11,10 +11,14 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.badRequest;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -60,6 +64,40 @@ public class DelegatingNetworkEngineTest {
                 assertArrayEquals(new int[]{2, 1}, counts);
                 assertThrows(ResponseStatusException.class, () -> myEntity.fail().send());
                 assertArrayEquals(new int[]{2, 2}, counts);
+            }
+        }
+    }
+
+    @Test
+    void shutdown(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
+        WireMock wireMock = runtimeInfo.getWireMock();
+        CollectionModel collectionModel = new CollectionModelBuilder()
+                .addModel()
+                .setType("entity")
+                .addLink("success", "/success")
+                .addLink("fail", "/fail")
+                .build().build();
+        wireMock.register(get("/success").willReturn(ModelTestUtil.response(URI.create(runtimeInfo.getHttpBaseUrl()), collectionModel)));
+        wireMock.register(get("/fail").willReturn(badRequest()));
+        try (NetworkEngine networkEngine = new NetworkEngine(runtimeInfo.getHttpBaseUrl(), () -> null)) {
+            try (DelegatingNetworkEngine delegatingNetworkEngine = new DelegatingNetworkEngine.ShutdownOnFailure(networkEngine)) {
+                MyService myService = delegatingNetworkEngine.createService(MyService.class);
+                CountDownLatch countDownLatch = new CountDownLatch(2);
+                CompletableFuture.allOf(
+                        myService.fail().sendAsync()
+                                .handleAsync((response, throwable) -> {
+                                    countDownLatch.countDown();
+                                    throw HttpNetworkClient.getThrowable(throwable);
+                                }),
+                        myService.success().sendAsync()
+                                .handleAsync((response, throwable) -> {
+                                    countDownLatch.countDown();
+                                    throw HttpNetworkClient.getThrowable(throwable);
+                                })
+                );
+                countDownLatch.await();
+                Assertions.assertThrows(IllegalStateException.class, () -> myService.success().send());
+                Assertions.assertThrows(CancellationException.class, () -> myService.success().sendAsync().get());
             }
         }
     }

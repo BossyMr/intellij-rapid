@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
@@ -10,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.List;
 import java.util.Set;
 
@@ -29,23 +27,16 @@ public interface Robot {
     @NotNull String getName();
 
     /**
-     * Returns the path of this robot.
+     * Returns all persisted symbols.
      *
-     * @return the path of this robot.
-     */
-    @NotNull URI getPath();
-
-    /**
-     * Returns all symbols on this persisted robot.
-     *
-     * @return all symbols on this robot.
+     * @return all persisted symbols.
      */
     @NotNull Set<VirtualSymbol> getSymbols();
 
     /**
-     * Returns all tasks on this persisted robot.
+     * Returns all persisted tasks.
      *
-     * @return all tasks on this robot.
+     * @return all persisted tasks.
      */
     @NotNull List<RapidTask> getTasks();
 
@@ -60,7 +51,12 @@ public interface Robot {
      */
     @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException;
 
-    @Nullable NetworkEngine getNetworkEngine();
+    /**
+     * Checks if this robot is currently connected to a remote robot.
+     *
+     * @return if this robot is currently connected.
+     */
+    boolean isConnected();
 
     /**
      * Reconnects to this robot, using the persisted path and credentials.
@@ -76,6 +72,13 @@ public interface Robot {
      * @throws IOException if an I/O error occurs.
      */
     void reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException;
+
+    /**
+     * Disconnects from this robot.
+     *
+     * @throws IOException if an I/O error occurs.
+     */
+    void disconnect() throws IOException, InterruptedException;
 
     /**
      * Uploads persisted modules to the remote robot.
@@ -105,12 +108,5 @@ public interface Robot {
      * @throws IllegalStateException if the robot is not currently connected.
      */
     void download() throws IOException, InterruptedException;
-
-    /**
-     * Disconnects from this robot.
-     *
-     * @throws IOException if an I/O error occurs.
-     */
-    void disconnect() throws IOException, InterruptedException;
 
 }

@@ -9,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
@@ -24,6 +23,10 @@ public abstract class CloseableSubscribableNetworkCall<T> implements Subscribabl
     private final @NotNull Set<SubscriptionEntity> entities = ConcurrentHashMap.newKeySet();
 
     private volatile boolean closed;
+
+    public boolean isClosed() {
+        return closed;
+    }
 
     @Override
     public @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<T> listener) {
@@ -44,7 +47,7 @@ public abstract class CloseableSubscribableNetworkCall<T> implements Subscribabl
         });
         return request.handleAsync((response, throwable) -> {
             if (throwable != null) {
-                throw new CompletionException(throwable);
+                throw HttpNetworkClient.getThrowable(throwable);
             }
             entities.add(response);
             return response;

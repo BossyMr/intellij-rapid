@@ -5,7 +5,6 @@ import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.DelegatingNetworkEngine;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.network.client.security.Credentials;
-import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RemoteRobotService;
@@ -15,14 +14,8 @@ import com.bossymr.rapid.robot.network.RobotService;
 import com.bossymr.rapid.robot.network.Symbol;
 import com.bossymr.rapid.robot.network.SymbolQueryBuilder;
 import com.bossymr.rapid.robot.network.SymbolType;
-import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.ide.passwordSafe.PasswordSafe;
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationAction;
-import com.intellij.notification.NotificationGroupManager;
-import com.intellij.notification.NotificationType;
-import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.project.Project;
@@ -87,7 +80,7 @@ public final class RobotUtil {
             RemoteRobotService service = RemoteRobotService.getInstance();
             Robot robot = service.getRobot();
             if (robot != null) {
-                return robot.getNetworkEngine() != null;
+                return robot.isConnected();
             }
         }
         return false;
@@ -101,12 +94,12 @@ public final class RobotUtil {
     }
 
     public static @NotNull Map<String, VirtualSymbol> getSymbols(@Nullable NetworkEngine networkEngine, @NotNull RobotState robotState) {
-        return new RobotSymbolFactory(networkEngine, robotState).getSymbols();
+        return RapidSymbolConverter.getSymbols(robotState.getSymbols(networkEngine));
     }
 
     public static @NotNull VirtualSymbol getSymbol(@NotNull Symbol symbol) {
         List<Symbol> symbolStates = List.of(symbol);
-        Map<String, VirtualSymbol> symbols = new RobotSymbolFactory(symbolStates).getSymbols();
+        Map<String, VirtualSymbol> symbols = RapidSymbolConverter.getSymbols(symbolStates);
         List<VirtualSymbol> virtualSymbols = new ArrayList<>(symbols.values());
         return virtualSymbols.get(0);
     }
@@ -145,6 +138,7 @@ public final class RobotUtil {
                                         if (entry.getKey().equals("RAPID")) continue;
                                         String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
                                         if (!states.get("RAPID").contains(name)) {
+                                            // FIXME: 2023-02-08 Notification is shown for some symbol
                                             NetworkCall<Symbol> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
                                             CompletableFuture<Void> completableFuture = symbol.sendAsync()
                                                     .exceptionally((exception) -> {
@@ -169,14 +163,16 @@ public final class RobotUtil {
                                     return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
                                 })
                 ).join();
+                return robotState;
             } catch (CompletionException e) {
                 if (e.getCause() instanceof IOException) {
                     throw (IOException) e.getCause();
                 }
-                if (e.getCause() instanceof InterruptedException)
+                if (e.getCause() instanceof InterruptedException) {
                     throw (InterruptedException) e.getCause();
+                }
+                throw e;
             }
-            return robotState;
         }
     }
 
@@ -190,32 +186,6 @@ public final class RobotUtil {
             symbolState.links.put(entry.getKey(), entry.getValue().toString());
         }
         return symbolState;
-    }
-
-    public static void showNotification(@Nullable Project project, @NotNull URI path) {
-        RemoteRobotService remoteService = RemoteRobotService.getInstance();
-        Robot robot = remoteService.getRobot();
-        if (robot != null) {
-            if (robot.getNetworkEngine() != null) {
-                try {
-                    robot.disconnect();
-                } catch (IOException | InterruptedException ignored) {
-                }
-            }
-        }
-        NotificationGroupManager.getInstance()
-                .getNotificationGroup("Robot Connect Error")
-                .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)
-                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
-                .addAction(new NotificationAction(RapidBundle.message("notification.action.retry.connect")) {
-                    @Override
-                    public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-                        assert e.getProject() != null;
-                        RobotConnectView connectView = new RobotConnectView(e.getProject(), path);
-                        connectView.show();
-                    }
-                })
-                .notify(project);
     }
 
 }

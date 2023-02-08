@@ -70,31 +70,40 @@ public class DelegatingNetworkEngine extends NetworkEngine {
 
     @Override
     protected @NotNull <T> NetworkCall<T> createNetworkCall(@NotNull NetworkEngine engine, @NotNull HttpRequest request, @NotNull Type returnType) {
-        if (closed) throw new IllegalArgumentException();
         DelegatingNetworkCall<T> networkCall = new DelegatingNetworkCall<>(this.engine.createNetworkCall(engine, request, returnType)) {
             @Override
             protected void onSuccess(@Nullable T response) {
+                if (isClosed()) return;
                 DelegatingNetworkEngine.this.onSuccess(this, response);
             }
 
             @Override
             protected void onFailure(@NotNull Throwable throwable) {
+                if (isClosed()) return;
                 DelegatingNetworkEngine.this.onFailure(this, throwable);
             }
         };
+        if (closed) networkCall.close();
         requests.add(networkCall);
         return networkCall;
     }
 
     @Override
     protected @NotNull <T> SubscribableNetworkCall<T> createSubscribableNetworkCall(@NotNull NetworkEngine engine, @NotNull SubscribableEvent<T> event) {
-        if (closed) throw new IllegalArgumentException();
         DelegatingSubscribableNetworkCall<T> networkCall = new DelegatingSubscribableNetworkCall<>(this.engine.createSubscribableNetworkCall(engine, event)) {
             @Override
             protected void onFailure(@NotNull Throwable throwable) {
+                if (isClosed()) return;
                 DelegatingNetworkEngine.this.onFailure(throwable);
             }
         };
+        if (closed) {
+            try {
+                networkCall.close();
+            } catch (IOException | InterruptedException e) {
+                throw new AssertionError(e);
+            }
+        }
         subscriptions.remove(networkCall);
         return networkCall;
     }

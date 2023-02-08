@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 public abstract class DelegatingNetworkCall<T> extends CloseableNetworkCall<T> {
 
@@ -44,7 +43,7 @@ public abstract class DelegatingNetworkCall<T> extends CloseableNetworkCall<T> {
         return networkCall.sendAsync().handleAsync((response, throwable) -> {
             if (throwable != null) {
                 onFailure(throwable);
-                throw new CompletionException(throwable);
+                throw HttpNetworkClient.getThrowable(throwable);
             }
             onSuccess(response);
             return response;

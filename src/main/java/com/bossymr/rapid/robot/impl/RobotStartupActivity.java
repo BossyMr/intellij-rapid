@@ -8,6 +8,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
+/**
+ * A {@code StartupActivity} which attempts to connect to a persisted robot.
+ */
 public class RobotStartupActivity implements StartupActivity.DumbAware {
 
     @Override
@@ -15,12 +18,10 @@ public class RobotStartupActivity implements StartupActivity.DumbAware {
         RemoteRobotService service = RemoteRobotService.getInstance();
         Robot robot = service.getRobot();
         if (robot != null) {
-            if (robot.getNetworkEngine() == null) {
-                try {
-                    robot.reconnect();
-                } catch (IOException | InterruptedException ignored) {
-                }
-            }
+            if (robot.isConnected()) return;
+            try {
+                robot.reconnect();
+            } catch (IOException | InterruptedException ignored) {}
         }
     }
 }

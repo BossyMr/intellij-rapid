@@ -60,6 +60,14 @@ public class HttpNetworkClient implements NetworkClient {
                 .build();
     }
 
+    public static @NotNull RuntimeException getThrowable(@NotNull Throwable throwable) {
+        if (throwable instanceof RuntimeException runtimeException) {
+            return runtimeException;
+        } else {
+            return new CompletionException(throwable);
+        }
+    }
+
     public @NotNull RequestBuilder createRequest() {
         return new RequestBuilder(getDefaultPath());
     }
@@ -135,24 +143,7 @@ public class HttpNetworkClient implements NetworkClient {
     }
 
     private <T> @NotNull CompletableFuture<HttpResponse<T>> sendAsync(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
-        CompletableFuture<HttpResponse<T>> completableFuture = new CompletableFuture<>();
-        executorService.submit(() -> {
-            semaphore.acquire();
-            logger.atDebug().log("Acquired semaphore for request '{}'; available permits: {}; queue length: {}", request, semaphore.availablePermits(), semaphore.getQueueLength());
-            httpClient.sendAsync(request, bodyHandler)
-                    .handleAsync(((response, throwable) -> {
-                        semaphore.release();
-                        logger.atDebug().log("Released semaphore for request '{}'", request);
-                        if (throwable != null) {
-                            completableFuture.completeExceptionally(throwable);
-                            throw new CompletionException(throwable);
-                        }
-                        completableFuture.complete(response);
-                        return response;
-                    }));
-            return null;
-        });
-        return completableFuture;
+        return new NetworkCompletableFuture<>(request, bodyHandler);
     }
 
     @Override
@@ -200,6 +191,53 @@ public class HttpNetworkClient implements NetworkClient {
                 if (cause instanceof RuntimeException uncheckedException) throw uncheckedException;
                 throw new IllegalStateException(cause);
             }
+        }
+    }
+
+    public static class CloseableCompletableFuture<T> extends CompletableFuture<T> {
+
+        @Override
+        public <U> CompletableFuture<U> newIncompleteFuture() {
+            return new CloseableCompletableFuture<>() {
+                @Override
+                public boolean cancel(boolean mayInterruptIfRunning) {
+                    return CloseableCompletableFuture.this.cancel(mayInterruptIfRunning);
+                }
+            };
+        }
+    }
+
+    public class NetworkCompletableFuture<T> extends CloseableCompletableFuture<HttpResponse<T>> {
+
+        private final Future<Void> semaphoreAsync;
+        private @Nullable CompletableFuture<HttpResponse<T>> requestAsync;
+
+        public NetworkCompletableFuture(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
+            semaphoreAsync = executorService.submit(() -> {
+                semaphore.acquire();
+                logger.atDebug().log("Acquired semaphore for request '{}'; available permits: {}; queue length: {}", request, semaphore.availablePermits(), semaphore.getQueueLength());
+                requestAsync = httpClient.sendAsync(request, bodyHandler)
+                        .handleAsync(((response, throwable) -> {
+                            semaphore.release();
+                            logger.atDebug().log("Released semaphore for request '{}'", request);
+                            if (throwable != null) {
+                                completeExceptionally(throwable);
+                                throw HttpNetworkClient.getThrowable(throwable);
+                            }
+                            complete(response);
+                            return response;
+                        }));
+                return null;
+            });
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            semaphoreAsync.cancel(mayInterruptIfRunning);
+            if (requestAsync != null) {
+                requestAsync.cancel(mayInterruptIfRunning);
+            }
+            return super.cancel(mayInterruptIfRunning);
         }
     }
 }

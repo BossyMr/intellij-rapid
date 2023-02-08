@@ -30,6 +30,6 @@ class RemoteRobotServiceTest {
         remoteService.disconnect();
         assertNull(remoteService.getRobotState());
         assertNull(remoteService.getRobot());
-        assertNull(robot.getNetworkEngine());
+        assertFalse(robot.isConnected());
     }
 }

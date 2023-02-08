@@ -1,9 +1,7 @@
 package com.bossymr.rapid.robot.impl;
 
-import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.*;
-import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.Symbol;
 import com.bossymr.rapid.robot.network.Symbol.*;
 import org.jetbrains.annotations.NotNull;
@@ -11,14 +9,17 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public final class RobotSymbolFactory {
+/**
+ * A converter for converting {@link Symbol} objects into {@link RapidSymbol} objects.
+ */
+public final class RapidSymbolConverter {
 
     private final Map<String, Map<String, Symbol>> states;
     private final Map<String, VirtualSymbol> symbols;
 
     private final Set<String> processed = new HashSet<>();
 
-    public RobotSymbolFactory(@NotNull Collection<Symbol> symbols) {
+    private RapidSymbolConverter(@NotNull Collection<Symbol> symbols) {
         this.states = new HashMap<>();
         for (Symbol symbol : symbols) {
             String address = symbol.getTitle().toLowerCase().substring(0, symbol.getTitle().lastIndexOf('/'));
@@ -28,15 +29,15 @@ public final class RobotSymbolFactory {
         this.symbols = new HashMap<>();
     }
 
-    public RobotSymbolFactory(@Nullable NetworkEngine networkEngine, @NotNull RobotState robotState) {
-        this(robotState.getSymbols(networkEngine));
+    public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull Collection<Symbol> symbols) {
+        return new RapidSymbolConverter(symbols).getSymbols();
     }
 
     private @NotNull String getName(@NotNull Symbol symbol) {
         return symbol.getTitle().toLowerCase().substring(symbol.getTitle().lastIndexOf('/') + 1);
     }
 
-    public @NotNull Map<String, VirtualSymbol> getSymbols() {
+    private @NotNull Map<String, VirtualSymbol> getSymbols() {
         if (states.isEmpty()) return new HashMap<>();
         for (String name : states.get("rapid").keySet()) {
             getSymbol(name);

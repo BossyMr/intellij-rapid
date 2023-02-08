@@ -7,6 +7,7 @@ import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotState;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
+import com.intellij.openapi.util.Disposer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,7 +21,6 @@ import java.net.URI;
 public class RemoteRobotServiceImpl implements RemoteRobotService {
 
     private @NotNull State state = new State();
-
     private @Nullable RobotImpl robot;
 
     @Override
@@ -39,7 +39,10 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
     public @NotNull Robot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         RobotEventListener.publish().beforeConnect();
         RobotUtil.setCredentials(path, credentials.username(), credentials.password());
-        return robot = new RobotImpl(path, credentials.username(), credentials.password());
+        RobotImpl robot = new RobotImpl(path, credentials.username(), credentials.password());
+        Disposer.register(this, robot);
+        this.robot = robot;
+        return robot;
     }
 
     @Override
@@ -56,14 +59,7 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
     }
 
     @Override
-    public void dispose() {
-        if (robot != null) {
-            try {
-                robot.dispose();
-            } catch (IOException | InterruptedException ignored) {
-            }
-        }
-    }
+    public void dispose() {}
 
     @Override
     public @Nullable RobotState getRobotState() {

@@ -7,7 +7,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -21,6 +20,10 @@ public abstract class CloseableNetworkCall<T> implements NetworkCall<T> {
     private final @NotNull Set<CompletableFuture<?>> requests = ConcurrentHashMap.newKeySet();
 
     private volatile boolean closed;
+
+    public boolean isClosed() {
+        return closed;
+    }
 
     @Override
     public @Nullable T send() throws IOException, InterruptedException {
@@ -40,7 +43,7 @@ public abstract class CloseableNetworkCall<T> implements NetworkCall<T> {
         return request.handleAsync((response, throwable) -> {
             requests.remove(request);
             if (throwable != null) {
-                throw new CompletionException(throwable);
+                throw HttpNetworkClient.getThrowable(throwable);
             }
             return response;
         });
