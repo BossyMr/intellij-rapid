@@ -17,7 +17,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements RapidModule, PhysicalSymbol {
@@ -40,20 +43,20 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
         visitor.visitModule(this);
     }
 
-    public @Nullable RapidAttributeList getAttributeList() {
-        return getStubOrPsiChild(RapidStubElementTypes.ATTRIBUTE_LIST);
+    public @NotNull RapidAttributeList getAttributeList() {
+        return getRequiredStubOrPsiChild(RapidStubElementTypes.ATTRIBUTE_LIST);
     }
 
     @Override
     public @NotNull List<Attribute> getAttributes() {
         RapidAttributeList attributeList = getAttributeList();
-        return attributeList != null ? attributeList.getAttributes() : Collections.emptyList();
+        return attributeList.getAttributes();
     }
 
     @Override
     public boolean hasAttribute(@NotNull Attribute attribute) {
         RapidAttributeList attributeList = getAttributeList();
-        return attributeList != null && attributeList.hasAttribute(attribute);
+        return attributeList.hasAttribute(attribute);
     }
 
     @Override
