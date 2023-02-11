@@ -98,7 +98,13 @@ public class RequestBuilder {
             query += "&";
         }
         query += arguments.stream()
-                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .map(entry -> {
+                    if (entry.getValue() != null) {
+                        return entry.getKey() + "=" + entry.getValue();
+                    } else {
+                        return entry.getKey();
+                    }
+                })
                 .collect(Collectors.joining("&"));
         try {
             return new URI(resource.getScheme(), resource.getUserInfo(), resource.getHost(), resource.getPort(), resource.getPath(), query, resource.getFragment());

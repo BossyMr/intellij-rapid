@@ -35,16 +35,16 @@ public class RequestFactory {
         String path = service != null ? service.value() : "";
         for (Annotation annotation : method.getAnnotations()) {
             if (annotation instanceof GET request) {
-                return createNetworkCall("GET", path + request.value(), proxy, method, args);
+                return createNetworkCall("GET", path + request.value(), request.arguments(), proxy, method, args);
             }
             if (annotation instanceof POST request) {
-                return createNetworkCall("POST", path + request.value(), proxy, method, args);
+                return createNetworkCall("POST", path + request.value(), request.arguments(), proxy, method, args);
             }
             if (annotation instanceof PUT request) {
-                return createNetworkCall("PUT", path + request.value(), proxy, method, args);
+                return createNetworkCall("PUT", path + request.value(), request.arguments(), proxy, method, args);
             }
             if (annotation instanceof DELETE request) {
-                return createNetworkCall("DELETE", path + request.value(), proxy, method, args);
+                return createNetworkCall("DELETE", path + request.value(), request.arguments(), proxy, method, args);
             }
             if (annotation instanceof Subscribable request) {
                 return createSubscribableNetworkCall(request.value(), proxy, method, args);
@@ -56,12 +56,23 @@ public class RequestFactory {
         throw new IllegalArgumentException("Cannot handle method '" + method.getName() + "' in '" + type.getName() + "'");
     }
 
-    private @NotNull NetworkCall<?> createNetworkCall(@NotNull String command, @NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
+    private @NotNull NetworkCall<?> createNetworkCall(@NotNull String command, @NotNull String path, @NotNull String[] arguments, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
+        MultiMap<String, String> collected = collect(method, args, annotation -> annotation instanceof Argument argument ? argument.value() : null);
+        for (String argument : arguments) {
+            String key = argument.split("=")[0];
+            String value;
+            if (argument.contains("=")) {
+                value = argument.substring(key.length() + 1);
+            } else {
+                value = null;
+            }
+            collected.add(key, value);
+        }
         HttpRequest request = engine.createRequest()
                 .setMethod(command)
                 .setPath(URI.create(interpolate(path, proxy, method, args)))
                 .setFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
-                .setArguments(collect(method, args, annotation -> annotation instanceof Argument argument ? argument.value() : null))
+                .setArguments(collected)
                 .build();
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
         return engine.createNetworkCall(request, returnType);
