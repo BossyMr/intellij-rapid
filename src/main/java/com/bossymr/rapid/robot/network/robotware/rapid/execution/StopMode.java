@@ -1,4 +1,4 @@
-package com.bossymr.rapid.robot.network;
+package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
 import com.bossymr.network.annotations.Deserializable;
 

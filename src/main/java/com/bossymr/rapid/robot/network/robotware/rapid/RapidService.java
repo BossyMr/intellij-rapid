@@ -1,35 +1,50 @@
-package com.bossymr.rapid.robot.network;
+package com.bossymr.rapid.robot.network.robotware.rapid;
 
 import com.bossymr.network.NetworkCall;
 import com.bossymr.network.annotations.*;
+import com.bossymr.rapid.robot.network.TaskService;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionService;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.Symbol;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A {@code Service} used to communicate with the {@code RAPID} section of a robot.
+ */
 @Service("/rw/rapid")
 public interface RapidService {
 
+    /**
+     * Returns the execution service.
+     *
+     * @return the execution service.
+     */
     @NotNull ExecutionService getExecutionService();
 
+    /**
+     * Returns the task service.
+     *
+     * @return the task service.
+     */
     @NotNull TaskService getTaskService();
 
     /**
-     * Searches for symbols on this robot, according to the specified arguments. To build a correctly formatted argument
-     * map, use {@link SymbolQueryBuilder}.
+     * Searches for symbols on this robot, according to the specified arguments. SymbolQueryBuilder To build a correctly
+     * formatted argument map, use {@link SymbolQuery}.
      *
      * @param fields the NetworkCall arguments.
      * @return the symbols on this robot.
      */
-    @POST("/symbols?action=search-symbols")
+    @POST(value = "/symbols", arguments = "action=search-symbols")
     @NotNull NetworkCall<List<Symbol>> findSymbols(
             @Field Map<String, String> fields
     );
 
     /**
-     * Returns the symbol with the specified path. If a symbol with the specified path does not exist, a
-     * {@link com.bossymr.network.ResponseStatusException} will be thrown, with the status code 400.
+     * Returns the symbol with the specified path.
      *
      * @param symbol the path of the symbol.
      * @return the symbol.

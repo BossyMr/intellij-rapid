@@ -1,7 +1,10 @@
-package com.bossymr.rapid.robot.network;
+package com.bossymr.rapid.robot.network.robotware.mastership;
 
 import com.bossymr.network.annotations.Deserializable;
 
+/**
+ * {@code MastershipStatus} represents the current state of a mastership domain.
+ */
 public enum MastershipStatus {
 
     /**

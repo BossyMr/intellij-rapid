@@ -2,8 +2,8 @@ package com.bossymr.rapid.robot;
 
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.network.model.Model;
-import com.bossymr.rapid.robot.network.Symbol;
 import com.bossymr.rapid.robot.network.robotware.io.InputOutputSignalType;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.Symbol;
 import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
 import org.jetbrains.annotations.NotNull;

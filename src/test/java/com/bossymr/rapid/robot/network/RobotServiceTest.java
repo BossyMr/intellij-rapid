@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.network;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionPriority;
 import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.rapid.robot.network.robotware.RobotWareService;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;

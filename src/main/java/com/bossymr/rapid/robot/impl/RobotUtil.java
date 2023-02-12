@@ -11,9 +11,9 @@ import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.RobotService;
-import com.bossymr.rapid.robot.network.Symbol;
-import com.bossymr.rapid.robot.network.SymbolQueryBuilder;
-import com.bossymr.rapid.robot.network.SymbolType;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.Symbol;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolType;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.ide.passwordSafe.PasswordSafe;
 import com.intellij.openapi.application.ApplicationManager;
@@ -108,10 +108,9 @@ public final class RobotUtil {
         try (NetworkEngine networkEngine = new DelegatingNetworkEngine.ShutdownOnFailure(engine)) {
             RobotService service = networkEngine.createService(RobotService.class);
             RobotState robotState = new RobotState();
-            Map<String, String> query = new SymbolQueryBuilder()
+            SymbolQuery query = new SymbolQuery()
                     .setRecursive(true)
-                    .setSymbolType(SymbolType.ANY)
-                    .build();
+                    .setSymbolType(SymbolType.ANY);
             try {
                 CompletableFuture.allOf(
                         service.getControllerService().getIdentity().sendAsync()

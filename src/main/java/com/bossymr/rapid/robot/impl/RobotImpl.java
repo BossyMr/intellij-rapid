@@ -13,6 +13,7 @@ import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.Module;
 import com.bossymr.rapid.robot.network.*;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.Symbol;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;

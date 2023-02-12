@@ -2,8 +2,7 @@ package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.*;
-import com.bossymr.rapid.robot.network.Symbol;
-import com.bossymr.rapid.robot.network.Symbol.*;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -78,7 +77,7 @@ public final class RapidSymbolConverter {
         return symbol instanceof RapidStructure structure ? structure : null;
     }
 
-    private @NotNull RapidAtomic getAtomic(@NotNull Symbol.AtomicSymbol symbol) {
+    private @NotNull RapidAtomic getAtomic(@NotNull AtomicSymbol symbol) {
         RapidType dataType = null;
         if (!(symbol.getDataType() == null || symbol.getDataType().isEmpty())) {
             dataType = new RapidType(getStructure(symbol.getDataType()));
@@ -86,12 +85,12 @@ public final class RapidSymbolConverter {
         return getSymbol(new VirtualAtomic(Visibility.GLOBAL, getName(symbol), dataType));
     }
 
-    private @NotNull RapidRecord getRecord(@NotNull Symbol.RecordSymbol symbol) {
+    private @NotNull RapidRecord getRecord(@NotNull RecordSymbol symbol) {
         Collection<Symbol> states = this.states.get(symbol.getTitle()).values();
         List<RapidComponent> components = new ArrayList<>();
-        assert states.size() == symbol.getSize();
+        assert states.size() == symbol.getComponentCount();
         processed.add(symbol.getTitle());
-        for (int i = 0; i < symbol.getSize(); i++) {
+        for (int i = 0; i < symbol.getComponentCount(); i++) {
             components.add(null);
         }
         for (Symbol symbolState : states) {
@@ -103,29 +102,29 @@ public final class RapidSymbolConverter {
         return getSymbol(new VirtualRecord(getName(symbol), Collections.unmodifiableList(components)));
     }
 
-    private @NotNull RapidAlias getAlias(@NotNull Symbol.AliasSymbol state) {
+    private @NotNull RapidAlias getAlias(@NotNull AliasSymbol state) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
         return getSymbol(new VirtualAlias(Visibility.GLOBAL, getName(state), dataType));
     }
 
-    private @NotNull RapidComponent getComponent(@NotNull Symbol.ComponentSymbol state) {
+    private @NotNull RapidComponent getComponent(@NotNull ComponentSymbol state) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
         return new VirtualComponent(getName(state), dataType);
     }
 
-    private @NotNull RapidField getField(@NotNull Symbol.FieldSymbol state, @NotNull RapidField.Attribute attribute) {
+    private @NotNull RapidField getField(@NotNull FieldSymbol state, @NotNull RapidField.Attribute attribute) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
         boolean readOnly = false;
-        if (state instanceof Symbol.PersistentSymbol persistentSymbol) {
+        if (state instanceof PersistentSymbol persistentSymbol) {
             readOnly = persistentSymbol.isReadOnly();
         }
-        if (state instanceof Symbol.VariableSymbol variableSymbol) {
+        if (state instanceof VariableSymbol variableSymbol) {
             readOnly = variableSymbol.isReadOnly();
         }
         return getSymbol(new VirtualField(Visibility.GLOBAL, attribute, getName(state), dataType, readOnly));
     }
 
-    private @NotNull VirtualParameter getParameter(@NotNull RapidParameterGroup parameterGroup, @NotNull Symbol.ParameterSymbol state) {
+    private @NotNull VirtualParameter getParameter(@NotNull RapidParameterGroup parameterGroup, @NotNull ParameterSymbol state) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
         RapidParameter.Attribute attribute = switch (state.getMode()) {
             case "in" -> RapidParameter.Attribute.INPUT;
@@ -138,13 +137,13 @@ public final class RapidSymbolConverter {
         return new VirtualParameter(parameterGroup, attribute, getName(state), dataType);
     }
 
-    private @NotNull RapidRoutine getRoutine(@NotNull Symbol.RoutineSymbol state, @NotNull RapidRoutine.Attribute attribute) {
+    private @NotNull RapidRoutine getRoutine(@NotNull RoutineSymbol state, @NotNull RapidRoutine.Attribute attribute) {
         List<VirtualParameterGroup> groups = new ArrayList<>();
         Map<String, Symbol> parameters = this.states.get(state.getTitle());
         Collection<Symbol> states = parameters != null ? parameters.values() : List.of();
-        assert states.size() == state.getSize() : state;
+        assert states.size() == state.getParameterCount() : state;
         processed.add(state.getTitle());
-        for (int i = 0; i < state.getSize(); i++) {
+        for (int i = 0; i < state.getParameterCount(); i++) {
             groups.add(null);
         }
         for (Symbol symbol : states) {

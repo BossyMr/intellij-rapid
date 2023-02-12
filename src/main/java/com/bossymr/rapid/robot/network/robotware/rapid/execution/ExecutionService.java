@@ -6,7 +6,6 @@ import com.bossymr.network.annotations.*;
 import com.bossymr.rapid.robot.network.Grant;
 import com.bossymr.rapid.robot.network.HoldToRunMode;
 import com.bossymr.rapid.robot.network.HoldToRunState;
-import com.bossymr.rapid.robot.network.StopMode;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 

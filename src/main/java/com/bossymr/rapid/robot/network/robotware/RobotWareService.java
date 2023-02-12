@@ -1,7 +1,10 @@
-package com.bossymr.rapid.robot.network;
+package com.bossymr.rapid.robot.network.robotware;
 
 import com.bossymr.network.annotations.Service;
+import com.bossymr.rapid.robot.network.EventLogService;
 import com.bossymr.rapid.robot.network.robotware.io.InputOutputService;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipService;
+import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -17,10 +20,25 @@ public interface RobotWareService {
      */
     @NotNull EventLogService getEventLogService();
 
+    /**
+     * Returns the mastership service.
+     *
+     * @return the mastership service.
+     */
     @NotNull MastershipService getMastershipService();
 
+    /**
+     * Returns the {@code RAPID} service.
+     *
+     * @return the {@code RAPID} service.
+     */
     @NotNull RapidService getRapidService();
 
+    /**
+     * Returns the I/O service.
+     *
+     * @return the I/O service.
+     */
     @NotNull InputOutputService getInputOutputService();
 
 }
