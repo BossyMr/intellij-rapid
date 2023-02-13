@@ -5,7 +5,7 @@ import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"rap-sympropfunction", "rap-sympropfunction-li"})
-public interface FunctionSymbol extends Symbol, VisibleSymbol, RoutineSymbol {
+public interface FunctionSymbolState extends SymbolState, VisibleSymbolState, RoutineSymbolState {
 
     @Property("linked")
     boolean isLinked();

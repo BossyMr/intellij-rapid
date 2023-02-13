@@ -2,15 +2,16 @@ package com.bossymr.rapid.robot;
 
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.network.model.Model;
-import com.bossymr.rapid.robot.network.robotware.io.InputOutputSignalType;
-import com.bossymr.rapid.robot.network.robotware.rapid.symbol.Symbol;
 import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Tag("robot")
@@ -22,7 +23,7 @@ public final class RobotState {
     @Attribute("path")
     public @NotNull String path = "";
 
-    public @NotNull Set<SymbolState> symbols = new HashSet<>();
+    public @NotNull Set<SymbolState> symbolStates = new HashSet<>();
 
     /*
      * All symbols are not provided by the robot, as some symbols have an empty "name" property.
@@ -32,16 +33,16 @@ public final class RobotState {
      */
     public @NotNull Set<String> cache = new HashSet<>();
 
-    public @NotNull Set<Symbol> getSymbols(@Nullable NetworkEngine networkEngine) {
-        Set<Symbol> symbols = new HashSet<>();
-        for (SymbolState symbolState : this.symbols) {
+    public @NotNull Set<com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState> getSymbols(@Nullable NetworkEngine networkEngine) {
+        Set<com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState> symbolStates = new HashSet<>();
+        for (SymbolState symbolState : this.symbolStates) {
             Model model = symbolState.toModel();
-            Symbol state = NetworkEngine.createEntity(networkEngine, Symbol.class, model);
+            com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState state = NetworkEngine.createEntity(networkEngine, com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState.class, model);
             if (state != null) {
-                symbols.add(state);
+                symbolStates.add(state);
             }
         }
-        return symbols;
+        return symbolStates;
     }
 
     @Override
@@ -49,12 +50,12 @@ public final class RobotState {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RobotState that = (RobotState) o;
-        return Objects.equals(name, that.name) && Objects.equals(path, that.path) && symbols.equals(that.symbols) && cache.equals(that.cache);
+        return Objects.equals(name, that.name) && Objects.equals(path, that.path) && symbolStates.equals(that.symbolStates) && cache.equals(that.cache);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, path, symbols, cache);
+        return Objects.hash(name, path, symbolStates, cache);
     }
 
     @Override
@@ -62,112 +63,9 @@ public final class RobotState {
         return "RobotState{" +
                 "name='" + name + '\'' +
                 ", path='" + path + '\'' +
-                ", symbols=" + symbols +
+                ", symbols=" + symbolStates +
                 ", cache=" + cache +
                 '}';
-    }
-
-    public static final class NetworkState implements Comparable<NetworkState> {
-
-        @Attribute("name")
-        public String name;
-
-        public List<DeviceState> devices;
-
-        @Override
-        public int compareTo(@NotNull NetworkState o) {
-            return name.compareTo(o.name);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            NetworkState that = (NetworkState) o;
-            return Objects.equals(name, that.name) && Objects.equals(devices, that.devices);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(name, devices);
-        }
-
-        @Override
-        public String toString() {
-            return "NetworkState{" +
-                    "name='" + name + '\'' +
-                    ", devices=" + devices +
-                    '}';
-        }
-    }
-
-    public static final class DeviceState implements Comparable<DeviceState> {
-
-        @Attribute("name")
-        public String name;
-
-        public List<SignalState> signals;
-
-        @Override
-        public int compareTo(@NotNull DeviceState o) {
-            return name.compareTo(o.name);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            DeviceState that = (DeviceState) o;
-            return Objects.equals(name, that.name) && Objects.equals(signals, that.signals);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(name, signals);
-        }
-
-        @Override
-        public String toString() {
-            return "DeviceState{" +
-                    "name='" + name + '\'' +
-                    ", signals=" + signals +
-                    '}';
-        }
-    }
-
-    public static final class SignalState implements Comparable<SignalState> {
-
-        @Attribute("name")
-        public String name;
-
-        @Attribute("type")
-        public InputOutputSignalType type;
-
-        @Override
-        public int compareTo(@NotNull SignalState o) {
-            return name.compareTo(o.name);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            SignalState that = (SignalState) o;
-            return Objects.equals(name, that.name) && type == that.type;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(name, type);
-        }
-
-        @Override
-        public String toString() {
-            return "SignalState{" +
-                    "name='" + name + '\'' +
-                    ", type=" + type +
-                    '}';
-        }
     }
 
     public static final class SymbolState implements Comparable<SymbolState> {

@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Entity({"rap-sympropparam", "rap-sympropparam-li"})
-public interface ParameterSymbol extends Symbol {
+public interface ParameterSymbolState extends SymbolState, QueryableSymbolState {
 
     /**
      * Returns the index of this parameter in its mutually exclusive parameter group.

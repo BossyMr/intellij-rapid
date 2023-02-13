@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
  * A {@code AliasSymbol} represent an alias structure.
  */
 @Entity({"rap-sympropalias", "rap-sympropalias-li"})
-public interface AliasSymbol extends Symbol, VisibleSymbol {
+public interface AliasSymbolState extends SymbolState, VisibleSymbolState {
 
     @Property("linked")
     boolean isLinked();

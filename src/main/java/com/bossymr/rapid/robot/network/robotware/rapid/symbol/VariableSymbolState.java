@@ -4,8 +4,8 @@ import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.Nullable;
 
-@Entity({"rap-symproppers", "rap-symproppers-li"})
-public interface PersistentSymbol extends Symbol, VisibleSymbol, FieldSymbol {
+@Entity({"rap-sympropvar", "rap-sympropvar-li"})
+public interface VariableSymbolState extends SymbolState, VisibleSymbolState, FieldSymbolState {
 
     @Property("dim")
     @Nullable String getDimensions();
@@ -13,7 +13,7 @@ public interface PersistentSymbol extends Symbol, VisibleSymbol, FieldSymbol {
     @Property("rdonly")
     boolean isReadOnly();
 
-    @Property("taskpers")
-    boolean isTaskPersistent();
+    @Property("taskvar")
+    boolean isTaskVariable();
 
 }

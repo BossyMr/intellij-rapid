@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.network.NetworkCall;
+import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.DelegatingNetworkEngine;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.RapidBundle;
@@ -28,6 +29,11 @@ public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine.Shutdo
 
     @Override
     protected void onFailure(@NotNull NetworkCall<?> request, @NotNull Throwable throwable) {
+        if (throwable instanceof ResponseStatusException exception) {
+            if (exception.getResponse().statusCode() == 400) {
+                return;
+            }
+        }
         RemoteRobotService remoteService = RemoteRobotService.getInstance();
         Robot robot = remoteService.getRobot();
         if (robot != null) {

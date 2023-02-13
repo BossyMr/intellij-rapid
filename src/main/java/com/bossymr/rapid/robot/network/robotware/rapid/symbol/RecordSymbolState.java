@@ -5,7 +5,7 @@ import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"rap-symproprecord", "rap-symproprecord-li"})
-public interface RecordSymbol extends Symbol, VisibleSymbol {
+public interface RecordSymbolState extends SymbolState, VisibleSymbolState {
 
     @Property("ncom")
     int getComponentCount();

@@ -10,10 +10,10 @@ import org.jetbrains.annotations.Nullable;
  * A {@code Symbol} represents a symbol.
  */
 @Entity(subtype = {
-        AtomicSymbol.class, AliasSymbol.class, RecordSymbol.class, ComponentSymbol.class,
-        ConstantSymbol.class, VariableSymbol.class, PersistentSymbol.class, ParameterSymbol.class, FunctionSymbol.class,
-        ProcedureSymbol.class, TrapSymbol.class, ModuleSymbol.class})
-public interface Symbol extends EntityModel {
+        AtomicSymbolState.class, AliasSymbolState.class, RecordSymbolState.class, ComponentSymbolState.class,
+        ConstantSymbolState.class, VariableSymbolState.class, PersistentSymbolState.class, ParameterSymbolState.class, FunctionSymbolState.class,
+        ProcedureSymbolState.class, TrapSymbolState.class, ModuleSymbolState.class})
+public interface SymbolState extends EntityModel {
 
     /**
      * Returns the canonical name of the symbol. For example, the canonical name of a field might be

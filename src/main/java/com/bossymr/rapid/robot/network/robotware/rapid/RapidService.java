@@ -4,8 +4,8 @@ import com.bossymr.network.NetworkCall;
 import com.bossymr.network.annotations.*;
 import com.bossymr.rapid.robot.network.TaskService;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionService;
-import com.bossymr.rapid.robot.network.robotware.rapid.symbol.Symbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -39,7 +39,7 @@ public interface RapidService {
      * @return the symbols on this robot.
      */
     @POST(value = "/symbols", arguments = "action=search-symbols")
-    @NotNull NetworkCall<List<Symbol>> findSymbols(
+    @NotNull NetworkCall<List<SymbolState>> findSymbols(
             @Field Map<String, String> fields
     );
 
@@ -50,7 +50,7 @@ public interface RapidService {
      * @return the symbol.
      */
     @GET("/symbol/properties/{symbol}")
-    @NotNull NetworkCall<Symbol> findSymbol(
+    @NotNull NetworkCall<SymbolState> findSymbol(
             @Path("symbol") String symbol
     );
 }

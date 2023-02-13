@@ -11,8 +11,8 @@ import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.RobotService;
-import com.bossymr.rapid.robot.network.robotware.rapid.symbol.Symbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolType;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.ide.passwordSafe.PasswordSafe;
@@ -97,8 +97,8 @@ public final class RobotUtil {
         return RapidSymbolConverter.getSymbols(robotState.getSymbols(networkEngine));
     }
 
-    public static @NotNull VirtualSymbol getSymbol(@NotNull Symbol symbol) {
-        List<Symbol> symbolStates = List.of(symbol);
+    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolState symbolState) {
+        List<SymbolState> symbolStates = List.of(symbolState);
         Map<String, VirtualSymbol> symbols = RapidSymbolConverter.getSymbols(symbolStates);
         List<VirtualSymbol> virtualSymbols = new ArrayList<>(symbols.values());
         return virtualSymbols.get(0);
@@ -121,24 +121,23 @@ public final class RobotUtil {
                                 }),
                         service.getRobotWareService().getRapidService().findSymbols(query).sendAsync()
                                 .thenApplyAsync(symbols -> {
-                                    robotState.symbols = symbols.stream()
+                                    robotState.symbolStates = symbols.stream()
                                             .map(RobotUtil::getSymbolState)
                                             .collect(Collectors.toSet());
                                     return symbols;
                                 }).thenComposeAsync(symbols -> {
                                     Map<String, Set<String>> states = new HashMap<>();
-                                    for (Symbol symbol : symbols) {
-                                        String address = symbol.getTitle().substring(0, symbol.getTitle().lastIndexOf('/'));
+                                    for (SymbolState symbolState : symbols) {
+                                        String address = symbolState.getTitle().substring(0, symbolState.getTitle().lastIndexOf('/'));
                                         states.computeIfAbsent(address, (value) -> new HashSet<>());
-                                        states.get(address).add(symbol.getTitle().substring(symbol.getTitle().lastIndexOf('/') + 1));
+                                        states.get(address).add(symbolState.getTitle().substring(symbolState.getTitle().lastIndexOf('/') + 1));
                                     }
                                     List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
                                     for (Map.Entry<String, Set<String>> entry : states.entrySet()) {
                                         if (entry.getKey().equals("RAPID")) continue;
                                         String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
                                         if (!states.get("RAPID").contains(name)) {
-                                            // FIXME: 2023-02-08 Notification is shown for some symbol
-                                            NetworkCall<Symbol> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
+                                            NetworkCall<SymbolState> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
                                             CompletableFuture<Void> completableFuture = symbol.sendAsync()
                                                     .exceptionally((exception) -> {
                                                         if (exception.getCause() instanceof ResponseStatusException responseStatusException) {
@@ -153,7 +152,7 @@ public final class RobotUtil {
                                                     }).thenAcceptAsync((response) -> {
                                                         if (response != null) {
                                                             RobotState.SymbolState storageSymbolState = RobotUtil.getSymbolState(response);
-                                                            robotState.symbols.add(storageSymbolState);
+                                                            robotState.symbolStates.add(storageSymbolState);
                                                         }
                                                     });
                                             completableFutures.add(completableFuture);
@@ -175,7 +174,7 @@ public final class RobotUtil {
         }
     }
 
-    public static @NotNull RobotState.SymbolState getSymbolState(@NotNull Symbol symbol) {
+    public static @NotNull RobotState.SymbolState getSymbolState(@NotNull SymbolState symbol) {
         RobotState.SymbolState symbolState = new RobotState.SymbolState();
         symbolState.title = symbol.getTitle().toLowerCase();
         symbolState.type = symbol.getType();

@@ -13,7 +13,7 @@ import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.Module;
 import com.bossymr.rapid.robot.network.*;
-import com.bossymr.rapid.robot.network.robotware.rapid.symbol.Symbol;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
@@ -91,21 +91,21 @@ public class RobotImpl implements Robot, Disposable {
                 if (robotState.cache.contains(name)) {
                     return null;
                 }
-                Symbol symbol;
+                SymbolState symbolState;
                 try {
-                    symbol = robotService.getRobotWareService().getRapidService().findSymbol("RAPID" + "/" + name).send();
+                    symbolState = robotService.getRobotWareService().getRapidService().findSymbol("RAPID" + "/" + name).send();
                 } catch (ResponseStatusException e) {
                     if (e.getResponse().statusCode() == 400) {
-                        symbol = null;
+                        symbolState = null;
                     } else {
                         throw e;
                     }
                 }
-                if (symbol != null) {
-                    RobotState.SymbolState storageSymbolState = RobotUtil.getSymbolState(symbol);
-                    VirtualSymbol virtualSymbol = RobotUtil.getSymbol(symbol);
+                if (symbolState != null) {
+                    RobotState.SymbolState storageSymbolState = RobotUtil.getSymbolState(symbolState);
+                    VirtualSymbol virtualSymbol = RobotUtil.getSymbol(symbolState);
                     symbols.put(virtualSymbol.getName(), virtualSymbol);
-                    robotState.symbols.add(storageSymbolState);
+                    robotState.symbolStates.add(storageSymbolState);
                     RobotEventListener.publish().onSymbol(this, virtualSymbol);
                     return virtualSymbol;
                 } else {

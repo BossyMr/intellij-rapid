@@ -5,7 +5,7 @@ import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.Nullable;
 
 @Entity({"rap-sympropreccomp", "rap-sympropreccomp-li"})
-public interface ComponentSymbol extends Symbol {
+public interface ComponentSymbolState extends SymbolState {
 
     /**
      * Returns the index of this component in the record. The index of the first component is 1.

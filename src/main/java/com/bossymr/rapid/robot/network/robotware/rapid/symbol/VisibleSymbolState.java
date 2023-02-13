@@ -2,8 +2,8 @@ package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
 import com.bossymr.network.annotations.Property;
 
-public interface RoutineSymbol extends Symbol, VisibleSymbol {
+public interface VisibleSymbolState extends SymbolState {
 
-    @Property("npar")
-    int getParameterCount();
+    @Property("local")
+    boolean isLocal();
 }

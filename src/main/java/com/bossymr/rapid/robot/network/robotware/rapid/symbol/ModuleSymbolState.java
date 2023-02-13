@@ -4,7 +4,7 @@ import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 
 @Entity({"rap-sympropmod", "rap-sympropmod-li"})
-public interface ModuleSymbol extends Symbol {
+public interface ModuleSymbolState extends SymbolState {
 
     @Property("changed")
     boolean isChanged();
