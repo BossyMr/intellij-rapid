@@ -1,4 +1,4 @@
-package com.bossymr.rapid.robot.network;
+package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
 import com.bossymr.network.NetworkCall;
 import com.bossymr.network.SubscribableNetworkCall;
@@ -12,7 +12,7 @@ import java.util.List;
 @Service("/rw/rapid/tasks")
 public interface TaskService {
 
-    @GET("")
+    @GET
     @NotNull NetworkCall<List<Task>> getTasks();
 
     @Subscribable("/rw/rapid/tasks;buildlogchange")

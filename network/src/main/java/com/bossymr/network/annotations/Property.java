@@ -1,7 +1,5 @@
 package com.bossymr.network.annotations;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.lang.annotation.*;
 
 
@@ -18,5 +16,5 @@ public @interface Property {
      *
      * @return the name of the field to provide by this method.
      */
-    @NotNull String value();
+    String[] value();
 }

@@ -4,6 +4,11 @@ import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionPriority;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.robot.network.robotware.RobotWareService;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleType;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +33,14 @@ class RobotServiceTest {
     static void beforeAll() {
         robotService = new NetworkEngine(NetworkTestUtil.DEFAULT_PATH, () -> NetworkTestUtil.DEFAULT_CREDENTIALS)
                 .createService(RobotService.class);
+    }
+
+    @Test
+    void testBuild() throws InterruptedException {
+        robotService.getRobotWareService().getRapidService().getTaskService().onBuild().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+            System.out.println(event);
+        }).join();
+        Thread.sleep(50000);
     }
 
     @DisplayName("Test User Service")

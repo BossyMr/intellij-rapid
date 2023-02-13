@@ -58,13 +58,14 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         }
         if (method.isAnnotationPresent(Property.class)) {
             Property property = method.getAnnotation(Property.class);
-            String name = property.value();
-            String value = getField(name);
-            if (value != null) {
-                return convert(value, method.getReturnType());
-            } else {
-                return null;
+            String[] names = property.value();
+            for (String name : names) {
+                String value = getField(name);
+                if (value != null) {
+                    return convert(value, method.getReturnType());
+                }
             }
+            return null;
         }
         if (engine == null) {
             throw new IllegalStateException();
@@ -170,5 +171,10 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             return false;
         }
         return false;
+    }
+
+    @Override
+    public String toString(@NotNull Object proxy) {
+        return proxy.getClass().getInterfaces()[0].getName() + ":" + model;
     }
 }

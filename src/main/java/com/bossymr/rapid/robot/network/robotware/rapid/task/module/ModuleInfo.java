@@ -1,4 +1,4 @@
-package com.bossymr.rapid.robot.network;
+package com.bossymr.rapid.robot.network.robotware.rapid.task.module;
 
 import com.bossymr.network.EntityModel;
 import com.bossymr.network.NetworkCall;
@@ -21,8 +21,9 @@ public interface ModuleInfo extends EntityModel {
     );
 
     default @NotNull NetworkCall<Module> getModule() {
-        String task = getTitle().substring(0, getTitle().lastIndexOf('/'));
-        String module = getTitle().substring(getTitle().lastIndexOf('/') + 1);
+        String title = getTitle();
+        String task = title.substring(0, title.lastIndexOf('/'));
+        String module = title.substring(title.lastIndexOf('/') + 1);
         return getModule(module, task);
     }
 
