@@ -11,17 +11,14 @@ import java.time.LocalDateTime;
 @Entity({"elog-message", "elog-message-li"})
 public interface EventLogMessage extends EntityModel {
 
-    @Property("msg-type")
-    int getMessageType();
+    @Property("msgtype")
+    @NotNull EventLogMessageType getMessageType();
 
     @Property("code")
     int getMessageCode();
 
-    @Property("src-name")
-    @NotNull String getSource();
-
     @Property("tstamp")
-    @NotNull LocalDateTime internalLocalDateTime();
+    @NotNull LocalDateTime getTimestamp();
 
     @Property("title")
     @Nullable String getMessageTitle();

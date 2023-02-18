@@ -20,7 +20,7 @@ public final class RobotState {
     @Attribute("name")
     public @NotNull String name = "";
 
-    @Attribute("path")
+    @Attribute("port")
     public @NotNull String path = "";
 
     public @NotNull Set<SymbolState> symbolStates = new HashSet<>();
@@ -50,7 +50,7 @@ public final class RobotState {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RobotState that = (RobotState) o;
-        return Objects.equals(name, that.name) && Objects.equals(path, that.path) && symbolStates.equals(that.symbolStates) && cache.equals(that.cache);
+        return name.equals(that.name) && path.equals(that.path) && symbolStates.equals(that.symbolStates) && cache.equals(that.cache);
     }
 
     @Override
@@ -63,7 +63,7 @@ public final class RobotState {
         return "RobotState{" +
                 "name='" + name + '\'' +
                 ", path='" + path + '\'' +
-                ", symbols=" + symbolStates +
+                ", symbolStates=" + symbolStates +
                 ", cache=" + cache +
                 '}';
     }

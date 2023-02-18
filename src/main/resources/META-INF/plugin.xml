@@ -94,6 +94,8 @@
         <lang.commenter language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidCommenter"/>
         <lang.braceMatcher language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidBraceMatcher"/>
         <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.RapidQuoteHandler"/>
+
+        <configurationType implementation="com.bossymr.rapid.ide.execution.configurations.RapidConfigurationType"/>
     </extensions>
 
     <actions>

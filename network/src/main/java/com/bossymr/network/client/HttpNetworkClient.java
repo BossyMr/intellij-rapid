@@ -19,9 +19,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 
@@ -33,7 +31,7 @@ public class HttpNetworkClient implements NetworkClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpNetworkClient.class);
 
-    private final int MAX_CONNECTIONS = 2;
+    private final int MAX_CONNECTIONS = 1;
     private final Semaphore semaphore = new Semaphore(MAX_CONNECTIONS);
 
     private final @NotNull HttpClient httpClient;
@@ -41,7 +39,7 @@ public class HttpNetworkClient implements NetworkClient {
     private final @NotNull ExecutorService executorService;
     private final URI defaultPath;
 
-    private @Nullable SubscriptionGroup group;
+    private final @NotNull SubscriptionGroup subscriptionGroup;
 
     /**
      * Creates a new {@code HttpNetworkClient} with the specified default path and credentials.
@@ -58,6 +56,7 @@ public class HttpNetworkClient implements NetworkClient {
                 .version(HttpClient.Version.HTTP_1_1)
                 .cookieHandler(new CookieManager())
                 .build();
+        this.subscriptionGroup = new SubscriptionGroup(executorService, this);
     }
 
     public static @NotNull RuntimeException getThrowable(@NotNull Throwable throwable) {
@@ -150,47 +149,28 @@ public class HttpNetworkClient implements NetworkClient {
     public @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
         logger.atInfo().log("Subscribing to {} with priority {}", event.getResource(), priority);
         SubscriptionEntity entity = new SubscriptionEntity(this, event, priority, listener);
-        if (group != null) {
-            group.getEntities().add(entity);
-            return group.update().thenApplyAsync(ignored -> entity);
-        } else {
-            Set<SubscriptionEntity> entities = new HashSet<>();
-            entities.add(entity);
-            return SubscriptionGroup.start(this, entities, defaultPath)
-                    .thenApplyAsync(result -> {
-                        this.group = result;
-                        return entity;
-                    });
-        }
+        subscriptionGroup.getEntities().add(entity);
+        return subscriptionGroup.update()
+                .thenApplyAsync(ignored -> entity);
     }
 
     @Override
     public @NotNull CompletableFuture<Void> unsubscribe(@NotNull SubscriptionEntity entity) {
-        if (group != null) {
-            if (group.getEntities().remove(entity)) {
-                if (group.getEntities().isEmpty()) {
-                    return group.close().thenRunAsync(() -> group = null);
-                } else {
-                    return group.update();
-                }
-            }
-        }
-        logger.warn("Attempting to close a previously closed subscription");
-        return CompletableFuture.completedFuture(null);
+        subscriptionGroup.getEntities().remove(entity);
+        return subscriptionGroup.update();
     }
 
     @Override
     public void close() throws IOException, InterruptedException {
-        if (group != null) {
-            try {
-                group.close().get();
-                executorService.shutdownNow();
-            } catch (ExecutionException e) {
-                Throwable cause = e.getCause();
-                if (cause instanceof IOException checkedException) throw checkedException;
-                if (cause instanceof RuntimeException uncheckedException) throw uncheckedException;
-                throw new IllegalStateException(cause);
-            }
+        try {
+            subscriptionGroup.getEntities().clear();
+            subscriptionGroup.update().get();
+            executorService.shutdownNow();
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof IOException checkedException) throw checkedException;
+            if (cause instanceof RuntimeException uncheckedException) throw uncheckedException;
+            throw new IllegalStateException(cause);
         }
     }
 
@@ -226,7 +206,7 @@ public class HttpNetworkClient implements NetworkClient {
                             }
                             complete(response);
                             return response;
-                        }));
+                        }), executorService);
                 return null;
             });
         }

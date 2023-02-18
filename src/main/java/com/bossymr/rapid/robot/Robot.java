@@ -9,6 +9,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -18,6 +20,8 @@ import java.util.Set;
  * persisted.
  */
 public interface Robot {
+
+    @NotNull URI getPath();
 
     /**
      * Returns the name of this robot.
@@ -105,7 +109,7 @@ public interface Robot {
      * @throws InterruptedException if the operation is interrupted.
      * @throws IllegalStateException if the robot is not currently connected.
      */
-    void upload(@NotNull RapidTask task, @NotNull Set<VirtualFile> modules) throws IOException, InterruptedException;
+    void upload(@NotNull RapidTask task, @NotNull Collection<VirtualFile> modules) throws IOException, InterruptedException;
 
     /**
      * Downloads modules from the connected robot.

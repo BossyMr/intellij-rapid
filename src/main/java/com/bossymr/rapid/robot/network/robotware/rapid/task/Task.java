@@ -31,5 +31,4 @@ public interface Task extends EntityModel {
             @Field("line") int row,
             @Field("column") int column
     );
-
 }

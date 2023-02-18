@@ -18,6 +18,8 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -59,6 +61,16 @@ public class NetworkEngine implements AutoCloseable {
         this(URI.create(defaultPath), credentials);
     }
 
+    @SuppressWarnings("unchecked")
+    public static <T> @Nullable T createEntity(@Nullable NetworkEngine networkEngine, @NotNull Class<T> entityType, @NotNull Model model) {
+        Map<String, Class<? extends T>> arguments = EntityFactory.getEntityType(entityType);
+        if (arguments.containsKey(model.getType())) {
+            Class<? extends T> returnType = arguments.get(model.getType());
+            return (T) Proxy.newProxyInstance(returnType.getClassLoader(), new Class[]{returnType}, new EntityInvocationHandler(networkEngine, model));
+        }
+        return null;
+    }
+
     public @NotNull NetworkClient getNetworkClient() {
         return client;
     }
@@ -90,16 +102,6 @@ public class NetworkEngine implements AutoCloseable {
     @SuppressWarnings("unchecked")
     public <T> @NotNull T createService(@NotNull Class<T> serviceType) {
         return (T) Proxy.newProxyInstance(serviceType.getClassLoader(), new Class[]{serviceType}, new ServiceInvocationHandler(getNetworkEngine()));
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <T> @Nullable T createEntity(@Nullable NetworkEngine networkEngine, @NotNull Class<T> entityType, @NotNull Model model) {
-        Map<String, Class<? extends T>> arguments = EntityFactory.getEntityType(entityType);
-        if (arguments.containsKey(model.getType())) {
-            Class<? extends T> returnType = arguments.get(model.getType());
-            return (T) Proxy.newProxyInstance(returnType.getClassLoader(), new Class[]{returnType}, new EntityInvocationHandler(networkEngine, model));
-        }
-        return null;
     }
 
     /**
@@ -171,5 +173,15 @@ public class NetworkEngine implements AutoCloseable {
         for (SubscribableNetworkCall<?> subscription : subscriptions) {
             subscription.close();
         }
+    }
+
+    public @NotNull CompletableFuture<Void> closeAsync() {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                close();
+            } catch (IOException | InterruptedException e) {
+                throw new CompletionException(e);
+            }
+        });
     }
 }

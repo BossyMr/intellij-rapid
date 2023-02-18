@@ -69,7 +69,7 @@ public abstract class CloseableNetworkCall<T> implements NetworkCall<T> {
             return;
         }
         for (CompletableFuture<?> request : requests) {
-            request.cancel(true);
+            request.cancel(false);
         }
         closed = true;
     }

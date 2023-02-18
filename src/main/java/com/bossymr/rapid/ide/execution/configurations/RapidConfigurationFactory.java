@@ -4,28 +4,30 @@ import com.bossymr.rapid.RapidBundle;
 import com.intellij.execution.configurations.ConfigurationFactory;
 import com.intellij.execution.configurations.ConfigurationType;
 import com.intellij.execution.configurations.RunConfiguration;
+import com.intellij.openapi.components.BaseState;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * A {@code ConfigurationFactory} used to create run configurations to execute a remote task.
+ * A {@code ConfigurationFactory} used to create run configurations to execute a local module.
  */
-public class RapidRemoteConfigurationFactory extends ConfigurationFactory {
+public class RapidConfigurationFactory extends ConfigurationFactory {
 
-    public RapidRemoteConfigurationFactory(@NotNull ConfigurationType type) {
+    public RapidConfigurationFactory(@NotNull ConfigurationType type) {
         super(type);
     }
 
     @Override
     public @NotNull @NonNls String getId() {
-        return "RapidRemoteConfigurationType";
+        return "RapidLocalConfigurationType";
     }
 
     @Override
     public @NotNull @Nls String getName() {
-        return RapidBundle.message("run.configuration.factory.remote");
+        return RapidBundle.message("run.configuration.factory.local");
     }
 
     @Override
@@ -34,7 +36,12 @@ public class RapidRemoteConfigurationFactory extends ConfigurationFactory {
     }
 
     @Override
+    public @Nullable Class<? extends BaseState> getOptionsClass() {
+        return RapidRunConfigurationOptions.class;
+    }
+
+    @Override
     public @NotNull RunConfiguration createTemplateConfiguration(@NotNull Project project) {
-        return null;
+        return new RapidRunConfiguration("", project, this);
     }
 }

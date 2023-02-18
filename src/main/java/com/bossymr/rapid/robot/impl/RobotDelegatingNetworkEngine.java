@@ -19,7 +19,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.net.URI;
 
-public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine.ShutdownOnFailure {
+public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
 
     private volatile boolean showNotifications = true;
 

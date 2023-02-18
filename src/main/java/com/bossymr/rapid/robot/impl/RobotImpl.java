@@ -1,7 +1,6 @@
 package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.network.ResponseStatusException;
-import com.bossymr.network.client.DelegatingNetworkEngine;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
@@ -69,6 +68,11 @@ public class RobotImpl implements Robot, Disposable {
     }
 
     @Override
+    public @NotNull URI getPath() {
+        return URI.create(robotState.path);
+    }
+
+    @Override
     public @NotNull String getName() {
         return robotState.name;
     }
@@ -131,7 +135,7 @@ public class RobotImpl implements Robot, Disposable {
     }
 
     @Override
-    public void upload(@NotNull RapidTask task, @NotNull Set<VirtualFile> modules) throws IOException, InterruptedException {
+    public void upload(@NotNull RapidTask task, @NotNull Collection<VirtualFile> modules) throws IOException, InterruptedException {
         try {
             ApplicationManager.getApplication().invokeLater(() -> ApplicationManager.getApplication().runWriteAction(() -> {
                 try {
@@ -147,30 +151,28 @@ public class RobotImpl implements Robot, Disposable {
         }
     }
 
-    private void doUpload(@NotNull RapidTask task, @NotNull Set<VirtualFile> modules) throws IOException, InterruptedException {
+    private void doUpload(@NotNull RapidTask task, @NotNull Collection<VirtualFile> modules) throws IOException, InterruptedException {
         if (networkEngine == null) throw new IllegalStateException();
-        try (NetworkEngine delegating = new DelegatingNetworkEngine.ShutdownOnFailure(networkEngine)) {
-            RobotService robotService = delegating.createService(RobotService.class);
-            File directory = FileUtil.createTempDirectory("robot", "upload");
-            VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(directory);
-            assert virtualFile != null;
-            List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
-            for (Task remoteTask : remoteTasks) {
-                if (remoteTask.getName().equals(task.getName())) {
-                    String programName = remoteTask.getProgram().send().getName();
-                    File programFile = directory.toPath().resolve(programName + ".pgf").toFile();
-                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(programFile))) {
-                        writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
-                        writer.write("<Program>\r\n");
-                        for (VirtualFile module : modules) {
-                            writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
-                            module.copy(this, virtualFile, module.getName());
-                        }
-                        writer.write("</Program>");
+        RobotService robotService = networkEngine.createService(RobotService.class);
+        File directory = FileUtil.createTempDirectory("robot", "upload");
+        VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(directory);
+        assert virtualFile != null;
+        List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
+        for (Task remoteTask : remoteTasks) {
+            if (remoteTask.getName().equals(task.getName())) {
+                String programName = remoteTask.getProgram().send().getName();
+                File programFile = directory.toPath().resolve(programName + ".pgf").toFile();
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(programFile))) {
+                    writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
+                    writer.write("<Program>\r\n");
+                    for (VirtualFile module : modules) {
+                        writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
+                        module.copy(this, virtualFile, module.getName());
                     }
-                    remoteTask.getProgram().send().load(programFile.getPath(), LoadProgramMode.REPLACE).send();
-                    return;
+                    writer.write("</Program>");
                 }
+                remoteTask.getProgram().send().load(programFile.getPath(), LoadProgramMode.REPLACE).send();
+                return;
             }
         }
     }
@@ -178,29 +180,27 @@ public class RobotImpl implements Robot, Disposable {
     @Override
     public void download() throws IOException, InterruptedException {
         if (networkEngine == null) throw new IllegalStateException();
-        try (NetworkEngine delegating = new DelegatingNetworkEngine.ShutdownOnFailure(networkEngine)) {
-            RobotService robotService = delegating.createService(RobotService.class);
-            List<RapidTask> rapidTasks = new ArrayList<>();
-            Path defaultPath = Path.of(PathManager.getSystemPath(), "robot");
-            File defaultFile = defaultPath.toFile();
-            if (defaultFile.exists()) FileUtil.delete(defaultFile);
-            if (!defaultFile.mkdir()) throw new IOException();
-            List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
-            for (Task remoteTask : remoteTasks) {
-                File taskFile = defaultPath.resolve(remoteTask.getName()).toFile();
-                if (!taskFile.mkdir()) throw new IOException();
-                Set<File> virtualFiles = new HashSet<>();
-                RapidTask rapidTask = new RapidTaskImpl(remoteTask.getName(), taskFile, virtualFiles);
-                List<ModuleInfo> moduleInfos = remoteTask.getModules().send();
-                for (ModuleInfo moduleInfo : moduleInfos) {
-                    Module module = moduleInfo.getModule().send();
-                    module.save(module.getName(), taskFile.getPath()).send();
-                    virtualFiles.add(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile());
-                }
-                rapidTasks.add(rapidTask);
+        RobotService robotService = networkEngine.createService(RobotService.class);
+        List<RapidTask> rapidTasks = new ArrayList<>();
+        Path defaultPath = Path.of(PathManager.getSystemPath(), "robot");
+        File defaultFile = defaultPath.toFile();
+        if (defaultFile.exists()) FileUtil.delete(defaultFile);
+        if (!defaultFile.mkdir()) throw new IOException();
+        List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
+        for (Task remoteTask : remoteTasks) {
+            File taskFile = defaultPath.resolve(remoteTask.getName()).toFile();
+            if (!taskFile.mkdir()) throw new IOException();
+            Set<File> virtualFiles = new HashSet<>();
+            RapidTask rapidTask = new RapidTaskImpl(remoteTask.getName(), taskFile, virtualFiles);
+            List<ModuleInfo> moduleInfos = remoteTask.getModules().send();
+            for (ModuleInfo moduleInfo : moduleInfos) {
+                Module module = moduleInfo.getModule().send();
+                module.save(module.getName(), taskFile.getPath()).send();
+                virtualFiles.add(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile());
             }
-            this.tasks = rapidTasks;
+            rapidTasks.add(rapidTask);
         }
+        this.tasks = rapidTasks;
     }
 
     public void retrieve() {

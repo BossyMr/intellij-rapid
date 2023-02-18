@@ -18,8 +18,7 @@ import javax.swing.*;
 public class RapidConfigurationType implements ConfigurationType {
 
     private final ConfigurationFactory[] CONFIGURATION_FACTORIES = {
-            new RapidLocalConfigurationFactory(this),
-            new RapidRemoteConfigurationFactory(this)
+            new RapidConfigurationFactory(this)
     };
 
     @Override

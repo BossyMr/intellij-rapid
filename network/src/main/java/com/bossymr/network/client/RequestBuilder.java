@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
  */
 public class RequestBuilder {
 
-
     private final @NotNull URI defaultPath;
     private @NotNull MultiMap<String, String> fields = new MultiMap<>();
     private @NotNull MultiMap<String, String> arguments = new MultiMap<>();
@@ -80,9 +79,9 @@ public class RequestBuilder {
         HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.noBody();
         HttpRequest.Builder builder = HttpRequest.newBuilder(getResource(path, arguments));
         if (body != null) {
-            builder.setHeader("Content-Type", "application/x-www-form-urlencoded");
             bodyPublisher = HttpRequest.BodyPublishers.ofString(body);
         }
+        builder = builder.setHeader("Content-Type", "application/x-www-form-urlencoded");
         builder = builder.method(method, bodyPublisher);
         return builder.build();
     }
