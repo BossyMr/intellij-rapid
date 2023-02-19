@@ -19,25 +19,13 @@ public abstract class CloseableNetworkCall<T> implements NetworkCall<T> {
 
     private final @NotNull Set<CompletableFuture<?>> requests = ConcurrentHashMap.newKeySet();
 
-    private volatile boolean closed;
-
-    public boolean isClosed() {
-        return closed;
-    }
-
     @Override
     public @Nullable T send() throws IOException, InterruptedException {
-        if (closed) {
-            throw new IllegalStateException("NetworkCall is closed");
-        }
         return create();
     }
 
     @Override
     public @NotNull CompletableFuture<T> sendAsync() {
-        if (closed) {
-            throw new IllegalStateException("NetworkCall '" + this + "' is closed");
-        }
         CompletableFuture<T> request = createAsync();
         requests.add(request);
         return request.handleAsync((response, throwable) -> {
@@ -63,14 +51,7 @@ public abstract class CloseableNetworkCall<T> implements NetworkCall<T> {
      */
     protected abstract @NotNull CompletableFuture<T> createAsync();
 
-    @Override
-    public void close() {
-        if (closed) {
-            return;
-        }
-        for (CompletableFuture<?> request : requests) {
-            request.cancel(false);
-        }
-        closed = true;
+    public @NotNull CompletableFuture<Void> join() {
+        return CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new));
     }
 }

@@ -36,14 +36,12 @@ import java.util.function.Supplier;
  */
 public class NetworkEngine implements AutoCloseable {
 
-    private final @NotNull Set<NetworkCall<?>> requests = ConcurrentHashMap.newKeySet();
-    private final @NotNull Set<SubscribableNetworkCall<?>> subscriptions = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<CloseableNetworkCall<?>> requests = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<CloseableSubscribableNetworkCall<?>> subscriptions = ConcurrentHashMap.newKeySet();
 
     private final @NotNull NetworkClient client;
     private final @NotNull EntityFactory entityFactory;
     private final @NotNull RequestFactory requestFactory;
-
-    private volatile boolean closed;
 
     protected NetworkEngine(@NotNull NetworkClient client, @NotNull EntityFactory entityFactory, @NotNull RequestFactory requestFactory) {
         this.client = client;
@@ -131,9 +129,6 @@ public class NetworkEngine implements AutoCloseable {
     }
 
     protected <T> @NotNull NetworkCall<T> createNetworkCall(@NotNull NetworkEngine engine, @NotNull HttpRequest request, @NotNull Type returnType) {
-        if (closed) {
-            throw new IllegalArgumentException();
-        }
         HttpNetworkCall<T> networkCall = new HttpNetworkCall<>(engine.getEntityFactory(), request, returnType);
         requests.add(networkCall);
         return networkCall;
@@ -151,26 +146,25 @@ public class NetworkEngine implements AutoCloseable {
     }
 
     protected <T> @NotNull SubscribableNetworkCall<T> createSubscribableNetworkCall(@NotNull NetworkEngine engine, @NotNull SubscribableEvent<T> event) {
-        if (closed) throw new IllegalArgumentException();
         HttpSubscribableNetworkCall<T> networkCall = new HttpSubscribableNetworkCall<>(engine, event);
         subscriptions.add(networkCall);
         return networkCall;
     }
 
+    public @NotNull CompletableFuture<Void> join() {
+        return CompletableFuture.allOf(requests.stream().map(CloseableNetworkCall::join)
+                .toArray(CompletableFuture[]::new));
+    }
+
     /**
-     * Closes this {@code NetworkEngine} and all created {@code NetworkCall} and {@code SubscribableNetworkCall}
-     * instances. All requests created by this {@code NetworkCall} are canceled and all ongoing subscriptions are
-     * disconnected.
+     * Closes this {@code NetworkEngine} and closes all subscriptions.
      *
      * @throws IOException if an I/O error has occurred.
      * @throws InterruptedException if this {@code NetworkEngine} is interrupted.
      */
     @Override
     public void close() throws IOException, InterruptedException {
-        if (closed) return;
-        closed = true;
-        requests.forEach(NetworkCall::close);
-        for (SubscribableNetworkCall<?> subscription : subscriptions) {
+        for (CloseableSubscribableNetworkCall<?> subscription : subscriptions) {
             subscription.close();
         }
     }

@@ -2,9 +2,9 @@ package com.bossymr.rapid.ide.execution.configurations;
 
 import com.bossymr.rapid.ide.execution.RapidRunProfileState;
 import com.bossymr.rapid.ide.execution.configurations.ui.RapidRunConfigurationEditor;
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.bossymr.rapid.robot.Robot;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.Executor;
 import com.intellij.execution.configurations.ConfigurationFactory;
@@ -49,7 +49,7 @@ public class RapidRunConfiguration extends ModuleBasedConfiguration<RapidRunConf
     @Override
     public @Nullable RunProfileState getState(@NotNull Executor executor, @NotNull ExecutionEnvironment environment) throws ExecutionException {
         RemoteRobotService robotService = RemoteRobotService.getInstance();
-        Robot robot = robotService.getRobot();
+        RapidRobot robot = robotService.getRobot();
         if (robot == null || getOptions().getRobotPath() == null) return null;
         URI robotPath = URI.create(getOptions().getRobotPath());
         if (!(robotPath.equals(robot.getPath()))) return null;

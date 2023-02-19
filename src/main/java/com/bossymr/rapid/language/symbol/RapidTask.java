@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.util.Set;
 
-public interface RapidTask {
+public interface RapidTask extends RapidSymbol {
 
     @NotNull String getName();
 

@@ -95,8 +95,8 @@ public class DelegatingNetworkEngineTest {
                                 })
                 );
                 countDownLatch.await();
-                Assertions.assertThrows(IllegalStateException.class, () -> myService.success().send());
-                Assertions.assertThrows(IllegalStateException.class, () -> myService.success().sendAsync().get());
+                Assertions.assertDoesNotThrow(() -> myService.success().send());
+                Assertions.assertDoesNotThrow(() -> myService.success().sendAsync().get());
             }
         }
     }

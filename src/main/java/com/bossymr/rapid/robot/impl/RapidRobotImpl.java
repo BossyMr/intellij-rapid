@@ -3,11 +3,12 @@ package com.bossymr.rapid.robot.impl;
 import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.network.client.security.Credentials;
+import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
@@ -25,6 +26,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -34,7 +36,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class RobotImpl implements Robot, Disposable {
+public class RapidRobotImpl implements RapidRobot, Disposable {
 
     private @NotNull RobotState robotState;
     private @Nullable NetworkEngine networkEngine;
@@ -42,7 +44,7 @@ public class RobotImpl implements Robot, Disposable {
     private @NotNull List<RapidTask> tasks;
     private @NotNull Map<String, VirtualSymbol> symbols;
 
-    public RobotImpl(@NotNull URI path, @NotNull String username, char @NotNull [] password) throws IOException, InterruptedException {
+    public RapidRobotImpl(@NotNull URI path, @NotNull String username, char @NotNull [] password) throws IOException, InterruptedException {
         NetworkEngine engine = new NetworkEngine(path, () -> new Credentials(username, password));
         this.networkEngine = new RobotDelegatingNetworkEngine(engine);
         robotState = RobotUtil.getRobotState(networkEngine);
@@ -59,7 +61,7 @@ public class RobotImpl implements Robot, Disposable {
      *
      * @param robotState the persisted robot state.
      */
-    public RobotImpl(@NotNull RobotState robotState) {
+    public RapidRobotImpl(@NotNull RobotState robotState) {
         this.robotState = robotState;
         RemoteRobotService.getInstance().setRobotState(robotState);
         symbols = RobotUtil.getSymbols(null, robotState);
@@ -75,6 +77,11 @@ public class RobotImpl implements Robot, Disposable {
     @Override
     public @NotNull String getName() {
         return robotState.name;
+    }
+
+    @Override
+    public @NotNull Icon getIcon() {
+        return RapidIcons.ROBOT_ICON;
     }
 
     @Override

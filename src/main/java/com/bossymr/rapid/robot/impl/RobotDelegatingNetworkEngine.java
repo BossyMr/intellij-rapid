@@ -5,8 +5,8 @@ import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.DelegatingNetworkEngine;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.RapidBundle;
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
@@ -35,7 +35,7 @@ public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
             }
         }
         RemoteRobotService remoteService = RemoteRobotService.getInstance();
-        Robot robot = remoteService.getRobot();
+        RapidRobot robot = remoteService.getRobot();
         if (robot != null) {
             if (robot.isConnected()) {
                 try {
@@ -44,16 +44,17 @@ public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
             }
         }
         if (showNotifications) {
-            showNotification(request);
+            showNotification(request, throwable);
         }
     }
 
-    private void showNotification(@NotNull NetworkCall<?> request) {
+    private void showNotification(@NotNull NetworkCall<?> request, @NotNull Throwable throwable) {
         showNotifications = false;
         URI path = request.request().uri();
         NotificationGroupManager.getInstance()
                 .getNotificationGroup("Robot Connection Error")
                 .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)
+                .setContent(throwable.getLocalizedMessage())
                 .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
                 .addAction(new ConnectNotificationAction(path))
                 .whenExpired(() -> showNotifications = true)

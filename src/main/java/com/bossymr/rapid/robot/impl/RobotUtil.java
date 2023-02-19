@@ -5,9 +5,9 @@ import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.RobotService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
@@ -77,7 +77,7 @@ public final class RobotUtil {
     public static boolean isConnected(@Nullable Project project) {
         if (project != null) {
             RemoteRobotService service = RemoteRobotService.getInstance();
-            Robot robot = service.getRobot();
+            RapidRobot robot = service.getRobot();
             if (robot != null) {
                 return robot.isConnected();
             }

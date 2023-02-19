@@ -1,7 +1,6 @@
-package com.bossymr.rapid.robot;
+package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.network.client.security.Credentials;
-import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.network.RobotService;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -19,7 +18,7 @@ import java.util.Set;
  * {@link RobotService}. If a robot is not directly connected to the remote robot, symbols, tasks and modules are
  * persisted.
  */
-public interface Robot {
+public interface RapidRobot extends RapidSymbol {
 
     @NotNull URI getPath();
 

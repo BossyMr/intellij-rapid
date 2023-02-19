@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot;
 
 import com.bossymr.network.client.security.Credentials;
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.robot.impl.RobotUtil;
 import com.bossymr.rapid.robot.network.NetworkTestUtil;
 import com.intellij.testFramework.junit5.TestApplication;
@@ -22,7 +23,7 @@ class RemoteRobotServiceTest {
         RemoteRobotService remoteService = RemoteRobotService.getInstance();
         assertNull(remoteService.getRobotState());
         assertNull(remoteService.getRobot());
-        Robot robot = remoteService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
+        RapidRobot robot = remoteService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
         Credentials credentials = RobotUtil.getCredentials(NetworkTestUtil.DEFAULT_PATH);
         assertNotNull(credentials);
         assertEquals(robot, remoteService.getRobot());

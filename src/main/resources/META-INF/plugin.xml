@@ -123,8 +123,14 @@
         <action id="com.bossymr.rapid.robot.actions.UploadAction" icon="AllIcons.Vcs.Push"
                 class="com.bossymr.rapid.robot.actions.UploadAction" text="Upload"/>
 
+        <!-- Context Menu (right-click) in Robot Tool Window -->
         <group id="RobotContextMenu">
             <reference id="com.bossymr.rapid.robot.actions.ConnectAction"/>
+            <separator/>
+            <reference id="$Cut"/>
+            <reference id="$Copy"/>
+            <reference id="$Paste"/>
+            <separator/>
             <reference id="com.bossymr.rapid.robot.actions.DeleteAction"/>
         </group>
 

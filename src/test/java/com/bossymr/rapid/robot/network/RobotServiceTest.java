@@ -35,14 +35,6 @@ class RobotServiceTest {
                 .createService(RobotService.class);
     }
 
-    @Test
-    void testBuild() throws InterruptedException {
-        robotService.getRobotWareService().getRapidService().getTaskService().onBuild().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
-            System.out.println(event);
-        }).join();
-        Thread.sleep(50000);
-    }
-
     @DisplayName("Test User Service")
     @Test
     void testUserService() throws Throwable {
@@ -51,8 +43,8 @@ class RobotServiceTest {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         CompletableFuture<SubscriptionEntity> subscriptionEntity = userService.getRemoteUserService().onRequest()
                 .subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> countDownLatch.countDown());
-        userService.getRemoteUserService().login().send();
         SubscriptionEntity entity = subscriptionEntity.join();
+        userService.getRemoteUserService().login().send();
         assertTrue(countDownLatch.await(5000, TimeUnit.MILLISECONDS));
         entity.unsubscribe().join();
     }

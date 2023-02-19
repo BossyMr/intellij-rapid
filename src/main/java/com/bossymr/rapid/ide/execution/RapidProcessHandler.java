@@ -104,8 +104,7 @@ public class RapidProcessHandler extends ProcessHandler {
     @Override
     protected void destroyProcessImpl() {
         robotService.getRobotWareService().getRapidService().getExecutionService()
-                .stop(StopMode.STOP, TaskExecutionMode.NORMAL).sendAsync()
-                .thenComposeAsync((entity) -> delegatingNetworkEngine.closeAsync());
+                .stop(StopMode.STOP, TaskExecutionMode.NORMAL).sendAsync();
     }
 
     @Override

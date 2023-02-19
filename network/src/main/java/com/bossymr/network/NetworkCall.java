@@ -32,9 +32,4 @@ public interface NetworkCall<T> {
      * @throws IllegalArgumentException if this {@code NetworkCall} is closed.
      */
     @NotNull CompletableFuture<T> sendAsync();
-
-    /**
-     * Closes this {@code NetworkCall} and cancels all ongoing asynchronous requests.
-     */
-    void close();
 }

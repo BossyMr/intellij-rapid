@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.ui;
 
 import com.bossymr.rapid.RapidBundle;
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
@@ -29,6 +29,8 @@ import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class RobotToolWindow implements Disposable {
 
@@ -77,12 +79,12 @@ public class RobotToolWindow implements Disposable {
 
         RobotEventListener.connect(new RobotEventListener() {
             @Override
-            public void afterConnect(@NotNull Robot robot) {
+            public void afterConnect(@NotNull RapidRobot robot) {
                 model.invalidateAsync();
             }
 
             @Override
-            public void afterRefresh(@NotNull Robot robot) {
+            public void afterRefresh(@NotNull RapidRobot robot) {
                 model.invalidateAsync();
             }
 
@@ -92,7 +94,7 @@ public class RobotToolWindow implements Disposable {
             }
 
             @Override
-            public void onSymbol(@NotNull Robot robot, @NotNull VirtualSymbol symbol) {
+            public void onSymbol(@NotNull RapidRobot robot, @NotNull VirtualSymbol symbol) {
                 model.invalidateAsync();
             }
         });
@@ -119,6 +121,17 @@ public class RobotToolWindow implements Disposable {
             if (CommonDataKeys.PROJECT.is(dataId)) {
                 return project;
             }
+            if (PlatformCoreDataKeys.SELECTED_ITEM.is(dataId)) {
+                AbstractTreeNode<?> selectedNode = getSelectedNode();
+                return selectedNode != null ? selectedNode.getValue() : null;
+            }
+            if (PlatformCoreDataKeys.SELECTED_ITEMS.is(dataId)) {
+                List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
+                if (selectedNodes == null) return null;
+                return selectedNodes.stream()
+                        .map(AbstractTreeNode::getValue)
+                        .toArray(Object[]::new);
+            }
             if (PlatformCoreDataKeys.BGT_DATA_PROVIDER.is(dataId)) {
                 return (DataProvider) this::getSlowData;
             }
@@ -130,23 +143,48 @@ public class RobotToolWindow implements Disposable {
                 PsiElement element = getSelectedElement();
                 return element != null && element.isValid() ? element : null;
             }
+            if (PlatformCoreDataKeys.PSI_ELEMENT_ARRAY.is(dataId)) {
+                return getSelectedElements();
+            }
             return null;
         }
 
         private @Nullable PsiElement getSelectedElement() {
-            Object value = getSelectedValue();
+            AbstractTreeNode<?> selectedNode = getSelectedNode();
+            Object value = selectedNode != null ? selectedNode.getValue() : null;
             return value instanceof PsiElement element ? element : null;
         }
 
-        private @Nullable Object getSelectedValue() {
-            AbstractTreeNode<?> node = getSelectedNode();
-            if (node == null) return null;
-            return node.getValue();
+        private @Nullable PsiElement[] getSelectedElements() {
+            List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
+            if (selectedNodes == null) return null;
+            return selectedNodes.stream()
+                    .map(AbstractTreeNode::getValue)
+                    .filter(element -> element instanceof PsiElement)
+                    .map(element -> ((PsiElement) element))
+                    .filter(PsiElement::isValid)
+                    .toArray(PsiElement[]::new);
         }
+
 
         private @Nullable AbstractTreeNode<?> getSelectedNode() {
             TreePath treePath = tree.getSelectionPath();
             if (treePath == null) return null;
+            return getSelectedNode(treePath);
+        }
+
+        private @Nullable List<AbstractTreeNode<?>> getSelectedNodes() {
+            TreePath[] treePaths = tree.getSelectionPaths();
+            if (treePaths == null) return null;
+            List<AbstractTreeNode<?>> selectedNodes = new ArrayList<>();
+            for (TreePath treePath : treePaths) {
+                AbstractTreeNode<?> selectedNode = getSelectedNode(treePath);
+                selectedNodes.add(selectedNode);
+            }
+            return selectedNodes;
+        }
+
+        private @Nullable AbstractTreeNode<?> getSelectedNode(@NotNull TreePath treePath) {
             Object component = treePath.getLastPathComponent();
             if (component instanceof DefaultMutableTreeNode mutableTreeNode) {
                 Object userobject = mutableTreeNode.getUserObject();

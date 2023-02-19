@@ -1,8 +1,8 @@
 package com.bossymr.rapid.ide.execution;
 
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidTask;
-import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.network.RobotService;
 import com.intellij.execution.DefaultExecutionResult;
 import com.intellij.execution.ExecutionException;
@@ -25,11 +25,11 @@ public class RapidRunProfileState implements RunProfileState {
 
     private final @NotNull Project project;
 
-    private final @NotNull Robot robot;
+    private final @NotNull RapidRobot robot;
     private final @NotNull RapidTask task;
     private final @Nullable Module module;
 
-    public RapidRunProfileState(@NotNull Project project, @NotNull Robot robot, @NotNull RapidTask task, @Nullable Module module) {
+    public RapidRunProfileState(@NotNull Project project, @NotNull RapidRobot robot, @NotNull RapidTask task, @Nullable Module module) {
         this.project = project;
         this.robot = robot;
         this.task = task;

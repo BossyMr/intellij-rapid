@@ -8,7 +8,6 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.bossymr.rapid.robot.Robot;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -19,6 +18,7 @@ import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -145,7 +145,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         PhysicalModule physicalModule = PsiTreeUtil.getParentOfType(context, PhysicalModule.class);
         boolean isRemoteFile = isRemoteFile(context);
         RemoteRobotService service = RemoteRobotService.getInstance();
-        Robot robot = service.getRobot();
+        RapidRobot robot = service.getRobot();
         if (robot != null) {
             for (RapidTask task : robot.getTasks()) {
                 for (PhysicalModule module : task.getModules(context.getProject())) {
@@ -172,10 +172,10 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         PsiFile containingFile = element.getContainingFile();
         VirtualFile virtualFile = containingFile.getVirtualFile();
         RemoteRobotService service = RemoteRobotService.getInstance();
-        Robot robot = service.getRobot();
-        if (robot != null) {
+        RapidRobot robot = service.getRobot();
+        if (robot != null && virtualFile != null) {
             for (RapidTask task : robot.getTasks()) {
-                if (task.getFiles().contains(virtualFile)) {
+                if (task.getFiles().contains(new File(virtualFile.getPath()))) {
                     return true;
                 }
             }
@@ -185,7 +185,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
 
     private void visitRobot() {
         RemoteRobotService service = RemoteRobotService.getInstance();
-        Robot robot = service.getRobot();
+        RapidRobot robot = service.getRobot();
         if (robot != null) {
             try {
                 if (processor.getName() != null) {

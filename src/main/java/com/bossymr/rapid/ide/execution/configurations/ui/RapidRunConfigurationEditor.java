@@ -3,9 +3,9 @@ package com.bossymr.rapid.ide.execution.configurations.ui;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.intellij.application.options.ModulesComboBox;
 import com.intellij.openapi.module.Module;
@@ -30,7 +30,7 @@ import java.net.URI;
 public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfiguration> {
 
     private final ModulesComboBox moduleComboBox;
-    private final ComboBox<Robot> robotComboBox;
+    private final ComboBox<RapidRobot> robotComboBox;
     private final ComboBox<RapidTask> taskComboBox;
 
     private final JPanel panel;
@@ -43,7 +43,7 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
         this.moduleComboBox.fillModules(project);
         this.robotComboBox = new ComboBox<>();
         CollectionComboBoxModel<RapidTask> taskComboBoxModel = new CollectionComboBoxModel<>();
-        Robot robot = RemoteRobotService.getInstance().getRobot();
+        RapidRobot robot = RemoteRobotService.getInstance().getRobot();
         if (robot != null) {
             robotComboBox.addItem(robot);
             for (RapidTask task : robot.getTasks()) {
@@ -59,7 +59,7 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
         }
         robotComboBox.setRenderer(new SimpleListCellRenderer<>() {
             @Override
-            public void customize(@NotNull JList<? extends Robot> list, @Nullable Robot value, int index, boolean selected, boolean hasFocus) {
+            public void customize(@NotNull JList<? extends RapidRobot> list, @Nullable RapidRobot value, int index, boolean selected, boolean hasFocus) {
                 if (value != null) {
                     setText(value.getName());
                     setIcon(RapidIcons.ROBOT_ICON);
@@ -94,26 +94,26 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
 
         RobotEventListener.connect(new RobotEventListener() {
             @Override
-            public void afterConnect(@NotNull Robot robot) {
+            public void afterConnect(@NotNull RapidRobot robot) {
                 robotComboBox.addItem(robot);
             }
 
             @Override
-            public void beforeRemoval(@NotNull Robot robot) {
+            public void beforeRemoval(@NotNull RapidRobot robot) {
                 robotComboBox.removeItem(robot);
             }
         });
 
         RobotEventListener.connect(new RobotEventListener() {
             @Override
-            public void afterConnect(@NotNull Robot robot) {
+            public void afterConnect(@NotNull RapidRobot robot) {
                 for (RapidTask task : robot.getTasks()) {
                     taskComboBoxModel.add(task);
                 }
             }
 
             @Override
-            public void afterRefresh(@NotNull Robot robot) {
+            public void afterRefresh(@NotNull RapidRobot robot) {
                 taskComboBoxModel.removeAll();
                 for (RapidTask task : robot.getTasks()) {
                     taskComboBoxModel.add(task);
@@ -121,7 +121,7 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
             }
 
             @Override
-            public void beforeRemoval(@NotNull Robot robot) {
+            public void beforeRemoval(@NotNull RapidRobot robot) {
                 for (RapidTask task : robot.getTasks()) {
                     taskComboBoxModel.remove(task);
                 }
@@ -154,7 +154,7 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
             try {
                 URI path = URI.create(robotPath);
                 for (int i = 0; i < robotComboBox.getItemCount(); i++) {
-                    Robot robot = robotComboBox.getItemAt(i);
+                    RapidRobot robot = robotComboBox.getItemAt(i);
                     if (robot != null) {
                         if (robot.getPath().equals(path)) {
                             robotComboBox.setSelectedItem(robot);
@@ -186,7 +186,7 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
         if (selectedRobot == null) {
             throw new ConfigurationException(RapidBundle.message("run.configuration.panel.validation.robot"));
         }
-        s.getOptions().setRobotPath(((Robot) selectedRobot).getPath().toString());
+        s.getOptions().setRobotPath(((RapidRobot) selectedRobot).getPath().toString());
     }
 
     @Override

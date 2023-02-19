@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.network.NetworkTestUtil;
 import com.intellij.testFramework.junit5.TestApplication;
@@ -18,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestApplication
 public class RobotTest {
 
-    private static Robot robot;
+    private static RapidRobot robot;
 
     @BeforeEach
     void setUp() throws IOException, InterruptedException {

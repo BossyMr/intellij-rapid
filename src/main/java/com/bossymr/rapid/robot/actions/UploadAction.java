@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.actions;
 
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.bossymr.rapid.robot.Robot;
 import com.bossymr.rapid.robot.impl.RobotUtil;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -25,7 +25,7 @@ public class UploadAction extends AnAction {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
                 RemoteRobotService service = RemoteRobotService.getInstance();
-                Robot robot = service.getRobot();
+                RapidRobot robot = service.getRobot();
                 assert robot != null;
                 try {
                     robot.upload();
