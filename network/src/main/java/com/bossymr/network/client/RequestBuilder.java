@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
  */
 public class RequestBuilder {
 
-
     private final @NotNull URI defaultPath;
     private @NotNull MultiMap<String, String> fields = new MultiMap<>();
     private @NotNull MultiMap<String, String> arguments = new MultiMap<>();
@@ -80,9 +79,9 @@ public class RequestBuilder {
         HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.noBody();
         HttpRequest.Builder builder = HttpRequest.newBuilder(getResource(path, arguments));
         if (body != null) {
-            builder.setHeader("Content-Type", "application/x-www-form-urlencoded");
             bodyPublisher = HttpRequest.BodyPublishers.ofString(body);
         }
+        builder = builder.setHeader("Content-Type", "application/x-www-form-urlencoded");
         builder = builder.method(method, bodyPublisher);
         return builder.build();
     }
@@ -98,7 +97,13 @@ public class RequestBuilder {
             query += "&";
         }
         query += arguments.stream()
-                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .map(entry -> {
+                    if (entry.getValue() != null) {
+                        return entry.getKey() + "=" + entry.getValue();
+                    } else {
+                        return entry.getKey();
+                    }
+                })
                 .collect(Collectors.joining("&"));
         try {
             return new URI(resource.getScheme(), resource.getUserInfo(), resource.getHost(), resource.getPort(), resource.getPath(), query, resource.getFragment());

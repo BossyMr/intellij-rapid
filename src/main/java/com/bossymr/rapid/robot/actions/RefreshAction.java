@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.actions;
 
+import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.bossymr.rapid.robot.Robot;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -35,7 +35,7 @@ public class RefreshAction extends AnAction {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
                 RemoteRobotService service = RemoteRobotService.getInstance();
-                Robot robot = service.getRobot();
+                RapidRobot robot = service.getRobot();
                 assert robot != null;
                 try {
                     robot.reconnect();

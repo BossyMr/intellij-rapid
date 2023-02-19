@@ -18,11 +18,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DelegatingNetworkEngine extends NetworkEngine {
 
-    private final Set<NetworkCall<?>> requests = ConcurrentHashMap.newKeySet();
-    private final Set<SubscribableNetworkCall<?>> subscriptions = ConcurrentHashMap.newKeySet();
+    private final Set<CloseableNetworkCall<?>> requests = ConcurrentHashMap.newKeySet();
+    private final Set<CloseableSubscribableNetworkCall<?>> subscriptions = ConcurrentHashMap.newKeySet();
 
     private final @NotNull NetworkEngine engine;
-    private boolean closed;
 
     public DelegatingNetworkEngine(@NotNull NetworkEngine engine) {
         super(engine.getNetworkClient(), engine.getEntityFactory(), engine.getRequestFactory());
@@ -73,17 +72,14 @@ public class DelegatingNetworkEngine extends NetworkEngine {
         DelegatingNetworkCall<T> networkCall = new DelegatingNetworkCall<>(this.engine.createNetworkCall(engine, request, returnType)) {
             @Override
             protected void onSuccess(@Nullable T response) {
-                if (isClosed()) return;
                 DelegatingNetworkEngine.this.onSuccess(this, response);
             }
 
             @Override
             protected void onFailure(@NotNull Throwable throwable) {
-                if (isClosed()) return;
                 DelegatingNetworkEngine.this.onFailure(this, throwable);
             }
         };
-        if (closed) networkCall.close();
         requests.add(networkCall);
         return networkCall;
     }
@@ -93,27 +89,16 @@ public class DelegatingNetworkEngine extends NetworkEngine {
         DelegatingSubscribableNetworkCall<T> networkCall = new DelegatingSubscribableNetworkCall<>(this.engine.createSubscribableNetworkCall(engine, event)) {
             @Override
             protected void onFailure(@NotNull Throwable throwable) {
-                if (isClosed()) return;
                 DelegatingNetworkEngine.this.onFailure(throwable);
             }
         };
-        if (closed) {
-            try {
-                networkCall.close();
-            } catch (IOException | InterruptedException e) {
-                throw new AssertionError(e);
-            }
-        }
-        subscriptions.remove(networkCall);
+        subscriptions.add(networkCall);
         return networkCall;
     }
 
     @Override
     public void close() throws IOException, InterruptedException {
-        if (closed) return;
-        closed = true;
-        requests.forEach(NetworkCall::close);
-        for (SubscribableNetworkCall<?> subscription : subscriptions) {
+        for (CloseableSubscribableNetworkCall<?> subscription : subscriptions) {
             subscription.close();
         }
     }

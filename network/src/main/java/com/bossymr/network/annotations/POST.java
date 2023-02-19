@@ -15,7 +15,7 @@ public @interface POST {
      *
      * @return the path to send the request to.
      */
-    String value();
+    String value() default "";
 
     /**
      * Specifies the arguments to send with this request.

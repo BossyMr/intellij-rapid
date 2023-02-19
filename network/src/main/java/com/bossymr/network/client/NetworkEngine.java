@@ -18,6 +18,8 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -34,14 +36,12 @@ import java.util.function.Supplier;
  */
 public class NetworkEngine implements AutoCloseable {
 
-    private final @NotNull Set<NetworkCall<?>> requests = ConcurrentHashMap.newKeySet();
-    private final @NotNull Set<SubscribableNetworkCall<?>> subscriptions = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<CloseableNetworkCall<?>> requests = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<CloseableSubscribableNetworkCall<?>> subscriptions = ConcurrentHashMap.newKeySet();
 
     private final @NotNull NetworkClient client;
     private final @NotNull EntityFactory entityFactory;
     private final @NotNull RequestFactory requestFactory;
-
-    private volatile boolean closed;
 
     protected NetworkEngine(@NotNull NetworkClient client, @NotNull EntityFactory entityFactory, @NotNull RequestFactory requestFactory) {
         this.client = client;
@@ -57,6 +57,16 @@ public class NetworkEngine implements AutoCloseable {
 
     public NetworkEngine(@NotNull String defaultPath, @NotNull Supplier<Credentials> credentials) {
         this(URI.create(defaultPath), credentials);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> @Nullable T createEntity(@Nullable NetworkEngine networkEngine, @NotNull Class<T> entityType, @NotNull Model model) {
+        Map<String, Class<? extends T>> arguments = EntityFactory.getEntityType(entityType);
+        if (arguments.containsKey(model.getType())) {
+            Class<? extends T> returnType = arguments.get(model.getType());
+            return (T) Proxy.newProxyInstance(returnType.getClassLoader(), new Class[]{returnType}, new EntityInvocationHandler(networkEngine, model));
+        }
+        return null;
     }
 
     public @NotNull NetworkClient getNetworkClient() {
@@ -92,16 +102,6 @@ public class NetworkEngine implements AutoCloseable {
         return (T) Proxy.newProxyInstance(serviceType.getClassLoader(), new Class[]{serviceType}, new ServiceInvocationHandler(getNetworkEngine()));
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T> @Nullable T createEntity(@Nullable NetworkEngine networkEngine, @NotNull Class<T> entityType, @NotNull Model model) {
-        Map<String, Class<? extends T>> arguments = EntityFactory.getEntityType(entityType);
-        if (arguments.containsKey(model.getType())) {
-            Class<? extends T> returnType = arguments.get(model.getType());
-            return (T) Proxy.newProxyInstance(returnType.getClassLoader(), new Class[]{returnType}, new EntityInvocationHandler(networkEngine, model));
-        }
-        return null;
-    }
-
     /**
      * Creates a new entity of the specified type and the specified underlying intermediate model.
      *
@@ -129,9 +129,6 @@ public class NetworkEngine implements AutoCloseable {
     }
 
     protected <T> @NotNull NetworkCall<T> createNetworkCall(@NotNull NetworkEngine engine, @NotNull HttpRequest request, @NotNull Type returnType) {
-        if (closed) {
-            throw new IllegalArgumentException();
-        }
         HttpNetworkCall<T> networkCall = new HttpNetworkCall<>(engine.getEntityFactory(), request, returnType);
         requests.add(networkCall);
         return networkCall;
@@ -149,27 +146,36 @@ public class NetworkEngine implements AutoCloseable {
     }
 
     protected <T> @NotNull SubscribableNetworkCall<T> createSubscribableNetworkCall(@NotNull NetworkEngine engine, @NotNull SubscribableEvent<T> event) {
-        if (closed) throw new IllegalArgumentException();
         HttpSubscribableNetworkCall<T> networkCall = new HttpSubscribableNetworkCall<>(engine, event);
         subscriptions.add(networkCall);
         return networkCall;
     }
 
+    public @NotNull CompletableFuture<Void> join() {
+        return CompletableFuture.allOf(requests.stream().map(CloseableNetworkCall::join)
+                .toArray(CompletableFuture[]::new));
+    }
+
     /**
-     * Closes this {@code NetworkEngine} and all created {@code NetworkCall} and {@code SubscribableNetworkCall}
-     * instances. All requests created by this {@code NetworkCall} are canceled and all ongoing subscriptions are
-     * disconnected.
+     * Closes this {@code NetworkEngine} and closes all subscriptions.
      *
      * @throws IOException if an I/O error has occurred.
      * @throws InterruptedException if this {@code NetworkEngine} is interrupted.
      */
     @Override
     public void close() throws IOException, InterruptedException {
-        if (closed) return;
-        closed = true;
-        requests.forEach(NetworkCall::close);
-        for (SubscribableNetworkCall<?> subscription : subscriptions) {
+        for (CloseableSubscribableNetworkCall<?> subscription : subscriptions) {
             subscription.close();
         }
+    }
+
+    public @NotNull CompletableFuture<Void> closeAsync() {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                close();
+            } catch (IOException | InterruptedException e) {
+                throw new CompletionException(e);
+            }
+        });
     }
 }

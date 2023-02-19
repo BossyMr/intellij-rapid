@@ -11,7 +11,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -28,6 +30,18 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     public EntityInvocationHandler(@Nullable NetworkEngine engine, @NotNull Model model) {
         this.model = model;
         this.engine = engine;
+    }
+
+    public static @NotNull EntityInvocationHandler getInstance(@NotNull EntityModel entityModel) {
+        InvocationHandler invocationHandler = Proxy.getInvocationHandler(entityModel);
+        if (!(invocationHandler instanceof EntityInvocationHandler)) {
+            throw new IllegalStateException();
+        }
+        return (EntityInvocationHandler) invocationHandler;
+    }
+
+    public @NotNull Model getModel() {
+        return model;
     }
 
     @Override
@@ -58,13 +72,14 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         }
         if (method.isAnnotationPresent(Property.class)) {
             Property property = method.getAnnotation(Property.class);
-            String name = property.value();
-            String value = getField(name);
-            if (value != null) {
-                return convert(value, method.getReturnType());
-            } else {
-                return null;
+            String[] names = property.value();
+            for (String name : names) {
+                String value = getField(name);
+                if (value != null) {
+                    return convert(value, method.getReturnType());
+                }
             }
+            return null;
         }
         if (engine == null) {
             throw new IllegalStateException();
@@ -170,5 +185,10 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             return false;
         }
         return false;
+    }
+
+    @Override
+    public String toString(@NotNull Object proxy) {
+        return proxy.getClass().getInterfaces()[0].getName() + ":" + model;
     }
 }

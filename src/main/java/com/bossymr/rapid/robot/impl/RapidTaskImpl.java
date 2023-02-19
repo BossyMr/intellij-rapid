@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
@@ -11,6 +12,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 
+import javax.swing.*;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
@@ -31,6 +33,11 @@ public class RapidTaskImpl implements RapidTask {
     @Override
     public @NotNull String getName() {
         return name;
+    }
+
+    @Override
+    public @NotNull Icon getIcon() {
+        return RapidIcons.TASK;
     }
 
     @Override

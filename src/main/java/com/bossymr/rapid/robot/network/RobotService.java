@@ -4,6 +4,7 @@ import com.bossymr.network.NetworkCall;
 import com.bossymr.network.ServiceModel;
 import com.bossymr.network.annotations.GET;
 import com.bossymr.network.annotations.Service;
+import com.bossymr.rapid.robot.network.robotware.RobotWareService;
 import org.jetbrains.annotations.NotNull;
 
 /**

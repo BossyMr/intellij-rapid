@@ -22,17 +22,8 @@ public abstract class CloseableSubscribableNetworkCall<T> implements Subscribabl
 
     private final @NotNull Set<SubscriptionEntity> entities = ConcurrentHashMap.newKeySet();
 
-    private volatile boolean closed;
-
-    public boolean isClosed() {
-        return closed;
-    }
-
     @Override
     public @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<T> listener) {
-        if (closed) {
-            throw new IllegalStateException("SubscribableNetworkCall '" + this + "'is closed");
-        }
         CompletableFuture<SubscriptionEntity> request = create(priority, new SubscriptionListener<>() {
             @Override
             public void onEvent(@NotNull SubscriptionEntity entity, @NotNull T event) {
@@ -58,9 +49,6 @@ public abstract class CloseableSubscribableNetworkCall<T> implements Subscribabl
 
     @Override
     public void close() throws IOException, InterruptedException {
-        if (closed) {
-            return;
-        }
         for (SubscriptionEntity entity : entities) {
             try {
                 entity.unsubscribe().get();
@@ -68,6 +56,5 @@ public abstract class CloseableSubscribableNetworkCall<T> implements Subscribabl
                 throw new IOException(e);
             }
         }
-        closed = true;
     }
 }

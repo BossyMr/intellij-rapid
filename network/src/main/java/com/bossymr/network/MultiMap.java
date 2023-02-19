@@ -32,12 +32,12 @@ public class MultiMap<K, V> implements Map<K, List<V>> {
         return null;
     }
 
-    public void add(@NotNull K key, @NotNull V value) {
+    public void add(@NotNull K key, @Nullable V value) {
         delegate.computeIfAbsent(key, (ignored) -> new ArrayList<>());
         delegate.get(key).add(value);
     }
 
-    public void set(@NotNull K key, @NotNull V value) {
+    public void set(@NotNull K key, @Nullable V value) {
         delegate.put(key, new ArrayList<>());
         delegate.get(key).add(value);
     }

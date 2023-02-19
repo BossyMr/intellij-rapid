@@ -3,6 +3,7 @@ package com.bossymr.network.client;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * A {@code SubscribableEvent} represents a subscribable endpoint.
@@ -22,7 +23,11 @@ public class SubscribableEvent<T> {
      * @param eventType the class of the event type.
      */
     public SubscribableEvent(@NotNull URI resource, @NotNull Class<T> eventType) {
-        this.resource = resource;
+        try {
+            this.resource = new URI(resource.getScheme(), resource.getUserInfo(), resource.getHost(), resource.getPort(), resource.getPath(), null, null);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
         this.eventType = eventType;
     }
 

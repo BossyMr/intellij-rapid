@@ -3,6 +3,12 @@ package com.bossymr.rapid.robot.network;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionPriority;
 import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.rapid.robot.network.robotware.RobotWareService;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleType;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -37,8 +43,8 @@ class RobotServiceTest {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         CompletableFuture<SubscriptionEntity> subscriptionEntity = userService.getRemoteUserService().onRequest()
                 .subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> countDownLatch.countDown());
-        userService.getRemoteUserService().login().send();
         SubscriptionEntity entity = subscriptionEntity.join();
+        userService.getRemoteUserService().login().send();
         assertTrue(countDownLatch.await(5000, TimeUnit.MILLISECONDS));
         entity.unsubscribe().join();
     }
