@@ -96,6 +96,11 @@
         <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.RapidQuoteHandler"/>
 
         <configurationType implementation="com.bossymr.rapid.ide.execution.configurations.RapidConfigurationType"/>
+
+        <!-- Debugging -->
+
+        <xdebugger.settings implementation="com.bossymr.rapid.ide.debugger.settings.RapidDebuggerSettings"/>
+
     </extensions>
 
     <actions>
