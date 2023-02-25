@@ -96,6 +96,8 @@
         <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.RapidQuoteHandler"/>
 
         <configurationType implementation="com.bossymr.rapid.ide.execution.configurations.RapidConfigurationType"/>
+
+        <errorHandler implementation="com.bossymr.rapid.ide.RapidErrorReportSubmitter"/>
     </extensions>
 
     <actions>

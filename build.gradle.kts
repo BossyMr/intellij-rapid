@@ -40,6 +40,7 @@ configurations {
 
 dependencies {
     implementation(project(mapOf("path" to ":network")))
+    implementation("io.sentry:sentry:6.14.0")
     testImplementation(platform("org.junit:junit-bom:5.9.0"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
     testImplementation("junit:junit:4.13.2")

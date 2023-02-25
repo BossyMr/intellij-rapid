@@ -255,7 +255,7 @@ public class RapidDocumentationProvider extends AbstractDocumentationProvider {
                 RapidParameterGroup group = parameters.get(i);
                 writeParameterGroup(builder, group);
             }
-            builder.append("\n");
+            if (parameters.size() > 0) builder.append("\n");
             write(builder, RapidColor.PARENTHESES, ")");
         }
     }
