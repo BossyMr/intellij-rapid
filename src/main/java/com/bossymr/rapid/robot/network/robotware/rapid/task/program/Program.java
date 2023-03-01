@@ -31,7 +31,7 @@ public interface Program extends EntityModel {
 
     @POST(value = "{@self}/breakpoint", arguments = "action=set")
     @NotNull NetworkCall<Void> setBreakpoint(
-            @NotNull @Field("module-name") String module,
+            @NotNull @Field("module") String module,
             @Field("row") int row,
             @Field("column") int column
     );

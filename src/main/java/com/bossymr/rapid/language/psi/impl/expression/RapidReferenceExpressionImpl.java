@@ -88,11 +88,11 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
         if (element instanceof RapidComponent) {
             RapidRecord record = (RapidRecord) element.getParent();
             String expression = record.getName() + "." + ((RapidComponent) element).getName();
-            RapidExpression reference = RapidElementFactory.getInstance(getProject()).createExpression(expression);
+            RapidExpression reference = RapidElementFactory.getInstance(getProject()).createExpressionFromText(expression);
             replace(reference);
         } else if (element instanceof RapidSymbol) {
             String expression = String.valueOf(((RapidSymbol) element).getName());
-            RapidExpression reference = RapidElementFactory.getInstance(getProject()).createExpression(expression);
+            RapidExpression reference = RapidElementFactory.getInstance(getProject()).createExpressionFromText(expression);
             replace(reference);
         }
         return this;

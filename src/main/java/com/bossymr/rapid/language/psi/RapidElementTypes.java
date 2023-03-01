@@ -1,12 +1,17 @@
 package com.bossymr.rapid.language.psi;
 
+import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.impl.*;
 import com.bossymr.rapid.language.psi.impl.expression.*;
 import com.bossymr.rapid.language.psi.impl.statement.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalLabelStatement;
 import com.bossymr.rapid.language.symbol.physical.PhysicalTargetVariable;
+import com.intellij.lang.ASTNode;
+import com.intellij.psi.impl.source.tree.ICodeFragmentElementType;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public interface RapidElementTypes {
 
@@ -27,6 +32,13 @@ public interface RapidElementTypes {
     RapidElementType REQUIRED_ARGUMENT = new RapidElementType("REQUIRED_ARGUMENT", RapidRequiredArgumentImpl::new);
     RapidElementType CONDITIONAL_ARGUMENT = new RapidElementType("CONDITIONAL_ARGUMENT", RapidConditionalArgumentImpl::new);
     RapidElementType OPTIONAL_ARGUMENT = new RapidElementType("OPTIONAL_ARGUMENT", RapidOptionalArgumentImpl::new);
+
+    IElementType EXPRESSION_TEXT = new ICodeFragmentElementType("EXPRESSION_TEXT", RapidLanguage.getInstance()) {
+        @Override
+        public @Nullable ASTNode parseContents(@NotNull ASTNode chameleon) {
+            return super.parseContents(chameleon);
+        }
+    };
 
     RapidElementType EXPRESSION_LIST = new RapidElementType("EXPRESSION_LIST", RapidExpressionListImpl::new);
     RapidElementType EMPTY_EXPRESSION = new RapidElementType("EMPTY_EXPRESSION", RapidEmptyExpressionImpl::new);

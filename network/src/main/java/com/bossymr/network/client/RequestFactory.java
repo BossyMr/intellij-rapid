@@ -90,17 +90,25 @@ public class RequestFactory {
                 .replaceAll(result -> {
                     String value = result.group().substring(1, result.group().length() - 1);
                     if (value.startsWith("@")) {
-                        if (proxy instanceof EntityModel model) {
-                            URI link = model.getLink(value.substring(1));
-                            if (link != null) {
-                                String query = link.getQuery();
-                                return link.getPath() + (query != null ? "?" + query : "");
-                            } else {
-                                throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
-                            }
-                        } else {
+                        if (!(proxy instanceof EntityModel model)) {
                             throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a link");
                         }
+                        URI link = model.getLink(value.substring(1));
+                        if (link == null) {
+                            throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
+                        }
+                        String query = link.getQuery();
+                        return link.getPath() + (query != null ? "?" + query : "");
+                    }
+                    if (value.startsWith("#")) {
+                        if (!(proxy instanceof EntityModel model)) {
+                            throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a field");
+                        }
+                        String field = model.getField(value.substring(1));
+                        if (field == null) {
+                            throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing field '" + value + "'");
+                        }
+                        return field;
                     }
                     if (map.containsKey(value)) {
                         return map.first(value);

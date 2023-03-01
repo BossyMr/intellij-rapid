@@ -121,17 +121,6 @@ public class RobotToolWindow implements Disposable {
             if (CommonDataKeys.PROJECT.is(dataId)) {
                 return project;
             }
-            if (PlatformCoreDataKeys.SELECTED_ITEM.is(dataId)) {
-                AbstractTreeNode<?> selectedNode = getSelectedNode();
-                return selectedNode != null ? selectedNode.getValue() : null;
-            }
-            if (PlatformCoreDataKeys.SELECTED_ITEMS.is(dataId)) {
-                List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
-                if (selectedNodes == null) return null;
-                return selectedNodes.stream()
-                        .map(AbstractTreeNode::getValue)
-                        .toArray(Object[]::new);
-            }
             if (PlatformCoreDataKeys.BGT_DATA_PROVIDER.is(dataId)) {
                 return (DataProvider) this::getSlowData;
             }
@@ -145,6 +134,17 @@ public class RobotToolWindow implements Disposable {
             }
             if (PlatformCoreDataKeys.PSI_ELEMENT_ARRAY.is(dataId)) {
                 return getSelectedElements();
+            }
+            if (PlatformCoreDataKeys.SELECTED_ITEM.is(dataId)) {
+                AbstractTreeNode<?> selectedNode = getSelectedNode();
+                return selectedNode != null ? selectedNode.getValue() : null;
+            }
+            if (PlatformCoreDataKeys.SELECTED_ITEMS.is(dataId)) {
+                List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
+                if (selectedNodes == null) return null;
+                return selectedNodes.stream()
+                        .map(AbstractTreeNode::getValue)
+                        .toArray(Object[]::new);
             }
             return null;
         }

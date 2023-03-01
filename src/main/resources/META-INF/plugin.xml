@@ -99,16 +99,15 @@
 
         <!-- Debugging -->
 
+        <programRunner implementation="com.bossymr.rapid.ide.debugger.RapidDebugRunner"/>
+
         <xdebugger.settings implementation="com.bossymr.rapid.ide.debugger.settings.RapidDebuggerSettings"/>
+
+        <xdebugger.breakpointType implementation="com.bossymr.rapid.ide.debugger.breakpoints.RapidLineBreakpointType"/>
 
     </extensions>
 
     <actions>
-        <action id="com.bossymr.rapid.ide.actions.RapidCreateFileAction"
-                class="com.bossymr.rapid.ide.actions.RapidCreateFileAction">
-            <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>
-        </action>
-
         <action id="com.bossymr.rapid.robot.actions.ConnectAction" icon="AllIcons.General.Add"
                 class="com.bossymr.rapid.robot.actions.ConnectAction" text="Connect..."/>
 

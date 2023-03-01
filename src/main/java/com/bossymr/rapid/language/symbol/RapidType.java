@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.language.symbol.virtual.VirtualAtomic;
-import com.bossymr.rapid.language.symbol.virtual.VirtualComponent;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRecord;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,9 +15,21 @@ public class RapidType {
     public static final RapidType DOUBLE = new RapidType(new VirtualAtomic("dnum"));
     public static final RapidType BOOLEAN = new RapidType(new VirtualAtomic("bool"));
     public static final RapidType STRING = new RapidType(new VirtualAtomic("string"));
-    public static final RapidType POSITION = new RapidType(new VirtualRecord("pos", List.of(new VirtualComponent("x", NUMBER), new VirtualComponent("y", NUMBER), new VirtualComponent("z", NUMBER))));
-    public static final RapidType ORIENTATION = new RapidType(new VirtualRecord("orient", List.of(new VirtualComponent("q1", NUMBER), new VirtualComponent("q2", NUMBER), new VirtualComponent("q3", NUMBER), new VirtualComponent("q4", NUMBER))));
-    public static final RapidType POSE = new RapidType(new VirtualRecord("pose", List.of(new VirtualComponent("trans", POSITION), new VirtualComponent("rot", ORIENTATION))));
+    public static final RapidType POSITION = VirtualRecord.newBuilder("pos")
+            .withComponent("x", NUMBER)
+            .withComponent("y", NUMBER)
+            .withComponent("z", NUMBER)
+            .asType();
+    public static final RapidType ORIENTATION = VirtualRecord.newBuilder("orient")
+            .withComponent("q1", NUMBER)
+            .withComponent("q2", NUMBER)
+            .withComponent("q3", NUMBER)
+            .withComponent("q4", NUMBER)
+            .asType();
+    public static final RapidType POSE = VirtualRecord.newBuilder("pose")
+            .withComponent("trans", POSITION)
+            .withComponent("rot", ORIENTATION)
+            .asType();
 
     private final RapidStructure structure;
     private final String name;

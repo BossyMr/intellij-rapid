@@ -20,6 +20,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 
@@ -34,12 +35,12 @@ public class HttpNetworkClient implements NetworkClient {
     private final int MAX_CONNECTIONS = 1;
     private final Semaphore semaphore = new Semaphore(MAX_CONNECTIONS);
 
-    private final @NotNull HttpClient httpClient;
     private final @NotNull Authenticator authenticator;
     private final @NotNull ExecutorService executorService;
     private final URI defaultPath;
 
-    private final @NotNull SubscriptionGroup subscriptionGroup;
+    private @NotNull HttpClient httpClient;
+    private @NotNull SubscriptionGroup subscriptionGroup;
 
     /**
      * Creates a new {@code HttpNetworkClient} with the specified default path and credentials.
@@ -67,6 +68,18 @@ public class HttpNetworkClient implements NetworkClient {
         }
     }
 
+    private void build() {
+        this.httpClient = HttpClient.newBuilder()
+                .executor(executorService)
+                .version(HttpClient.Version.HTTP_1_1)
+                .cookieHandler(new CookieManager())
+                .build();
+        Set<SubscriptionEntity> entities = this.subscriptionGroup.getEntities();
+        this.subscriptionGroup = new SubscriptionGroup(executorService, this);
+        this.subscriptionGroup.getEntities().addAll(entities);
+        this.subscriptionGroup.update();
+    }
+
     public @NotNull RequestBuilder createRequest() {
         return new RequestBuilder(getDefaultPath());
     }
@@ -83,7 +96,7 @@ public class HttpNetworkClient implements NetworkClient {
     @Override
     public @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
         HttpResponse<byte[]> response = retry(request, HttpResponse.BodyHandlers.ofByteArray());
-        logger.atInfo().log("Sending request '{} synchronously with response '{}'", request, response);
+        logger.atDebug().log("Sending request '{} synchronously with response '{}'", request, response);
         if (response.statusCode() >= 300) {
             throw new ResponseStatusException(response);
         }
@@ -107,7 +120,12 @@ public class HttpNetworkClient implements NetworkClient {
     private <T> @NotNull HttpResponse<T> send(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
         semaphore.acquire();
         try {
-            return httpClient.send(request, bodyHandler);
+            HttpResponse<T> response = httpClient.send(request, bodyHandler);
+            if (response.statusCode() == 503) {
+                build();
+                return httpClient.send(request, bodyHandler);
+            }
+            return response;
         } finally {
             semaphore.release();
         }
@@ -117,7 +135,7 @@ public class HttpNetworkClient implements NetworkClient {
     public @NotNull CompletableFuture<HttpResponse<byte[]>> sendAsync(@NotNull HttpRequest request) {
         return retryAsync(request, HttpResponse.BodyHandlers.ofByteArray())
                 .thenApplyAsync(response -> {
-                    logger.atInfo().log("Sending request '{} synchronously with response '{}'", request, response);
+                    logger.atDebug().log("Sending request '{} synchronously with response '{}'", request, response);
                     if (response.statusCode() >= 300) {
                         throw new CompletionException(new ResponseStatusException(response));
                     }
@@ -147,7 +165,7 @@ public class HttpNetworkClient implements NetworkClient {
 
     @Override
     public @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
-        logger.atInfo().log("Subscribing to {} with priority {}", event.getResource(), priority);
+        logger.atDebug().log("Subscribing to {} with priority {}", event.getResource(), priority);
         SubscriptionEntity entity = new SubscriptionEntity(this, event, priority, listener);
         subscriptionGroup.getEntities().add(entity);
         return subscriptionGroup.update()
@@ -176,6 +194,8 @@ public class HttpNetworkClient implements NetworkClient {
 
     public static class CloseableCompletableFuture<T> extends CompletableFuture<T> {
 
+        private static final Logger logger = LoggerFactory.getLogger(CloseableCompletableFuture.class);
+
         @Override
         public <U> CompletableFuture<U> newIncompleteFuture() {
             return new CloseableCompletableFuture<>() {
@@ -184,6 +204,18 @@ public class HttpNetworkClient implements NetworkClient {
                     return CloseableCompletableFuture.this.cancel(mayInterruptIfRunning);
                 }
             };
+        }
+
+        @Override
+        public boolean complete(T value) {
+            logger.atTrace().log("CompletableFuture '" + this + "' completed with value '" + value + "'");
+            return super.complete(value);
+        }
+
+        @Override
+        public boolean completeExceptionally(Throwable ex) {
+            logger.atTrace().setCause(ex).log("CompletableFuture '" + this + "' completed exceptionally with exception + '" + ex + "'");
+            return super.completeExceptionally(ex);
         }
     }
 
@@ -197,6 +229,16 @@ public class HttpNetworkClient implements NetworkClient {
                 semaphore.acquire();
                 logger.atDebug().log("Acquired semaphore for request '{}'; available permits: {}; queue length: {}", request, semaphore.availablePermits(), semaphore.getQueueLength());
                 requestAsync = httpClient.sendAsync(request, bodyHandler)
+                        .thenComposeAsync((response) -> {
+                            /*
+                             * If the request fails due to a 503 error (caused by too many connected clients), reconnect and retry.
+                             */
+                            if (response.statusCode() == 503) {
+                                build();
+                                return httpClient.sendAsync(request, bodyHandler);
+                            }
+                            return CompletableFuture.completedFuture(response);
+                        }, executorService)
                         .handleAsync(((response, throwable) -> {
                             semaphore.release();
                             logger.atDebug().log("Released semaphore for request '{}'", request);

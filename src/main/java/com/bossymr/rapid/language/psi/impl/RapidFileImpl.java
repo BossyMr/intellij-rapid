@@ -1,11 +1,7 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
-import com.intellij.extapi.psi.PsiFileBase;
-import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.psi.FileViewProvider;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.IncorrectOperationException;
@@ -15,10 +11,10 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.List;
 
-public class RapidFileImpl extends PsiFileBase implements RapidFile {
+public class RapidFileImpl extends AbstractRapidFile implements RapidFile {
 
     public RapidFileImpl(@NotNull FileViewProvider viewProvider) {
-        super(viewProvider, RapidLanguage.INSTANCE);
+        super(viewProvider);
     }
 
     @Override
@@ -43,11 +39,6 @@ public class RapidFileImpl extends PsiFileBase implements RapidFile {
     @Override
     protected @Nullable Icon getElementIcon(int flags) {
         return getFileType().getIcon();
-    }
-
-    @Override
-    public @NotNull FileType getFileType() {
-        return RapidFileType.getInstance();
     }
 
     @Override

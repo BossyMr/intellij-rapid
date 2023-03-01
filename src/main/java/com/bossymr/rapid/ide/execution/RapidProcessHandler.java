@@ -41,6 +41,10 @@ public class RapidProcessHandler extends ProcessHandler {
         this.robotService = ServiceModel.move(robotService, delegatingNetworkEngine);
     }
 
+    public @NotNull RobotService getRobotService() {
+        return robotService;
+    }
+
     public void startProcess() throws IOException, InterruptedException {
         try {
             subscribeToOutput();

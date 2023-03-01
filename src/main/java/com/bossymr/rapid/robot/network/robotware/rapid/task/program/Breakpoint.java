@@ -3,13 +3,14 @@ package com.bossymr.rapid.robot.network.robotware.rapid.task.program;
 import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
+import com.bossymr.rapid.robot.network.LineTextRange;
 import org.jetbrains.annotations.NotNull;
 
 @Entity("rap-program-breakpoint")
 public interface Breakpoint extends EntityModel {
 
     @Property("module-name")
-    @NotNull String getModule();
+    @NotNull String getModuleName();
 
     @Property("start-row")
     int getStartRow();
@@ -22,5 +23,9 @@ public interface Breakpoint extends EntityModel {
 
     @Property("end-col")
     int getEndColumn();
+
+    default @NotNull LineTextRange toTextRange() {
+        return new LineTextRange(getModuleName(), getStartRow() - 1, getEndRow() - 1, getStartColumn() - 1, getEndColumn() - 1);
+    }
 
 }

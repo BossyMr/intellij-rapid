@@ -15,12 +15,19 @@ import com.intellij.notification.NotificationType;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpRequest;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletionException;
 
 public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
 
+    private final Map<String, Runnable> onClose = new HashMap<>();
     private volatile boolean showNotifications = true;
 
     public RobotDelegatingNetworkEngine(@NotNull NetworkEngine engine) {
@@ -28,7 +35,30 @@ public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
     }
 
     @Override
+    protected <T> void onSuccess(@NotNull NetworkCall<T> request, @Nullable T response) {
+        URI previous = request.request().uri();
+        String path = previous.getPath();
+        String query = previous.getQuery();
+        if (path != null && path.startsWith("/rw/mastership")) {
+            if ("action=request".equals(query)) {
+                try {
+                    HttpRequest httpRequest = HttpRequest.newBuilder(request.request(), (k, v) -> true)
+                            .uri(new URI(previous.getScheme(), previous.getUserInfo(), previous.getHost(), previous.getPort(), previous.getPath(), "action=release", previous.getFragment()))
+                            .build();
+                    onClose.put(previous.getPath(), () -> getNetworkClient().sendAsync(httpRequest));
+                } catch (URISyntaxException ignored) {}
+            }
+            if ("action=release".equals(query)) {
+                onClose.remove(previous.getPath());
+            }
+        }
+    }
+
+    @Override
     protected void onFailure(@NotNull NetworkCall<?> request, @NotNull Throwable throwable) {
+        while (throwable instanceof CompletionException) {
+            throwable = throwable.getCause();
+        }
         if (throwable instanceof ResponseStatusException exception) {
             if (exception.getResponse().statusCode() == 400) {
                 return;
@@ -46,6 +76,12 @@ public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
         if (showNotifications) {
             showNotification(request, throwable);
         }
+    }
+
+    @Override
+    public void close() throws IOException, InterruptedException {
+        onClose.values().forEach(Runnable::run);
+        super.close();
     }
 
     private void showNotification(@NotNull NetworkCall<?> request, @NotNull Throwable throwable) {

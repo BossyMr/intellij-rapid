@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -39,5 +40,24 @@ public class RapidAssignmentStatementImpl extends RapidElementImpl implements Ra
     @Override
     public String toString() {
         return "RapidAssignmentStatement:" + getText();
+    }
+
+    @Override
+    public @Nullable RapidType getType() {
+        RapidExpression left = getLeft();
+        if (left == null) {
+            return null;
+        }
+        return left.getType();
+    }
+
+    @Override
+    public boolean isConstant() {
+        return false;
+    }
+
+    @Override
+    public boolean isConditional() {
+        return false;
     }
 }

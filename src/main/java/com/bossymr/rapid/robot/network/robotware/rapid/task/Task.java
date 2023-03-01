@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
 import com.bossymr.network.EntityModel;
 import com.bossymr.network.NetworkCall;
+import com.bossymr.network.SubscribableNetworkCall;
 import com.bossymr.network.annotations.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
@@ -31,4 +32,16 @@ public interface Task extends EntityModel {
             @Field("line") int row,
             @Field("column") int column
     );
+
+    @GET(value = "{@self}", arguments = "resource=activation-record")
+    @NotNull NetworkCall<StackFrame> getStackFrame(
+            @Argument("stackframe") int stackframe
+    );
+
+    @Subscribable("{@self};excstate")
+    @NotNull SubscribableNetworkCall<TaskExecutionEvent> onExecutionState();
+
+    @Subscribable("{@self}/pcp;programpointerchange")
+    @NotNull SubscribableNetworkCall<ProgramPointerEvent> onProgramPointer();
+
 }

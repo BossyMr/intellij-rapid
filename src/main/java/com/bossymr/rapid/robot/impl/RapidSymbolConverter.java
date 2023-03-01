@@ -9,31 +9,29 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
- * A converter for converting {@link SymbolState} objects into {@link RapidSymbol} objects.
+ * A converter for converting {@link SymbolModel} objects into {@link RapidSymbol} objects.
  */
 public final class RapidSymbolConverter {
 
-    private final Map<String, Map<String, SymbolState>> states;
+    private final Map<String, Map<String, SymbolModel>> states;
     private final Map<String, VirtualSymbol> symbols;
 
-    private final Set<String> processed = new HashSet<>();
-
-    private RapidSymbolConverter(@NotNull Collection<SymbolState> symbolStates) {
+    private RapidSymbolConverter(@NotNull Collection<SymbolModel> symbolModels) {
         this.states = new HashMap<>();
-        for (SymbolState symbolState : symbolStates) {
-            String address = symbolState.getTitle().toLowerCase().substring(0, symbolState.getTitle().lastIndexOf('/'));
+        for (SymbolModel symbolModel : symbolModels) {
+            String address = symbolModel.getTitle().toLowerCase().substring(0, symbolModel.getTitle().lastIndexOf('/'));
             states.computeIfAbsent(address, (value) -> new HashMap<>());
-            states.get(address).put(getName(symbolState), symbolState);
+            states.get(address).put(getName(symbolModel), symbolModel);
         }
         this.symbols = new HashMap<>();
     }
 
-    public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull Collection<SymbolState> symbolStates) {
-        return new RapidSymbolConverter(symbolStates).getSymbols();
+    public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull Collection<SymbolModel> symbolModels) {
+        return new RapidSymbolConverter(symbolModels).getSymbols();
     }
 
-    private @NotNull String getName(@NotNull SymbolState symbolState) {
-        return symbolState.getTitle().toLowerCase().substring(symbolState.getTitle().lastIndexOf('/') + 1);
+    private @NotNull String getName(@NotNull SymbolModel symbolModel) {
+        return symbolModel.getTitle().toLowerCase().substring(symbolModel.getTitle().lastIndexOf('/') + 1);
     }
 
     private @NotNull Map<String, VirtualSymbol> getSymbols() {
@@ -41,29 +39,26 @@ public final class RapidSymbolConverter {
         for (String name : states.get("rapid").keySet()) {
             getSymbol(name);
         }
-        states.remove("rapid");
-        states.entrySet().removeIf(entry -> processed.contains(entry.getKey()));
-        assert states.isEmpty() : states;
         return symbols;
     }
 
     private @Nullable RapidSymbol getSymbol(@NotNull String name) {
         if (symbols.containsKey(name)) return symbols.get(name);
-        SymbolState state = states.get("rapid").get(name);
+        SymbolModel state = states.get("rapid").get(name);
         if (state == null) {
             return null;
         }
         return switch (state.getSymbolType()) {
-            case ATOMIC -> getAtomic((AtomicSymbolState) state);
-            case RECORD -> getRecord((RecordSymbolState) state);
-            case ALIAS -> getAlias((AliasSymbolState) state);
-            case CONSTANT -> getField((FieldSymbolState) state, RapidField.Attribute.CONSTANT);
-            case VARIABLE -> getField((FieldSymbolState) state, RapidField.Attribute.VARIABLE);
-            case PERSISTENT -> getField((FieldSymbolState) state, RapidField.Attribute.PERSISTENT);
-            case FUNCTION -> getRoutine((RoutineSymbolState) state, RapidRoutine.Attribute.FUNCTION);
-            case PROCEDURE -> getRoutine((RoutineSymbolState) state, RapidRoutine.Attribute.PROCEDURE);
-            case TRAP -> getRoutine((RoutineSymbolState) state, RapidRoutine.Attribute.TRAP);
-            default -> throw new IllegalStateException("Unexpected value: " + state.getSymbolType());
+            case ATOMIC -> getAtomic((AtomicModel) state);
+            case RECORD -> getRecord((RecordModel) state);
+            case ALIAS -> getAlias((AliasModel) state);
+            case CONSTANT -> getField((FieldModel) state, RapidField.Attribute.CONSTANT);
+            case VARIABLE -> getField((FieldModel) state, RapidField.Attribute.VARIABLE);
+            case PERSISTENT -> getField((FieldModel) state, RapidField.Attribute.PERSISTENT);
+            case FUNCTION -> getRoutine((RoutineModel) state, RapidRoutine.Attribute.FUNCTION);
+            case PROCEDURE -> getRoutine((RoutineModel) state, RapidRoutine.Attribute.PROCEDURE);
+            case TRAP -> getRoutine((RoutineModel) state, RapidRoutine.Attribute.TRAP);
+            default -> null;
         };
     }
 
@@ -77,7 +72,7 @@ public final class RapidSymbolConverter {
         return symbol instanceof RapidStructure structure ? structure : null;
     }
 
-    private @NotNull RapidAtomic getAtomic(@NotNull AtomicSymbolState symbol) {
+    private @NotNull RapidAtomic getAtomic(@NotNull AtomicModel symbol) {
         RapidType dataType = null;
         if (!(symbol.getDataType() == null || symbol.getDataType().isEmpty())) {
             dataType = new RapidType(getStructure(symbol.getDataType()));
@@ -85,46 +80,46 @@ public final class RapidSymbolConverter {
         return getSymbol(new VirtualAtomic(Visibility.GLOBAL, getName(symbol), dataType));
     }
 
-    private @NotNull RapidRecord getRecord(@NotNull RecordSymbolState symbol) {
-        Collection<SymbolState> states = this.states.get(symbol.getTitle()).values();
+    private @NotNull RapidRecord getRecord(@NotNull RecordModel symbol) {
+        Collection<SymbolModel> states = this.states.get(symbol.getTitle()).values();
         List<RapidComponent> components = new ArrayList<>();
         assert states.size() == symbol.getComponentCount();
-        processed.add(symbol.getTitle());
         for (int i = 0; i < symbol.getComponentCount(); i++) {
             components.add(null);
         }
-        for (SymbolState symbolState : states) {
-            assert symbolState instanceof ComponentSymbolState;
-            ComponentSymbolState componentSymbolState = (ComponentSymbolState) symbolState;
-            components.set(componentSymbolState.getIndex() - 1, getComponent(componentSymbolState));
+        VirtualRecord record = new VirtualRecord(getName(symbol), components);
+        for (SymbolModel symbolModel : states) {
+            assert symbolModel instanceof ComponentModel;
+            ComponentModel componentSymbolState = (ComponentModel) symbolModel;
+            components.set(componentSymbolState.getIndex() - 1, getComponent(record, componentSymbolState));
         }
         assert !components.contains(null);
-        return getSymbol(new VirtualRecord(getName(symbol), Collections.unmodifiableList(components)));
+        return getSymbol(record);
     }
 
-    private @NotNull RapidAlias getAlias(@NotNull AliasSymbolState state) {
+    private @NotNull RapidAlias getAlias(@NotNull AliasModel state) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
         return getSymbol(new VirtualAlias(Visibility.GLOBAL, getName(state), dataType));
     }
 
-    private @NotNull RapidComponent getComponent(@NotNull ComponentSymbolState state) {
+    private @NotNull RapidComponent getComponent(@NotNull VirtualRecord record, @NotNull ComponentModel state) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
-        return new VirtualComponent(getName(state), dataType);
+        return new VirtualComponent(record, getName(state), dataType);
     }
 
-    private @NotNull RapidField getField(@NotNull FieldSymbolState state, @NotNull RapidField.Attribute attribute) {
+    private @NotNull RapidField getField(@NotNull FieldModel state, @NotNull RapidField.Attribute attribute) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
         boolean readOnly = false;
-        if (state instanceof PersistentSymbolState persistentSymbol) {
+        if (state instanceof PersistentModel persistentSymbol) {
             readOnly = persistentSymbol.isReadOnly();
         }
-        if (state instanceof VariableSymbolState variableSymbol) {
+        if (state instanceof VariableModel variableSymbol) {
             readOnly = variableSymbol.isReadOnly();
         }
         return getSymbol(new VirtualField(Visibility.GLOBAL, attribute, getName(state), dataType, readOnly));
     }
 
-    private @NotNull VirtualParameter getParameter(@NotNull RapidParameterGroup parameterGroup, @NotNull ParameterSymbolState state) {
+    private @NotNull VirtualParameter getParameter(@NotNull VirtualParameterGroup parameterGroup, @NotNull ParameterModel state) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
         RapidParameter.Attribute attribute = switch (state.getMode()) {
             case "in" -> RapidParameter.Attribute.INPUT;
@@ -137,30 +132,29 @@ public final class RapidSymbolConverter {
         return new VirtualParameter(parameterGroup, attribute, getName(state), dataType);
     }
 
-    private @NotNull RapidRoutine getRoutine(@NotNull RoutineSymbolState state, @NotNull RapidRoutine.Attribute attribute) {
+    private @NotNull RapidRoutine getRoutine(@NotNull RoutineModel state, @NotNull RapidRoutine.Attribute attribute) {
         List<VirtualParameterGroup> groups = new ArrayList<>();
-        Map<String, SymbolState> parameters = this.states.get(state.getTitle());
-        Collection<SymbolState> states = parameters != null ? parameters.values() : List.of();
+        Map<String, SymbolModel> parameters = this.states.get(state.getTitle());
+        Collection<SymbolModel> states = parameters != null ? parameters.values() : List.of();
         assert states.size() == state.getParameterCount() : state;
-        processed.add(state.getTitle());
         for (int i = 0; i < state.getParameterCount(); i++) {
             groups.add(null);
         }
-        for (SymbolState symbolState : states) {
-            assert symbolState instanceof ParameterSymbolState;
-            ParameterSymbolState parameterSymbolState = (ParameterSymbolState) symbolState;
+        RapidType dataType = state instanceof FunctionModel functionSymbolState && functionSymbolState.getDataType().length() > 0 ? new RapidType(getStructure(functionSymbolState.getDataType())) : null;
+        VirtualRoutine routine = new VirtualRoutine(Visibility.GLOBAL, attribute, getName(state), dataType, groups);
+        for (SymbolModel symbolModel : states) {
+            assert symbolModel instanceof ParameterModel;
+            ParameterModel parameterSymbolState = (ParameterModel) symbolModel;
             int index = parameterSymbolState.getIndex() - 1;
             if (groups.get(index) != null) {
                 groups.get(index).getParameters().add(getParameter(groups.get(index), parameterSymbolState));
             } else {
-                groups.set(index, new VirtualParameterGroup(!parameterSymbolState.isRequired(), new ArrayList<>()));
+                groups.set(index, new VirtualParameterGroup(routine, !parameterSymbolState.isRequired(), new ArrayList<>()));
                 groups.get(index).getParameters().add(getParameter(groups.get(index), parameterSymbolState));
             }
         }
-        RapidType dataType = state instanceof FunctionSymbolState functionSymbolState && functionSymbolState.getDataType().length() > 0 ? new RapidType(getStructure(functionSymbolState.getDataType())) : null;
         groups.removeIf(Objects::isNull);
         assert !groups.contains(null);
-        VirtualRoutine routine = new VirtualRoutine(Visibility.GLOBAL, attribute, getName(state), dataType, groups);
         return getSymbol(routine);
     }
 }

@@ -44,6 +44,11 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
     }
 
     @Override
+    public @NotNull PhysicalRecord getRecord() {
+        return Objects.requireNonNull(getStubOrPsiParentOfType(PhysicalRecord.class));
+    }
+
+    @Override
     public @Nullable PsiElement getNameIdentifier() {
         return findChildByType(RapidTokenTypes.IDENTIFIER);
     }

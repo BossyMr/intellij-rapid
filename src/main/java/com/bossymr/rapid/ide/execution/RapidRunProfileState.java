@@ -15,11 +15,13 @@ import com.intellij.execution.runners.ProgramRunner;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.search.FileTypeIndex;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.Collection;
 
 public class RapidRunProfileState implements RunProfileState {
 
@@ -36,34 +38,49 @@ public class RapidRunProfileState implements RunProfileState {
         this.module = module;
     }
 
+    public @NotNull RapidRobot getRobot() {
+        return robot;
+    }
+
+    public @NotNull RapidTask getTask() {
+        return task;
+    }
+
+    public @Nullable Module getModule() {
+        return module;
+    }
+
+    public @NotNull RobotService getRobotService() throws IOException, InterruptedException {
+        RobotService robotService = robot.getRobotService();
+        if (robotService == null) {
+            robotService = robot.reconnect();
+        }
+        upload();
+        return robotService;
+    }
+
+    public void upload() throws IOException, InterruptedException {
+        if (module != null) {
+            Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), module.getModuleScope());
+            robot.upload(task, virtualFiles);
+        }
+    }
+
     @Override
     public @Nullable ExecutionResult execute(@NotNull Executor executor, @NotNull ProgramRunner<?> runner) throws ExecutionException {
         try {
-            return doExecute();
+            RobotService robotService = getRobotService();
+            RapidProcessHandler processHandler = new RapidProcessHandler(robotService);
+            processHandler.startProcess();
+            ConsoleView consoleView = getBuilder().getConsole();
+            consoleView.attachToProcess(processHandler);
+            return new DefaultExecutionResult(consoleView, processHandler);
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ExecutionException(e);
         }
-    }
-
-    private @NotNull ExecutionResult doExecute() throws IOException, InterruptedException {
-        if (!(robot.isConnected())) {
-            robot.reconnect();
-        }
-        if (module != null) {
-            robot.upload(task, FileTypeIndex.getFiles(RapidFileType.getInstance(), module.getModuleScope()));
-        }
-        RobotService robotService = robot.getRobotService();
-        if (robotService == null) {
-            throw new IllegalStateException();
-        }
-        RapidProcessHandler processHandler = new RapidProcessHandler(robotService);
-        processHandler.startProcess();
-        ConsoleView consoleView = getBuilder().getConsole();
-        consoleView.attachToProcess(processHandler);
-        return new DefaultExecutionResult(consoleView, processHandler);
     }
 
     private @NotNull TextConsoleBuilder getBuilder() {

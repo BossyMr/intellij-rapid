@@ -66,7 +66,7 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
                 return null;
             }
             RapidElementFactory elementFactory = RapidElementFactory.getInstance(getProject());
-            return elementFactory.createExpression(initializer);
+            return elementFactory.createExpressionFromText(initializer);
         } else {
             return findInitializer();
         }

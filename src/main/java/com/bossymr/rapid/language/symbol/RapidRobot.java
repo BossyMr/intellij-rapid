@@ -50,9 +50,8 @@ public interface RapidRobot extends RapidSymbol {
      * @param name the name of the symbol.
      * @return a symbol on this robot with the specified name, or {@code null} if a symbol with the specified name was
      * not found.
-     * @throws IOException if an I/O error occurs.
      */
-    @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException;
+    @Nullable VirtualSymbol getSymbol(@NotNull String name);
 
     /**
      * Checks if this robot is currently connected to a remote robot.
@@ -73,7 +72,7 @@ public interface RapidRobot extends RapidSymbol {
      *
      * @throws IOException if an I/O error occurs.
      */
-    void reconnect() throws IOException, InterruptedException;
+    @NotNull RobotService reconnect() throws IOException, InterruptedException;
 
     /**
      * Reconnects to this robot, using the specified credentials.
@@ -81,7 +80,7 @@ public interface RapidRobot extends RapidSymbol {
      * @param credentials the credentials to authenticate with.
      * @throws IOException if an I/O error occurs.
      */
-    void reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException;
+    @NotNull RobotService reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException;
 
     /**
      * Disconnects from this robot.

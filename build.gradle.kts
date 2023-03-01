@@ -40,6 +40,7 @@ configurations {
 
 dependencies {
     implementation(project(mapOf("path" to ":network")))
+    implementation("org.slf4j:slf4j-jdk14:2.0.5")
     testImplementation(platform("org.junit:junit-bom:5.9.0"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
     testImplementation("junit:junit:4.13.2")

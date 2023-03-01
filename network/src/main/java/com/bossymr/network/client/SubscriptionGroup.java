@@ -7,6 +7,8 @@ import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -15,6 +17,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class SubscriptionGroup {
+    private static final Logger logger = LoggerFactory.getLogger(SubscriptionGroup.class);
 
     private final @NotNull HttpNetworkClient networkClient;
     private final @NotNull Set<SubscriptionEntity> entities;
@@ -86,6 +89,7 @@ public class SubscriptionGroup {
                     if (path == null || webSocket == null) {
                         return start();
                     }
+                    logger.atDebug().log("Updating SubscriptionGroup '{}'", getEntities());
                     HttpRequest request = networkClient.createRequest()
                             .setMethod("PUT")
                             .setPath(path)
@@ -100,6 +104,7 @@ public class SubscriptionGroup {
     }
 
     private @NotNull CompletableFuture<Void> start() {
+        logger.atDebug().log("Starting SubscriptionGroup '{}'", getEntities());
         HttpRequest request = networkClient.createRequest()
                 .setMethod("POST")
                 .setPath(URI.create("/subscription"))
@@ -121,6 +126,7 @@ public class SubscriptionGroup {
     }
 
     private @NotNull CompletableFuture<Void> close() {
+        logger.atDebug().log("Closing SubscriptionGroup");
         if (path == null || webSocket == null) {
             return CompletableFuture.completedFuture(null);
         }

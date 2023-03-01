@@ -36,6 +36,7 @@ import java.util.function.Supplier;
  */
 public class NetworkEngine implements AutoCloseable {
 
+    // FIXME: 2023-03-01 NetworkCalls are never garbage collected - ideally, NetworkCall should be refactored to not have any state.
     private final @NotNull Set<CloseableNetworkCall<?>> requests = ConcurrentHashMap.newKeySet();
     private final @NotNull Set<CloseableSubscribableNetworkCall<?>> subscriptions = ConcurrentHashMap.newKeySet();
 
@@ -169,8 +170,8 @@ public class NetworkEngine implements AutoCloseable {
         }
     }
 
-    public @NotNull CompletableFuture<Void> closeAsync() {
-        return CompletableFuture.runAsync(() -> {
+    public void closeAsync() {
+        CompletableFuture.runAsync(() -> {
             try {
                 close();
             } catch (IOException | InterruptedException e) {

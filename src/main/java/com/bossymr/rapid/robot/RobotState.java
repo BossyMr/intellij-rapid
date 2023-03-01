@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot;
 
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.network.model.Model;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
 import org.jetbrains.annotations.NotNull;
@@ -33,16 +34,16 @@ public final class RobotState {
      */
     public @NotNull Set<String> cache = new HashSet<>();
 
-    public @NotNull Set<com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState> getSymbols(@Nullable NetworkEngine networkEngine) {
-        Set<com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState> symbolStates = new HashSet<>();
+    public @NotNull Set<SymbolModel> getSymbols(@Nullable NetworkEngine networkEngine) {
+        Set<SymbolModel> symbolModels = new HashSet<>();
         for (SymbolState symbolState : this.symbolStates) {
             Model model = symbolState.toModel();
-            com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState state = NetworkEngine.createEntity(networkEngine, com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState.class, model);
+            SymbolModel state = NetworkEngine.createEntity(networkEngine, SymbolModel.class, model);
             if (state != null) {
-                symbolStates.add(state);
+                symbolModels.add(state);
             }
         }
-        return symbolStates;
+        return symbolModels;
     }
 
     @Override
@@ -107,7 +108,7 @@ public final class RobotState {
 
         @Override
         public String toString() {
-            return "SymbolState{" +
+            return "SymbolModel{" +
                     "title='" + title + '\'' +
                     ", type='" + type + '\'' +
                     ", properties=" + fields +

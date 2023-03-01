@@ -10,8 +10,8 @@ import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.RobotService;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
-import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolType;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.ide.passwordSafe.PasswordSafe;
@@ -96,9 +96,9 @@ public final class RobotUtil {
         return RapidSymbolConverter.getSymbols(robotState.getSymbols(networkEngine));
     }
 
-    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolState symbolState) {
-        List<SymbolState> symbolStates = List.of(symbolState);
-        Map<String, VirtualSymbol> symbols = RapidSymbolConverter.getSymbols(symbolStates);
+    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolModel symbolModel) {
+        List<SymbolModel> symbolModels = List.of(symbolModel);
+        Map<String, VirtualSymbol> symbols = RapidSymbolConverter.getSymbols(symbolModels);
         List<VirtualSymbol> virtualSymbols = new ArrayList<>(symbols.values());
         return virtualSymbols.get(0);
     }
@@ -125,17 +125,17 @@ public final class RobotUtil {
                                 return symbols;
                             }).thenComposeAsync(symbols -> {
                                 Map<String, Set<String>> states = new HashMap<>();
-                                for (SymbolState symbolState : symbols) {
-                                    String address = symbolState.getTitle().substring(0, symbolState.getTitle().lastIndexOf('/'));
+                                for (SymbolModel symbolModel : symbols) {
+                                    String address = symbolModel.getTitle().substring(0, symbolModel.getTitle().lastIndexOf('/'));
                                     states.computeIfAbsent(address, (value) -> new HashSet<>());
-                                    states.get(address).add(symbolState.getTitle().substring(symbolState.getTitle().lastIndexOf('/') + 1));
+                                    states.get(address).add(symbolModel.getTitle().substring(symbolModel.getTitle().lastIndexOf('/') + 1));
                                 }
                                 List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
                                 for (Map.Entry<String, Set<String>> entry : states.entrySet()) {
                                     if (entry.getKey().equals("RAPID")) continue;
                                     String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
                                     if (!states.get("RAPID").contains(name)) {
-                                        NetworkCall<SymbolState> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
+                                        NetworkCall<SymbolModel> symbol = service.getRobotWareService().getRapidService().findSymbol(entry.getKey());
                                         CompletableFuture<Void> completableFuture = symbol.sendAsync()
                                                 .exceptionally((exception) -> {
                                                     if (exception.getCause() instanceof ResponseStatusException responseStatusException) {
@@ -171,7 +171,7 @@ public final class RobotUtil {
         }
     }
 
-    public static @NotNull RobotState.SymbolState getSymbolState(@NotNull SymbolState symbol) {
+    public static @NotNull RobotState.SymbolState getSymbolState(@NotNull SymbolModel symbol) {
         RobotState.SymbolState symbolState = new RobotState.SymbolState();
         symbolState.title = symbol.getTitle().toLowerCase();
         symbolState.type = symbol.getType();

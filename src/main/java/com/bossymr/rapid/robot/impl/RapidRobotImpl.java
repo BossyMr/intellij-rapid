@@ -13,7 +13,7 @@ import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
 import com.bossymr.rapid.robot.network.RobotService;
-import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.Module;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
@@ -95,7 +95,7 @@ public class RapidRobotImpl implements RapidRobot, Disposable {
     }
 
     @Override
-    public @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException {
+    public @Nullable VirtualSymbol getSymbol(@NotNull String name) {
         name = name.toLowerCase();
         if (symbols.containsKey(name)) {
             return symbols.get(name);
@@ -105,19 +105,21 @@ public class RapidRobotImpl implements RapidRobot, Disposable {
                 if (robotState.cache.contains(name)) {
                     return null;
                 }
-                SymbolState symbolState;
+                SymbolModel symbolModel;
                 try {
-                    symbolState = robotService.getRobotWareService().getRapidService().findSymbol("RAPID" + "/" + name).send();
+                    symbolModel = robotService.getRobotWareService().getRapidService().findSymbol("RAPID" + "/" + name).send();
                 } catch (ResponseStatusException e) {
                     if (e.getResponse().statusCode() == 400) {
-                        symbolState = null;
+                        symbolModel = null;
                     } else {
-                        throw e;
+                        return null;
                     }
+                } catch (IOException | InterruptedException e) {
+                    return null;
                 }
-                if (symbolState != null) {
-                    RobotState.SymbolState storageSymbolState = RobotUtil.getSymbolState(symbolState);
-                    VirtualSymbol virtualSymbol = RobotUtil.getSymbol(symbolState);
+                if (symbolModel != null) {
+                    RobotState.SymbolState storageSymbolState = RobotUtil.getSymbolState(symbolModel);
+                    VirtualSymbol virtualSymbol = RobotUtil.getSymbol(symbolModel);
                     symbols.put(virtualSymbol.getName(), virtualSymbol);
                     robotState.symbolStates.add(storageSymbolState);
                     RobotEventListener.publish().onSymbol(this, virtualSymbol);
@@ -250,16 +252,18 @@ public class RapidRobotImpl implements RapidRobot, Disposable {
     }
 
     @Override
-    public void reconnect() throws IOException, InterruptedException {
+    public @NotNull RobotService reconnect() throws IOException, InterruptedException {
         URI path = URI.create(robotState.path);
         Credentials credentials = RobotUtil.getCredentials(path);
         if (credentials != null) {
-            reconnect(credentials);
+            return reconnect(credentials);
+        } else {
+            throw new IllegalStateException();
         }
     }
 
     @Override
-    public void reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException {
+    public @NotNull RobotService reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException {
         RobotEventListener.publish().beforeRefresh(this);
         URI path = URI.create(robotState.path);
         RobotUtil.setCredentials(path, credentials.username(), credentials.password());
@@ -271,6 +275,7 @@ public class RapidRobotImpl implements RapidRobot, Disposable {
         retrieve();
         RobotUtil.reload();
         RobotEventListener.publish().afterRefresh(this);
+        return networkEngine.createService(RobotService.class);
     }
 
     @Override

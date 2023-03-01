@@ -19,7 +19,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -187,15 +186,12 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         RemoteRobotService service = RemoteRobotService.getInstance();
         RapidRobot robot = service.getRobot();
         if (robot != null) {
-            try {
-                if (processor.getName() != null) {
-                    process(robot.getSymbol(processor.getName()));
-                } else {
-                    for (VirtualSymbol symbol : robot.getSymbols()) {
-                        process(symbol);
-                    }
+            if (processor.getName() != null) {
+                process(robot.getSymbol(processor.getName()));
+            } else {
+                for (VirtualSymbol symbol : robot.getSymbols()) {
+                    process(symbol);
                 }
-            } catch (IOException | InterruptedException ignored) {
             }
         }
     }
