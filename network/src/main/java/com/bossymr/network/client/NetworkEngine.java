@@ -2,6 +2,7 @@ package com.bossymr.network.client;
 
 import com.bossymr.network.NetworkCall;
 import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Service;
 import com.bossymr.network.client.security.Credentials;
@@ -36,9 +37,8 @@ import java.util.function.Supplier;
  */
 public class NetworkEngine implements AutoCloseable {
 
-    // FIXME: 2023-03-01 NetworkCalls are never garbage collected - ideally, NetworkCall should be refactored to not have any state.
-    private final @NotNull Set<CloseableNetworkCall<?>> requests = ConcurrentHashMap.newKeySet();
-    private final @NotNull Set<CloseableSubscribableNetworkCall<?>> subscriptions = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<CompletableFuture<?>> requests = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<SubscriptionEntity> subscriptions = ConcurrentHashMap.newKeySet();
 
     private final @NotNull NetworkClient client;
     private final @NotNull EntityFactory entityFactory;
@@ -90,6 +90,25 @@ public class NetworkEngine implements AutoCloseable {
         return getNetworkClient().createRequest();
     }
 
+    <T> @NotNull CompletableFuture<T> track(@NotNull CompletableFuture<T> completableFuture) {
+        requests.add(completableFuture);
+        return completableFuture.handleAsync((response, throwable) -> {
+            requests.remove(completableFuture);
+            if (throwable != null) {
+                throw throwable instanceof RuntimeException runtimeException ? runtimeException : new CompletionException(throwable);
+            }
+            return response;
+        });
+    }
+
+    void track(@NotNull SubscriptionEntity entity) {
+        subscriptions.add(entity);
+    }
+
+    void untrack(@NotNull SubscriptionEntity entity) {
+        subscriptions.remove(entity);
+    }
+
     /**
      * Creates a new service of the specified type.
      *
@@ -131,9 +150,7 @@ public class NetworkEngine implements AutoCloseable {
     }
 
     protected <T> @NotNull NetworkCall<T> createNetworkCall(@NotNull NetworkEngine engine, @NotNull HttpRequest request, @NotNull Type returnType) {
-        HttpNetworkCall<T> networkCall = new HttpNetworkCall<>(engine.getEntityFactory(), request, returnType);
-        requests.add(networkCall);
-        return networkCall;
+        return new HttpNetworkCall<>(engine, request, returnType);
     }
 
     /**
@@ -148,14 +165,7 @@ public class NetworkEngine implements AutoCloseable {
     }
 
     protected <T> @NotNull SubscribableNetworkCall<T> createSubscribableNetworkCall(@NotNull NetworkEngine engine, @NotNull SubscribableEvent<T> event) {
-        HttpSubscribableNetworkCall<T> networkCall = new HttpSubscribableNetworkCall<>(engine, event);
-        subscriptions.add(networkCall);
-        return networkCall;
-    }
-
-    public @NotNull CompletableFuture<Void> join() {
-        return CompletableFuture.allOf(requests.stream().map(CloseableNetworkCall::join)
-                .toArray(CompletableFuture[]::new));
+        return new HttpSubscribableNetworkCall<>(engine, event);
     }
 
     /**
@@ -166,8 +176,8 @@ public class NetworkEngine implements AutoCloseable {
      */
     @Override
     public void close() throws IOException, InterruptedException {
-        for (CloseableSubscribableNetworkCall<?> subscription : subscriptions) {
-            subscription.close();
+        for (SubscriptionEntity subscription : subscriptions) {
+            subscription.unsubscribe();
         }
     }
 

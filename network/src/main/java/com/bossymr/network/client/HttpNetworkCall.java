@@ -24,12 +24,13 @@ public class HttpNetworkCall<T> extends CloseableNetworkCall<T> {
      * Creates a new {@code NetworkCall}, which will send the specified request to the specified {@code EntityFactory}
      * and convert it into the specified type.
      *
-     * @param factory the entity factory.
+     * @param networkEngine the engine.
      * @param request the request.
      * @param returnType the response type.
      */
-    public HttpNetworkCall(@NotNull EntityFactory factory, @NotNull HttpRequest request, @NotNull Type returnType) {
-        this.factory = factory;
+    public HttpNetworkCall(@NotNull NetworkEngine networkEngine, @NotNull HttpRequest request, @NotNull Type returnType) {
+        super(networkEngine);
+        this.factory = networkEngine.getEntityFactory();
         this.request = request;
         this.returnType = returnType;
     }

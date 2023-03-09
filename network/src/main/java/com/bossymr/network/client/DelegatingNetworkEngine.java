@@ -8,8 +8,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.http.HttpRequest;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A {@code NetworkAction} is a {@link NetworkEngine} which delegates requests to an underlying {@link NetworkEngine}.
@@ -17,9 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * A {@code NetworkAction} represents a policy for handling both successful and unsuccessful responses.
  */
 public class DelegatingNetworkEngine extends NetworkEngine {
-
-    private final Set<CloseableNetworkCall<?>> requests = ConcurrentHashMap.newKeySet();
-    private final Set<CloseableSubscribableNetworkCall<?>> subscriptions = ConcurrentHashMap.newKeySet();
 
     private final @NotNull NetworkEngine engine;
 
@@ -69,7 +64,7 @@ public class DelegatingNetworkEngine extends NetworkEngine {
 
     @Override
     protected @NotNull <T> NetworkCall<T> createNetworkCall(@NotNull NetworkEngine engine, @NotNull HttpRequest request, @NotNull Type returnType) {
-        DelegatingNetworkCall<T> networkCall = new DelegatingNetworkCall<>(this.engine.createNetworkCall(engine, request, returnType)) {
+        return new DelegatingNetworkCall<>(DelegatingNetworkEngine.this.engine.createNetworkCall(engine, request, returnType)) {
             @Override
             protected void onSuccess(@Nullable T response) {
                 DelegatingNetworkEngine.this.onSuccess(this, response);
@@ -80,27 +75,16 @@ public class DelegatingNetworkEngine extends NetworkEngine {
                 DelegatingNetworkEngine.this.onFailure(this, throwable);
             }
         };
-        requests.add(networkCall);
-        return networkCall;
     }
 
     @Override
     protected @NotNull <T> SubscribableNetworkCall<T> createSubscribableNetworkCall(@NotNull NetworkEngine engine, @NotNull SubscribableEvent<T> event) {
-        DelegatingSubscribableNetworkCall<T> networkCall = new DelegatingSubscribableNetworkCall<>(this.engine.createSubscribableNetworkCall(engine, event)) {
+        return new DelegatingSubscribableNetworkCall<>(engine, event) {
             @Override
             protected void onFailure(@NotNull Throwable throwable) {
                 DelegatingNetworkEngine.this.onFailure(throwable);
             }
         };
-        subscriptions.add(networkCall);
-        return networkCall;
-    }
-
-    @Override
-    public void close() throws IOException, InterruptedException {
-        for (CloseableSubscribableNetworkCall<?> subscription : subscriptions) {
-            subscription.close();
-        }
     }
 
     public static class ShutdownOnFailure extends DelegatingNetworkEngine {

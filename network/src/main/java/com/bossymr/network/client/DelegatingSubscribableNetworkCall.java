@@ -13,8 +13,9 @@ public abstract class DelegatingSubscribableNetworkCall<T> extends CloseableSubs
 
     private final @NotNull SubscribableNetworkCall<T> networkCall;
 
-    public DelegatingSubscribableNetworkCall(@NotNull SubscribableNetworkCall<T> networkCall) {
-        this.networkCall = networkCall;
+    public DelegatingSubscribableNetworkCall(@NotNull NetworkEngine networkEngine, @NotNull SubscribableEvent<T> event) {
+        super(networkEngine);
+        this.networkCall = networkEngine.createSubscribableNetworkCall(networkEngine, event);
     }
 
     protected abstract void onFailure(@NotNull Throwable throwable);

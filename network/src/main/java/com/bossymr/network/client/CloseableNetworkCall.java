@@ -5,9 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A {@code CloseableNetworkCall} is a {@link NetworkCall} which, when closed, will automatically cancel all
@@ -17,7 +15,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class CloseableNetworkCall<T> implements NetworkCall<T> {
 
-    private final @NotNull Set<CompletableFuture<?>> requests = ConcurrentHashMap.newKeySet();
+    private final @NotNull NetworkEngine networkEngine;
+
+    protected CloseableNetworkCall(@NotNull NetworkEngine networkEngine) {
+        this.networkEngine = networkEngine;
+    }
 
     @Override
     public @Nullable T send() throws IOException, InterruptedException {
@@ -27,14 +29,7 @@ public abstract class CloseableNetworkCall<T> implements NetworkCall<T> {
     @Override
     public @NotNull CompletableFuture<T> sendAsync() {
         CompletableFuture<T> request = createAsync();
-        requests.add(request);
-        return request.handleAsync((response, throwable) -> {
-            requests.remove(request);
-            if (throwable != null) {
-                throw HttpNetworkClient.getThrowable(throwable);
-            }
-            return response;
-        });
+        return networkEngine.track(request);
     }
 
     /**
@@ -50,8 +45,4 @@ public abstract class CloseableNetworkCall<T> implements NetworkCall<T> {
      * @return the response.
      */
     protected abstract @NotNull CompletableFuture<T> createAsync();
-
-    public @NotNull CompletableFuture<Void> join() {
-        return CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new));
-    }
 }

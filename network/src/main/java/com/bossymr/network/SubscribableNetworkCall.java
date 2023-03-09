@@ -2,7 +2,6 @@ package com.bossymr.network;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -22,12 +21,4 @@ public interface SubscribableNetworkCall<T> {
      * @return an entity used to unsubscribe.
      */
     @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<T> listener);
-
-    /**
-     * Closes this {@code SubscribableNetworkCall} and unsubscribes all ongoing subscriptions.
-     *
-     * @throws IOException if an I/O error has occurred.
-     * @throws InterruptedException if this {@code SubscribableNetworkCall} is unsubscribed.
-     */
-    void close() throws IOException, InterruptedException;
 }
