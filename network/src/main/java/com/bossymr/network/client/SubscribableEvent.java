@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Objects;
 
 /**
  * A {@code SubscribableEvent} represents a subscribable endpoint.
@@ -49,5 +50,26 @@ public class SubscribableEvent<T> {
     @NotNull
     public Class<T> getEventType() {
         return eventType;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SubscribableEvent<?> that = (SubscribableEvent<?>) o;
+        return getResource().equals(that.getResource()) && getEventType().equals(that.getEventType());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getResource(), getEventType());
+    }
+
+    @Override
+    public String toString() {
+        return "SubscribableEvent{" +
+                "resource=" + resource +
+                ", eventType=" + eventType +
+                '}';
     }
 }

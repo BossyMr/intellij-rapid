@@ -9,6 +9,7 @@ import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 
 public class RobotViewTaskNode extends RobotViewNode<RapidTask> {
@@ -19,6 +20,9 @@ public class RobotViewTaskNode extends RobotViewNode<RapidTask> {
 
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
+        if (getValue() == null) {
+            return Collections.emptyList();
+        }
         Set<PhysicalModule> modules = getValue().getModules(getProject());
         return modules.stream()
                 .map(module -> new RobotViewModuleNode(getProject(), module))
@@ -27,7 +31,9 @@ public class RobotViewTaskNode extends RobotViewNode<RapidTask> {
 
     @Override
     protected void update(@NotNull PresentationData presentation) {
-        presentation.setIcon(RapidIcons.TASK);
-        presentation.setPresentableText(getValue().getName());
+        if (getValue() != null) {
+            presentation.setIcon(RapidIcons.TASK);
+            presentation.setPresentableText(getValue().getName());
+        }
     }
 }

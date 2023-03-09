@@ -2,7 +2,7 @@ package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
 import com.bossymr.network.annotations.Deserializable;
 
-public enum TaskExecutionState {
+public enum ProgramExecutionState {
 
     @Deserializable("ready")
     READY,
@@ -12,11 +12,11 @@ public enum TaskExecutionState {
     STARTED,
 
 
-    @Deserializable("stop")
+    @Deserializable("stopped")
     STOPPED,
 
 
-    @Deserializable("uninitialized")
-    UNINITIALIZED,
+    @Deserializable("initiated")
+    INITIATED,
 
 }

@@ -6,7 +6,7 @@ import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"rap-module"})
-public interface Module extends EntityModel {
+public interface ModuleEntity extends EntityModel {
 
     @Property("modname")
     @NotNull String getName();

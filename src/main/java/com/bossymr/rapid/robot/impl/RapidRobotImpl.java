@@ -13,13 +13,17 @@ import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotState;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
 import com.bossymr.rapid.robot.network.RobotService;
+import com.bossymr.rapid.robot.network.robotware.mastership.CloseableMastership;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipService;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.Module;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
+import com.intellij.openapi.application.WriteAction;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -34,9 +38,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class RapidRobotImpl implements RapidRobot, Disposable {
+
+    private static final Logger logger = Logger.getInstance(RapidRobotImpl.class);
 
     private @NotNull RobotState robotState;
     private @Nullable NetworkEngine networkEngine;
@@ -44,6 +53,15 @@ public class RapidRobotImpl implements RapidRobot, Disposable {
     private @NotNull List<RapidTask> tasks;
     private @NotNull Map<String, VirtualSymbol> symbols;
 
+    /**
+     * Creates a new connected {@code RapidRobotImpl} which will connect with the specified robot and credentials.
+     *
+     * @param path the robot path.
+     * @param username the robot username.
+     * @param password the robot password.
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public RapidRobotImpl(@NotNull URI path, @NotNull String username, char @NotNull [] password) throws IOException, InterruptedException {
         NetworkEngine engine = new NetworkEngine(path, () -> new Credentials(username, password));
         this.networkEngine = new RobotDelegatingNetworkEngine(engine);
@@ -51,15 +69,19 @@ public class RapidRobotImpl implements RapidRobot, Disposable {
         RemoteRobotService.getInstance().setRobotState(robotState);
         symbols = RobotUtil.getSymbols(networkEngine, robotState);
         tasks = new ArrayList<>();
-        download();
+        try {
+            download().get();
+        } catch (ExecutionException e) {
+            throw new IOException(e);
+        }
         RobotUtil.reload();
         RobotEventListener.publish().afterConnect(this);
     }
 
     /**
-     * Creates a new {@code Robot} from a persisted robot state, which is not immediately connected.
+     * Creates a new unconnected {@code RapidRobotImpl} with the specified state.
      *
-     * @param robotState the persisted robot state.
+     * @param robotState the robot state.
      */
     public RapidRobotImpl(@NotNull RobotState robotState) {
         this.robotState = robotState;
@@ -87,6 +109,16 @@ public class RapidRobotImpl implements RapidRobot, Disposable {
     @Override
     public @NotNull Set<VirtualSymbol> getSymbols() {
         return Set.copyOf(symbols.values());
+    }
+
+    @Override
+    public @Nullable RapidTask getTask(@NotNull String name) {
+        for (RapidTask task : tasks) {
+            if (task.getName().equals(name)) {
+                return task;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -133,83 +165,152 @@ public class RapidRobotImpl implements RapidRobot, Disposable {
     }
 
     @Override
-    public void upload() throws IOException, InterruptedException {
-        if (networkEngine == null) throw new IllegalStateException();
+    public @NotNull CompletableFuture<Void> upload() {
+        List<CompletableFuture<Void>> requests = new ArrayList<>();
         for (RapidTask task : getTasks()) {
             Set<VirtualFile> modules = task.getFiles().stream()
                     .map(file -> LocalFileSystem.getInstance().findFileByIoFile(file))
                     .collect(Collectors.toSet());
-            upload(task, modules);
+            requests.add(upload(task, modules));
         }
+        return CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new));
+    }
+
+    private @NotNull CompletableFuture<Void> refreshAsync(@NotNull Collection<VirtualFile> modules) {
+        List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
+        for (VirtualFile module : modules) {
+            CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+            module.refresh(true, true, () -> completableFuture.complete(null));
+            completableFutures.add(completableFuture);
+        }
+        return CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
     }
 
     @Override
-    public void upload(@NotNull RapidTask task, @NotNull Collection<VirtualFile> modules) throws IOException, InterruptedException {
+    public @NotNull CompletableFuture<Void> upload(@NotNull RapidTask task, @NotNull Collection<VirtualFile> modules) {
+        if (networkEngine == null) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Robot is not connected"));
+        }
+        VirtualFile temporaryDirectory;
         try {
-            ApplicationManager.getApplication().invokeLater(() -> ApplicationManager.getApplication().runWriteAction(() -> {
-                try {
-                    doUpload(task, modules);
-                } catch (IOException | InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }));
-        } catch (RuntimeException e) {
-            if (e.getCause() instanceof IOException) throw (IOException) e.getCause();
-            if (e.getCause() instanceof InterruptedException) throw (InterruptedException) e.getCause();
-            throw e;
+            temporaryDirectory = createTemporaryDirectory("upload");
+        } catch (IOException e) {
+            return CompletableFuture.failedFuture(e);
         }
+        return refreshAsync(modules)
+                .thenComposeAsync(unused -> networkEngine.createService(TaskService.class).getTask(task.getName()).sendAsync()
+                        .thenComposeAsync(remote -> remote.getProgram().sendAsync())
+                        .thenComposeAsync(program -> {
+                            File file = temporaryDirectory.toNioPath().resolve(program.getName() + ".pgf").toFile();
+                            WriteAction.runAndWait(() -> {
+                                try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+                                    writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
+                                    writer.write("<Program>\r\n");
+                                    for (VirtualFile module : modules) {
+                                        writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
+                                        module.copy(this, temporaryDirectory, module.getName());
+                                    }
+                                    writer.write("</Program>");
+                                } catch (IOException e) {
+                                    throw new CompletionException(e);
+                                }
+                            });
+                            return networkEngine.createService(MastershipService.class).getDomain(MastershipType.RAPID).sendAsync()
+                                    .thenComposeAsync(domain -> CloseableMastership.requestAsync(domain, () -> program.load(file.getPath(), LoadProgramMode.REPLACE).sendAsync()));
+                        }).handleAsync((ignored, throwable) -> {
+                            WriteAction.runAndWait(() -> FileUtil.delete(temporaryDirectory.toNioPath().toFile()));
+                            if (throwable != null) {
+                                logger.error(throwable);
+                            }
+                            return null;
+                        }));
     }
 
-    private void doUpload(@NotNull RapidTask task, @NotNull Collection<VirtualFile> modules) throws IOException, InterruptedException {
-        if (networkEngine == null) throw new IllegalStateException();
-        RobotService robotService = networkEngine.createService(RobotService.class);
-        File directory = FileUtil.createTempDirectory("robot", "upload");
-        VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(directory);
-        assert virtualFile != null;
-        List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
-        for (Task remoteTask : remoteTasks) {
-            if (remoteTask.getName().equals(task.getName())) {
-                String programName = remoteTask.getProgram().send().getName();
-                File programFile = directory.toPath().resolve(programName + ".pgf").toFile();
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(programFile))) {
-                    writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
-                    writer.write("<Program>\r\n");
-                    for (VirtualFile module : modules) {
-                        writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
-                        module.copy(this, virtualFile, module.getName());
-                    }
-                    writer.write("</Program>");
-                }
-                remoteTask.getProgram().send().load(programFile.getPath(), LoadProgramMode.REPLACE).send();
-                return;
-            }
+    private @NotNull VirtualFile createTemporaryDirectory(@NotNull String suffix) throws IOException {
+        File file = FileUtil.createTempDirectory("intellij-rapid", suffix);
+        File[] files = file.listFiles();
+        if (files == null) {
+            throw new IOException();
         }
+        for (File child : files) {
+            FileUtil.delete(child);
+        }
+        VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByIoFile(file);
+        if (virtualFile == null) {
+            throw new IOException();
+        }
+        return virtualFile;
     }
 
     @Override
-    public void download() throws IOException, InterruptedException {
-        if (networkEngine == null) throw new IllegalStateException();
-        RobotService robotService = networkEngine.createService(RobotService.class);
-        List<RapidTask> rapidTasks = new ArrayList<>();
-        Path defaultPath = Path.of(PathManager.getSystemPath(), "robot");
-        File defaultFile = defaultPath.toFile();
-        if (defaultFile.exists()) FileUtil.delete(defaultFile);
-        if (!defaultFile.mkdir()) throw new IOException();
-        List<Task> remoteTasks = robotService.getRobotWareService().getRapidService().getTaskService().getTasks().send();
-        for (Task remoteTask : remoteTasks) {
-            File taskFile = defaultPath.resolve(remoteTask.getName()).toFile();
-            if (!taskFile.mkdir()) throw new IOException();
-            Set<File> virtualFiles = new HashSet<>();
-            RapidTask rapidTask = new RapidTaskImpl(remoteTask.getName(), taskFile, virtualFiles);
-            List<ModuleInfo> moduleInfos = remoteTask.getModules().send();
-            for (ModuleInfo moduleInfo : moduleInfos) {
-                Module module = moduleInfo.getModule().send();
-                module.save(module.getName(), taskFile.getPath()).send();
-                virtualFiles.add(taskFile.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile());
-            }
-            rapidTasks.add(rapidTask);
+    public @NotNull CompletableFuture<Void> download() {
+        if (networkEngine == null) {
+            throw new IllegalStateException();
         }
-        this.tasks = rapidTasks;
+        VirtualFile temporaryDirectory;
+        try {
+            temporaryDirectory = createTemporaryDirectory("download");
+        } catch (IOException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+        File file = Path.of(PathManager.getSystemPath(), "robot").toFile();
+        if (file.exists()) {
+            FileUtil.delete(file);
+        }
+        VirtualFile finalDirectory = LocalFileSystem.getInstance().findFileByNioFile(PathManager.getSystemDir());
+        if (finalDirectory == null) {
+            throw new IllegalStateException();
+        }
+        List<RapidTask> updated = new ArrayList<>();
+        return networkEngine.createService(TaskService.class).getTasks().sendAsync()
+                .thenComposeAsync(tasks -> {
+                    List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
+                    for (Task task : tasks) {
+                        File temporaryTask = temporaryDirectory.toNioPath().resolve(task.getName()).toFile();
+                        File finalTask = finalDirectory.toNioPath().resolve("robot").resolve(task.getName()).toFile();
+                        if (!(WriteAction.computeAndWait(() -> FileUtil.createDirectory(temporaryTask)))) {
+                            return CompletableFuture.failedFuture(new IOException());
+                        }
+                        RapidTask local = new RapidTaskImpl(task.getName(), finalTask, new HashSet<>());
+                        completableFutures.add(task.getModules().sendAsync()
+                                .thenComposeAsync(moduleInfos -> {
+                                    List<CompletableFuture<Void>> moduleEntities = new ArrayList<>();
+                                    for (ModuleInfo moduleInfo : moduleInfos) {
+                                        moduleEntities.add(moduleInfo.getModule().sendAsync()
+                                                .thenComposeAsync(module -> module.save(module.getName(), temporaryTask.toPath().toString()).sendAsync()
+                                                        .thenRunAsync(() -> {
+                                                            File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
+                                                            local.getFiles().add(result);
+                                                        })));
+                                    }
+                                    return CompletableFuture.allOf(moduleEntities.toArray(CompletableFuture[]::new));
+                                }).thenRunAsync(() -> updated.add(local)));
+                    }
+                    return CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
+                }).thenRunAsync(() -> {
+                    try {
+                        WriteAction.runAndWait(() -> {
+                            VirtualFile directoryChild = finalDirectory.findChild("robot");
+                            if (directoryChild != null) {
+                                directoryChild.delete(this);
+                            }
+                            temporaryDirectory.copy(this, finalDirectory, "robot");
+                        });
+                        this.tasks = updated;
+                    } catch (IOException e) {
+                        throw new IllegalStateException(e);
+                    }
+                }).handleAsync((response, throwable) -> {
+                    try {
+                        WriteAction.runAndWait(() -> temporaryDirectory.delete(this));
+                    } catch (IOException e) {
+                        logger.error(e);
+                    }
+                    if (throwable != null) {
+                        logger.error(throwable);
+                    }
+                    return null;
+                });
     }
 
     public void retrieve() {

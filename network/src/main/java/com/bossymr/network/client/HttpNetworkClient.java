@@ -32,7 +32,7 @@ public class HttpNetworkClient implements NetworkClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpNetworkClient.class);
 
-    private final int MAX_CONNECTIONS = 1;
+    private final int MAX_CONNECTIONS = 2;
     private final Semaphore semaphore = new Semaphore(MAX_CONNECTIONS);
 
     private final @NotNull Authenticator authenticator;
@@ -74,6 +74,8 @@ public class HttpNetworkClient implements NetworkClient {
                 .version(HttpClient.Version.HTTP_1_1)
                 .cookieHandler(new CookieManager())
                 .build();
+        this.subscriptionGroup.getEntities().clear();
+        this.subscriptionGroup.update();
         Set<SubscriptionEntity> entities = this.subscriptionGroup.getEntities();
         this.subscriptionGroup = new SubscriptionGroup(executorService, this);
         this.subscriptionGroup.getEntities().addAll(entities);
@@ -122,6 +124,7 @@ public class HttpNetworkClient implements NetworkClient {
         try {
             HttpResponse<T> response = httpClient.send(request, bodyHandler);
             if (response.statusCode() == 503) {
+                logger.atDebug().log("Rebuilding NetworkClient with response'" + response + "'");
                 build();
                 return httpClient.send(request, bodyHandler);
             }
@@ -193,9 +196,6 @@ public class HttpNetworkClient implements NetworkClient {
     }
 
     public static class CloseableCompletableFuture<T> extends CompletableFuture<T> {
-
-        private static final Logger logger = LoggerFactory.getLogger(CloseableCompletableFuture.class);
-
         @Override
         public <U> CompletableFuture<U> newIncompleteFuture() {
             return new CloseableCompletableFuture<>() {
@@ -204,18 +204,6 @@ public class HttpNetworkClient implements NetworkClient {
                     return CloseableCompletableFuture.this.cancel(mayInterruptIfRunning);
                 }
             };
-        }
-
-        @Override
-        public boolean complete(T value) {
-            logger.atTrace().log("CompletableFuture '" + this + "' completed with value '" + value + "'");
-            return super.complete(value);
-        }
-
-        @Override
-        public boolean completeExceptionally(Throwable ex) {
-            logger.atTrace().setCause(ex).log("CompletableFuture '" + this + "' completed exceptionally with exception + '" + ex + "'");
-            return super.completeExceptionally(ex);
         }
     }
 
@@ -227,13 +215,13 @@ public class HttpNetworkClient implements NetworkClient {
         public NetworkCompletableFuture(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
             semaphoreAsync = executorService.submit(() -> {
                 semaphore.acquire();
-                logger.atDebug().log("Acquired semaphore for request '{}'; available permits: {}; queue length: {}", request, semaphore.availablePermits(), semaphore.getQueueLength());
                 requestAsync = httpClient.sendAsync(request, bodyHandler)
                         .thenComposeAsync((response) -> {
                             /*
                              * If the request fails due to a 503 error (caused by too many connected clients), reconnect and retry.
                              */
                             if (response.statusCode() == 503) {
+                                logger.atDebug().log("Rebuilding NetworkClient with response'" + response + "'");
                                 build();
                                 return httpClient.sendAsync(request, bodyHandler);
                             }
@@ -241,7 +229,6 @@ public class HttpNetworkClient implements NetworkClient {
                         }, executorService)
                         .handleAsync(((response, throwable) -> {
                             semaphore.release();
-                            logger.atDebug().log("Released semaphore for request '{}'", request);
                             if (throwable != null) {
                                 completeExceptionally(throwable);
                                 throw HttpNetworkClient.getThrowable(throwable);

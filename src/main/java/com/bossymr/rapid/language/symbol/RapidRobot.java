@@ -12,6 +12,7 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A robot represents a remote robot. A robot might be directly connected to the remote robot, through a
@@ -35,6 +36,8 @@ public interface RapidRobot extends RapidSymbol {
      * @return all persisted symbols.
      */
     @NotNull Set<VirtualSymbol> getSymbols();
+
+    @Nullable RapidTask getTask(@NotNull String name);
 
     /**
      * Returns all persisted tasks.
@@ -91,31 +94,22 @@ public interface RapidRobot extends RapidSymbol {
 
     /**
      * Uploads persisted modules to the remote robot.
-     *
-     * @throws IOException if an I/O error occurs.
-     * @throws InterruptedException if the operation is interrupted.
-     * @throws IllegalStateException if the robot is not currently connected.
      */
-    void upload() throws IOException, InterruptedException;
+    @NotNull CompletableFuture<Void> upload();
 
     /**
      * Uploads the specified modules to the specified task on the remote robot.
      *
      * @param task the task.
      * @param modules the modules to upload.
-     * @throws IOException if an I/O error occurs.
-     * @throws InterruptedException if the operation is interrupted.
-     * @throws IllegalStateException if the robot is not currently connected.
      */
-    void upload(@NotNull RapidTask task, @NotNull Collection<VirtualFile> modules) throws IOException, InterruptedException;
+    @NotNull CompletableFuture<Void> upload(@NotNull RapidTask task, @NotNull Collection<VirtualFile> modules);
 
     /**
      * Downloads modules from the connected robot.
      *
-     * @throws IOException if an I/O error occurs.
-     * @throws InterruptedException if the operation is interrupted.
      * @throws IllegalStateException if the robot is not currently connected.
      */
-    void download() throws IOException, InterruptedException;
+    @NotNull CompletableFuture<Void> download();
 
 }

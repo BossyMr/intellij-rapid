@@ -34,10 +34,12 @@ public class SubscriptionGroup {
     }
 
     private static void onEntity(@NotNull Set<SubscriptionEntity> entities, @NotNull Model model) {
+        logger.debug("Received event '" + model + "'");
         for (SubscriptionEntity entity : entities) {
             String path = model.getLink("self").getPath();
             String event = entity.getEvent().getResource().toString();
             if (path.startsWith(event)) {
+                logger.debug("Sending event '" + model + "' to entity '" + entity + "'");
                 entity.onEvent(model);
             }
         }
@@ -167,6 +169,7 @@ public class SubscriptionGroup {
             if (last) {
                 String event = stringBuilder.toString();
                 CollectionModel collectionModel = CollectionModel.convert(event.getBytes());
+                logger.debug("Received events '" + collectionModel + "'");
                 for (Model model : collectionModel.getModels()) {
                     onEntity(entities, model);
                 }

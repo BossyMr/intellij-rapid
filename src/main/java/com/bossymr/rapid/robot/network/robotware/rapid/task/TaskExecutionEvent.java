@@ -9,6 +9,6 @@ import org.jetbrains.annotations.NotNull;
 public interface TaskExecutionEvent extends EntityModel {
 
     @Property("pgmtaskexec-state")
-    @NotNull TaskExecutionState getState();
+    @NotNull ProgramExecutionState getState();
 
 }

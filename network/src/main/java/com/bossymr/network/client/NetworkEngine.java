@@ -100,6 +100,7 @@ public class NetworkEngine implements AutoCloseable {
      */
     @SuppressWarnings("unchecked")
     public <T> @NotNull T createService(@NotNull Class<T> serviceType) {
+        // TODO: 2023-03-05 Cache services
         return (T) Proxy.newProxyInstance(serviceType.getClassLoader(), new Class[]{serviceType}, new ServiceInvocationHandler(getNetworkEngine()));
     }
 

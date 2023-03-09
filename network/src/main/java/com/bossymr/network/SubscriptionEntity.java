@@ -5,6 +5,7 @@ import com.bossymr.network.client.SubscribableEvent;
 import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -59,5 +60,26 @@ public class SubscriptionEntity {
      */
     public CompletableFuture<Void> unsubscribe() {
         return networkClient.unsubscribe(this);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SubscriptionEntity entity = (SubscriptionEntity) o;
+        return Objects.equals(networkClient, entity.networkClient) && Objects.equals(getEvent(), entity.getEvent()) && getPriority() == entity.getPriority() && Objects.equals(listener, entity.listener);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(networkClient, getEvent(), getPriority(), listener);
+    }
+
+    @Override
+    public String toString() {
+        return "SubscriptionEntity{" +
+                "event=" + event +
+                ", priority=" + priority +
+                '}';
     }
 }

@@ -22,7 +22,10 @@ public class RobotViewSymbolNode extends RobotViewNode<RapidSymbol> {
 
     @Override
     protected void update(@NotNull PresentationData presentation) {
-        presentation.setPresentableText(getValue().getName());
-        presentation.setIcon(getValue().getIcon());
+        RapidSymbol value = getValue();
+        if (value != null) {
+            presentation.setPresentableText(value.getName());
+            presentation.setIcon(value.getIcon());
+        }
     }
 }

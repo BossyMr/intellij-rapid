@@ -17,6 +17,8 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.ui.ColoredTextContainer;
+import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator;
 import com.intellij.xdebugger.frame.XCompositeNode;
 import com.intellij.xdebugger.frame.XStackFrame;
@@ -25,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 public class RapidStackFrame extends XStackFrame {
@@ -106,5 +109,32 @@ public class RapidStackFrame extends XStackFrame {
             }
             node.addChildren(childrenList, true);
         }));
+    }
+
+    @Override
+    public void customizePresentation(@NotNull ColoredTextContainer component) {
+        String[] sections = stackFrame.getRoutine().split("/");
+        String label = sections[sections.length - 1] + ":" + stackFrame.getStartRow() + ", " + sections[2];
+        component.append(label, SimpleTextAttributes.SIMPLE_CELL_ATTRIBUTES);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RapidStackFrame that = (RapidStackFrame) o;
+        return stackFrame.equals(that.stackFrame);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(stackFrame);
+    }
+
+    @Override
+    public String toString() {
+        return "RapidStackFrame{" +
+                "stackFrame=" + stackFrame +
+                '}';
     }
 }

@@ -22,8 +22,26 @@ public interface Task extends EntityModel {
     @Property("name")
     @NotNull String getName();
 
+    @Property("motiontask")
+    boolean isMotionTask();
+
+    @Property("tasktype")
+    @NotNull TaskType getTaskType();
+
+    @Property("excstate")
+    @NotNull TaskExecutionState getExecutionState();
+
+    @Property("active")
+    @NotNull TaskActiveState getActivityState();
+
     @GET("{@self}/pcp")
     @NotNull NetworkCall<List<ProgramPointer>> getProgramPointer();
+
+    @POST(value = "{@self}", arguments = "action=activate")
+    @NotNull NetworkCall<Void> activate();
+
+    @POST(value = "{@self}", arguments = "action=deactivate")
+    @NotNull NetworkCall<Void> deactivate();
 
     @POST(value = "{@self}/pcp", arguments = "action=set-pp-cursor")
     @NotNull NetworkCall<Void> setProgramPointer(

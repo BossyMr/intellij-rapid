@@ -12,7 +12,6 @@ import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.Module;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
 import org.jetbrains.annotations.NotNull;
@@ -119,7 +118,7 @@ class RobotServiceTest {
         program.setBreakpoint("StartModul", 12, 0).send();
         assertEquals(1, program.getBreakpoints().send().size());
         List<ModuleInfo> moduleInfos = task.getModules().send();
-        Module module = moduleInfos.stream()
+        ModuleEntity module = moduleInfos.stream()
                 .filter(moduleInfo -> moduleInfo.getName().equals("StartModul"))
                 .findFirst().orElseThrow()
                 .getModule().send();

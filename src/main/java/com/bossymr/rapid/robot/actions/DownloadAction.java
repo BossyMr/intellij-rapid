@@ -13,7 +13,7 @@ import com.intellij.openapi.progress.impl.BackgroundableProcessIndicator;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 public class DownloadAction extends AnAction {
 
@@ -28,8 +28,8 @@ public class DownloadAction extends AnAction {
                 RapidRobot robot = service.getRobot();
                 assert robot != null;
                 try {
-                    robot.download();
-                } catch (IOException | InterruptedException ignored) {}
+                    robot.download().get();
+                } catch (ExecutionException | InterruptedException ignored) {}
             }
         };
         ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));

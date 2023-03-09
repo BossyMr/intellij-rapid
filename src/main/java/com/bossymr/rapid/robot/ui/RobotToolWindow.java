@@ -31,6 +31,7 @@ import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class RobotToolWindow implements Disposable {
 
@@ -144,6 +145,7 @@ public class RobotToolWindow implements Disposable {
                 if (selectedNodes == null) return null;
                 return selectedNodes.stream()
                         .map(AbstractTreeNode::getValue)
+                        .filter(Objects::nonNull)
                         .toArray(Object[]::new);
             }
             return null;

@@ -15,12 +15,12 @@ public interface ModuleInfo extends EntityModel {
     @NotNull ModuleType getModuleType();
 
     @GET("/rw/rapid/modules/{module}")
-    @NotNull NetworkCall<Module> getModule(
+    @NotNull NetworkCall<ModuleEntity> getModule(
             @NotNull @Path("module") String module,
             @NotNull @Argument("task") String task
     );
 
-    default @NotNull NetworkCall<Module> getModule() {
+    default @NotNull NetworkCall<ModuleEntity> getModule() {
         String title = getTitle();
         String task = title.substring(0, title.lastIndexOf('/'));
         String module = title.substring(title.lastIndexOf('/') + 1);

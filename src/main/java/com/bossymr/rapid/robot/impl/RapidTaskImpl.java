@@ -55,7 +55,13 @@ public class RapidTaskImpl implements RapidTask {
         PsiManager psiManager = PsiManager.getInstance(project);
         Set<PhysicalModule> modules = new HashSet<>();
         Set<VirtualFile> virtualFiles = files.stream()
-                .map(file -> LocalFileSystem.getInstance().findFileByIoFile(file))
+                .map(file -> {
+                    VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByIoFile(file);
+                    if (virtualFile == null) {
+                        throw new IllegalArgumentException("Could not find '" + file + "'");
+                    }
+                    return virtualFile;
+                })
                 .collect(Collectors.toSet());
         NonProjectFileWritingAccessProvider.allowWriting(virtualFiles);
         for (VirtualFile file : virtualFiles) {

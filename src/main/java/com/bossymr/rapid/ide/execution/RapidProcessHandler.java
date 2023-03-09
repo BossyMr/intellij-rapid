@@ -1,33 +1,35 @@
 package com.bossymr.rapid.ide.execution;
 
 import com.bossymr.network.NetworkCall;
-import com.bossymr.network.ServiceModel;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionPriority;
 import com.bossymr.network.client.DelegatingNetworkEngine;
+import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.robot.network.EventLogCategory;
-import com.bossymr.rapid.robot.network.RobotService;
+import com.bossymr.rapid.robot.network.EventLogService;
 import com.bossymr.rapid.robot.network.robotware.mastership.CloseableMastership;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipDomain;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipService;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.process.ProcessOutputType;
+import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RapidProcessHandler extends ProcessHandler {
 
-    private final @NotNull DelegatingNetworkEngine delegatingNetworkEngine;
-    private final @NotNull RobotService robotService;
+    private static final Logger logger = Logger.getInstance(RapidProcessHandler.class);
 
-    public RapidProcessHandler(@NotNull RobotService robotService) {
-        this.delegatingNetworkEngine = new DelegatingNetworkEngine(robotService.getNetworkEngine()) {
+    private final @NotNull CompletableFuture<DelegatingNetworkEngine> delegatingNetworkEngine;
+
+
+    public RapidProcessHandler(@NotNull CompletableFuture<NetworkEngine> completableFuture) {
+        this.delegatingNetworkEngine = completableFuture.thenApplyAsync(networkEngine -> new DelegatingNetworkEngine(networkEngine) {
             @Override
             protected void onFailure(@NotNull NetworkCall<?> request, @NotNull Throwable throwable) {
                 destroyProcess();
@@ -37,53 +39,51 @@ public class RapidProcessHandler extends ProcessHandler {
             protected void onFailure(@NotNull Throwable throwable) {
                 destroyProcess();
             }
-        };
-        this.robotService = ServiceModel.move(robotService, delegatingNetworkEngine);
+        });
+        delegatingNetworkEngine.thenComposeAsync(this::start);
     }
 
-    public @NotNull RobotService getRobotService() {
-        return robotService;
+    public @NotNull CompletableFuture<Void> start(@NotNull NetworkEngine networkEngine) {
+        logger.info("Starting process");
+        AtomicBoolean started = new AtomicBoolean();
+        ExecutionService executionService = networkEngine.createService(ExecutionService.class);
+        return connectOutputStream(networkEngine.createService(EventLogService.class))
+                .thenComposeAsync(unused -> executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+                    logger.debug("State '" + event.getState() + "'");
+                    switch (event.getState()) {
+                        case RUNNING -> {
+                            logger.debug("Execution started");
+                            started.set(true);
+                        }
+                        case STOPPED -> {
+                            if (started.get()) {
+                                logger.debug("Execution stopped");
+                                notifyProcessTerminated(0);
+                                networkEngine.closeAsync();
+                            }
+                        }
+                    }
+                }))
+                .thenComposeAsync(unused -> executionService.resetProgramPointer().sendAsync())
+                .thenComposeAsync(unused -> networkEngine.createService(MastershipService.class).getDomain(MastershipType.RAPID).sendAsync())
+                .thenComposeAsync(domain -> {
+                    logger.debug("Starting execution");
+                    NetworkCall<Void> networkCall = executionService.start(RegainMode.REGAIN, ExecutionMode.CONTINUE, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.DISABLED, TaskExecutionMode.NORMAL);
+                    return CloseableMastership.requestAsync(domain, networkCall::sendAsync);
+                });
     }
 
-    public void startProcess() throws IOException, InterruptedException {
-        try {
-            subscribeToOutput();
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof IOException exception) throw exception;
-            throw new IOException(e.getCause());
-        }
-        MastershipDomain mastershipDomain = robotService.getRobotWareService().getMastershipService().getDomain(MastershipType.RAPID).send();
-        try (CloseableMastership ignored = CloseableMastership.request(mastershipDomain)) {
-            ExecutionService executionService = robotService.getRobotWareService().getRapidService().getExecutionService();
-            executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
-                if (event.getState() == ExecutionState.STOPPED) {
-                    notifyProcessTerminated(0);
-                    delegatingNetworkEngine.closeAsync();
-                }
-            }).get();
-            executionService.resetProgramPointer().send();
-            executionService.start(RegainMode.REGAIN, ExecutionMode.CONTINUE, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.DISABLED, TaskExecutionMode.NORMAL).send();
-            startNotify();
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof IOException exception) {
-                throw exception;
-            } else {
-                throw new IOException(e.getCause());
-            }
-        }
-    }
-
-    private void subscribeToOutput() throws ExecutionException, InterruptedException {
-        robotService.getRobotWareService().getEventLogService().getCategories("en").sendAsync()
+    private @NotNull CompletableFuture<Void> connectOutputStream(@NotNull EventLogService eventLogService) {
+        return eventLogService.getCategories("en").sendAsync()
                 .thenComposeAsync(categories -> {
                     if (categories.isEmpty()) {
                         return CompletableFuture.completedFuture(null);
                     }
-                    return subscribeToOutput(categories.get(0));
-                }).get();
+                    return connectOutputStream(categories.get(0)).thenRunAsync(() -> {});
+                });
     }
 
-    private @NotNull CompletableFuture<SubscriptionEntity> subscribeToOutput(@NotNull EventLogCategory category) {
+    private @NotNull CompletableFuture<SubscriptionEntity> connectOutputStream(@NotNull EventLogCategory category) {
         return category.onMessage().subscribe(SubscriptionPriority.MEDIUM, (entity, event) ->
                 event.getMessage("en").sendAsync()
                         .thenAcceptAsync(message -> {
@@ -107,13 +107,22 @@ public class RapidProcessHandler extends ProcessHandler {
 
     @Override
     protected void destroyProcessImpl() {
-        robotService.getRobotWareService().getRapidService().getExecutionService()
-                .stop(StopMode.STOP, TaskExecutionMode.NORMAL).sendAsync();
+        delegatingNetworkEngine.thenAcceptAsync(networkEngine -> {
+            ExecutionService executionService = networkEngine.createService(ExecutionService.class);
+            executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).sendAsync()
+                    .handleAsync((unused, throwable) -> {
+                        if (throwable != null) {
+                            notifyProcessDetached();
+                            logger.error(throwable);
+                        }
+                        return null;
+                    });
+        });
     }
 
     @Override
     protected void detachProcessImpl() {
-        delegatingNetworkEngine.closeAsync();
+        delegatingNetworkEngine.thenAcceptAsync(NetworkEngine::closeAsync);
         notifyProcessDetached();
     }
 
