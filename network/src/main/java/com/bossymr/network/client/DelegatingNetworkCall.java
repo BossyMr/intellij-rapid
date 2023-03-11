@@ -13,7 +13,8 @@ public abstract class DelegatingNetworkCall<T> extends CloseableNetworkCall<T> {
 
     private final @NotNull NetworkCall<T> networkCall;
 
-    protected DelegatingNetworkCall(@NotNull NetworkCall<T> networkCall) {
+    protected DelegatingNetworkCall(@NotNull NetworkEngine engine, @NotNull NetworkCall<T> networkCall) {
+        super(engine);
         this.networkCall = networkCall;
     }
 

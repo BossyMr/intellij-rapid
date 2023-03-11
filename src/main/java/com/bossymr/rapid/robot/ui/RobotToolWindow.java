@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.ui;
 
+import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
@@ -79,18 +80,24 @@ public class RobotToolWindow implements Disposable {
                 e -> ActionUtil.invokeAction(action, panel, "RobotToolWindow", null, null));
 
         RobotEventListener.connect(new RobotEventListener() {
+
             @Override
-            public void afterConnect(@NotNull RapidRobot robot) {
+            public void onConnect(@NotNull RapidRobot robot, @NotNull NetworkEngine engine) {
                 model.invalidateAsync();
             }
 
             @Override
-            public void afterRefresh(@NotNull RapidRobot robot) {
+            public void onDisconnect(@NotNull RapidRobot robot) {
                 model.invalidateAsync();
             }
 
             @Override
-            public void afterRemoval() {
+            public void onRefresh(@NotNull RapidRobot robot, @NotNull NetworkEngine engine) {
+                model.invalidateAsync();
+            }
+
+            @Override
+            public void onRemoval(@NotNull RapidRobot robot) {
                 model.invalidateAsync();
             }
 

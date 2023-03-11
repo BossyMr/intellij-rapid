@@ -14,6 +14,7 @@ public class HttpSubscribableNetworkCall<T> extends CloseableSubscribableNetwork
     private final @NotNull SubscribableEvent<T> event;
 
     public HttpSubscribableNetworkCall(@NotNull NetworkEngine engine, @NotNull SubscribableEvent<T> event) {
+        super(engine);
         this.engine = engine;
         this.event = event;
     }

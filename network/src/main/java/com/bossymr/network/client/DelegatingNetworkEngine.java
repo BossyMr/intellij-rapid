@@ -64,7 +64,7 @@ public class DelegatingNetworkEngine extends NetworkEngine {
 
     @Override
     protected @NotNull <T> NetworkCall<T> createNetworkCall(@NotNull NetworkEngine engine, @NotNull HttpRequest request, @NotNull Type returnType) {
-        return new DelegatingNetworkCall<>(DelegatingNetworkEngine.this.engine.createNetworkCall(engine, request, returnType)) {
+        return new DelegatingNetworkCall<>(this, DelegatingNetworkEngine.this.engine.createNetworkCall(engine, request, returnType)) {
             @Override
             protected void onSuccess(@Nullable T response) {
                 DelegatingNetworkEngine.this.onSuccess(this, response);

@@ -37,7 +37,7 @@ public class RapidRunConfiguration extends LocatableConfigurationBase<Element> {
     @Override
     public @Nullable RapidRunProfileState getState(@NotNull Executor executor, @NotNull ExecutionEnvironment environment) throws ExecutionException {
         RemoteRobotService robotService = RemoteRobotService.getInstance();
-        RapidRobot robot = robotService.getRobot();
+        RapidRobot robot = robotService.getRobot().getNow(null);
         if (robot == null || getOptions().getRobotPath() == null) return null;
         URI robotPath = URI.create(getOptions().getRobotPath());
         if (!(robotPath.equals(robot.getPath()))) return null;

@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public final class ResolveUtil {
 
@@ -22,7 +23,7 @@ public final class ResolveUtil {
 
     public static @Nullable RapidSymbol findSymbol(@NotNull Project project, @NotNull String address) {
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot();
+        RapidRobot robot = service.getRobot().getNow(null);
         if (robot == null) return null;
         String[] sections = address.split("/");
         for (RapidTask task : robot.getTasks()) {
@@ -44,7 +45,11 @@ public final class ResolveUtil {
                 }
             }
         }
-        return robot.getSymbol(sections[1]);
+        try {
+            return robot.getSymbol(sections[1]).get();
+        } catch (InterruptedException | ExecutionException e) {
+            return null;
+        }
     }
 
     private static @Nullable RapidSymbol findChild(@NotNull RapidSymbol symbol, @NotNull String name) {

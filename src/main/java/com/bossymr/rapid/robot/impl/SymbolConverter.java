@@ -11,15 +11,15 @@ import java.util.*;
 /**
  * A converter for converting {@link SymbolModel} objects into {@link RapidSymbol} objects.
  */
-public final class RapidSymbolConverter {
+public final class SymbolConverter {
 
     private final Map<String, Map<String, SymbolModel>> states;
     private final Map<String, VirtualSymbol> symbols;
 
-    private RapidSymbolConverter(@NotNull Collection<SymbolModel> symbolModels) {
+    private SymbolConverter(@NotNull Collection<SymbolModel> symbolModels) {
         this.states = new HashMap<>();
         for (SymbolModel symbolModel : symbolModels) {
-            String address = symbolModel.getTitle().toLowerCase().substring(0, symbolModel.getTitle().lastIndexOf('/'));
+            String address = symbolModel.getTitle().substring(0, symbolModel.getTitle().lastIndexOf('/'));
             states.computeIfAbsent(address, (value) -> new HashMap<>());
             states.get(address).put(getName(symbolModel), symbolModel);
         }
@@ -27,16 +27,21 @@ public final class RapidSymbolConverter {
     }
 
     public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull Collection<SymbolModel> symbolModels) {
-        return new RapidSymbolConverter(symbolModels).getSymbols();
+        return new SymbolConverter(symbolModels).getSymbols();
+    }
+
+    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolModel symbolModel) {
+        Map<String, VirtualSymbol> symbols = new SymbolConverter(List.of(symbolModel)).getSymbols();
+        return List.copyOf(symbols.values()).get(0);
     }
 
     private @NotNull String getName(@NotNull SymbolModel symbolModel) {
-        return symbolModel.getTitle().toLowerCase().substring(symbolModel.getTitle().lastIndexOf('/') + 1);
+        return symbolModel.getTitle().substring(symbolModel.getTitle().lastIndexOf('/') + 1);
     }
 
     private @NotNull Map<String, VirtualSymbol> getSymbols() {
         if (states.isEmpty()) return new HashMap<>();
-        for (String name : states.get("rapid").keySet()) {
+        for (String name : states.get("RAPID").keySet()) {
             getSymbol(name);
         }
         return symbols;
@@ -44,7 +49,7 @@ public final class RapidSymbolConverter {
 
     private @Nullable RapidSymbol getSymbol(@NotNull String name) {
         if (symbols.containsKey(name)) return symbols.get(name);
-        SymbolModel state = states.get("rapid").get(name);
+        SymbolModel state = states.get("RAPID").get(name);
         if (state == null) {
             return null;
         }
@@ -81,7 +86,8 @@ public final class RapidSymbolConverter {
     }
 
     private @NotNull RapidRecord getRecord(@NotNull RecordModel symbol) {
-        Collection<SymbolModel> states = this.states.get(symbol.getTitle()).values();
+        Map<String, SymbolModel> map = this.states.get(symbol.getTitle());
+        Collection<SymbolModel> states = map.values();
         List<RapidComponent> components = new ArrayList<>();
         assert states.size() == symbol.getComponentCount();
         for (int i = 0; i < symbol.getComponentCount(); i++) {

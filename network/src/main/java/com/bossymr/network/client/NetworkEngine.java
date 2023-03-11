@@ -181,13 +181,9 @@ public class NetworkEngine implements AutoCloseable {
         }
     }
 
-    public void closeAsync() {
-        CompletableFuture.runAsync(() -> {
-            try {
-                close();
-            } catch (IOException | InterruptedException e) {
-                throw new CompletionException(e);
-            }
-        });
+    public @NotNull CompletableFuture<Void> closeAsync() {
+        return CompletableFuture.allOf(subscriptions.stream()
+                .map(SubscriptionEntity::unsubscribe)
+                .toList().toArray(CompletableFuture[]::new));
     }
 }

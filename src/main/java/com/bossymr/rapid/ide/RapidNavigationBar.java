@@ -52,7 +52,7 @@ public class RapidNavigationBar extends StructureAwareNavBarModelExtension {
         if (element instanceof PsiDirectory directory) {
             VirtualFile virtualFile = directory.getVirtualFile();
             RemoteRobotService remoteService = RemoteRobotService.getInstance();
-            RapidRobot robot = remoteService.getRobot();
+            RapidRobot robot = remoteService.getRobot().getNow(null);
             if (robot != null) {
                 for (RapidTask task : robot.getTasks()) {
                     if (FileUtil.filesEqual(task.getDirectory(), new File(virtualFile.getPath()))) {

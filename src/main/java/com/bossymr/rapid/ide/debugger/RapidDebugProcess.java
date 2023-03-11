@@ -355,7 +355,7 @@ public class RapidDebugProcess extends XDebugProcess {
             }
         } else {
             RemoteRobotService service = RemoteRobotService.getInstance();
-            RapidRobot robot = service.getRobot();
+            RapidRobot robot = service.getRobot().getNow(null);
             if (robot == null) return null;
             for (RapidTask task : robot.getTasks()) {
                 File file = new File(sourcePosition.getFile().getPath());

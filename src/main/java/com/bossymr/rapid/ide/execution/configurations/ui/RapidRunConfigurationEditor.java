@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.execution.configurations.ui;
 
+import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
@@ -60,13 +61,14 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
         NameColumnInfo NAME = new NameColumnInfo();
         ModuleColumnInfo MODULE = new ModuleColumnInfo(project);
         this.taskModel = new ListTableModel<>(new ColumnInfo[]{ENABLED, NAME, MODULE});
-        RapidRobot robot = RemoteRobotService.getInstance().getRobot();
-        if (robot != null) {
-            robotComboBox.addItem(robot);
-            taskModel.setItems(robot.getTasks().stream()
-                    .map(task -> new TaskState(task.getName(), true, null))
-                    .toList());
-        }
+        RemoteRobotService.getInstance().getRobot().thenAcceptAsync(robot -> {
+            if (robot != null) {
+                robotComboBox.addItem(robot);
+                taskModel.setItems(robot.getTasks().stream()
+                        .map(task -> new TaskState(task.getName(), true, null))
+                        .toList());
+            }
+        });
         this.taskTable = new TableView<>(taskModel);
         taskTable.getEmptyText().setText(RapidBundle.message("run.configuration.panel.no.task"));
 
@@ -113,12 +115,12 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
 
         RobotEventListener.connect(new RobotEventListener() {
             @Override
-            public void afterConnect(@NotNull RapidRobot robot) {
+            public void onConnect(@NotNull RapidRobot robot, @NotNull NetworkEngine engine) {
                 robotComboBox.addItem(robot);
             }
 
             @Override
-            public void beforeRemoval(@NotNull RapidRobot robot) {
+            public void onRemoval(@NotNull RapidRobot robot) {
                 robotComboBox.removeItem(robot);
             }
         });

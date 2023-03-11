@@ -5,7 +5,6 @@ import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.DelegatingNetworkEngine;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.notification.Notification;
@@ -23,6 +22,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpRequest;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
@@ -65,14 +65,13 @@ public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
             }
         }
         RemoteRobotService remoteService = RemoteRobotService.getInstance();
-        RapidRobot robot = remoteService.getRobot();
-        if (robot != null) {
-            if (robot.isConnected()) {
-                try {
-                    robot.disconnect();
-                } catch (IOException | InterruptedException ignored) {}
+        remoteService.getRobot().thenComposeAsync(robot -> {
+            if (robot != null) {
+                return robot.disconnect();
+            } else {
+                return CompletableFuture.completedFuture(null);
             }
-        }
+        });
         if (showNotifications) {
             showNotification(request, throwable);
         }

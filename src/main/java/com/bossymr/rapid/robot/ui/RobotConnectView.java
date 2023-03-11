@@ -19,8 +19,8 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.ExecutionException;
 
 public class RobotConnectView extends DialogWrapper {
 
@@ -111,8 +111,8 @@ public class RobotConnectView extends DialogWrapper {
                 Credentials credentials = authenticationComboBox.getItem().equals(AuthenticationType.DEFAULT) ? new Credentials("Default User", "robotics".toCharArray()) :
                         new Credentials(userField.getText(), passwordField.getPassword());
                 try {
-                    service.connect(path, credentials);
-                } catch (IOException | InterruptedException ignored) {
+                    service.connect(path, credentials).get();
+                } catch (ExecutionException | InterruptedException ignored) {
                     indicator.stop();
                 }
             }

@@ -59,7 +59,7 @@ public class RapidStackFrame extends XStackFrame {
     }
 
     private @Nullable File findFile(@NotNull String taskName, @NotNull String moduleName) {
-        RapidRobot robot = RemoteRobotService.getInstance().getRobot();
+        RapidRobot robot = RemoteRobotService.getInstance().getRobot().getNow(null);
         if (robot == null) return null;
         for (RapidTask task : robot.getTasks()) {
             if (task.getName().equals(taskName)) {

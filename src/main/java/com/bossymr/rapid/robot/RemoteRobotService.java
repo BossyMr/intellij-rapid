@@ -9,8 +9,8 @@ import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A {@code RobotService} is a responsible for communicating with a remote robot. If a robot is currently connected,
@@ -27,12 +27,21 @@ public interface RemoteRobotService extends PersistentStateComponent<RemoteRobot
         return ApplicationManager.getApplication().getService(RemoteRobotService.class);
     }
 
+    static boolean isConnected() {
+        RemoteRobotService service = RemoteRobotService.getInstance();
+        RapidRobot robot = service.getRobot().getNow(null);
+        if (robot != null) {
+            return robot.isConnected();
+        }
+        return false;
+    }
+
     /**
      * Returns the robot which is currently persisted, or connected.
      *
      * @return the robot which is currently persisted, or {@code null} if a robot is not persisted.
      */
-    @Nullable RapidRobot getRobot();
+    @NotNull CompletableFuture<@Nullable RapidRobot> getRobot();
 
     /**
      * Connects to the specified path with the specified credentials.
@@ -40,22 +49,19 @@ public interface RemoteRobotService extends PersistentStateComponent<RemoteRobot
      * @param path the path to connect to.
      * @param credentials the credentials to authenticate with.
      * @return the connected robot.
-     * @throws IOException if an I/O error occurs.
      */
-    @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException;
+    @NotNull CompletableFuture<@NotNull RapidRobot> connect(@NotNull URI path, @NotNull Credentials credentials);
 
     /**
      * Disconnects the currently persisted robot, and deletes all persisted state associated with it.
-     *
-     * @throws IOException if an I/O error occurs.
      */
-    void disconnect() throws IOException, InterruptedException;
+    CompletableFuture<Void> disconnect();
 
-    @Nullable RobotState getRobotState();
+    @Nullable RapidRobot.State getRobotState();
 
-    void setRobotState(@Nullable RobotState robotState);
+    void setRobotState(@Nullable RapidRobot.State robotState);
 
     class State {
-        public RobotState state;
+        public RapidRobot.State state;
     }
 }

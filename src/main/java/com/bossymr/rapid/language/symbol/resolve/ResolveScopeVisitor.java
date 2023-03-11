@@ -21,6 +21,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public class ResolveScopeVisitor extends RapidElementVisitor {
 
@@ -144,7 +145,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         PhysicalModule physicalModule = PsiTreeUtil.getParentOfType(context, PhysicalModule.class);
         boolean isRemoteFile = isRemoteFile(context);
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot();
+        RapidRobot robot = service.getRobot().getNow(null);
         if (robot != null) {
             for (RapidTask task : robot.getTasks()) {
                 for (PhysicalModule module : task.getModules(context.getProject())) {
@@ -171,7 +172,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         PsiFile containingFile = element.getContainingFile();
         VirtualFile virtualFile = containingFile.getVirtualFile();
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot();
+        RapidRobot robot = service.getRobot().getNow(null);
         if (robot != null && virtualFile != null) {
             for (RapidTask task : robot.getTasks()) {
                 if (task.getFiles().contains(new File(virtualFile.getPath()))) {
@@ -184,10 +185,12 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
 
     private void visitRobot() {
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot();
+        RapidRobot robot = service.getRobot().getNow(null);
         if (robot != null) {
             if (processor.getName() != null) {
-                process(robot.getSymbol(processor.getName()));
+                try {
+                    process(robot.getSymbol(processor.getName()).get());
+                } catch (InterruptedException | ExecutionException ignored) {}
             } else {
                 for (VirtualSymbol symbol : robot.getSymbols()) {
                     process(symbol);
