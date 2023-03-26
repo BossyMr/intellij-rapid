@@ -57,6 +57,8 @@ public interface NetworkClient extends AutoCloseable {
      */
     @NotNull CompletableFuture<Void> unsubscribe(@NotNull SubscriptionEntity entity);
 
+    @NotNull CompletableFuture<Void> closeAsync();
+
     /**
      * Closes this {@code NetworkClient}. All ongoing subscriptions are unsubscribed and all ongoing requests are
      * interrupted.

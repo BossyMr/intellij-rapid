@@ -115,7 +115,6 @@ public class SubscriptionGroup {
         return networkClient.sendAsync(request)
                 .thenComposeAsync(response -> {
                     CollectionModel collectionModel = CollectionModel.convert(response.body());
-                    collectionModel.getModels().forEach(model -> onEntity(entities, model));
                     URI path = URI.create(response.headers().firstValue("Location").orElseThrow());
                     return networkClient.getHttpClient().newWebSocketBuilder()
                             .subprotocols("robapi2_subscription")

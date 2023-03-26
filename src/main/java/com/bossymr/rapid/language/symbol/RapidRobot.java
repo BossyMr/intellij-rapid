@@ -10,13 +10,13 @@ import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.impl.RapidTaskImpl;
-import com.bossymr.rapid.robot.impl.RobotDelegatingNetworkEngine;
+import com.bossymr.rapid.robot.impl.RobotNetworkEngine;
 import com.bossymr.rapid.robot.impl.SymbolConverter;
 import com.bossymr.rapid.robot.network.ControllerService;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
-import com.bossymr.rapid.robot.network.robotware.mastership.CloseableMastership;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipDomain;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipService;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipStatus;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
@@ -51,6 +51,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Semaphore;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -60,7 +61,7 @@ public class RapidRobot {
     @Topic.AppLevel
     public static final Topic<StateListener> STATE_TOPIC = Topic.create("Robot State", StateListener.class);
     private static final Logger logger = Logger.getInstance(RapidRobot.class);
-
+    private static final @NotNull Map<NetworkEngine, Semaphore> semaphores = new WeakHashMap<>();
     private @NotNull State state = new State();
     private @Nullable NetworkEngine engine;
     private @NotNull Set<RapidTask> tasks;
@@ -100,7 +101,7 @@ public class RapidRobot {
     public static @NotNull CompletableFuture<@NotNull RapidRobot> connect(@NotNull URI path, @NotNull Credentials credentials) {
         setCredentials(path, credentials);
         NetworkEngine engine = new NetworkEngine(path, () -> credentials);
-        DelegatingNetworkEngine delegating = new RobotDelegatingNetworkEngine(engine);
+        DelegatingNetworkEngine delegating = new RobotNetworkEngine(engine);
         return getState(path, delegating)
                 .thenComposeAsync(state -> {
                     RapidRobot robot = new RapidRobot(delegating, state);
@@ -191,6 +192,93 @@ public class RapidRobot {
     private static void setCredentials(@NotNull URI path, @NotNull Credentials credentials) {
         CredentialAttributes credentialsAttributes = createCredentialsAttributes(path);
         PasswordSafe.getInstance().set(credentialsAttributes, new com.intellij.credentialStore.Credentials(credentials.username(), credentials.password()));
+    }
+
+    /**
+     * Runs the specified {@link CompletableFuture} with the specified mastership.
+     *
+     * @param engine the engine.
+     * @param mastership the mastership type.
+     * @param supplier the action to perform with mastership.
+     * @param <T> the return type of the action.
+     * @return the {@code CompletableFuture}.
+     * @throws IllegalStateException if this robot is not {@link #isConnected() connected}.
+     */
+    public static <T> @NotNull CompletableFuture<T> withMastership(@NotNull NetworkEngine engine, @NotNull Mastership mastership, @NotNull Supplier<CompletableFuture<T>> supplier) throws IllegalStateException {
+        MastershipService mastershipService = engine.createService(MastershipService.class);
+        MastershipType mastershipType = switch (mastership) {
+            case MOTION -> MastershipType.MOTION;
+            case CONFIGURATION -> MastershipType.CONFIGURATION;
+            case RAPID -> MastershipType.RAPID;
+        };
+        CompletableFuture<T> completableFuture = new CompletableFuture<>();
+        CompletableFuture.runAsync(() -> {
+            semaphores.computeIfAbsent(engine, key -> new Semaphore(1));
+            Semaphore semaphore = semaphores.get(engine);
+            logger.debug("NetworkEngine '" + engine.hashCode() + "' has semaphore '" + semaphores.get(engine) + "'");
+            try {
+                semaphore.acquire();
+            } catch (InterruptedException e) {
+                completableFuture.cancel(false);
+            }
+            mastershipService.getDomain(mastershipType).sendAsync()
+                    .thenComposeAsync(domain -> {
+                        logger.debug("Current mastership is '" + domain + "'");
+                        if (Boolean.TRUE.equals(domain.isHolding())) {
+                            logger.debug("Mastership already held");
+                            CompletableFuture<T> request = supplier.get();
+                            if (semaphore.getQueueLength() > 0) {
+                                return request;
+                            }
+                            return request.thenCompose(result -> domain.release().sendAsync().thenApplyAsync(unused -> result));
+                        } else if (domain.getStatus() != MastershipStatus.NO_MASTER) {
+                            logger.debug("Mastership held by other party");
+                        }
+                        logger.debug("Requesting mastership");
+                        return withMastership(semaphore, domain, supplier);
+                    }).handleAsync((response, throwable) -> {
+                        semaphore.release();
+                        if (throwable != null) {
+                            completableFuture.completeExceptionally(throwable);
+                        } else {
+                            completableFuture.complete(response);
+                        }
+                        return null;
+                    });
+        }).exceptionally(throwable -> {
+            completableFuture.completeExceptionally(throwable);
+            return null;
+        });
+        return completableFuture;
+    }
+
+    private static <T> @NotNull CompletableFuture<T> withMastership(@NotNull Semaphore semaphore, @NotNull MastershipDomain domain, @NotNull Supplier<CompletableFuture<T>> supplier) {
+        return domain.request().sendAsync()
+                .thenComposeAsync(unused -> {
+                    CompletableFuture<T> completableFuture = new CompletableFuture<>();
+                    supplier.get()
+                            .handleAsync((response, throwable) -> {
+                                if (semaphore.getQueueLength() > 0) {
+                                    if (throwable != null) {
+                                        completableFuture.completeExceptionally(throwable);
+                                    } else {
+                                        completableFuture.complete(response);
+                                    }
+                                    return null;
+                                }
+                                domain.release().sendAsync()
+                                        .handleAsync((unused1, throwable1) -> {
+                                            if (throwable != null || throwable1 != null) {
+                                                completableFuture.completeExceptionally(throwable);
+                                            } else {
+                                                completableFuture.complete(response);
+                                            }
+                                            return null;
+                                        });
+                                return null;
+                            });
+                    return completableFuture;
+                });
     }
 
     public @NotNull State getState() {
@@ -304,10 +392,11 @@ public class RapidRobot {
         for (File child : files) {
             FileUtil.delete(child);
         }
-        VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file);
+        VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByIoFile(file);
         if (virtualFile == null) {
             throw new IOException("Failed to find directory '" + file + "'");
         }
+        virtualFile.refresh(false, true);
         return virtualFile;
     }
 
@@ -345,14 +434,21 @@ public class RapidRobot {
                                     List<CompletableFuture<Void>> moduleEntities = new ArrayList<>();
                                     for (ModuleInfo moduleInfo : moduleInfos) {
                                         moduleEntities.add(moduleInfo.getModule().sendAsync()
-                                                .thenComposeAsync(module -> module.save(module.getName(), temporaryTask.toPath().toString()).sendAsync()
+                                                .thenComposeAsync(module -> withMastership(engine, Mastership.RAPID, () -> module.save(module.getName(), temporaryTask.toPath().toString()).sendAsync())
                                                         .thenRunAsync(() -> {
                                                             File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
                                                             local.getFiles().add(result);
                                                         })));
                                     }
                                     return CompletableFuture.allOf(moduleEntities.toArray(CompletableFuture[]::new));
-                                }).thenRunAsync(() -> updated.add(local)));
+                                }).thenComposeAsync(unused -> {
+                                    CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+                                    LocalFileSystem.getInstance().refreshIoFiles(local.getFiles(), true, true, () -> {
+                                        updated.add(local);
+                                        completableFuture.complete(null);
+                                    });
+                                    return completableFuture;
+                                }));
                     }
                     return CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
                 }).thenRunAsync(() -> {
@@ -364,6 +460,8 @@ public class RapidRobot {
                             }
                             temporaryDirectory.copy(this, finalDirectory, "robot");
                         });
+                        finalDirectory.refresh(false, true);
+                        RobotEventListener.publish().onDownload(this);
                         this.tasks = updated;
                     } catch (IOException e) {
                         throw new IllegalStateException(e);
@@ -373,9 +471,6 @@ public class RapidRobot {
                         WriteAction.runAndWait(() -> temporaryDirectory.delete(this));
                     } catch (IOException e) {
                         logger.error(e);
-                    }
-                    if (throwable != null) {
-                        logger.error(throwable);
                     }
                     return null;
                 });
@@ -429,66 +524,14 @@ public class RapidRobot {
                                     throw new CompletionException(e);
                                 }
                             });
-                            return engine.createService(MastershipService.class).getDomain(MastershipType.RAPID).sendAsync()
-                                    .thenComposeAsync(domain -> CloseableMastership.requestAsync(domain, () -> program.load(file.getPath(), LoadProgramMode.REPLACE).sendAsync()));
+                            return withMastership(engine, Mastership.RAPID, () -> program.load(file.getPath(), LoadProgramMode.REPLACE).sendAsync());
                         }).handleAsync((ignored, throwable) -> {
-                            WriteAction.runAndWait(() -> FileUtil.delete(temporaryDirectory.toNioPath().toFile()));
-                            if (throwable != null) {
-                                logger.error(throwable);
+                            if (throwable == null) {
+                                RobotEventListener.publish().onUpload(this);
                             }
+                            WriteAction.runAndWait(() -> FileUtil.delete(temporaryDirectory.toNioPath().toFile()));
                             return null;
                         }));
-    }
-
-    /**
-     * Runs the specified {@link CompletableFuture} with the specified mastership.
-     *
-     * @param mastership the mastership type.
-     * @param supplier the action to perform with mastership.
-     * @param <T> the return type of the action.
-     * @return the {@code CompletableFuture}.
-     * @throws IllegalStateException if this robot is not {@link #isConnected() connected}.
-     */
-    public <T> @NotNull CompletableFuture<T> withMastership(@NotNull Mastership mastership, @NotNull Supplier<CompletableFuture<T>> supplier) throws IllegalStateException {
-        NetworkEngine engine = getNetworkEngine();
-        if (engine == null) {
-            throw new IllegalStateException("Robot is not connected");
-        }
-        MastershipService mastershipService = engine.createService(MastershipService.class);
-        MastershipType mastershipType = switch (mastership) {
-            case MOTION -> MastershipType.MOTION;
-            case CONFIGURATION -> MastershipType.CONFIGURATION;
-            case RAPID -> MastershipType.RAPID;
-        };
-        return mastershipService.getDomain(mastershipType).sendAsync()
-                .thenComposeAsync(domain -> {
-                    if (domain.isHolding()) {
-                        return supplier.get();
-                    } else {
-                        return withMastership(domain, supplier);
-                    }
-                });
-    }
-
-    private <T> @NotNull CompletableFuture<T> withMastership(@NotNull MastershipDomain domain, @NotNull Supplier<CompletableFuture<T>> supplier) {
-        return domain.request().sendAsync()
-                .thenComposeAsync(unused -> {
-                    CompletableFuture<T> completableFuture = new CompletableFuture<>();
-                    supplier.get()
-                            .handleAsync((response, throwable) -> {
-                                domain.release().sendAsync()
-                                        .handleAsync((unused1, throwable1) -> {
-                                            if (throwable != null || throwable1 != null) {
-                                                completableFuture.completeExceptionally(throwable);
-                                            } else {
-                                                completableFuture.complete(response);
-                                            }
-                                            return null;
-                                        });
-                                return null;
-                            });
-                    return completableFuture;
-                });
     }
 
     public @NotNull CompletableFuture<@NotNull NetworkEngine> reconnect() throws IllegalStateException {
@@ -508,7 +551,7 @@ public class RapidRobot {
 
     private @NotNull CompletableFuture<@NotNull NetworkEngine> reconnect(@NotNull URI path, @NotNull Credentials credentials) throws IllegalArgumentException {
         NetworkEngine engine = new NetworkEngine(path, () -> credentials);
-        DelegatingNetworkEngine delegating = new RobotDelegatingNetworkEngine(engine);
+        DelegatingNetworkEngine delegating = new RobotNetworkEngine(engine);
         return getState(path, delegating)
                 .thenApplyAsync(state -> {
                     Objects.requireNonNull(state.symbols);
@@ -567,7 +610,7 @@ public class RapidRobot {
     }
 
     /**
-     * Represents the type of mastership which can be requested with {@link #withMastership(Mastership, Supplier)}.
+     * Represents the type of mastership.
      */
     public enum Mastership {
         RAPID,
@@ -604,7 +647,7 @@ public class RapidRobot {
         /**
          * Unfortunately, all symbols cannot be automatically retrieved. As such, each queried symbol which has not
          * already been persisted is queried manually. To avoid duplicate queries, if a symbol is not found it is added
-         * a cache, and should not be queryed again.
+         * a cache, and should not be queried again.
          */
         public @Nullable Set<String> cache;
 

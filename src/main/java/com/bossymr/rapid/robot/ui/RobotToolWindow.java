@@ -105,6 +105,11 @@ public class RobotToolWindow implements Disposable {
             public void onSymbol(@NotNull RapidRobot robot, @NotNull VirtualSymbol symbol) {
                 model.invalidateAsync();
             }
+
+            @Override
+            public void onDownload(@NotNull RapidRobot robot) {
+                model.invalidateAsync();
+            }
         });
     }
 

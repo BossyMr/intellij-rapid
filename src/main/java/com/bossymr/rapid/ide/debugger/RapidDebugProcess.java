@@ -1,17 +1,15 @@
 package com.bossymr.rapid.ide.debugger;
 
-import com.bossymr.network.NetworkCall;
 import com.bossymr.network.SubscriptionPriority;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.ide.debugger.breakpoints.RapidLineBreakpointHandler;
 import com.bossymr.rapid.ide.debugger.frame.RapidSuspendContext;
+import com.bossymr.rapid.ide.execution.RapidProcessHandler;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.language.symbol.RapidRobot.Mastership;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.RemoteRobotService;
-import com.bossymr.rapid.robot.network.robotware.mastership.CloseableMastership;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipService;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
@@ -22,6 +20,7 @@ import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.QueryMode;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ReplaceMode;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Breakpoint;
+import com.intellij.execution.process.ProcessHandler;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
@@ -46,7 +45,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Phaser;
-import java.util.concurrent.atomic.AtomicBoolean;
+
+import static com.bossymr.rapid.language.symbol.RapidRobot.withMastership;
 
 public class RapidDebugProcess extends XDebugProcess {
     public static final @NotNull Key<CompletableFuture<Breakpoint>> BREAKPOINT_KEY = Key.create("RapidBreakpointKey");
@@ -75,67 +75,63 @@ public class RapidDebugProcess extends XDebugProcess {
     private final @NotNull Set<XBreakpoint<?>> breakpoints = new HashSet<>();
     private final @NotNull List<TaskState> tasks;
 
-
-    private final @NotNull NetworkEngine networkEngine;
-
+    private final @NotNull NetworkEngine engine;
+    private final @NotNull RapidProcessHandler processHandler;
 
     public RapidDebugProcess(@NotNull Project project,
                              @NotNull XDebugSession session,
                              @NotNull List<TaskState> tasks,
-                             @NotNull NetworkEngine networkEngine) {
+                             @NotNull NetworkEngine engine) {
         super(session);
         this.project = project;
         this.tasks = tasks;
-        this.networkEngine = networkEngine;
+        this.processHandler = new RapidProcessHandler(engine);
+        this.engine = processHandler.getNetworkEngine().join();
     }
 
     private @NotNull ExecutionService getExecutionService() {
-        return networkEngine.createService(ExecutionService.class);
+        return engine.createService(ExecutionService.class);
+    }
+
+    @Override
+    protected @NotNull ProcessHandler doGetProcessHandler() {
+        return processHandler;
     }
 
     @Override
     public void sessionInitialized() {
         ExecutionService executionService = getExecutionService();
-        AtomicBoolean isStarted = new AtomicBoolean();
         executionService.resetProgramPointer().sendAsync()
-                .thenComposeAsync(result -> executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+                .thenComposeAsync(unused -> startAsync(ExecutionMode.CONTINUE))
+                .thenComposeAsync(unused -> executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
                     switch (event.getState()) {
-                        case RUNNING -> {
-                            isStarted.set(true);
-                            logger.debug("Process resumed");
-                            getSession().sessionResumed();
-                        }
+                        case RUNNING -> getSession().sessionResumed();
                         case STOPPED -> {
-                            if (!(isStarted.get())) {
-                                logger.trace("Process not started");
-                                return;
-                            }
-                            // Don't resume the program until after all calculations are complete.
                             phaser.register();
-                            TaskService taskService = networkEngine.createService(TaskService.class);
-                            taskService.getTasks().sendAsync().thenAcceptAsync(tasks -> {
-                                for (Task task : tasks) {
-                                    if (task.getActivityState() == TaskActiveState.DISABLED) continue;
-                                    task.getStackFrame(1).sendAsync().thenCombineAsync(task.getStackFrame(2).sendAsync(), (stackFrame, nextStackFrame) -> {
-                                        onProgramStop(task, stackFrame, nextStackFrame);
-                                        return null;
-                                    }).handleAsync((value, throwable) -> {
+                            engine.createService(TaskService.class).getTasks().sendAsync()
+                                    .thenComposeAsync(tasks -> CompletableFuture.allOf(tasks.stream()
+                                            .map(task -> {
+                                                if (task.getActivityState() == TaskActiveState.DISABLED) {
+                                                    return CompletableFuture.completedFuture(null);
+                                                }
+                                                return task.getStackFrame(1).sendAsync().thenCombineAsync(task.getStackFrame(2).sendAsync(), (stack, next) -> {
+                                                    onProgramStop(task, stack, next);
+                                                    return null;
+                                                });
+                                            }).toList().toArray(CompletableFuture[]::new)))
+                                    .thenRunAsync(phaser::arriveAndDeregister)
+                                    .exceptionally(throwable -> {
                                         phaser.arriveAndDeregister();
-                                        if (throwable != null) {
-                                            logger.error(throwable);
-                                        }
                                         return null;
                                     });
-                                }
-                            });
                         }
                     }
-                })).thenComposeAsync(ignored -> startAsync(ExecutionMode.CONTINUE));
+                }));
     }
 
     private void onProgramStop(@NotNull Task task, @NotNull StackFrame stackFrame, @NotNull StackFrame nextStackFrame) {
         logger.debug("Process paused at '" + stackFrame + "' invoked by '" + nextStackFrame + "'");
-        RapidSuspendContext suspendContext = new RapidSuspendContext(project, breakpoints, networkEngine, task, stackFrame);
+        RapidSuspendContext suspendContext = new RapidSuspendContext(project, breakpoints, engine, task, stackFrame);
         for (XBreakpoint<?> breakpoint : breakpoints) {
             if (isAtBreakpoint(stackFrame, breakpoint)) {
                 logger.debug("Breakpoint '" + breakpoint + "' reached");
@@ -146,7 +142,7 @@ public class RapidDebugProcess extends XDebugProcess {
         if (hasStopped(stackFrame) || hasStopped(nextStackFrame)) {
             logger.debug("Process stopped");
             getSession().stop();
-            networkEngine.closeAsync();
+            engine.closeAsync();
         } else {
             logger.debug("Process paused");
             getSession().positionReached(suspendContext);
@@ -167,21 +163,21 @@ public class RapidDebugProcess extends XDebugProcess {
     }
 
     private @NotNull CompletableFuture<Void> startAsync(@NotNull ExecutionMode executionMode) {
-        MastershipService mastershipService = networkEngine.createService(MastershipService.class);
-        return CompletableFuture.runAsync(() -> {
-            int parties = phaser.getUnarrivedParties();
-            if (parties > 0) {
-                logger.debug("Awaiting '" + parties + "' to start process");
-            }
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        CompletableFuture.runAsync(() -> {
             phaser.register();
             phaser.awaitAdvance(phaser.arriveAndDeregister());
-            logger.debug("Starting process with mode: " + executionMode);
-            mastershipService.getDomain(MastershipType.RAPID).sendAsync()
-                    .thenComposeAsync(domain -> {
-                        NetworkCall<Void> networkCall = getExecutionService().start(RegainMode.REGAIN, executionMode, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.ENABLED, TaskExecutionMode.NORMAL);
-                        return CloseableMastership.requestAsync(domain, networkCall::sendAsync);
+            withMastership(engine, Mastership.RAPID, () -> getExecutionService().start(RegainMode.REGAIN, executionMode, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.ENABLED, TaskExecutionMode.NORMAL).sendAsync())
+                    .thenRunAsync(() -> completableFuture.complete(null))
+                    .exceptionally(throwable -> {
+                        completableFuture.completeExceptionally(throwable);
+                        return null;
                     });
+        }).exceptionally(throwable -> {
+            completableFuture.completeExceptionally(throwable);
+            return null;
         });
+        return completableFuture;
     }
 
     private @NotNull CompletableFuture<Void> stopAsync(@NotNull StopMode stopMode) {
@@ -197,7 +193,7 @@ public class RapidDebugProcess extends XDebugProcess {
      * @return the asynchronous request.
      */
     public @NotNull CompletableFuture<Breakpoint> registerBreakpoint(@NotNull String taskName, @NotNull String moduleName, int line) {
-        TaskService taskService = networkEngine.createService(TaskService.class);
+        TaskService taskService = engine.createService(TaskService.class);
         return taskService.getTask(taskName).sendAsync()
                 .thenComposeAsync(task -> task.getProgram().sendAsync())
                 .thenComposeAsync(program -> program.setBreakpoint(moduleName, line + 1, 0).sendAsync()
@@ -253,7 +249,7 @@ public class RapidDebugProcess extends XDebugProcess {
             if (event.getState() == ExecutionState.STOPPED) {
                 phaser.register();
                 String taskName = breakpoint.getLink("self").getPath().substring(1).split("/")[3];
-                TaskService taskService = networkEngine.createService(TaskService.class);
+                TaskService taskService = engine.createService(TaskService.class);
                 taskService.getTask(taskName).sendAsync().thenComposeAsync(task -> task.getStackFrame(1).sendAsync().thenComposeAsync(stackFrame -> {
                     if (!stackFrame.toTextRange().equals(breakpoint.toTextRange())) {
                         logger.debug("Removing breakpoint '" + breakpoint + "'");
@@ -261,13 +257,9 @@ public class RapidDebugProcess extends XDebugProcess {
                                 .thenComposeAsync(unused -> findModule(taskName, breakpoint.getModuleName()))
                                 .thenComposeAsync(module -> {
                                     if (module == null) return CompletableFuture.completedFuture(null);
-                                    MastershipService mastershipService = networkEngine.createService(MastershipService.class);
                                     return module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).sendAsync()
-                                            .thenComposeAsync(moduleText -> mastershipService.getDomain(MastershipType.RAPID).sendAsync()
-                                                    .thenComposeAsync(domain -> {
-                                                        NetworkCall<Void> networkCall = module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.FORCE, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText());
-                                                        return CloseableMastership.requestAsync(domain, networkCall::sendAsync);
-                                                    }));
+                                            .thenComposeAsync(moduleText -> withMastership(engine, Mastership.RAPID,
+                                                    () -> module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.FORCE, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).sendAsync()));
                                 });
                     } else {
                         logger.debug("Could not remove breakpoint '" + breakpoint + "' at '" + stackFrame + "'");
@@ -283,7 +275,7 @@ public class RapidDebugProcess extends XDebugProcess {
     }
 
     private @NotNull CompletableFuture<ModuleEntity> findModule(@NotNull String taskName, @NotNull String moduleName) {
-        TaskService taskService = networkEngine.createService(TaskService.class);
+        TaskService taskService = engine.createService(TaskService.class);
         return taskService.getTask(taskName).sendAsync().thenComposeAsync(task -> task.getModules().sendAsync()
                 .thenComposeAsync(moduleInfos -> {
                     for (ModuleInfo moduleInfo : moduleInfos) {
@@ -391,7 +383,7 @@ public class RapidDebugProcess extends XDebugProcess {
         AsyncPromise<Object> promise = new AsyncPromise<>();
         stopAsync(StopMode.STOP)
                 .handleAsync((response, throwable) -> {
-                    networkEngine.closeAsync();
+                    engine.closeAsync();
                     if (throwable != null) {
                         promise.setError(throwable);
                     } else {

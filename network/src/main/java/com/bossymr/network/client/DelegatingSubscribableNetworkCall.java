@@ -1,9 +1,6 @@
 package com.bossymr.network.client;
 
-import com.bossymr.network.SubscribableNetworkCall;
-import com.bossymr.network.SubscriptionEntity;
-import com.bossymr.network.SubscriptionListener;
-import com.bossymr.network.SubscriptionPriority;
+import com.bossymr.network.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -13,9 +10,9 @@ public abstract class DelegatingSubscribableNetworkCall<T> extends CloseableSubs
 
     private final @NotNull SubscribableNetworkCall<T> networkCall;
 
-    public DelegatingSubscribableNetworkCall(@NotNull NetworkEngine networkEngine, @NotNull SubscribableEvent<T> event) {
-        super(networkEngine);
-        this.networkCall = networkEngine.createSubscribableNetworkCall(networkEngine, event);
+    public DelegatingSubscribableNetworkCall(@NotNull NetworkEngine engine, @NotNull SubscribableNetworkCall<T> networkCall) {
+        super(engine);
+        this.networkCall = networkCall;
     }
 
     protected abstract void onFailure(@NotNull Throwable throwable);

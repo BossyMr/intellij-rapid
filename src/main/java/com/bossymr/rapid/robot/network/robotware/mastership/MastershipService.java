@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network.robotware.mastership;
 
 import com.bossymr.network.NetworkCall;
+import com.bossymr.network.ServiceModel;
 import com.bossymr.network.SubscribableNetworkCall;
 import com.bossymr.network.annotations.*;
 import com.bossymr.rapid.robot.network.ManualModePrivilegeService;
@@ -10,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
  * A {@code Service} used to handle mastership.
  */
 @Service("/rw/mastership")
-public interface MastershipService {
+public interface MastershipService extends ServiceModel {
 
     /**
      * Requests mastership for all mastership domains.

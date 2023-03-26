@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
 import com.bossymr.network.NetworkCall;
+import com.bossymr.network.ServiceModel;
 import com.bossymr.network.SubscribableNetworkCall;
 import com.bossymr.network.annotations.*;
 import com.bossymr.rapid.robot.network.Grant;
@@ -13,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
  * A {@code Service} used to execute a task.
  */
 @Service("/rw/rapid/execution")
-public interface ExecutionService {
+public interface ExecutionService extends ServiceModel {
 
     /**
      * Returns the current execution state.

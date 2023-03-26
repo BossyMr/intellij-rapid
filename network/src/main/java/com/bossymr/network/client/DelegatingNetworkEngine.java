@@ -2,12 +2,14 @@ package com.bossymr.network.client;
 
 import com.bossymr.network.NetworkCall;
 import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.SubscriptionEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.http.HttpRequest;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A {@code NetworkAction} is a {@link NetworkEngine} which delegates requests to an underlying {@link NetworkEngine}.
@@ -78,8 +80,22 @@ public class DelegatingNetworkEngine extends NetworkEngine {
     }
 
     @Override
+    public void close() throws IOException, InterruptedException {
+        for (SubscriptionEntity subscription : subscriptions) {
+            subscription.unsubscribe();
+        }
+    }
+
+    @Override
+    public @NotNull CompletableFuture<Void> closeAsync() {
+        return CompletableFuture.allOf(subscriptions.stream()
+                .map(SubscriptionEntity::unsubscribe)
+                .toList().toArray(CompletableFuture[]::new));
+    }
+
+    @Override
     protected @NotNull <T> SubscribableNetworkCall<T> createSubscribableNetworkCall(@NotNull NetworkEngine engine, @NotNull SubscribableEvent<T> event) {
-        return new DelegatingSubscribableNetworkCall<>(engine, event) {
+        return new DelegatingSubscribableNetworkCall<>(engine, DelegatingNetworkEngine.this.engine.createSubscribableNetworkCall(engine, event)) {
             @Override
             protected void onFailure(@NotNull Throwable throwable) {
                 DelegatingNetworkEngine.this.onFailure(throwable);

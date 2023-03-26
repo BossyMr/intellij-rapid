@@ -13,6 +13,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -130,7 +131,7 @@ public class IntermediateConverter {
 
     private @NotNull Document parse(byte @NotNull [] body) {
         try {
-            return builder.parse(new ByteArrayInputStream(body));
+            return builder.parse(new ByteArrayInputStream(new String(body, StandardCharsets.ISO_8859_1).getBytes(StandardCharsets.UTF_8)));
         } catch (SAXException | IOException e) {
             throw new RuntimeException(new String(body), e);
         }

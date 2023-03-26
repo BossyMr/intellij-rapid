@@ -6,6 +6,7 @@ import com.bossymr.network.client.DelegatingNetworkEngine;
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.network.RobotService;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
@@ -25,12 +26,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
+public class RobotNetworkEngine extends DelegatingNetworkEngine {
 
     private final Map<String, Runnable> onClose = new HashMap<>();
     private volatile boolean showNotifications = true;
 
-    public RobotDelegatingNetworkEngine(@NotNull NetworkEngine engine) {
+    public RobotNetworkEngine(@NotNull NetworkEngine engine) {
         super(engine);
     }
 
@@ -53,6 +54,8 @@ public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
             }
         }
     }
+
+
 
     @Override
     protected void onFailure(@NotNull NetworkCall<?> request, @NotNull Throwable throwable) {
@@ -79,6 +82,7 @@ public class RobotDelegatingNetworkEngine extends DelegatingNetworkEngine {
 
     @Override
     public void close() throws IOException, InterruptedException {
+        createService(RobotService.class).logout().send();
         onClose.values().forEach(Runnable::run);
         super.close();
     }

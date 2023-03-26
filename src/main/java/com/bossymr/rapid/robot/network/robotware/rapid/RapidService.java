@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network.robotware.rapid;
 
 import com.bossymr.network.NetworkCall;
+import com.bossymr.network.ServiceModel;
 import com.bossymr.network.annotations.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
@@ -15,7 +16,7 @@ import java.util.Map;
  * A {@code Service} used to communicate with the {@code RAPID} section of a robot.
  */
 @Service("/rw/rapid")
-public interface RapidService {
+public interface RapidService extends ServiceModel {
 
     /**
      * Returns the execution service.

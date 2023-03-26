@@ -1,6 +1,7 @@
 package com.bossymr.network.client;
 
 import com.bossymr.network.NetworkCall;
+import com.bossymr.network.ServiceModel;
 import com.bossymr.network.SubscribableNetworkCall;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.annotations.Entity;
@@ -19,6 +20,7 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,8 +39,9 @@ import java.util.function.Supplier;
  */
 public class NetworkEngine implements AutoCloseable {
 
-    private final @NotNull Set<CompletableFuture<?>> requests = ConcurrentHashMap.newKeySet();
-    private final @NotNull Set<SubscriptionEntity> subscriptions = ConcurrentHashMap.newKeySet();
+    protected final @NotNull Set<CompletableFuture<?>> requests = ConcurrentHashMap.newKeySet();
+    protected final @NotNull Set<SubscriptionEntity> subscriptions = ConcurrentHashMap.newKeySet();
+    private final @NotNull WeakHashMap<Class<? extends ServiceModel>, ServiceModel> services = new WeakHashMap<>();
 
     private final @NotNull NetworkClient client;
     private final @NotNull EntityFactory entityFactory;
@@ -118,9 +121,13 @@ public class NetworkEngine implements AutoCloseable {
      * @throws IllegalArgumentException if the type is not annotated with {@link Service}.
      */
     @SuppressWarnings("unchecked")
-    public <T> @NotNull T createService(@NotNull Class<T> serviceType) {
-        // TODO: 2023-03-05 Cache services
-        return (T) Proxy.newProxyInstance(serviceType.getClassLoader(), new Class[]{serviceType}, new ServiceInvocationHandler(getNetworkEngine()));
+    public <T extends ServiceModel> @NotNull T createService(@NotNull Class<T> serviceType) {
+        if (services.containsKey(serviceType)) {
+            return (T) services.get(serviceType);
+        }
+        T service = (T) Proxy.newProxyInstance(serviceType.getClassLoader(), new Class[]{serviceType}, new ServiceInvocationHandler(getNetworkEngine()));
+        services.put(serviceType, service);
+        return service;
     }
 
     /**
@@ -176,6 +183,7 @@ public class NetworkEngine implements AutoCloseable {
      */
     @Override
     public void close() throws IOException, InterruptedException {
+        getNetworkClient().close();
         for (SubscriptionEntity subscription : subscriptions) {
             subscription.unsubscribe();
         }
@@ -183,7 +191,8 @@ public class NetworkEngine implements AutoCloseable {
 
     public @NotNull CompletableFuture<Void> closeAsync() {
         return CompletableFuture.allOf(subscriptions.stream()
-                .map(SubscriptionEntity::unsubscribe)
-                .toList().toArray(CompletableFuture[]::new));
+                        .map(SubscriptionEntity::unsubscribe)
+                        .toList().toArray(CompletableFuture[]::new))
+                .thenRunAsync(() -> getNetworkClient().closeAsync());
     }
 }

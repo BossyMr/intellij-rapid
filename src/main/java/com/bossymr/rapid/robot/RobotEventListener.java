@@ -51,4 +51,8 @@ public interface RobotEventListener extends EventListener {
      * @param robot the robot.
      */
     default void onRefresh(@NotNull RapidRobot robot, @NotNull NetworkEngine engine) {}
+
+    default void onDownload(@NotNull RapidRobot robot) {}
+
+    default void onUpload(@NotNull RapidRobot robot) {}
 }

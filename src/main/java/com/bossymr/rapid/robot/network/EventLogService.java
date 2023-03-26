@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network;
 
 import com.bossymr.network.NetworkCall;
+import com.bossymr.network.ServiceModel;
 import com.bossymr.network.annotations.Argument;
 import com.bossymr.network.annotations.GET;
 import com.bossymr.network.annotations.POST;
@@ -14,7 +15,7 @@ import java.util.List;
  * A service used to fetch the robots event log.
  */
 @Service("/rw/elog")
-public interface EventLogService {
+public interface EventLogService extends ServiceModel {
 
     /**
      * Returns all categories in this event log.

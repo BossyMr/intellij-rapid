@@ -1,9 +1,6 @@
 package com.bossymr.network.client;
 
-import com.bossymr.network.EntityModel;
-import com.bossymr.network.MultiMap;
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.*;
 import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,9 +23,15 @@ public class RequestFactory {
         this.engine = engine;
     }
 
+    @SuppressWarnings("unchecked")
     public @NotNull Object createQuery(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (method.getReturnType().isAnnotationPresent(Service.class)) {
-            return engine.createService(method.getReturnType());
+            Class<?> returnType = method.getReturnType();
+            if(ServiceModel.class.isAssignableFrom(returnType)) {
+                return engine.createService(((Class<? extends ServiceModel>) returnType));
+            } else {
+                throw new IllegalArgumentException();
+            }
         }
         Class<?> type = proxy.getClass().getInterfaces()[0];
         Service service = type.getAnnotation(Service.class);

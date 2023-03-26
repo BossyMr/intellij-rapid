@@ -54,7 +54,7 @@ public interface MastershipDomain extends EntityModel {
      * @return if the master is currently being held by this user.
      */
     @Property("mastershipheldbyme")
-    boolean isHolding();
+    @Nullable Boolean isHolding();
 
     /**
      * Returns the current mastership status.

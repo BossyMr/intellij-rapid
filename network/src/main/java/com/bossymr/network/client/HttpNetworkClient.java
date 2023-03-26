@@ -1,9 +1,6 @@
 package com.bossymr.network.client;
 
-import com.bossymr.network.ResponseStatusException;
-import com.bossymr.network.SubscriptionEntity;
-import com.bossymr.network.SubscriptionListener;
-import com.bossymr.network.SubscriptionPriority;
+import com.bossymr.network.*;
 import com.bossymr.network.client.security.Authenticator;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.network.client.security.impl.DigestAuthenticator;
@@ -17,10 +14,12 @@ import java.io.IOException;
 import java.net.CookieManager;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Objects;
-import java.util.Set;
+import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 
@@ -32,15 +31,15 @@ public class HttpNetworkClient implements NetworkClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpNetworkClient.class);
 
-    private final int MAX_CONNECTIONS = 2;
+    private final int MAX_CONNECTIONS = 1;
     private final Semaphore semaphore = new Semaphore(MAX_CONNECTIONS);
 
     private final @NotNull Authenticator authenticator;
     private final @NotNull ExecutorService executorService;
-    private final URI defaultPath;
+    private final @NotNull URI defaultPath;
 
-    private @NotNull HttpClient httpClient;
-    private @NotNull SubscriptionGroup subscriptionGroup;
+    private final @NotNull SubscriptionGroup subscriptionGroup;
+    private final @NotNull HttpClient httpClient;
 
     /**
      * Creates a new {@code HttpNetworkClient} with the specified default path and credentials.
@@ -68,20 +67,6 @@ public class HttpNetworkClient implements NetworkClient {
         }
     }
 
-    private void build() {
-        this.httpClient = HttpClient.newBuilder()
-                .executor(executorService)
-                .version(HttpClient.Version.HTTP_1_1)
-                .cookieHandler(new CookieManager())
-                .build();
-        this.subscriptionGroup.getEntities().clear();
-        this.subscriptionGroup.update();
-        Set<SubscriptionEntity> entities = this.subscriptionGroup.getEntities();
-        this.subscriptionGroup = new SubscriptionGroup(executorService, this);
-        this.subscriptionGroup.getEntities().addAll(entities);
-        this.subscriptionGroup.update();
-    }
-
     public @NotNull RequestBuilder createRequest() {
         return new RequestBuilder(getDefaultPath());
     }
@@ -98,7 +83,7 @@ public class HttpNetworkClient implements NetworkClient {
     @Override
     public @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
         HttpResponse<byte[]> response = retry(request, HttpResponse.BodyHandlers.ofByteArray());
-        logger.atDebug().log("Sending request '{} synchronously with response '{}'", request, response);
+        logger.atDebug().log("Sending request '{}' synchronously with response '{}'", request, response);
         if (response.statusCode() >= 300) {
             throw new ResponseStatusException(response);
         }
@@ -122,11 +107,14 @@ public class HttpNetworkClient implements NetworkClient {
     private <T> @NotNull HttpResponse<T> send(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
         semaphore.acquire();
         try {
-            HttpResponse<T> response = httpClient.send(request, bodyHandler);
+            HttpRequest copy = HttpRequest.newBuilder(request, (key, value) -> true)
+                    .setHeader("Connection", "close")
+                    .build();
+            HttpResponse<T> response = httpClient.send(copy, bodyHandler);
             if (response.statusCode() == 503) {
-                logger.atDebug().log("Rebuilding NetworkClient with response'" + response + "'");
-                build();
-                return httpClient.send(request, bodyHandler);
+                logger.atDebug().log("Retrying request with response'" + response + "'");
+                Thread.sleep(1000);
+                return httpClient.send(copy, bodyHandler);
             }
             return response;
         } finally {
@@ -163,7 +151,14 @@ public class HttpNetworkClient implements NetworkClient {
     }
 
     private <T> @NotNull CompletableFuture<HttpResponse<T>> sendAsync(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) {
-        return new NetworkCompletableFuture<>(request, bodyHandler);
+        HttpRequest copy = HttpRequest.newBuilder(request, (key, value) -> true)
+                .setHeader("Connection", "close")
+                .build();
+        return new NetworkCompletableFuture<>(copy, bodyHandler);
+    }
+
+    private @NotNull HttpRequest createRequest(@NotNull HttpRequest request, @NotNull MultiMap<String, String> requests) {
+
     }
 
     @Override
@@ -172,7 +167,10 @@ public class HttpNetworkClient implements NetworkClient {
         SubscriptionEntity entity = new SubscriptionEntity(this, event, priority, listener);
         subscriptionGroup.getEntities().add(entity);
         return subscriptionGroup.update()
-                .thenApplyAsync(ignored -> entity);
+                .thenApplyAsync(ignored -> {
+                    logger.atDebug().log("Subscribed to {} with priority {}", event.getResource(), priority);
+                    return entity;
+                });
     }
 
     @Override
@@ -181,8 +179,16 @@ public class HttpNetworkClient implements NetworkClient {
         return subscriptionGroup.update();
     }
 
+    public @NotNull CompletableFuture<Void> closeAsync() {
+        logger.atDebug().log("Closing NetworkClient");
+        subscriptionGroup.getEntities().clear();
+        return subscriptionGroup.update()
+                .thenRunAsync(executorService::shutdownNow);
+    }
+
     @Override
     public void close() throws IOException, InterruptedException {
+        logger.atDebug().log("Closing NetworkClient");
         try {
             subscriptionGroup.getEntities().clear();
             subscriptionGroup.update().get();
@@ -217,12 +223,15 @@ public class HttpNetworkClient implements NetworkClient {
                 semaphore.acquire();
                 requestAsync = httpClient.sendAsync(request, bodyHandler)
                         .thenComposeAsync((response) -> {
-                            /*
-                             * If the request fails due to a 503 error (caused by too many connected clients), reconnect and retry.
-                             */
                             if (response.statusCode() == 503) {
-                                logger.atDebug().log("Rebuilding NetworkClient with response'" + response + "'");
-                                build();
+                                logger.atDebug().log("Retrying request with response'" + response + "'");
+                                try {
+                                    Thread.sleep(1000);
+                                } catch (InterruptedException e) {
+                                    CompletableFuture<HttpResponse<T>> completableFuture = new CompletableFuture<>();
+                                    completableFuture.cancel(false);
+                                    return completableFuture;
+                                }
                                 return httpClient.sendAsync(request, bodyHandler);
                             }
                             return CompletableFuture.completedFuture(response);
