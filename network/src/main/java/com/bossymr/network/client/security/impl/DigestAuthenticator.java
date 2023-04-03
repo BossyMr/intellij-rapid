@@ -13,20 +13,16 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.function.Supplier;
 
 public class DigestAuthenticator implements Authenticator {
-    private final Supplier<Credentials> supplier;
     private final String unique;
-
+    private final @NotNull Credentials credentials;
     private boolean isProxy;
-    private @Nullable Credentials credentials;
     private Challenge challenge;
     private int usages = 0;
 
-    public DigestAuthenticator(@NotNull Supplier<Credentials> supplier) {
-        this.supplier = supplier;
-        this.credentials = supplier.get();
+    public DigestAuthenticator(@NotNull Credentials credentials) {
+        this.credentials = credentials;
         this.unique = generate();
     }
 
@@ -70,7 +66,7 @@ public class DigestAuthenticator implements Authenticator {
 
     @Override
     public @Nullable HttpRequest authenticate(@NotNull HttpRequest request) {
-        if (challenge == null || credentials == null) return null;
+        if (challenge == null) return null;
         Charset charset = getCharset();
         String algorithm = challenge.values().getOrDefault("algorithm", "MD5");
         boolean session = algorithm.endsWith("-sess");
@@ -175,7 +171,6 @@ public class DigestAuthenticator implements Authenticator {
 
     private void setChallenge(@NotNull Challenge challenge) {
         this.challenge = challenge;
-        this.credentials = supplier.get();
         this.usages = 0;
     }
 

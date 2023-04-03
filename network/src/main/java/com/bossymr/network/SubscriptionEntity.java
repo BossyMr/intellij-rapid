@@ -1,29 +1,22 @@
 package com.bossymr.network;
 
-import com.bossymr.network.client.NetworkClient;
+import com.bossymr.network.client.EntityModel;
 import com.bossymr.network.client.SubscribableEvent;
-import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
+import java.io.IOException;
 
 /**
  * A {@code SubscriptionEntity} represents an ongoing subscription.
  */
-public class SubscriptionEntity {
+public abstract class SubscriptionEntity {
 
-    private final NetworkClient networkClient;
     private final SubscribableEvent<?> event;
     private final SubscriptionPriority priority;
 
-    private final SubscriptionListener<Model> listener;
-
-    public SubscriptionEntity(@NotNull NetworkClient networkClient, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
-        this.networkClient = networkClient;
+    public SubscriptionEntity(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority) {
         this.event = event;
         this.priority = priority;
-        this.listener = listener;
     }
 
     /**
@@ -45,34 +38,28 @@ public class SubscriptionEntity {
     }
 
     /**
-     * This method is called for each retrieved model.
-     *
-     * @param model the event.
-     */
-    public void onEvent(@NotNull Model model) {
-        listener.onEvent(this, model);
-    }
-
-    /**
      * Unsubscribes from this subscription.
-     *
-     * @return the request.
      */
-    public CompletableFuture<Void> unsubscribe() {
-        return networkClient.unsubscribe(this);
-    }
+    public abstract void unsubscribe() throws IOException, InterruptedException;
+
+    public abstract void event(@NotNull EntityModel model);
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SubscriptionEntity entity = (SubscriptionEntity) o;
-        return Objects.equals(networkClient, entity.networkClient) && Objects.equals(getEvent(), entity.getEvent()) && getPriority() == entity.getPriority() && Objects.equals(listener, entity.listener);
+
+        SubscriptionEntity that = (SubscriptionEntity) o;
+
+        if (!event.equals(that.event)) return false;
+        return priority == that.priority;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(networkClient, getEvent(), getPriority(), listener);
+        int result = event.hashCode();
+        result = 31 * result + priority.hashCode();
+        return result;
     }
 
     @Override

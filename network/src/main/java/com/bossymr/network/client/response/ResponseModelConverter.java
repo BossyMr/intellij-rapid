@@ -1,6 +1,13 @@
-package com.bossymr.network.model;
+package com.bossymr.network.client.response;
 
+import com.bossymr.network.ResponseConverter;
+import com.bossymr.network.ResponseConverterFactory;
+import com.bossymr.network.client.EntityModel;
+import com.bossymr.network.client.GenericType;
+import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.client.ResponseModel;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -13,17 +20,31 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class IntermediateConverter {
+public class ResponseModelConverter implements ResponseConverter<ResponseModel> {
+
+    public static final ResponseConverterFactory FACTORY = new ResponseConverterFactory() {
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> ResponseConverter<T> create(@NotNull NetworkManager manager, @NotNull HttpResponse<?> response, @NotNull GenericType<T> type) {
+            if (type.getRawType().equals(ResponseModel.class)) {
+                Optional<String> optional = response.headers().firstValue("Content-Type");
+                if (optional.isEmpty() || !(optional.orElseThrow().equals("application/xhtml+xml"))) {
+                    return null;
+                }
+                return (ResponseConverter<T>) new ResponseModelConverter();
+            }
+            return null;
+        }
+    };
+
 
     private final DocumentBuilder builder;
 
-    public IntermediateConverter() {
+    public ResponseModelConverter() {
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newDefaultInstance();
         try {
             this.builder = builderFactory.newDocumentBuilder();
@@ -32,12 +53,12 @@ public class IntermediateConverter {
         }
     }
 
-    public @NotNull CollectionModel convert(byte @NotNull [] body) {
-        IntermediateConverter converter = new IntermediateConverter();
-        return converter.getModel(body);
+    @Override
+    public @Nullable ResponseModel convert(@NotNull HttpResponse<byte[]> response) {
+        return convert(response.body());
     }
 
-    private @NotNull CollectionModel getModel(byte @NotNull [] body) {
+    public @NotNull ResponseModel convert(byte @NotNull [] body) {
         Document document = parse(body);
         Element element = document.getDocumentElement();
         String title = findChild(element, "title").getTextContent();
@@ -47,8 +68,8 @@ public class IntermediateConverter {
         URI defaultPath = getDefaultPath(element);
         Map<String, URI> links = getLinks(defaultPath, section);
         Map<String, String> fields = getFields(section);
-        List<Model> models = getModels(defaultPath, element);
-        return new CollectionModel(title, type, fields, links, models);
+        List<EntityModel> models = getModels(defaultPath, element);
+        return new ResponseModel(new EntityModel(title, type, links, fields), models);
     }
 
     private @NotNull Element getSection(@NotNull List<Element> elements) {
@@ -60,15 +81,15 @@ public class IntermediateConverter {
         return elements.get(0);
     }
 
-    private @NotNull List<Model> getModels(@NotNull URI defaultPath, @NotNull Element element) {
+    private @NotNull List<EntityModel> getModels(@NotNull URI defaultPath, @NotNull Element element) {
         List<Element> elements = findChildren(element, "li");
-        List<Model> models = new ArrayList<>();
+        List<EntityModel> models = new ArrayList<>();
         for (Element model : elements) {
             String title = model.getAttribute("title");
             String type = model.getAttribute("class");
             Map<String, URI> links = getLinks(defaultPath, model);
             Map<String, String> fields = getFields(model);
-            models.add(new Model(title, type, fields, links));
+            models.add(new EntityModel(title, type, links, fields));
         }
         return models;
     }

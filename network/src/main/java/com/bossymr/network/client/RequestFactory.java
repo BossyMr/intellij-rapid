@@ -1,6 +1,8 @@
 package com.bossymr.network.client;
 
-import com.bossymr.network.*;
+import com.bossymr.network.MultiMap;
+import com.bossymr.network.NetworkQuery;
+import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,37 +19,26 @@ import java.util.regex.Pattern;
 
 public class RequestFactory {
 
-    private final @NotNull NetworkEngine engine;
+    private final @NotNull NetworkManager manager;
 
-    public RequestFactory(@NotNull NetworkEngine engine) {
-        this.engine = engine;
+    public RequestFactory(@NotNull NetworkManager manager) {
+        this.manager = manager;
     }
 
-    @SuppressWarnings("unchecked")
-    public @NotNull Object createQuery(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
+    public @NotNull Object createQuery(@NotNull Class<?> type, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (method.getReturnType().isAnnotationPresent(Service.class)) {
             Class<?> returnType = method.getReturnType();
-            if(ServiceModel.class.isAssignableFrom(returnType)) {
-                return engine.createService(((Class<? extends ServiceModel>) returnType));
+            if (returnType.isAnnotationPresent(Service.class)) {
+                return manager.createService((returnType));
             } else {
                 throw new IllegalArgumentException();
             }
         }
-        Class<?> type = proxy.getClass().getInterfaces()[0];
         Service service = type.getAnnotation(Service.class);
         String path = service != null ? service.value() : "";
         for (Annotation annotation : method.getAnnotations()) {
-            if (annotation instanceof GET request) {
-                return createNetworkCall("GET", path + request.value(), request.arguments(), proxy, method, args);
-            }
-            if (annotation instanceof POST request) {
-                return createNetworkCall("POST", path + request.value(), request.arguments(), proxy, method, args);
-            }
-            if (annotation instanceof PUT request) {
-                return createNetworkCall("PUT", path + request.value(), request.arguments(), proxy, method, args);
-            }
-            if (annotation instanceof DELETE request) {
-                return createNetworkCall("DELETE", path + request.value(), request.arguments(), proxy, method, args);
+            if (annotation instanceof Fetch request) {
+                return createNetworkCall(request.method().name(), path + request.value(), request.arguments(), proxy, method, args);
             }
             if (annotation instanceof Subscribable request) {
                 return createSubscribableNetworkCall(request.value(), proxy, method, args);
@@ -59,7 +50,7 @@ public class RequestFactory {
         throw new IllegalArgumentException("Cannot handle method '" + method.getName() + "' in '" + type.getName() + "'");
     }
 
-    private @NotNull NetworkCall<?> createNetworkCall(@NotNull String command, @NotNull String path, @NotNull String[] arguments, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
+    private @NotNull NetworkQuery<?> createNetworkCall(@NotNull String command, @NotNull String path, @NotNull String[] arguments, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         MultiMap<String, String> collected = collect(method, args, annotation -> annotation instanceof Argument argument ? argument.value() : null);
         for (String argument : arguments) {
             String key = argument.split("=")[0];
@@ -71,20 +62,20 @@ public class RequestFactory {
             }
             collected.add(key, value);
         }
-        HttpRequest request = engine.createRequest()
+        HttpRequest request = manager.getNetworkClient().createRequest()
                 .setMethod(command)
                 .setPath(URI.create(interpolate(path, proxy, method, args)))
                 .setFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
                 .setArguments(collected)
                 .build();
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        return engine.createNetworkCall(request, returnType);
+        return manager.createQuery(GenericType.of(returnType), request);
     }
 
-    private @NotNull SubscribableNetworkCall<?> createSubscribableNetworkCall(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
+    private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkCall(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         Class<?> returnType = (Class<?>) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
         SubscribableEvent<?> event = new SubscribableEvent<>(URI.create(interpolate(path, proxy, method, args)), returnType);
-        return engine.createSubscribableNetworkCall(event);
+        return manager.createSubscribableQuery(event);
     }
 
     private @NotNull String interpolate(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
@@ -96,7 +87,7 @@ public class RequestFactory {
                         if (!(proxy instanceof EntityModel model)) {
                             throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a link");
                         }
-                        URI link = model.getLink(value.substring(1));
+                        URI link = model.reference(value.substring(1));
                         if (link == null) {
                             throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
                         }
@@ -107,7 +98,7 @@ public class RequestFactory {
                         if (!(proxy instanceof EntityModel model)) {
                             throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a field");
                         }
-                        String field = model.getField(value.substring(1));
+                        String field = model.property(value.substring(1));
                         if (field == null) {
                             throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing field '" + value + "'");
                         }

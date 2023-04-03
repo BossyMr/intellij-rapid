@@ -2,14 +2,14 @@ package com.bossymr.network;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.CompletableFuture;
+import java.io.IOException;
 
 /**
  * A {@code SubscribableNetworkCall} represents a subscribable network resource.
  *
  * @param <T> the type of event body.
  */
-public interface SubscribableNetworkCall<T> {
+public interface SubscribableNetworkQuery<T> {
 
     /**
      * Subscribes to this resource with the specified priority. The specified callback will be called, for each event
@@ -20,5 +20,5 @@ public interface SubscribableNetworkCall<T> {
      * @param listener the subscription callback.
      * @return an entity used to unsubscribe.
      */
-    @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<T> listener);
+    @NotNull SubscriptionEntity subscribe(@NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<T> listener) throws IOException, InterruptedException;
 }
