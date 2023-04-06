@@ -35,5 +35,5 @@ public @interface Fetch {
      *
      * @return the query arguments of the request.
      */
-    @NotNull String[] arguments();
+    @NotNull String[] arguments() default {};
 }

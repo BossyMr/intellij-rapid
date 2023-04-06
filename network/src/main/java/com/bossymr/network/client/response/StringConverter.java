@@ -18,7 +18,7 @@ public class StringConverter implements ResponseConverter<String> {
         public <T> ResponseConverter<T> create(@NotNull NetworkManager manager, @NotNull HttpResponse<?> response, @NotNull GenericType<T> type) {
             if (type.getRawType().equals(String.class)) {
                 Optional<String> optional = response.headers().firstValue("Content-Type");
-                if (optional.isEmpty() || !(optional.orElseThrow().equals("text/plain"))) {
+                if (optional.isPresent() && !(optional.orElseThrow().equals("text/plain"))) {
                     return null;
                 }
                 return (ResponseConverter<T>) new StringConverter();

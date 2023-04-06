@@ -4,13 +4,16 @@ import com.bossymr.network.MultiMap;
 import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.client.proxy.EntityProxy;
+import com.bossymr.network.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.util.Map;
@@ -25,29 +28,43 @@ public class RequestFactory {
         this.manager = manager;
     }
 
-    public @NotNull Object createQuery(@NotNull Class<?> type, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
+    public @Nullable Object createQuery(@NotNull Class<?> type, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (method.getReturnType().isAnnotationPresent(Service.class)) {
             Class<?> returnType = method.getReturnType();
             if (returnType.isAnnotationPresent(Service.class)) {
                 return manager.createService((returnType));
             } else {
-                throw new IllegalArgumentException();
+                throw new ProxyException();
             }
         }
         Service service = type.getAnnotation(Service.class);
         String path = service != null ? service.value() : "";
         for (Annotation annotation : method.getAnnotations()) {
             if (annotation instanceof Fetch request) {
-                return createNetworkCall(request.method().name(), path + request.value(), request.arguments(), proxy, method, args);
+                try {
+                    Object result = createNetworkCall(request.method().name(), path + request.value(), request.arguments(), proxy, method, args).get();
+                    if (result == null || method.getReturnType().isInstance(result)) {
+                        return result;
+                    }
+                    throw new ProxyException("Method '" + method + "' should return '" + method.getReturnType() + "' but responds with value '" + result + "' of type '" + result.getClass().getName());
+                } catch (IOException e) {
+                    throw new ProxyException(e);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new ProxyException(e);
+                }
             }
             if (annotation instanceof Subscribable request) {
-                return createSubscribableNetworkCall(request.value(), proxy, method, args);
+                if (method.getReturnType().isAssignableFrom(method.getReturnType())) {
+                    return createSubscribableNetworkCall(request.value(), proxy, method, args);
+                }
+                throw new ProxyException("Method '" + method + "' is annotated as '@Subscribable' but should return '" + method.getReturnType() + "' - must return '" + SubscribableNetworkQuery.class.getName() + "'");
             }
         }
         if (method.isDefault()) {
             return InvocationHandler.invokeDefault(proxy, method, args);
         }
-        throw new IllegalArgumentException("Cannot handle method '" + method.getName() + "' in '" + type.getName() + "'");
+        throw new ProxyException("Cannot handle method '" + method.getName() + "' in '" + type.getName() + "'");
     }
 
     private @NotNull NetworkQuery<?> createNetworkCall(@NotNull String command, @NotNull String path, @NotNull String[] arguments, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
@@ -68,8 +85,7 @@ public class RequestFactory {
                 .setFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
                 .setArguments(collected)
                 .build();
-        Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        return manager.createQuery(GenericType.of(returnType), request);
+        return manager.createQuery(GenericType.of(method.getGenericReturnType()), request);
     }
 
     private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkCall(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
@@ -84,30 +100,30 @@ public class RequestFactory {
                 .replaceAll(result -> {
                     String value = result.group().substring(1, result.group().length() - 1);
                     if (value.startsWith("@")) {
-                        if (!(proxy instanceof EntityModel model)) {
-                            throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a link");
+                        if (!(proxy instanceof EntityProxy model)) {
+                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a link");
                         }
-                        URI link = model.reference(value.substring(1));
+                        URI link = model.getReference(value.substring(1));
                         if (link == null) {
-                            throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
+                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
                         }
                         String query = link.getQuery();
                         return link.getPath() + (query != null ? "?" + query : "");
                     }
                     if (value.startsWith("#")) {
-                        if (!(proxy instanceof EntityModel model)) {
-                            throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a field");
+                        if (!(proxy instanceof EntityProxy model)) {
+                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a field");
                         }
-                        String field = model.property(value.substring(1));
+                        String field = model.getProperty(value.substring(1));
                         if (field == null) {
-                            throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing field '" + value + "'");
+                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing field '" + value + "'");
                         }
                         return field;
                     }
                     if (map.containsKey(value)) {
                         return map.first(value);
                     }
-                    throw new IllegalArgumentException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' does not provide value for '" + value + "'");
+                    throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' does not provide value for '" + value + "'");
                 });
     }
 
@@ -125,7 +141,7 @@ public class RequestFactory {
                             map.add(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
                         }
                     } else {
-                        throw new IllegalArgumentException("Parameter of '" + method.getName() + "' should be Map<String, String>");
+                        throw new ProxyException("Parameter of '" + method.getName() + "' should be Map<String, String>");
                     }
                 } else {
                     map.add(name, convert(args[i]));

@@ -4,6 +4,9 @@ import org.jetbrains.annotations.NotNull;
 
 public class ProxyException extends RuntimeException {
 
+    public ProxyException() {
+    }
+
     public ProxyException(@NotNull String message, @NotNull Throwable cause) {
         super(message, cause);
     }

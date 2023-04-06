@@ -2,6 +2,7 @@ package com.bossymr.network.entity;
 
 import com.bossymr.network.annotations.Deserializable;
 import com.bossymr.network.annotations.Property;
+import com.bossymr.network.annotations.Title;
 import com.bossymr.network.client.EntityModel;
 import com.bossymr.network.client.NetworkManager;
 import com.bossymr.network.client.RequestFactory;
@@ -14,7 +15,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -22,6 +25,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class EntityInvocationHandler extends AbstractInvocationHandler {
 
@@ -50,13 +54,44 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             }
             getSelf();
         }
+        if (isMethod(method, EntityProxy.class, "getProperty", String.class)) {
+            return getProperty((String) args[0]);
+        }
+        if (isMethod(method, EntityProxy.class, "getReference", String.class)) {
+            return getReference((String) args[0]);
+        }
+        if (isMethod(method, EntityProxy.class, "getType")) {
+            return model.type();
+        }
+        if (isMethod(method, EntityProxy.class, "getTitle")) {
+            return model.title();
+        }
+        if (method.isAnnotationPresent(Title.class)) {
+            return model.title();
+        }
         if (method.isAnnotationPresent(Property.class)) {
             Property property = method.getAnnotation(Property.class);
             String[] names = property.value();
             for (String name : names) {
-                String value = getField(name);
-                if (value != null) {
-                    return convert(value, method.getReturnType());
+                if (name.startsWith("{") && name.endsWith("}")) {
+                    name = name.substring(1, name.length() - 1);
+                    if (name.startsWith("@")) {
+                        URI reference = getReference(name.substring(1));
+                        if (reference != null) {
+                            return convert(reference.toString(), method.getReturnType());
+                        }
+                    }
+                    if (name.startsWith("#")) {
+                        String value = getProperty(name.substring(1));
+                        if (value != null) {
+                            return convert(value, method.getReturnType());
+                        }
+                    }
+                } else {
+                    String value = getProperty(name);
+                    if (value != null) {
+                        return convert(value, method.getReturnType());
+                    }
                 }
             }
             return null;
@@ -78,6 +113,13 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         if (type == Double.class) return Double.parseDouble(value);
         if (type == Boolean.class) return Boolean.parseBoolean(value);
         if (type == Character.class) return value.charAt(0);
+        if (type == URI.class) {
+            try {
+                return URI.create(value);
+            } catch (IllegalArgumentException e) {
+                throw new ProxyException(e);
+            }
+        }
         if (type == LocalDateTime.class) {
             return LocalDateTime.parse(value.replaceAll(" ", ""), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         }
@@ -119,7 +161,18 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         return type;
     }
 
-    private @Nullable String getField(@NotNull String type) {
+    private @Nullable URI getReference(@NotNull String type) {
+        URI reference = model.reference(type);
+        if (reference != null) {
+            return reference;
+        }
+        if (model.type().endsWith("-li")) {
+            return getSelf().reference(type);
+        }
+        return null;
+    }
+
+    private @Nullable String getProperty(@NotNull String type) {
         String field = model.property(type);
         if (field != null) {
             return field;
@@ -152,7 +205,14 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     }
 
     @Override
+    public boolean equals(@NotNull Object proxy, @NotNull Object obj) {
+        InvocationHandler invocationHandler = Proxy.getInvocationHandler(obj);
+        if (!(invocationHandler instanceof EntityInvocationHandler entity)) return false;
+        return entity.type.equals(type) && entity.model.equals(model) && Objects.equals(entity.manager, manager);
+    }
+
+    @Override
     public String toString(@NotNull Object proxy) {
-        return proxy.getClass().getInterfaces()[0].getName() + ":" + model;
+        return type.getName() + ":" + model;
     }
 }

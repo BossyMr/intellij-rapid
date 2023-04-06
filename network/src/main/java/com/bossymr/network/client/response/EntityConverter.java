@@ -7,6 +7,7 @@ import com.bossymr.network.client.EntityModel;
 import com.bossymr.network.client.GenericType;
 import com.bossymr.network.client.NetworkManager;
 import com.bossymr.network.client.ResponseModel;
+import com.bossymr.network.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +41,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
 
     private static void validateType(@NotNull Class<?> entityType) {
         if (entityType.getAnnotation(Entity.class) == null) {
-            throw new IllegalArgumentException("'" + entityType.getName() + "' is not annotated with Entity");
+            throw new ProxyException("'" + entityType.getName() + "' is not annotated with Entity");
         }
     }
 
@@ -63,7 +64,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
                 .map(model -> {
                     try {
                         return ((Object) manager.createEntity(entityType, model));
-                    } catch (IllegalArgumentException e) {
+                    } catch (ProxyException e) {
                         return null;
                     }
                 })
@@ -78,11 +79,11 @@ public class EntityConverter<T> implements ResponseConverter<T> {
         }
         if (returnType instanceof Class<?> classType) {
             if (entities.size() != 1) {
-                throw new IllegalArgumentException("Could not convert '" + models + "' into a single entity of '" + classType.getName() + "'");
+                throw new ProxyException("Could not convert '" + models + "' into a single entity of '" + classType.getName() + "'");
             }
             return (T) entities.get(0);
         }
-        throw new IllegalArgumentException("Could not convert '" + models + "' into '" + returnType + "'");
+        throw new ProxyException("Could not convert '" + models + "' into '" + returnType + "'");
     }
 
     @SuppressWarnings("unchecked")
@@ -103,7 +104,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
                 }
             }
         }
-        throw new IllegalArgumentException("'" + returnType + "' is not supported");
+        throw new ProxyException("'" + returnType + "' is not supported");
     }
 
     private @Nullable List<EntityModel> get(@NotNull HttpResponse<byte[]> response) throws IOException, InterruptedException {

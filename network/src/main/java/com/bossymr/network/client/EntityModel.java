@@ -18,9 +18,6 @@ public record EntityModel(@NotNull String title, @NotNull String type, @NotNull 
     }
 
     public @Nullable String property(@NotNull String type) {
-        if (type.equals("title")) {
-            return title();
-        }
         return properties().get(type);
     }
 

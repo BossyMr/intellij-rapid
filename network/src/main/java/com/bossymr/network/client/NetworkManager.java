@@ -46,10 +46,11 @@ public class NetworkManager {
     @SuppressWarnings("unchecked")
     private static <T> @Nullable T createEntity(@Nullable NetworkManager manager, @NotNull Class<T> entityType, @NotNull EntityModel model) {
         Map<String, Class<? extends T>> entities = getEntityType(entityType);
-        if (entities.containsKey(model.type())) {
-            Class<? extends T> type = entities.get(model.type());
-            return (T) Proxy.newProxyInstance(entityType.getClassLoader(),
-                    new Class[]{entityType, EntityProxy.class},
+        String modelType = model.type().endsWith("-li") ? model.type().substring(0, model.type().length() - "-li".length()) : model.type();
+        if (entities.containsKey(modelType)) {
+            Class<? extends T> type = entities.get(modelType);
+            return (T) Proxy.newProxyInstance(type.getClassLoader(),
+                    new Class[]{type, EntityProxy.class},
                     new EntityInvocationHandler(manager, type, model));
         }
         return null;
