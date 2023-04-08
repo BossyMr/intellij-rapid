@@ -1,6 +1,6 @@
 package com.bossymr.rapid.ide.execution.filter;
 
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.robot.RemoteRobotService;

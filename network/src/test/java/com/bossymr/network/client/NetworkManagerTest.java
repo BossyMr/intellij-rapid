@@ -116,20 +116,19 @@ class NetworkManagerTest {
         TestFetch testFetch = modelQuery.get();
         assertNotNull(testFetch);
         assertEquals("/selfPath", testFetch.getSelf());
-        assertEquals("Hello, World!", testFetch.withPath());
-        assertEquals(model, testFetch.withArguments());
-        testFetch.withProperty();
+        assertEquals("Hello, World!", testFetch.withPath().get());
+        assertEquals(model, testFetch.withArguments().get());
+        testFetch.withProperty().get();
         try {
-            testFetch.fail("failPath");
+            testFetch.fail("failPath").get();
             fail();
-        } catch (ProxyException e) {
-            ResponseStatusException exception = assertInstanceOf(ResponseStatusException.class, e.getCause());
-            assertEquals(400, exception.getResponse().statusCode());
+        } catch (ResponseStatusException e) {
+            assertEquals(400, e.getResponse().statusCode());
         }
     }
 
     @Test
-    void expandTest(@NotNull WireMockRuntimeInfo runtimeInfo) {
+    void expandTest(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
         ResponseModel completeModel = ResponseModel.newBuilder()
                 .setEntity(EntityModel.newBuilder("Hello!", "entity")
@@ -149,7 +148,7 @@ class NetworkManagerTest {
         wireMock.register(get("/complete").willReturn(okForContentType("application/xhtml+xml", completeModel.toText())));
         NetworkManager manager = NetworkManager.newBuilder(URI.create(runtimeInfo.getHttpBaseUrl())).build();
         TestService service = manager.createService(TestService.class);
-        TestEntity entity = service.getEntity();
+        TestEntity entity = service.getEntity().get();
         EntityProxy proxy = assertInstanceOf(EntityProxy.class, entity);
         assertEquals("entity-li", proxy.getType());
         int events = wireMock.getServeEvents().size();
@@ -164,8 +163,9 @@ class NetworkManagerTest {
     @Service
     public interface TestService {
 
+        @NotNull
         @Fetch("/")
-        @NotNull TestEntity getEntity();
+        NetworkQuery<TestEntity> getEntity();
 
     }
 
@@ -220,19 +220,19 @@ class NetworkManagerTest {
         @Property("{@self}")
         @NotNull String getSelf();
 
+        @NotNull
         @Fetch(method = FetchMethod.GET, value = "/")
-        @NotNull String withPath();
+        NetworkQuery<String> withPath();
 
+        @NotNull
         @Fetch(method = FetchMethod.POST, value = "{@self}/request", arguments = {"argument=value", "arguments=values"})
-        @NotNull ResponseModel withArguments();
+        NetworkQuery<ResponseModel> withArguments();
 
         @Fetch(method = FetchMethod.PUT, value = "{#property}/request")
-        void withProperty();
+        NetworkQuery<Void> withProperty();
 
         @Fetch(method = FetchMethod.DELETE, value = "/{path}")
-        void fail(
-                @NotNull @Path("path") String argument
-        );
+        NetworkQuery<Void> fail(@NotNull @Path("path") String argument);
 
     }
 }

@@ -9,11 +9,11 @@ import com.bossymr.network.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.util.Map;
@@ -41,24 +41,16 @@ public class RequestFactory {
         String path = service != null ? service.value() : "";
         for (Annotation annotation : method.getAnnotations()) {
             if (annotation instanceof Fetch request) {
-                try {
-                    Object result = createNetworkCall(request.method().name(), path + request.value(), request.arguments(), proxy, method, args).get();
-                    if (result == null || method.getReturnType().isInstance(result)) {
-                        return result;
-                    }
-                    throw new ProxyException("Method '" + method + "' should return '" + method.getReturnType() + "' but responds with value '" + result + "' of type '" + result.getClass().getName());
-                } catch (IOException e) {
-                    throw new ProxyException(e);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new ProxyException(e);
+                if (method.getReturnType().isAssignableFrom(NetworkQuery.class)) {
+                    return createNetworkCall(request.method().name(), path + request.value(), request.arguments(), proxy, method, args);
                 }
+                throw new ProxyException("Method '" + method + "' is annotated as '@NetworkQuery' but returns '" + method.getReturnType() + "', it should return '" + NetworkQuery.class.getName() + "'");
             }
             if (annotation instanceof Subscribable request) {
-                if (method.getReturnType().isAssignableFrom(method.getReturnType())) {
+                if (method.getReturnType().isAssignableFrom(SubscribableNetworkQuery.class)) {
                     return createSubscribableNetworkQuery(request.value(), proxy, method, args);
                 }
-                throw new ProxyException("Method '" + method + "' is annotated as '@Subscribable' but should return '" + method.getReturnType() + "' - must return '" + SubscribableNetworkQuery.class.getName() + "'");
+                throw new ProxyException("Method '" + method + "' is annotated as '@Subscribable' but returns '" + method.getReturnType() + "', it should return '" + SubscribableNetworkQuery.class.getName() + "'");
             }
         }
         if (method.isDefault()) {
@@ -85,7 +77,8 @@ public class RequestFactory {
                 .setFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
                 .setArguments(collected)
                 .build();
-        return manager.createQuery(GenericType.of(method.getGenericReturnType()), request);
+        Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
+        return manager.createQuery(GenericType.of(returnType), request);
     }
 
     private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkQuery(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {

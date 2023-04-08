@@ -1,6 +1,7 @@
 package com.bossymr.rapid.ide.debugger.frame;
 
 import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.ide.debugger.RapidDebugProcess;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
@@ -20,12 +21,12 @@ import java.util.concurrent.CompletableFuture;
 public class RapidSuspendContext extends XSuspendContext {
 
     private final @NotNull RapidExecutionStack executionStack;
-    private final @NotNull NetworkEngine networkEngine;
+    private final @NotNull NetworkManager manager;
     private final @NotNull Project project;
     private final @NotNull List<CompletableFuture<Breakpoint>> breakpoints;
 
-    public RapidSuspendContext(@NotNull Project project, @NotNull Set<XBreakpoint<?>> breakpoints, @NotNull NetworkEngine networkEngine, @NotNull Task task, @NotNull StackFrame stackFrame) {
-        this.networkEngine = networkEngine;
+    public RapidSuspendContext(@NotNull Project project, @NotNull Set<XBreakpoint<?>> breakpoints, @NotNull NetworkManager manager, @NotNull Task task, @NotNull StackFrame stackFrame) {
+        this.manager = manager;
         this.project = project;
         this.breakpoints = breakpoints.stream()
                 .map(breakpoint -> breakpoint.getUserData(RapidDebugProcess.BREAKPOINT_KEY))
@@ -54,7 +55,7 @@ public class RapidSuspendContext extends XSuspendContext {
 
     @Override
     public void computeExecutionStacks(@NotNull XExecutionStackContainer container) {
-        TaskService taskService = networkEngine.createService(TaskService.class);
+        TaskService taskService = manager.createService(TaskService.class);
         taskService.getTasks().sendAsync().thenAcceptAsync(tasks -> {
             List<RapidExecutionStack> executionStacks = new ArrayList<>();
             List<CompletableFuture<?>> requests = new ArrayList<>();

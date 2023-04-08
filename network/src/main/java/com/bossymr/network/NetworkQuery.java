@@ -6,6 +6,6 @@ import java.io.IOException;
 
 public interface NetworkQuery<T> {
 
-    @Nullable T get() throws IOException, InterruptedException;
+    T get() throws IOException, InterruptedException;
 
 }

@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.network.robotware.mastership;
 
 import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -63,13 +64,13 @@ public interface MastershipDomain {
      * Requests mastership for this mastership domain.
      */
     @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=request")
-    @NotNull Void request();
+  @NotNull NetworkQuery<Void> request();
 
     /**
      * Releases mastership for this mastership domain.
      */
     @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=release")
-    @NotNull Void release();
+  @NotNull NetworkQuery<Void> release();
 
     /**
      * Subscribes to changes to mastership fot this mastership domain.

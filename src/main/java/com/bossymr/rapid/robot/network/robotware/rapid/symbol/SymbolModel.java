@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
+import com.bossymr.network.annotations.Title;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -12,6 +13,9 @@ import org.jetbrains.annotations.NotNull;
         ConstantModel.class, VariableModel.class, PersistentModel.class, ParameterModel.class, FunctionModel.class,
         ProcedureModel.class, TrapModel.class, ModuleModel.class, TaskModel.class})
 public interface SymbolModel {
+
+    @Title
+    @NotNull String getTitle();
 
     /**
      * Returns the canonical name of the symbol. For example, the canonical name of a field might be

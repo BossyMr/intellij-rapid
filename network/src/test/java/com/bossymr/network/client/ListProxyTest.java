@@ -92,11 +92,6 @@ class ListProxyTest {
     }
 
     @Entity("entity")
-    public interface SimpleEntity {
-
-        @Property("property")
-        @NotNull String getProperty();
-
-    }
+    public interface SimpleEntity {}
 
 }

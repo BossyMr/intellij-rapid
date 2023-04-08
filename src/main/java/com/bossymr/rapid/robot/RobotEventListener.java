@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.client.NetworkEngine;
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.robot.network.RobotService;
 import com.intellij.openapi.application.ApplicationManager;
 import org.jetbrains.annotations.NotNull;
 
@@ -31,7 +31,7 @@ public interface RobotEventListener extends EventListener {
      *
      * @param robot the robot.
      */
-    default void onConnect(@NotNull RapidRobot robot, @NotNull NetworkEngine engine) {}
+    default void onConnect(@NotNull RapidRobot robot, @NotNull NetworkManager manager) {}
 
     /**
      * Called after a robot is disconnected.
@@ -50,7 +50,7 @@ public interface RobotEventListener extends EventListener {
      *
      * @param robot the robot.
      */
-    default void onRefresh(@NotNull RapidRobot robot, @NotNull NetworkEngine engine) {}
+    default void onRefresh(@NotNull RapidRobot robot, @NotNull NetworkManager manager) {}
 
     default void onDownload(@NotNull RapidRobot robot) {}
 

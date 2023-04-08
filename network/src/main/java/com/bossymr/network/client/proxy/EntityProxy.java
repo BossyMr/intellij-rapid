@@ -1,5 +1,6 @@
 package com.bossymr.network.client.proxy;
 
+import com.bossymr.network.client.EntityModel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,9 +16,15 @@ public interface EntityProxy extends NetworkProxy {
      */
     void refresh();
 
-    @NotNull String getType();
+    @NotNull EntityModel getModel();
 
-    @NotNull String getTitle();
+    default @NotNull String getType() {
+        return getModel().type();
+    }
+
+    default @NotNull String getTitle() {
+        return getModel().title();
+    }
 
     @Nullable URI getReference(@NotNull String type);
 

@@ -2,7 +2,7 @@ package com.bossymr.rapid.ide.debugger.frame;
 
 import com.bossymr.rapid.ide.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.RapidField;
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;

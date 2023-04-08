@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 @Entity("user-rmmp-ev")
 public interface ManualModePrivilegeEvent {
 
-    @Fetch("{@resource}")
-    @NotNull ManualModePrivilegeState getState();
+        @Fetch("{@resource}")
+  @NotNull NetworkQuery<ManualModePrivilegeState> getState();
 
 }

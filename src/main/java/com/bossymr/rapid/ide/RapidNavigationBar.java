@@ -4,7 +4,7 @@ import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.FormatUtil;
 import com.bossymr.rapid.language.psi.FormatUtil.Option;
 import com.bossymr.rapid.language.psi.RapidFile;
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
@@ -52,7 +52,7 @@ public class RapidNavigationBar extends StructureAwareNavBarModelExtension {
         if (element instanceof PsiDirectory directory) {
             VirtualFile virtualFile = directory.getVirtualFile();
             RemoteRobotService remoteService = RemoteRobotService.getInstance();
-            RapidRobot robot = remoteService.getRobot().getNow(null);
+            RapidRobot robot = remoteService.getRobot();
             if (robot != null) {
                 for (RapidTask task : robot.getTasks()) {
                     if (FileUtil.filesEqual(task.getDirectory(), new File(virtualFile.getPath()))) {

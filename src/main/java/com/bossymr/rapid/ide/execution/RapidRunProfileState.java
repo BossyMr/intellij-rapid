@@ -1,13 +1,15 @@
 package com.bossymr.rapid.ide.execution;
 
 import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfigurationOptions;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.filter.RapidFileFilter;
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidTask;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
 import com.intellij.execution.DefaultExecutionResult;
 import com.intellij.execution.ExecutionException;
@@ -28,6 +30,7 @@ import com.intellij.psi.search.FileTypeIndex;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -95,63 +98,52 @@ public class RapidRunProfileState implements RunProfileState {
      *
      * @return an asynchronous request which will complete with a {@code NetworkEngine} connected to the robot.
      */
-    public @NotNull CompletableFuture<@NotNull NetworkEngine> getNetworkEngine() {
-        NetworkEngine networkEngine = robot.getNetworkEngine();
-        if (networkEngine == null) {
+    public @NotNull NetworkManager getNetworkManager() throws IOException, InterruptedException {
+        NetworkManager manager = robot.getNetworkManager();
+        if (manager == null) {
             return robot.reconnect();
         }
-        return CompletableFuture.completedFuture(networkEngine);
+        return manager;
     }
 
-    public @NotNull CompletableFuture<NetworkEngine> setupExecution() {
-        return getNetworkEngine().thenComposeAsync(engine -> {
-            List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
-            for (TaskState taskState : states) {
-                if (taskState.getName() == null) continue;
-                if (taskState.getModuleName() != null) {
-                    completableFutures.add(upload(taskState.getName(), taskState.getModuleName()));
-                }
-                completableFutures.add(activate(engine, taskState, taskState.getName()));
+    public @NotNull NetworkManager setupExecution() throws IOException, InterruptedException {
+        NetworkManager manager = getNetworkManager();
+        for (TaskState state : states) {
+            if (state.getName() == null) continue;
+            if (state.getModuleName() != null) {
+                upload(state.getName(), state.getModuleName());
             }
-            return CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new))
-                    .thenComposeAsync(unused -> robot.download())
-                    .thenApplyAsync(unused -> engine);
-        });
+            activate(manager, state, state.getName());
+        }
+        robot.download();
+        return manager;
     }
 
-    private @NotNull CompletableFuture<Void> upload(@NotNull String taskName, @NotNull String moduleName) {
+    private void upload(@NotNull String taskName, @NotNull String moduleName) throws IOException, InterruptedException {
         RapidTask task = robot.getTask(taskName);
         if (task != null) {
             Module module = ModuleManager.getInstance(getProject()).findModuleByName(moduleName);
             if (module != null) {
                 Collection<VirtualFile> modules = ReadAction.compute(() -> FileTypeIndex.getFiles(RapidFileType.getInstance(), module.getModuleContentScope()));
-                return getRobot().upload(task, Set.copyOf(modules));
+                getRobot().upload(task, Set.copyOf(modules));
             }
         }
-        return CompletableFuture.completedFuture(null);
     }
 
-    private @NotNull CompletableFuture<Void> activate(@NotNull NetworkEngine engine, @NotNull TaskState taskState, @NotNull String taskName) {
-        return engine.createService(TaskService.class).getTask(taskName).sendAsync()
-                .thenComposeAsync(task -> {
-                    /*
-                     * Check if the task needs to be activated or deactivated.
-                     */
-                    return switch (task.getActivityState()) {
-                        case ENABLED -> {
-                            if (!taskState.isEnabled()) {
-                                yield task.deactivate().sendAsync();
-                            }
-                            yield CompletableFuture.completedFuture(null);
-                        }
-                        case DISABLED -> {
-                            if (taskState.isEnabled()) {
-                                yield task.activate().sendAsync();
-                            }
-                            yield CompletableFuture.completedFuture(null);
-                        }
-                    };
-                });
+    private void activate(@NotNull NetworkManager manager, @NotNull TaskState taskState, @NotNull String taskName) throws IOException, InterruptedException {
+        Task task = manager.createService(TaskService.class).getTask(taskName).get();
+        switch (task.getActivityState()) {
+            case ENABLED -> {
+                if (!taskState.isEnabled()) {
+                    task.deactivate().get();
+                }
+            }
+            case DISABLED -> {
+                if (taskState.isEnabled()) {
+                    task.activate().get();
+                }
+            }
+        }
     }
 
 

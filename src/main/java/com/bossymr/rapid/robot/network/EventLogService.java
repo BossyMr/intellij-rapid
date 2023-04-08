@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.annotations.Argument;
 import com.bossymr.network.annotations.Fetch;
 import com.bossymr.network.annotations.FetchMethod;
@@ -22,14 +23,12 @@ public interface EventLogService {
      * name.
      * @return all categories in this event log.
      */
-    @Fetch("?resource=count")
-    @NotNull List<EventLogCategory> getCategories(
-            @Nullable @Argument("lang") String languageCode
-    );
+        @Fetch("?resource=count")
+  @NotNull NetworkQuery<List<EventLogCategory>> getCategories(@Nullable @Argument("lang") String languageCode);
 
     /**
      * Clears all messages in this event log.
      */
     @Fetch(method = FetchMethod.POST, value = "?action=clearall")
-    @NotNull Void clearAll();
+  @NotNull NetworkQuery<Void> clearAll();
 }

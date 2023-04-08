@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.actions;
 
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.project.Project;

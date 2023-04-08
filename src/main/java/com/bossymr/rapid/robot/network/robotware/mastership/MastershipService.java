@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.network.robotware.mastership;
 
 import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.rapid.robot.network.ManualModePrivilegeService;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,13 +19,13 @@ public interface MastershipService {
      * {@link ManualModePrivilegeService}.
      */
     @Fetch(method = FetchMethod.POST, value = "", arguments = "action=request")
-    @NotNull Void request();
+  @NotNull NetworkQuery<Void> request();
 
     /**
      * Releases mastership for all mastership domains.
      */
     @Fetch(method = FetchMethod.POST, value = "", arguments = "action=release")
-    @NotNull Void release();
+  @NotNull NetworkQuery<Void> release();
 
     /**
      * Subscribes to changes to mastership for all mastership domains.
@@ -38,8 +39,6 @@ public interface MastershipService {
      * @param mastershipType the mastership type.
      * @return the specified mastership domain.
      */
-    @Fetch("/{domain}")
-    @NotNull MastershipDomain getDomain(
-            @NotNull @Path("domain") MastershipType mastershipType
-    );
+        @Fetch("/{domain}")
+  @NotNull NetworkQuery<MastershipDomain> getDomain(@NotNull @Path("domain") MastershipType mastershipType);
 }

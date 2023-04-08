@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.Fetch;
 import com.bossymr.network.annotations.Path;
@@ -13,12 +14,10 @@ import java.util.List;
 public interface TaskService {
 
     @Fetch("")
-    @NotNull List<Task> getTasks();
+    @NotNull NetworkQuery<List<Task>> getTasks();
 
     @Fetch("/{task}")
-    @NotNull Task getTask(
-            @NotNull @Path("task") String task
-    );
+    @NotNull NetworkQuery<Task> getTask(@NotNull @Path("task") String task);
 
     @Subscribable("/rw/rapid/tasks;buildlogchange")
     @NotNull SubscribableNetworkQuery<BuildLogEvent> onBuild();

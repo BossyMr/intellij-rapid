@@ -2,7 +2,7 @@ package com.bossymr.rapid.robot.ui;
 
 import com.bossymr.network.client.NetworkEngine;
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.intellij.ide.dnd.aware.DnDAwareTree;

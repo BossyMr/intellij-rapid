@@ -5,7 +5,7 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.RobotEventListener;

@@ -36,8 +36,7 @@ public class SubscribableEvent<T> {
      *
      * @return the path to the subscribable resource.
      */
-    @NotNull
-    public URI getResource() {
+    public @NotNull URI getResource() {
         return resource;
     }
 
@@ -46,8 +45,7 @@ public class SubscribableEvent<T> {
      *
      * @return the class of the event type.
      */
-    @NotNull
-    public Class<T> getEventType() {
+    public @NotNull Class<T> getEventType() {
         return eventType;
     }
 

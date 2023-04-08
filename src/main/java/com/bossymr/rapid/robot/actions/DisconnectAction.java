@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.actions;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -10,10 +10,8 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.io.IOException;
 
 public class DisconnectAction extends AnAction {
 
@@ -25,16 +23,12 @@ public class DisconnectAction extends AnAction {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
                 RemoteRobotService service = RemoteRobotService.getInstance();
-                CompletableFuture<@Nullable RapidRobot> completableFuture = service.getRobot();
-                try {
-                    completableFuture.thenComposeAsync(robot -> {
-                        if (robot != null) {
-                            return robot.disconnect();
-                        } else {
-                            return CompletableFuture.completedFuture(null);
-                        }
-                    }).get();
-                } catch (InterruptedException | ExecutionException ignored) {}
+                RapidRobot robot = service.getRobot();
+                if (robot != null) {
+                    try {
+                        robot.disconnect();
+                    } catch (IOException | InterruptedException ignored) {}
+                }
             }
         }.queue();
 

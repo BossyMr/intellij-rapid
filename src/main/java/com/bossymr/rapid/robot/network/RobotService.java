@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.annotations.Fetch;
 import com.bossymr.network.annotations.Service;
 import com.bossymr.rapid.robot.network.robotware.RobotWareService;
@@ -16,7 +17,7 @@ public interface RobotService {
      * Logs out of the currently logged-in user.
      */
     @Fetch("/logout")
-    @NotNull Void logout();
+    @NotNull NetworkQuery<Void> logout();
 
     /**
      * Returns the user service.

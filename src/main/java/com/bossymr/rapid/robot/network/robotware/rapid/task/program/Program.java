@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task.program;
 
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,24 +18,18 @@ public interface Program {
     @Nullable String getEntryPoint();
 
     @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=save")
-    @NotNull Void save(
-            @NotNull @Field("path") String path
-    );
+  @NotNull NetworkQuery<Void> save(@NotNull @Field("path") String path);
 
     @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=loadprog")
-    @NotNull Void load(
-            @NotNull @Field("progpath") String path,
-            @NotNull @Field("loadmode") LoadProgramMode mode
-    );
+  @NotNull NetworkQuery<Void> load(@NotNull @Field("progpath") String path,
+                            @NotNull @Field("loadmode") LoadProgramMode mode);
 
     @Fetch(method = FetchMethod.POST, value = "{@self}/breakpoint", arguments = "action=set")
-    @NotNull Void setBreakpoint(
-            @NotNull @Field("module") String module,
-            @Field("row") int row,
-            @Field("column") int column
-    );
+  @NotNull NetworkQuery<Void> setBreakpoint(@NotNull @Field("module") String module,
+                                     @Field("row") int row,
+                                     @Field("column") int column);
 
-    @Fetch("{@self}/breakpoint")
-    @NotNull List<Breakpoint> getBreakpoints();
+        @Fetch("{@self}/breakpoint")
+  @NotNull NetworkQuery<List<Breakpoint>> getBreakpoints();
 
 }

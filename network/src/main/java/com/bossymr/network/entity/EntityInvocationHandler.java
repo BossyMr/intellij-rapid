@@ -60,11 +60,8 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         if (isMethod(method, EntityProxy.class, "getReference", String.class)) {
             return getReference((String) args[0]);
         }
-        if (isMethod(method, EntityProxy.class, "getType")) {
-            return model.type();
-        }
-        if (isMethod(method, EntityProxy.class, "getTitle")) {
-            return model.title();
+        if (isMethod(method, EntityProxy.class, "getModel")) {
+            return model;
         }
         if (method.isAnnotationPresent(Title.class)) {
             return model.title();
@@ -209,6 +206,14 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         InvocationHandler invocationHandler = Proxy.getInvocationHandler(obj);
         if (!(invocationHandler instanceof EntityInvocationHandler entity)) return false;
         return entity.type.equals(type) && entity.model.equals(model) && Objects.equals(entity.manager, manager);
+    }
+
+    @Override
+    public int hashCode(@NotNull Object proxy) {
+        int result = type.hashCode();
+        result = 31 * result + (manager != null ? manager.hashCode() : 0);
+        result = 31 * result + model.hashCode();
+        return result;
     }
 
     @Override

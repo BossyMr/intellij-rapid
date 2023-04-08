@@ -1,6 +1,5 @@
 package com.bossymr.rapid.language.symbol;
 
-import com.bossymr.rapid.language.symbol.RapidRobot.Mastership;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;

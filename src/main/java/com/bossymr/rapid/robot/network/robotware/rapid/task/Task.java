@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
 import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
 import org.jetbrains.annotations.NotNull;
@@ -12,10 +13,10 @@ import java.util.List;
 public interface Task {
 
     @Fetch("{@modules}")
-    @NotNull List<ModuleInfo> getModules();
+    @NotNull NetworkQuery<List<ModuleInfo>> getModules();
 
     @Fetch("{@program}")
-    @NotNull Program getProgram();
+    @NotNull NetworkQuery<Program> getProgram();
 
     @Property("name")
     @NotNull String getName();
@@ -33,26 +34,22 @@ public interface Task {
     @NotNull TaskActiveState getActivityState();
 
     @Fetch("{@self}/pcp")
-    @NotNull List<ProgramPointer> getProgramPointer();
+    @NotNull NetworkQuery<List<ProgramPointer>> getProgramPointer();
 
     @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=activate")
-    @NotNull Void activate();
+    @NotNull NetworkQuery<Void> activate();
 
     @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=deactivate")
-    @NotNull Void deactivate();
+    @NotNull NetworkQuery<Void> deactivate();
 
     @Fetch(method = FetchMethod.POST, value = "{@self}/pcp", arguments = "action=set-pp-cursor")
-    @NotNull Void setProgramPointer(
-            @NotNull @Field("module") String module,
-            @NotNull @Field("routine") String routine,
-            @Field("line") int row,
-            @Field("column") int column
-    );
+    @NotNull NetworkQuery<Void> setProgramPointer(@NotNull @Field("module") String module,
+                                                  @NotNull @Field("routine") String routine,
+                                                  @Field("line") int row,
+                                                  @Field("column") int column);
 
     @Fetch(value = "{@self}", arguments = "resource=activation-record")
-    @NotNull StackFrame getStackFrame(
-            @Argument("stackframe") int stackframe
-    );
+    @NotNull NetworkQuery<StackFrame> getStackFrame(@Argument("stackframe") int stackframe);
 
     @Subscribable("{@self};excstate")
     @NotNull SubscribableNetworkQuery<TaskExecutionEvent> onExecutionState();

@@ -14,32 +14,26 @@ import java.util.List;
 @Service("/rw/iosystem")
 public interface InputOutputService {
 
-    @Fetch("/networks/{network}")
-    @NotNull InputOutputNetwork getNetwork(
-            @NotNull @Field("network") String network
-    );
+        @Fetch("/networks/{network}")
+  @NotNull NetworkQuery<InputOutputNetwork> getNetwork(@NotNull @Field("network") String network);
 
-    @Fetch("/networks")
-    @NotNull List<InputOutputNetwork> getNetworks();
+        @Fetch("/networks")
+  @NotNull NetworkQuery<List<InputOutputNetwork>> getNetworks();
 
-    @Fetch("/devices")
-    @NotNull List<InputOutputDevice> getDevices();
+        @Fetch("/devices")
+  @NotNull NetworkQuery<List<InputOutputDevice>> getDevices();
 
-    @Fetch("/devices/{device}")
-    @NotNull InputOutputNetwork getDevices(
-            @NotNull @Field("device") String device
-    );
+        @Fetch("/devices/{device}")
+  @NotNull NetworkQuery<InputOutputNetwork> getDevices(@NotNull @Field("device") String device);
 
-    @Fetch("/signals")
-    @NotNull List<InputOutputSignal> getSignals();
+        @Fetch("/signals")
+  @NotNull NetworkQuery<List<InputOutputSignal>> getSignals();
 
-    @Fetch("/signals/{network}/{device}/{signal}")
-    @NotNull InputOutputSignal getSignal(
-            @NotNull @Field("network") String network,
-            @NotNull @Field("device") String device,
-            @NotNull @Field("signal") String signal
-    );
+        @Fetch("/signals/{network}/{device}/{signal}")
+  @NotNull NetworkQuery<InputOutputSignal> getSignal(@NotNull @Field("network") String network,
+                                              @NotNull @Field("device") String device,
+                                              @NotNull @Field("signal") String signal);
 
     @Fetch(method = FetchMethod.POST, value = "/signals?action=unblock-signals")
-    @NotNull Void unblockSignals();
+  @NotNull NetworkQuery<Void> unblockSignals();
 }

@@ -92,21 +92,18 @@ public class MultiMap<K, V> implements Map<K, List<V>> {
         delegate.clear();
     }
 
-    @NotNull
     @Override
-    public Set<K> keySet() {
+    public @NotNull Set<K> keySet() {
         return delegate.keySet();
     }
 
-    @NotNull
     @Override
-    public Collection<List<V>> values() {
+    public @NotNull Collection<List<V>> values() {
         return delegate.values();
     }
 
-    @NotNull
     @Override
-    public Set<Entry<K, List<V>>> entrySet() {
+    public @NotNull Set<Entry<K, List<V>>> entrySet() {
         return delegate.entrySet();
     }
 }

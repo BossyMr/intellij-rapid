@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.Fetch;
 import com.bossymr.network.annotations.FetchMethod;
@@ -20,13 +21,13 @@ public interface RemoteUserService {
      * The grant "UAS_REMOTE_LOGIN" is required.
      */
     @Fetch(method = FetchMethod.POST, value = "?action=remotelogin")
-    @NotNull Void login();
+    @NotNull NetworkQuery<Void> login();
 
     /**
      * Requests the TPU to logout of the current user.
      */
     @Fetch(method = FetchMethod.POST, value = "?action=remotelogout ")
-    @NotNull Void logout();
+    @NotNull NetworkQuery<Void> logout();
 
     /**
      * Subscribes to changes for remote user connections.

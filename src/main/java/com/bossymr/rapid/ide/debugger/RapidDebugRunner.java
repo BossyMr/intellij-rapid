@@ -1,26 +1,25 @@
 package com.bossymr.rapid.ide.debugger;
 
 import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.ide.execution.RapidRunProfileState;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.CloseableMastership;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionService;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskActiveState;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleEntity;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.QueryMode;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ReplaceMode;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Breakpoint;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.RunProfile;
 import com.intellij.execution.configurations.RunProfileState;
 import com.intellij.execution.configurations.RunnerSettings;
 import com.intellij.execution.executors.DefaultDebugExecutor;
-import com.intellij.execution.runners.AsyncProgramRunner;
 import com.intellij.execution.runners.ExecutionEnvironment;
-import com.intellij.execution.ui.RunContentDescriptor;
+import com.intellij.execution.runners.ProgramRunner;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.xdebugger.XDebugProcess;
@@ -29,10 +28,8 @@ import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.XDebuggerManager;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.concurrency.AsyncPromise;
-import org.jetbrains.concurrency.Promise;
-import org.jetbrains.concurrency.Promises;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * A {@code ProgramRunner} for starting a debugging session.
  */
-public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
+public class RapidDebugRunner implements ProgramRunner<RunnerSettings> {
 
     public static final @NotNull String RUNNER_ID = "RapidDebugRunner";
 
@@ -57,78 +54,73 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
                 profile instanceof RapidRunConfiguration;
     }
 
-    @NotNull
     @Override
-    protected Promise<RunContentDescriptor> execute(@NotNull ExecutionEnvironment environment, @NotNull RunProfileState profileState) throws ExecutionException {
-        if (profileState instanceof RapidRunProfileState state) {
-            AsyncPromise<RunContentDescriptor> promise = new AsyncPromise<>();
-            state.setupExecution()
-                    .thenComposeAsync(this::prepare)
-                    .thenAcceptAsync(engine -> {
-                        Project project = environment.getProject();
-                        ApplicationManager.getApplication().invokeLater(() -> {
-                            try {
-                                XDebuggerManager.getInstance(project).startSession(environment, new XDebugProcessStarter() {
-                                    @Override
-                                    public @NotNull XDebugProcess start(@NotNull XDebugSession session) {
-                                        return new RapidDebugProcess(project, session, state.getTasks(), engine);
-                                    }
-                                });
-                            } catch (ExecutionException e) {
-                                promise.setError(e);
+    public void execute(@NotNull ExecutionEnvironment environment) throws ExecutionException {
+        RunProfileState runProfileState = environment.getState();
+        if (runProfileState instanceof RapidRunProfileState state) {
+            try {
+                NetworkManager manager = state.setupExecution();
+                setupExecution(manager);
+                Project project = environment.getProject();
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    try {
+                        XDebuggerManager.getInstance(project).startSession(environment, new XDebugProcessStarter() {
+                            @Override
+                            public @NotNull XDebugProcess start(@NotNull XDebugSession session) throws ExecutionException {
+                                try {
+                                    return new RapidDebugProcess(project, session, state.getTasks(), manager);
+                                } catch (IOException | InterruptedException e) {
+                                    throw new ExecutionException(e);
+                                }
                             }
                         });
-                    });
-            return promise;
-        }
-        return Promises.rejectedPromise();
-    }
-
-
-    private @NotNull CompletableFuture<Void> removeBreakpoint(@NotNull Task task, @NotNull Map<String, ModuleEntity> modules, @NotNull Breakpoint breakpoint) {
-        ModuleEntity module = modules.get(breakpoint.getModuleName());
-        return module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).sendAsync()
-                .thenComposeAsync(text -> RapidRobot.withMastership(breakpoint.getNetworkEngine(), RapidRobot.Mastership.RAPID,
-                        () -> module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.TRY, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), text.getText()).sendAsync()));
-    }
-
-    private @NotNull CompletableFuture<Map<String, ModuleEntity>> getModules(@NotNull Task task) {
-        Map<String, ModuleEntity> modules = new ConcurrentHashMap<>();
-        return task.getModules().sendAsync()
-                .thenComposeAsync(moduleInfos -> {
-                    List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
-                    for (ModuleInfo moduleInfo : moduleInfos) {
-                        completableFutures.add(moduleInfo.getModule().sendAsync()
-                                .thenAcceptAsync(module -> modules.put(module.getName(), module)));
+                    } catch (ExecutionException e) {
+                        throw new AssertionError(e);
                     }
-                    return CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
-                }).thenApplyAsync(unused -> Map.copyOf(modules));
+                });
+            } catch (IOException | InterruptedException e) {
+                throw new ExecutionException(e);
+            }
+        }
+    }
+
+
+    private void removeBreakpoint(@NotNull NetworkManager manager, @NotNull Task task, @NotNull Map<String, ModuleEntity> modules, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
+        ModuleEntity module = modules.get(breakpoint.getModuleName());
+        ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
+        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+            module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.TRY, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
+        }
+    }
+
+    private @NotNull Map<String, ModuleEntity> getModules(@NotNull Task task) throws IOException, InterruptedException {
+        Map<String, ModuleEntity> modules = new ConcurrentHashMap<>();
+        List<ModuleInfo> moduleInfos = task.getModules().get();
+        for (ModuleInfo moduleInfo : moduleInfos) {
+            ModuleEntity module = moduleInfo.getModule();
+            modules.put(module.getName(), module);
+            return modules;
+        }
     }
 
     /**
      * Resets the robot to allow for a new debugging session to be executed.
      */
-    private @NotNull CompletableFuture<NetworkEngine> prepare(@NotNull NetworkEngine networkEngine) {
-        ExecutionService executionService = networkEngine.createService(ExecutionService.class);
-        return executionService.resetProgramPointer().sendAsync()
-                .thenComposeAsync(unused -> {
-                    TaskService taskService = networkEngine.createService(TaskService.class);
-                    return taskService.getTasks().sendAsync();
-                }).thenComposeAsync(tasks -> {
-                    List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
-                    for (Task task : tasks) {
-                        if (task.getActivityState() == TaskActiveState.DISABLED) {
-                            continue;
-                        }
-                        completableFutures.add(task.getProgram().sendAsync()
-                                .thenComposeAsync(program -> program.getBreakpoints().sendAsync())
-                                .thenComposeAsync(breakpoints -> getModules(task)
-                                        .thenComposeAsync(modules ->
-                                                CompletableFuture.allOf(breakpoints.stream()
-                                                        .map(breakpoint -> removeBreakpoint(task, modules, breakpoint))
-                                                        .toList().toArray(CompletableFuture[]::new)))));
-                    }
-                    return CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
-                }).thenApplyAsync(unused -> networkEngine);
+    private void setupExecution(@NotNull NetworkManager manager) throws IOException, InterruptedException {
+        ExecutionService executionService = manager.createService(ExecutionService.class);
+        executionService.resetProgramPointer().get();
+        TaskService taskService = manager.createService(TaskService.class);
+        List<Task> tasks = taskService.getTasks().get();
+        for (Task task : tasks) {
+            if (task.getActivityState() == TaskActiveState.DISABLED) {
+                continue;
+            }
+            Map<String, ModuleEntity> modules = getModules(task);
+            Program program = task.getProgram().get();
+            List<Breakpoint> breakpoints = program.getBreakpoints().get();
+            for (Breakpoint breakpoint : breakpoints) {
+                removeBreakpoint(manager, task, modules, breakpoint);
+            }
+        }
     }
 }

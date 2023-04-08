@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.network.robotware.io;
 
 import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"ios-signal-li", "ios-signal"})
@@ -46,13 +47,11 @@ public interface InputOutputSignal {
     @Property("quality")
     int getSignalQuality();
 
-    @Fetch("{@device}")
-    @NotNull InputOutputDevice getDevice();
+        @Fetch("{@device}")
+  @NotNull NetworkQuery<InputOutputDevice> getDevice();
 
     @Fetch(method = FetchMethod.POST, value = "{@self}?action=set")
-    @NotNull Void setState(
-            @NotNull InputOutputSignalLogicalState logicalState
-    );
+  @NotNull NetworkQuery<Void> setState(@NotNull InputOutputSignalLogicalState logicalState);
 
     @Subscribable("{@self};state")
     @NotNull SubscribableNetworkQuery<InputOutputSignalEvent> onState();

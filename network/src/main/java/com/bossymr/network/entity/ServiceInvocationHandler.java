@@ -6,7 +6,10 @@ import com.bossymr.network.client.proxy.NetworkProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.Objects;
 
 public class ServiceInvocationHandler extends AbstractInvocationHandler {
 
@@ -31,6 +34,20 @@ public class ServiceInvocationHandler extends AbstractInvocationHandler {
             throw new IllegalStateException("Entity is not managed");
         }
         return new RequestFactory(manager).createQuery(type, proxy, method, args);
+    }
+
+    @Override
+    public boolean equals(@NotNull Object proxy, @NotNull Object obj) {
+        InvocationHandler invocationHandler = Proxy.getInvocationHandler(obj);
+        if (!(invocationHandler instanceof ServiceInvocationHandler service)) return false;
+        return type.equals(service.type) && Objects.equals(manager, service.manager);
+    }
+
+    @Override
+    public int hashCode(@NotNull Object proxy) {
+        int result = type.hashCode();
+        result = 31 * result + (manager != null ? manager.hashCode() : 0);
+        return result;
     }
 
     @Override

@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.impl;
 
-import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.NetworkManager;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.intellij.openapi.application.ApplicationManager;
@@ -13,6 +13,7 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
@@ -24,10 +25,11 @@ import com.intellij.util.messages.MessageBusConnection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
+import java.util.Objects;
 
 @State(name = "robot",
         storages = {
@@ -36,12 +38,12 @@ import java.util.concurrent.CompletableFuture;
 public class RemoteRobotServiceImpl implements RemoteRobotService {
 
     private @NotNull State state = new State();
-    private @Nullable CompletableFuture<RapidRobot> robot;
+    private @Nullable RapidRobot robot;
 
     private @Nullable MessageBusConnection connection;
 
     @Override
-    public @NotNull CompletableFuture<@Nullable RapidRobot> getRobot() {
+    public @Nullable RapidRobot getRobot() {
         if (robot != null) {
             return robot;
         }
@@ -49,20 +51,16 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
         if (state != null) {
             RapidRobot value = RapidRobot.create(state);
             registerRobot(value);
-            robot = CompletableFuture.completedFuture(value);
+            this.robot = value;
             reload();
             return robot;
         }
-        return CompletableFuture.completedFuture(null);
+        return null;
     }
 
     private void registerRobot(@NotNull RapidRobot robot) {
-        if (connection != null) {
-            connection.disconnect();
-        }
-        // FIXME: 2023-03-22 Connection already disposed?
-        connection = ApplicationManager.getApplication().getMessageBus().connect();
-        connection.subscribe(RapidRobot.STATE_TOPIC, (RapidRobot.StateListener) (result, state) -> {
+        Disposer.register(this, robot);
+        ApplicationManager.getApplication().getMessageBus().connect(robot).subscribe(RapidRobot.STATE_TOPIC, (RapidRobot.StateListener) (result, state) -> {
             if (result == robot) {
                 setRobotState(state);
             }
@@ -70,52 +68,44 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
     }
 
     @Override
-    public @NotNull CompletableFuture<@NotNull RapidRobot> connect(@NotNull URI path, @NotNull Credentials credentials) {
-        CompletableFuture<?> completableFuture;
+    public @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         if (robot != null) {
-            completableFuture = robot.thenComposeAsync(RapidRobot::disconnect);
-        } else {
-            completableFuture = CompletableFuture.completedFuture(null);
+            robot.disconnect();
+            Disposer.dispose(robot);
         }
-        return robot = completableFuture
-                .thenComposeAsync(unused -> RapidRobot.connect(path, credentials))
-                .thenApplyAsync(robot -> {
-                    setRobotState(robot.getState());
-                    registerRobot(robot);
-                    reload();
-                    NetworkEngine engine = robot.getNetworkEngine();
-                    if (engine != null) {
-                        RobotEventListener.publish().onConnect(robot, engine);
-                    }
-                    return robot;
-                });
+        RapidRobot robot = RapidRobot.connect(path, credentials);
+        setRobotState(robot.getState());
+        registerRobot(robot);
+        reload();
+        NetworkManager manager = robot.getNetworkManager();
+        Objects.requireNonNull(manager);
+        RobotEventListener.publish().onConnect(robot, manager);
+        return robot;
     }
 
     @Override
-    public @NotNull CompletableFuture<Void> disconnect() {
+    public void disconnect() throws IOException, InterruptedException {
         if (robot == null) {
-            return CompletableFuture.completedFuture(null);
+            return;
         }
-        CompletableFuture<Void> completableFuture = robot.thenComposeAsync(result -> result.disconnect().thenRunAsync(() -> {
-            RobotEventListener.publish().onRemoval(result);
-            Path path = Path.of(PathManager.getSystemPath(), "robot");
-            WriteAction.runAndWait(() -> {
-                VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path);
-                if (virtualFile != null) {
-                    for (Project project : ProjectManager.getInstance().getOpenProjects()) {
-                        PsiDirectory directory = PsiManager.getInstance(project).findDirectory(virtualFile);
-                        if(directory != null) {
-                            directory.delete();
-                        }
+        robot.disconnect();
+        Disposer.dispose(robot);
+        RobotEventListener.publish().onRemoval(robot);
+        Path path = Path.of(PathManager.getSystemPath(), "robot");
+        WriteAction.runAndWait(() -> {
+            VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path);
+            if (virtualFile != null) {
+                for (Project project : ProjectManager.getInstance().getOpenProjects()) {
+                    PsiDirectory directory = PsiManager.getInstance(project).findDirectory(virtualFile);
+                    if (directory != null) {
+                        directory.delete();
                     }
-                    reload();
                 }
-            });
-        }));
+            }
+        });
         robot = null;
         setRobotState(null);
         reload();
-        return completableFuture;
     }
 
     private void reload() {

@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.annotations.Fetch;
 import com.bossymr.network.annotations.FetchMethod;
 import com.bossymr.network.annotations.Field;
@@ -25,12 +26,10 @@ public interface UserService {
      * @param locale the locale of the user.
      */
     @Fetch(method = FetchMethod.POST, value = "")
-    @NotNull Void register(
-            @NotNull @Field("username") String username,
-            @NotNull @Field("application") String application,
-            @NotNull @Field("location") String location,
-            @NotNull @Field("ulocale") UserLocale locale
-    );
+  @NotNull NetworkQuery<Void> register(@NotNull @Field("username") String username,
+                                @NotNull @Field("application") String application,
+                                @NotNull @Field("location") String location,
+                                @NotNull @Field("ulocale") UserLocale locale);
 
     /**
      * Impersonate a user with the same credentials on the same machine.
@@ -38,9 +37,7 @@ public interface UserService {
      * @param identifier the identifier of the user to impersonate.
      */
     @Fetch(method = FetchMethod.POST, value = "?action=impersonate")
-    @NotNull Void impersonate(
-            @NotNull @Field("uid") String identifier
-    );
+  @NotNull NetworkQuery<Void> impersonate(@NotNull @Field("uid") String identifier);
 
     /**
      * Changes the locale of client. A client is normally connected as a remote client. To change the local to local an
@@ -49,17 +46,15 @@ public interface UserService {
      * @param locale the new locale.
      */
     @Fetch(method = FetchMethod.POST, value = "?action=set-locale")
-    @NotNull Void login(
-            @NotNull @Field("type") UserLocale locale
-    );
+  @NotNull NetworkQuery<Void> login(@NotNull @Field("type") UserLocale locale);
 
     /**
      * Returns the grants awarded to the currently logged-in user.
      *
      * @return the grants awarded to the currently logged-in user.
      */
-    @Fetch("/grants")
-    @NotNull List<UserGrant> getGrants();
+        @Fetch("/grants")
+  @NotNull NetworkQuery<List<UserGrant>> getGrants();
 
     /**
      * Returns the manual mode privilege service.

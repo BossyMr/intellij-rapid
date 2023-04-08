@@ -14,8 +14,8 @@ public interface QueryableSymbol extends SymbolModel, TypeSymbol {
      *
      * @return the string value of the symbol.
      */
-    @Fetch("/rw/rapid/symbol/data/{#symburl}")
-    @NotNull SymbolValue getValue();
+        @Fetch("/rw/rapid/symbol/data/{#symburl}")
+  @NotNull NetworkQuery<SymbolValue> getValue();
 
     @Property("ndim")
     int getSize();
