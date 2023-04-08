@@ -26,12 +26,13 @@ public class BlockList<T> extends AbstractList<Block<T>> {
                     .collect(Collectors.toMap(value -> value[0], value -> value[1]));
             int start = Integer.parseInt(query.get("start"));
             int limit = Integer.parseInt(query.get("limit"));
-            int sections = start / model.entities().size();
-            this.sections = new Block[sections + 1];
-            for (int i = 0; i < sections; i++) {
+            int length = start / model.entities().size();
+            this.sections = new Block[length + 1];
+            for (int i = 0; i < length; i++) {
                 this.sections[i] = new Block<>(manager, entityType, model.entities().size());
             }
-            this.sections[sections] = new Block<>(manager, entityType, limit);
+            this.sections[length] = new Block<>(manager, entityType, limit);
+            this.sections[0].fill(model);
         }
     }
 

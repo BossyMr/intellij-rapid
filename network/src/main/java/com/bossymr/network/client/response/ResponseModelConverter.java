@@ -22,19 +22,18 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ResponseModelConverter implements ResponseConverter<ResponseModel> {
 
     public static final ResponseConverterFactory FACTORY = new ResponseConverterFactory() {
         @SuppressWarnings("unchecked")
         @Override
-        public <T> ResponseConverter<T> create(@NotNull NetworkManager manager, @NotNull HttpResponse<?> response, @NotNull GenericType<T> type) {
+        public <T> ResponseConverter<T> create(@NotNull NetworkManager manager, @NotNull GenericType<T> type) {
             if (type.getRawType().equals(ResponseModel.class)) {
-                Optional<String> optional = response.headers().firstValue("Content-Type");
-                if (optional.isEmpty() || !(optional.orElseThrow().equals("application/xhtml+xml"))) {
-                    return null;
-                }
                 return (ResponseConverter<T>) new ResponseModelConverter();
             }
             return null;

@@ -16,12 +16,12 @@ import java.util.*;
 
 public class DigestAuthenticator implements Authenticator {
     private final String unique;
-    private final @NotNull Credentials credentials;
+    private final @Nullable Credentials credentials;
     private boolean isProxy;
     private Challenge challenge;
     private int usages = 0;
 
-    public DigestAuthenticator(@NotNull Credentials credentials) {
+    public DigestAuthenticator(@Nullable Credentials credentials) {
         this.credentials = credentials;
         this.unique = generate();
     }
@@ -66,7 +66,7 @@ public class DigestAuthenticator implements Authenticator {
 
     @Override
     public @Nullable HttpRequest authenticate(@NotNull HttpRequest request) {
-        if (challenge == null) return null;
+        if (challenge == null || credentials == null) return null;
         Charset charset = getCharset();
         String algorithm = challenge.values().getOrDefault("algorithm", "MD5");
         boolean session = algorithm.endsWith("-sess");

@@ -9,10 +9,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpRequest;
-import java.util.AbstractList;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -74,9 +71,12 @@ public class ListProxy<T> extends AbstractList<T> {
                     return block.get(index - j);
                 } else {
                     URI path = request.uri();
-                    Map<String, String> query = Arrays.stream(path.getQuery().split("&amp;|&"))
-                            .map(value -> value.split("="))
-                            .collect(Collectors.toMap(value -> value[0], value -> value[1]));
+                    Map<String, String> query = new HashMap<>();
+                    if (path.getQuery() != null) {
+                        query.putAll(Arrays.stream(path.getQuery().split("&amp;|&"))
+                                .map(value -> value.split("="))
+                                .collect(Collectors.toMap(value -> value[0], value -> value[1])));
+                    }
                     query.put("start", String.valueOf(j));
                     query.put("limit", String.valueOf(block.size()));
                     String collected = query.entrySet().stream().map(value -> value.getKey() + "=" + value.getValue()).collect(Collectors.joining("&"));

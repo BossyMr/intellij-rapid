@@ -8,6 +8,7 @@ import com.bossymr.network.client.security.Authenticator;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.network.client.security.impl.DigestAuthenticator;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +19,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Objects;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
 
 public class NetworkClient {
 
@@ -28,18 +31,15 @@ public class NetworkClient {
     private final @NotNull Semaphore semaphore = new Semaphore(MAX_CONNECTIONS);
 
     private final @NotNull Authenticator authenticator;
-    private final @NotNull ExecutorService executorService;
     private final @NotNull URI defaultPath;
 
     private final @NotNull SubscriptionGroup subscriptionGroup;
     private final @NotNull HttpClient httpClient;
 
-    public NetworkClient(@NotNull URI defaultPath, @NotNull Credentials credentials) {
+    public NetworkClient(@NotNull URI defaultPath, @Nullable Credentials credentials) {
         this.defaultPath = defaultPath;
         this.authenticator = new DigestAuthenticator(credentials);
-        this.executorService = Executors.newCachedThreadPool(Executors.defaultThreadFactory());
         this.httpClient = HttpClient.newBuilder()
-                .executor(executorService)
                 .version(HttpClient.Version.HTTP_1_1)
                 .cookieHandler(new CookieManager())
                 .build();
@@ -138,6 +138,5 @@ public class NetworkClient {
         logger.atDebug().log("Closing NetworkClient");
         subscriptionGroup.getEntities().clear();
         subscriptionGroup.update();
-        executorService.shutdownNow();
     }
 }

@@ -16,18 +16,20 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 public class EntityConverter<T> implements ResponseConverter<T> {
 
     public static final ResponseConverterFactory FACTORY = new ResponseConverterFactory() {
         @Override
-        public <E> ResponseConverter<E> create(@NotNull NetworkManager manager, @NotNull HttpResponse<?> response, @NotNull GenericType<E> type) {
-            Optional<String> optional = response.headers().firstValue("Content-Type");
-            if (optional.isEmpty() || !(optional.orElseThrow().equals("application/xhtml+xml"))) {
-                return null;
+        public <E> ResponseConverter<E> create(@NotNull NetworkManager manager, @NotNull GenericType<E> type) {
+            if (type.getRawType().isAnnotationPresent(Entity.class)) {
+                return new EntityConverter<>(manager, type);
             }
-            return new EntityConverter<>(manager, type);
+            return null;
         }
     };
 

@@ -8,19 +8,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.http.HttpResponse;
-import java.util.Optional;
 
 public class StringConverter implements ResponseConverter<String> {
 
     public static final ResponseConverterFactory FACTORY = new ResponseConverterFactory() {
         @SuppressWarnings("unchecked")
         @Override
-        public <T> ResponseConverter<T> create(@NotNull NetworkManager manager, @NotNull HttpResponse<?> response, @NotNull GenericType<T> type) {
+        public <T> ResponseConverter<T> create(@NotNull NetworkManager manager, @NotNull GenericType<T> type) {
             if (type.getRawType().equals(String.class)) {
-                Optional<String> optional = response.headers().firstValue("Content-Type");
-                if (optional.isPresent() && !(optional.orElseThrow().equals("text/plain"))) {
-                    return null;
-                }
                 return (ResponseConverter<T>) new StringConverter();
             }
             return null;

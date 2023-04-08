@@ -5,7 +5,6 @@ import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.annotations.*;
 import com.bossymr.network.client.proxy.EntityProxy;
 import com.bossymr.network.client.proxy.ProxyException;
-import com.bossymr.network.client.security.Credentials;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -16,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
-import java.util.List;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,7 +26,7 @@ class NetworkManagerTest {
     void stringQuery(@NotNull WireMockRuntimeInfo runtimeInfo) {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(okForContentType("text/plain", "Hello, World!")));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
+        NetworkManager manager = NetworkManager.newBuilder(URI.create(runtimeInfo.getHttpBaseUrl())).build();
         HttpRequest request = manager.getNetworkClient().createRequest()
                 .setPath(URI.create("/"))
                 .build();
@@ -48,7 +46,7 @@ class NetworkManagerTest {
                 .setEntity(entity)
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toText())));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
+        NetworkManager manager = NetworkManager.newBuilder(URI.create(runtimeInfo.getHttpBaseUrl())).build();
         HttpRequest request = manager.getNetworkClient().createRequest()
                 .setPath(URI.create("/"))
                 .build();
@@ -76,7 +74,7 @@ class NetworkManagerTest {
                 .setEntity(entity)
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toText())));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
+        NetworkManager manager = NetworkManager.newBuilder(URI.create(runtimeInfo.getHttpBaseUrl())).build();
         HttpRequest request = manager.getNetworkClient().createRequest()
                 .setPath(URI.create("/"))
                 .build();
@@ -107,7 +105,7 @@ class NetworkManagerTest {
                 .willReturn(ok()));
         wireMock.register(delete("/failPath")
                 .willReturn(badRequest()));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
+        NetworkManager manager = NetworkManager.newBuilder(URI.create(runtimeInfo.getHttpBaseUrl())).build();
         HttpRequest request = manager.getNetworkClient().createRequest()
                 .setMethod("POST")
                 .setPath(URI.create("/selfPath/request"))
@@ -149,7 +147,7 @@ class NetworkManagerTest {
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", simpleModel.toText())));
         wireMock.register(get("/complete").willReturn(okForContentType("application/xhtml+xml", completeModel.toText())));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
+        NetworkManager manager = NetworkManager.newBuilder(URI.create(runtimeInfo.getHttpBaseUrl())).build();
         TestService service = manager.createService(TestService.class);
         TestEntity entity = service.getEntity();
         EntityProxy proxy = assertInstanceOf(EntityProxy.class, entity);
@@ -168,9 +166,6 @@ class NetworkManagerTest {
 
         @Fetch("/")
         @NotNull TestEntity getEntity();
-
-        @Fetch("/")
-        @NotNull List<TestEntity> getEntityList();
 
     }
 
