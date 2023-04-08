@@ -1,15 +1,13 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.EntityModel;
-import com.bossymr.network.NetworkCall;
 import com.bossymr.network.annotations.Entity;
-import com.bossymr.network.annotations.GET;
+import com.bossymr.network.annotations.Fetch;
 import org.jetbrains.annotations.NotNull;
 
 @Entity("user-rmmp-ev")
-public interface ManualModePrivilegeEvent extends EntityModel {
+public interface ManualModePrivilegeEvent {
 
-    @GET("{@resource}")
-    @NotNull NetworkCall<ManualModePrivilegeState> getState();
+    @Fetch("{@resource}")
+    @NotNull ManualModePrivilegeState getState();
 
 }

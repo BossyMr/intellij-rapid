@@ -56,7 +56,7 @@ public class RequestFactory {
             }
             if (annotation instanceof Subscribable request) {
                 if (method.getReturnType().isAssignableFrom(method.getReturnType())) {
-                    return createSubscribableNetworkCall(request.value(), proxy, method, args);
+                    return createSubscribableNetworkQuery(request.value(), proxy, method, args);
                 }
                 throw new ProxyException("Method '" + method + "' is annotated as '@Subscribable' but should return '" + method.getReturnType() + "' - must return '" + SubscribableNetworkQuery.class.getName() + "'");
             }
@@ -88,7 +88,7 @@ public class RequestFactory {
         return manager.createQuery(GenericType.of(method.getGenericReturnType()), request);
     }
 
-    private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkCall(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
+    private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkQuery(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         Class<?> returnType = (Class<?>) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
         SubscribableEvent<?> event = new SubscribableEvent<>(URI.create(interpolate(path, proxy, method, args)), returnType);
         return manager.createSubscribableQuery(event);

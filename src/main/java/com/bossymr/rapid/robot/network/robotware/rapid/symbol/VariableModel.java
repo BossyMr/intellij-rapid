@@ -4,7 +4,7 @@ import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.Nullable;
 
-@Entity({"rap-sympropvar", "rap-sympropvar-li"})
+@Entity("rap-sympropvar")
 public interface VariableModel extends SymbolModel, VisibleSymbol, FieldModel {
 
     @Property("dim")

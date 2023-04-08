@@ -3,7 +3,7 @@ package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 
-@Entity({"rap-sympropmod", "rap-sympropmod-li"})
+@Entity("rap-sympropmod")
 public interface ModuleModel extends SymbolModel {
 
     @Property("changed")

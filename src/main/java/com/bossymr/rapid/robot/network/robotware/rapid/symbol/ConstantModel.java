@@ -3,7 +3,7 @@ package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 
-@Entity({"rap-sympropconstant", "rap-sympropconstant-li"})
+@Entity("rap-sympropconstant")
 public interface ConstantModel extends SymbolModel, VisibleSymbol, FieldModel {
 
     @Property("linked")

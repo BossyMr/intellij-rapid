@@ -10,7 +10,6 @@ import java.util.Objects;
  * A {@code SubscribableEvent} represents a subscribable endpoint.
  *
  * @param <T> the type of event.
- * @see NetworkEngine#createSubscribableNetworkCall(SubscribableEvent)
  */
 public class SubscribableEvent<T> {
 

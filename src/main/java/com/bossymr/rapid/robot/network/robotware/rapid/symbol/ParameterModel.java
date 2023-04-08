@@ -4,7 +4,7 @@ import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
-@Entity({"rap-sympropparam", "rap-sympropparam-li"})
+@Entity("rap-sympropparam")
 public interface ParameterModel extends QueryableSymbol {
 
     /**

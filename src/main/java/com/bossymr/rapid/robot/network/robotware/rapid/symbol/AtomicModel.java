@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * An {@code AtomicSymbol} represents an atomic structure.
  */
-@Entity({"rap-sympropatomic", "rap-sympropatomic-li"})
+@Entity("rap-sympropatomic")
 public interface AtomicModel extends SymbolModel {
 
     /**

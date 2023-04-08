@@ -1,9 +1,8 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.NetworkCall;
+import com.bossymr.network.annotations.Fetch;
+import com.bossymr.network.annotations.FetchMethod;
 import com.bossymr.network.annotations.Field;
-import com.bossymr.network.annotations.GET;
-import com.bossymr.network.annotations.POST;
 import com.bossymr.network.annotations.Service;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,8 +24,8 @@ public interface UserService {
      * @param location the location of the user.
      * @param locale the locale of the user.
      */
-    @POST("")
-    @NotNull NetworkCall<Void> register(
+    @Fetch(method = FetchMethod.POST, value = "")
+    @NotNull Void register(
             @NotNull @Field("username") String username,
             @NotNull @Field("application") String application,
             @NotNull @Field("location") String location,
@@ -38,8 +37,8 @@ public interface UserService {
      *
      * @param identifier the identifier of the user to impersonate.
      */
-    @POST("?action=impersonate")
-    @NotNull NetworkCall<Void> impersonate(
+    @Fetch(method = FetchMethod.POST, value = "?action=impersonate")
+    @NotNull Void impersonate(
             @NotNull @Field("uid") String identifier
     );
 
@@ -49,8 +48,8 @@ public interface UserService {
      *
      * @param locale the new locale.
      */
-    @POST("?action=set-locale")
-    @NotNull NetworkCall<Void> login(
+    @Fetch(method = FetchMethod.POST, value = "?action=set-locale")
+    @NotNull Void login(
             @NotNull @Field("type") UserLocale locale
     );
 
@@ -59,8 +58,8 @@ public interface UserService {
      *
      * @return the grants awarded to the currently logged-in user.
      */
-    @GET("/grants")
-    @NotNull NetworkCall<List<UserGrant>> getGrants();
+    @Fetch("/grants")
+    @NotNull List<UserGrant> getGrants();
 
     /**
      * Returns the manual mode privilege service.

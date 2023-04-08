@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
@@ -9,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
  * An {@code ExecutionStatus} represents the current execution state.
  */
 @Entity("rap-execution")
-public interface ExecutionStatus extends EntityModel {
+public interface ExecutionStatus {
 
     /**
      * Returns the current execution state.

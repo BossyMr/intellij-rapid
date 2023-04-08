@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
@@ -11,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
  * privilege.
  */
 @Entity("user-rmmp")
-public interface ManualModePrivilegeState extends EntityModel {
+public interface ManualModePrivilegeState {
 
     /**
      * Returns the user identifier.

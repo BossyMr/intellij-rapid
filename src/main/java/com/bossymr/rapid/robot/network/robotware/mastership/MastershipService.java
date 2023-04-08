@@ -1,8 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.mastership;
 
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.ServiceModel;
-import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
 import com.bossymr.rapid.robot.network.ManualModePrivilegeService;
 import org.jetbrains.annotations.NotNull;
@@ -11,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
  * A {@code Service} used to handle mastership.
  */
 @Service("/rw/mastership")
-public interface MastershipService extends ServiceModel {
+public interface MastershipService {
 
     /**
      * Requests mastership for all mastership domains.
@@ -19,20 +17,20 @@ public interface MastershipService extends ServiceModel {
      * If the robot is in manual mode, {@code Manual Mode Privilege (RMMP)} is required, see
      * {@link ManualModePrivilegeService}.
      */
-    @POST(arguments = "action=request")
-    @NotNull NetworkCall<Void> request();
+    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=request")
+    @NotNull Void request();
 
     /**
      * Releases mastership for all mastership domains.
      */
-    @POST(arguments = "action=release")
-    @NotNull NetworkCall<Void> release();
+    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=release")
+    @NotNull Void release();
 
     /**
      * Subscribes to changes to mastership for all mastership domains.
      */
     @Subscribable("/rw/mastership")
-    @NotNull SubscribableNetworkCall<MastershipEvent> onRequest();
+    @NotNull SubscribableNetworkQuery<MastershipEvent> onRequest();
 
     /**
      * Returns the specified mastership domain.
@@ -40,8 +38,8 @@ public interface MastershipService extends ServiceModel {
      * @param mastershipType the mastership type.
      * @return the specified mastership domain.
      */
-    @GET("/{domain}")
-    @NotNull NetworkCall<MastershipDomain> getDomain(
+    @Fetch("/{domain}")
+    @NotNull MastershipDomain getDomain(
             @NotNull @Path("domain") MastershipType mastershipType
     );
 }

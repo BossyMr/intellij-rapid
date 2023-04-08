@@ -1,12 +1,11 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
 @Entity("rap-buildlog-ev")
-public interface BuildLogEvent extends EntityModel {
+public interface BuildLogEvent {
 
     @Property("task-name")
     @NotNull String getTask();

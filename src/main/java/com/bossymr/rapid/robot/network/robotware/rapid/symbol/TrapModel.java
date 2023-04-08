@@ -5,5 +5,5 @@ import com.bossymr.network.annotations.Entity;
 /**
  * A {@code TrapSymbol} represents a {@code TRAP} routine.
  */
-@Entity({"rap-symproptrap", "rap-symproptrap-li"})
+@Entity("rap-symproptrap")
 public interface TrapModel extends SymbolModel, VisibleSymbol, RoutineModel {}

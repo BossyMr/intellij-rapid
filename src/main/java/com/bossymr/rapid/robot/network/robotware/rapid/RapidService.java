@@ -1,7 +1,5 @@
 package com.bossymr.rapid.robot.network.robotware.rapid;
 
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.ServiceModel;
 import com.bossymr.network.annotations.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
@@ -16,7 +14,7 @@ import java.util.Map;
  * A {@code Service} used to communicate with the {@code RAPID} section of a robot.
  */
 @Service("/rw/rapid")
-public interface RapidService extends ServiceModel {
+public interface RapidService {
 
     /**
      * Returns the execution service.
@@ -39,8 +37,8 @@ public interface RapidService extends ServiceModel {
      * @param fields the NetworkCall arguments.
      * @return the symbols on this robot.
      */
-    @POST(value = "/symbols", arguments = "action=search-symbols")
-    @NotNull NetworkCall<List<SymbolModel>> findSymbols(
+    @Fetch(method = FetchMethod.POST, value = "/symbols", arguments = "action=search-symbols")
+    @NotNull List<SymbolModel> findSymbols(
             @Field Map<String, String> fields
     );
 
@@ -50,8 +48,8 @@ public interface RapidService extends ServiceModel {
      * @param symbol the path of the symbol.
      * @return the symbol.
      */
-    @GET("/symbol/properties/{symbol}")
-    @NotNull NetworkCall<SymbolModel> findSymbol(
+    @Fetch("/symbol/properties/{symbol}")
+    @NotNull SymbolModel findSymbol(
             @Path("symbol") String symbol
     );
 }

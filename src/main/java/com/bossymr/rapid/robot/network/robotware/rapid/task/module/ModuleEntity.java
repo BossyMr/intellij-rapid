@@ -1,12 +1,10 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task.module;
 
-import com.bossymr.network.EntityModel;
-import com.bossymr.network.NetworkCall;
 import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"rap-module"})
-public interface ModuleEntity extends EntityModel {
+public interface ModuleEntity {
 
     @Property("modname")
     @NotNull String getName();
@@ -14,22 +12,22 @@ public interface ModuleEntity extends EntityModel {
     @Property("filename")
     @NotNull String getFileName();
 
-    @POST(value = "{@self}", arguments = "action=save")
-    @NotNull NetworkCall<Void> save(
+    @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=save")
+    @NotNull Void save(
             @NotNull @Field("name") String name,
             @NotNull @Field("path") String path
     );
 
-    @GET(value = "{@self}")
-    @NotNull NetworkCall<ModuleText> getText(
+    @Fetch(value = "{@self}")
+    @NotNull ModuleText getText(
             @Argument("startrow") int startRow,
             @Argument("startcol") int startColumn,
             @Argument("endrow") int endRow,
             @Argument("endcol") int endColumn
     );
 
-    @POST(value = "{@self}", arguments = "action=set-text-range")
-    @NotNull NetworkCall<Void> setText(
+    @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=set-text-range")
+    @NotNull Void setText(
             @NotNull @Field("task") String task,
             @NotNull @Field("replace-mode") ReplaceMode replaceMode,
             @NotNull @Field("query-mode") QueryMode queryMode,
@@ -40,8 +38,8 @@ public interface ModuleEntity extends EntityModel {
             @NotNull @Field("text") String text
     );
 
-    @POST(value = "{@self}", arguments = "action=set-module-text")
-    @NotNull NetworkCall<UpdateModuleText> setText(
+    @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=set-module-text")
+    @NotNull UpdateModuleText setText(
             @NotNull @Field("text") String text
     );
 

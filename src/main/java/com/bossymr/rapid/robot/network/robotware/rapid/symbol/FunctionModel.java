@@ -4,7 +4,7 @@ import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
-@Entity({"rap-sympropfunction", "rap-sympropfunction-li"})
+@Entity("rap-sympropfunction")
 public interface FunctionModel extends RoutineModel {
 
     @Property("linked")

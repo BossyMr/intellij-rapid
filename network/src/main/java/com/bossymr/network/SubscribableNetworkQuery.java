@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 
 /**
- * A {@code SubscribableNetworkCall} represents a subscribable network resource.
+ * A {@code SubscribableNetworkQuery} represents a subscribable network resource.
  *
  * @param <T> the type of event body.
  */

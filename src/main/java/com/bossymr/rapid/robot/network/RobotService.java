@@ -1,8 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.ServiceModel;
-import com.bossymr.network.annotations.GET;
+import com.bossymr.network.annotations.Fetch;
 import com.bossymr.network.annotations.Service;
 import com.bossymr.rapid.robot.network.robotware.RobotWareService;
 import org.jetbrains.annotations.NotNull;
@@ -12,13 +10,13 @@ import org.jetbrains.annotations.NotNull;
  * dynamically.
  */
 @Service
-public interface RobotService extends ServiceModel {
+public interface RobotService {
 
     /**
      * Logs out of the currently logged-in user.
      */
-    @GET("/logout")
-    @NotNull NetworkCall<Void> logout();
+    @Fetch("/logout")
+    @NotNull Void logout();
 
     /**
      * Returns the user service.

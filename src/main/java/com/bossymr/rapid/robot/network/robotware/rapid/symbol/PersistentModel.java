@@ -4,7 +4,7 @@ import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.Nullable;
 
-@Entity({"rap-symproppers", "rap-symproppers-li"})
+@Entity("rap-symproppers")
 public interface PersistentModel extends SymbolModel, VisibleSymbol, FieldModel {
 
     @Property("dim")

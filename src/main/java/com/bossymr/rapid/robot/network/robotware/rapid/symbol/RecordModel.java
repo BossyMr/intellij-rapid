@@ -4,7 +4,7 @@ import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
-@Entity({"rap-symproprecord", "rap-symproprecord-li"})
+@Entity("rap-symproprecord")
 public interface RecordModel extends SymbolModel, VisibleSymbol {
 
     @Property("ncom")

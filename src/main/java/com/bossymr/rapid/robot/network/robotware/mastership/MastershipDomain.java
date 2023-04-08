@@ -1,12 +1,7 @@
 package com.bossymr.rapid.robot.network.robotware.mastership;
 
-import com.bossymr.network.EntityModel;
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.SubscribableNetworkCall;
-import com.bossymr.network.annotations.Entity;
-import com.bossymr.network.annotations.POST;
-import com.bossymr.network.annotations.Property;
-import com.bossymr.network.annotations.Subscribable;
+import com.bossymr.network.SubscribableNetworkQuery;
+import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
  * A {@code MastershipDomain} represents a specific mastership domain.
  */
 @Entity("msh-resource")
-public interface MastershipDomain extends EntityModel {
+public interface MastershipDomain {
 
     /**
      * The identifier of the user currently holding mastership for this domain.
@@ -67,19 +62,19 @@ public interface MastershipDomain extends EntityModel {
     /**
      * Requests mastership for this mastership domain.
      */
-    @POST(value = "{@self}", arguments = "action=request")
-    @NotNull NetworkCall<Void> request();
+    @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=request")
+    @NotNull Void request();
 
     /**
      * Releases mastership for this mastership domain.
      */
-    @POST(value = "{@self}", arguments = "action=release")
-    @NotNull NetworkCall<Void> release();
+    @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=release")
+    @NotNull Void release();
 
     /**
      * Subscribes to changes to mastership fot this mastership domain.
      */
     @Subscribable("{@self}}")
-    @NotNull SubscribableNetworkCall<MastershipEvent> onRequest();
+    @NotNull SubscribableNetworkQuery<MastershipEvent> onRequest();
 
 }

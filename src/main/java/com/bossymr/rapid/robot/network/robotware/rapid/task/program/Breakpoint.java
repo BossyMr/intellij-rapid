@@ -1,13 +1,12 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task.program;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import com.bossymr.rapid.robot.network.LineTextRange;
 import org.jetbrains.annotations.NotNull;
 
 @Entity("rap-program-breakpoint")
-public interface Breakpoint extends EntityModel {
+public interface Breakpoint {
 
     @Property("module-name")
     @NotNull String getModuleName();

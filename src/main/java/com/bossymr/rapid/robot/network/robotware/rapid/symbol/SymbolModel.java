@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
         AtomicModel.class, AliasModel.class, RecordModel.class, ComponentModel.class,
         ConstantModel.class, VariableModel.class, PersistentModel.class, ParameterModel.class, FunctionModel.class,
         ProcedureModel.class, TrapModel.class, ModuleModel.class, TaskModel.class})
-public interface SymbolModel extends EntityModel {
+public interface SymbolModel {
 
     /**
      * Returns the canonical name of the symbol. For example, the canonical name of a field might be

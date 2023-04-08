@@ -1,10 +1,8 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.ServiceModel;
 import com.bossymr.network.annotations.Argument;
-import com.bossymr.network.annotations.GET;
-import com.bossymr.network.annotations.POST;
+import com.bossymr.network.annotations.Fetch;
+import com.bossymr.network.annotations.FetchMethod;
 import com.bossymr.network.annotations.Service;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,7 +13,7 @@ import java.util.List;
  * A service used to fetch the robots event log.
  */
 @Service("/rw/elog")
-public interface EventLogService extends ServiceModel {
+public interface EventLogService {
 
     /**
      * Returns all categories in this event log.
@@ -24,14 +22,14 @@ public interface EventLogService extends ServiceModel {
      * name.
      * @return all categories in this event log.
      */
-    @GET("?resource=count")
-    @NotNull NetworkCall<List<EventLogCategory>> getCategories(
+    @Fetch("?resource=count")
+    @NotNull List<EventLogCategory> getCategories(
             @Nullable @Argument("lang") String languageCode
     );
 
     /**
      * Clears all messages in this event log.
      */
-    @POST("?action=clearall")
-    @NotNull NetworkCall<Void> clearAll();
+    @Fetch(method = FetchMethod.POST, value = "?action=clearall")
+    @NotNull Void clearAll();
 }

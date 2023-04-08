@@ -1,13 +1,12 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import com.bossymr.rapid.robot.network.LineTextRange;
 import org.jetbrains.annotations.NotNull;
 
 @Entity("pcp-info")
-public interface ProgramPointer extends EntityModel {
+public interface ProgramPointer {
 
     /**
      * Returns the start position of the pointer.
