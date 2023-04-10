@@ -10,7 +10,6 @@ import org.junit.jupiter.api.condition.EnabledIf;
 
 import java.io.IOException;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,7 +23,7 @@ public class RobotTest {
     @BeforeEach
     void setUp() throws InterruptedException, IOException {
         RemoteRobotService remoteService = RemoteRobotService.getInstance();
-        robot = remoteService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS).get();
+        robot = remoteService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
     }
 
     @AfterEach

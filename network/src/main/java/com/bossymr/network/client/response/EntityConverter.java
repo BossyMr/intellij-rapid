@@ -5,7 +5,7 @@ import com.bossymr.network.ResponseConverterFactory;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.client.EntityModel;
 import com.bossymr.network.client.GenericType;
-import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.ResponseModel;
 import com.bossymr.network.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
@@ -25,19 +25,19 @@ public class EntityConverter<T> implements ResponseConverter<T> {
 
     public static final ResponseConverterFactory FACTORY = new ResponseConverterFactory() {
         @Override
-        public <E> ResponseConverter<E> create(@NotNull NetworkManager manager, @NotNull GenericType<E> type) {
+        public <E> ResponseConverter<E> create(@NotNull NetworkAction action, @NotNull GenericType<E> type) {
             if (type.getRawType().isAnnotationPresent(Entity.class)) {
-                return new EntityConverter<>(manager, type);
+                return new EntityConverter<>(action, type);
             }
             return null;
         }
     };
 
-    private final @NotNull NetworkManager manager;
+    private final @NotNull NetworkAction action;
     private final @NotNull GenericType<T> type;
 
-    public EntityConverter(@NotNull NetworkManager manager, @NotNull GenericType<T> type) {
-        this.manager = manager;
+    public EntityConverter(@NotNull NetworkAction action, @NotNull GenericType<T> type) {
+        this.action = action;
         this.type = type;
     }
 
@@ -65,7 +65,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
         List<?> entities = models.stream()
                 .map(model -> {
                     try {
-                        return ((Object) manager.createEntity(entityType, model));
+                        return ((Object) action.createEntity(entityType, model));
                     } catch (ProxyException e) {
                         return null;
                     }
@@ -119,7 +119,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
             HttpRequest next = HttpRequest.newBuilder(response.request(), (n, v) -> true)
                     .uri(collectionModel.model().reference("next"))
                     .build();
-            response = manager.getNetworkClient().send(next);
+            response = action.getManager().getNetworkClient().send(next);
             collectionModel = ResponseModel.convert(response.body());
             models.addAll(collectionModel.entities());
         }

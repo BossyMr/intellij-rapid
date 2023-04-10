@@ -14,6 +14,7 @@ import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.util.Disposer;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
@@ -21,7 +22,6 @@ import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.util.messages.MessageBusConnection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,8 +39,6 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
 
     private @NotNull State state = new State();
     private @Nullable RapidRobot robot;
-
-    private @Nullable MessageBusConnection connection;
 
     @Override
     public @Nullable RapidRobot getRobot() {
@@ -80,7 +78,7 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
         NetworkManager manager = robot.getNetworkManager();
         Objects.requireNonNull(manager);
         RobotEventListener.publish().onConnect(robot, manager);
-        return robot;
+        return this.robot = robot;
     }
 
     @Override
@@ -93,7 +91,7 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
         RobotEventListener.publish().onRemoval(robot);
         Path path = Path.of(PathManager.getSystemPath(), "robot");
         WriteAction.runAndWait(() -> {
-            VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path);
+            VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByNioFile(path);
             if (virtualFile != null) {
                 for (Project project : ProjectManager.getInstance().getOpenProjects()) {
                     PsiDirectory directory = PsiManager.getInstance(project).findDirectory(virtualFile);
@@ -102,6 +100,7 @@ public class RemoteRobotServiceImpl implements RemoteRobotService {
                     }
                 }
             }
+            FileUtil.delete(path);
         });
         robot = null;
         setRobotState(null);

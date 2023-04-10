@@ -6,17 +6,20 @@ import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 public final class ResolveUtil {
+
+    private static final Logger logger = Logger.getInstance(ResolveUtil.class);
 
     private ResolveUtil() {
         throw new UnsupportedOperationException();
@@ -24,7 +27,7 @@ public final class ResolveUtil {
 
     public static @Nullable RapidSymbol findSymbol(@NotNull Project project, @NotNull String address) {
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot().getNow(null);
+        RapidRobot robot = service.getRobot();
         if (robot == null) return null;
         String[] sections = address.split("/");
         for (RapidTask task : robot.getTasks()) {
@@ -47,9 +50,13 @@ public final class ResolveUtil {
             }
         }
         try {
-            return robot.getSymbol(sections[1]).get();
-        } catch (InterruptedException | ExecutionException e) {
+            return robot.getSymbol(sections[1]);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             return null;
+        } catch (IOException e) {
+            logger.error(e);
+            throw new AssertionError();
         }
     }
 

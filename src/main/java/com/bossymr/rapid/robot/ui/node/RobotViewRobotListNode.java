@@ -20,7 +20,7 @@ public class RobotViewRobotListNode extends RobotViewNode<Project> {
     public @NotNull Collection<RobotViewRobotNode> getChildren() {
         List<RobotViewRobotNode> nodes = new ArrayList<>();
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot().getNow(null);
+        RapidRobot robot = service.getRobot();
         if (robot != null) {
             nodes.add(new RobotViewRobotNode(getProject(), robot));
         }

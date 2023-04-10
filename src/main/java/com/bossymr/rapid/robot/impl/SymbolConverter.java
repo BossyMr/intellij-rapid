@@ -68,7 +68,7 @@ public final class SymbolConverter {
     }
 
     private <T extends VirtualSymbol> @NotNull T getSymbol(@NotNull T symbol) {
-        symbols.put(symbol.getName(), symbol);
+        symbols.put(symbol.getName().toLowerCase(), symbol);
         return symbol;
     }
 

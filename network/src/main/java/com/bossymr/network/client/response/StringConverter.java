@@ -3,7 +3,7 @@ package com.bossymr.network.client.response;
 import com.bossymr.network.ResponseConverter;
 import com.bossymr.network.ResponseConverterFactory;
 import com.bossymr.network.client.GenericType;
-import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.client.NetworkAction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,7 +14,7 @@ public class StringConverter implements ResponseConverter<String> {
     public static final ResponseConverterFactory FACTORY = new ResponseConverterFactory() {
         @SuppressWarnings("unchecked")
         @Override
-        public <T> ResponseConverter<T> create(@NotNull NetworkManager manager, @NotNull GenericType<T> type) {
+        public <T> ResponseConverter<T> create(@NotNull NetworkAction action, @NotNull GenericType<T> type) {
             if (type.getRawType().equals(String.class)) {
                 return (ResponseConverter<T>) new StringConverter();
             }

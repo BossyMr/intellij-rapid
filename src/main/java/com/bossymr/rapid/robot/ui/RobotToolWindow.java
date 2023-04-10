@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.ui;
 
-import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
@@ -82,7 +82,7 @@ public class RobotToolWindow implements Disposable {
         RobotEventListener.connect(new RobotEventListener() {
 
             @Override
-            public void onConnect(@NotNull RapidRobot robot, @NotNull NetworkEngine engine) {
+            public void onConnect(@NotNull RapidRobot robot, @NotNull NetworkManager manager) {
                 model.invalidateAsync();
             }
 
@@ -92,7 +92,7 @@ public class RobotToolWindow implements Disposable {
             }
 
             @Override
-            public void onRefresh(@NotNull RapidRobot robot, @NotNull NetworkEngine engine) {
+            public void onRefresh(@NotNull RapidRobot robot, @NotNull NetworkManager manager) {
                 model.invalidateAsync();
             }
 

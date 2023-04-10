@@ -1,6 +1,6 @@
 package com.bossymr.rapid.ide.debugger;
 
-import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.ide.execution.RapidRunProfileState;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
@@ -30,10 +30,8 @@ import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -85,10 +83,10 @@ public class RapidDebugRunner implements ProgramRunner<RunnerSettings> {
     }
 
 
-    private void removeBreakpoint(@NotNull NetworkManager manager, @NotNull Task task, @NotNull Map<String, ModuleEntity> modules, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
+    private void removeBreakpoint(@NotNull NetworkAction action, @NotNull Task task, @NotNull Map<String, ModuleEntity> modules, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
         ModuleEntity module = modules.get(breakpoint.getModuleName());
         ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
-        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+        try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
             module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.TRY, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
         }
     }
@@ -97,29 +95,31 @@ public class RapidDebugRunner implements ProgramRunner<RunnerSettings> {
         Map<String, ModuleEntity> modules = new ConcurrentHashMap<>();
         List<ModuleInfo> moduleInfos = task.getModules().get();
         for (ModuleInfo moduleInfo : moduleInfos) {
-            ModuleEntity module = moduleInfo.getModule();
+            ModuleEntity module = moduleInfo.getModule().get();
             modules.put(module.getName(), module);
-            return modules;
         }
+        return modules;
     }
 
     /**
      * Resets the robot to allow for a new debugging session to be executed.
      */
     private void setupExecution(@NotNull NetworkManager manager) throws IOException, InterruptedException {
-        ExecutionService executionService = manager.createService(ExecutionService.class);
-        executionService.resetProgramPointer().get();
-        TaskService taskService = manager.createService(TaskService.class);
-        List<Task> tasks = taskService.getTasks().get();
-        for (Task task : tasks) {
-            if (task.getActivityState() == TaskActiveState.DISABLED) {
-                continue;
-            }
-            Map<String, ModuleEntity> modules = getModules(task);
-            Program program = task.getProgram().get();
-            List<Breakpoint> breakpoints = program.getBreakpoints().get();
-            for (Breakpoint breakpoint : breakpoints) {
-                removeBreakpoint(manager, task, modules, breakpoint);
+        try (NetworkAction action = manager.createAction()) {
+            ExecutionService executionService = action.createService(ExecutionService.class);
+            executionService.resetProgramPointer().get();
+            TaskService taskService = action.createService(TaskService.class);
+            List<Task> tasks = taskService.getTasks().get();
+            for (Task task : tasks) {
+                if (task.getActivityState() == TaskActiveState.DISABLED) {
+                    continue;
+                }
+                Map<String, ModuleEntity> modules = getModules(task);
+                Program program = task.getProgram().get();
+                List<Breakpoint> breakpoints = program.getBreakpoints().get();
+                for (Breakpoint breakpoint : breakpoints) {
+                    removeBreakpoint(action, task, modules, breakpoint);
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.bossymr.rapid.ide.debugger;
 
 import com.bossymr.network.SubscriptionPriority;
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.ide.debugger.breakpoints.RapidLineBreakpointHandler;
 import com.bossymr.rapid.ide.debugger.frame.RapidSuspendContext;
@@ -41,7 +42,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Phaser;
 
 public class RapidDebugProcess extends XDebugProcess {
@@ -67,7 +67,7 @@ public class RapidDebugProcess extends XDebugProcess {
      */
     private final @NotNull Set<XBreakpoint<?>> breakpoints = new HashSet<>();
     private final @NotNull List<TaskState> tasks;
-    private final @NotNull NetworkManager manager;
+    private final @NotNull NetworkAction action;
     private final @NotNull RapidProcessHandler processHandler;
 
     public RapidDebugProcess(@NotNull Project project, @NotNull XDebugSession session, @NotNull List<TaskState> tasks, @NotNull NetworkManager manager) throws IOException, InterruptedException {
@@ -75,11 +75,11 @@ public class RapidDebugProcess extends XDebugProcess {
         this.project = project;
         this.tasks = tasks;
         this.processHandler = new RapidProcessHandler(manager);
-        this.manager = processHandler.getNetworkManager();
+        this.action = processHandler.getNetworkManager();
     }
 
     private @NotNull ExecutionService getExecutionService() {
-        return manager.createService(ExecutionService.class);
+        return action.createService(ExecutionService.class);
     }
 
     @Override
@@ -99,7 +99,7 @@ public class RapidDebugProcess extends XDebugProcess {
                     case STOPPED -> {
                         phaser.register();
                         try {
-                            List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
+                            List<Task> tasks = action.createService(TaskService.class).getTasks().get();
                             for (Task task : tasks) {
                                 if (task.getActivityState() == TaskActiveState.DISABLED) return;
                                 StackFrame stackFrame = task.getStackFrame(1).get();
@@ -125,7 +125,7 @@ public class RapidDebugProcess extends XDebugProcess {
 
     private void onProgramStop(@NotNull Task task, @NotNull StackFrame stackFrame, @NotNull StackFrame nextStackFrame) {
         logger.debug("Process paused at '" + stackFrame + "' invoked by '" + nextStackFrame + "'");
-        RapidSuspendContext suspendContext = new RapidSuspendContext(project, breakpoints, manager, task, stackFrame);
+        RapidSuspendContext suspendContext = new RapidSuspendContext(project, breakpoints, action, task, stackFrame);
         for (XBreakpoint<?> breakpoint : breakpoints) {
             if (isAtBreakpoint(stackFrame, breakpoint)) {
                 logger.debug("Breakpoint '" + breakpoint + "' reached");
@@ -136,6 +136,13 @@ public class RapidDebugProcess extends XDebugProcess {
         if (hasStopped(stackFrame) || hasStopped(nextStackFrame)) {
             logger.debug("Process stopped");
             getSession().stop();
+            try {
+                action.close();
+            } catch (IOException e) {
+                logger.error(e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         } else {
             logger.debug("Process paused");
             getSession().positionReached(suspendContext);
@@ -158,7 +165,7 @@ public class RapidDebugProcess extends XDebugProcess {
     private void start(@NotNull ExecutionMode executionMode) throws IOException, InterruptedException {
         phaser.register();
         phaser.awaitAdvance(phaser.arriveAndDeregister());
-        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+        try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
             getExecutionService().start(RegainMode.REGAIN, executionMode, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.ENABLED, TaskExecutionMode.NORMAL).get();
         }
     }
@@ -176,7 +183,7 @@ public class RapidDebugProcess extends XDebugProcess {
      * @return the asynchronous request.
      */
     public @Nullable BreakpointEntity registerBreakpoint(@NotNull String taskName, @NotNull String moduleName, int line) throws IOException, InterruptedException {
-        TaskService taskService = manager.createService(TaskService.class);
+        TaskService taskService = action.createService(TaskService.class);
         Task task = taskService.getTask(taskName).get();
         Program program = task.getProgram().get();
         program.setBreakpoint(moduleName, line + 1, 0).get();
@@ -219,6 +226,10 @@ public class RapidDebugProcess extends XDebugProcess {
     }
 
     private void onFailure(@NotNull Throwable throwable) {
+        try {
+            action.close();
+        } catch (IOException | InterruptedException ignored) {}
+        getSession().reportError(throwable.getLocalizedMessage());
 
     }
 
@@ -237,7 +248,7 @@ public class RapidDebugProcess extends XDebugProcess {
             if (event.getState() == ExecutionState.STOPPED) {
                 phaser.register();
                 try {
-                    TaskService taskService = manager.createService(TaskService.class);
+                    TaskService taskService = action.createService(TaskService.class);
                     Task task = taskService.getTask(taskName).get();
                     StackFrame stackFrame = task.getStackFrame(1).get();
                     if (!stackFrame.toTextRange().equals(breakpoint.toTextRange())) {
@@ -246,7 +257,7 @@ public class RapidDebugProcess extends XDebugProcess {
                         ModuleEntity module = findModule(taskName, breakpoint.getModuleName());
                         if (module != null) {
                             ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
-                            try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+                            try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
                                 module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.FORCE, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
                             }
                         }
@@ -264,7 +275,7 @@ public class RapidDebugProcess extends XDebugProcess {
     }
 
     private @Nullable ModuleEntity findModule(@NotNull String taskName, @NotNull String moduleName) throws IOException, InterruptedException {
-        TaskService taskService = manager.createService(TaskService.class);
+        TaskService taskService = action.createService(TaskService.class);
         Task task = taskService.getTask(taskName).get();
         List<ModuleInfo> moduleInfos = task.getModules().get();
         for (ModuleInfo moduleInfo : moduleInfos) {
@@ -302,12 +313,20 @@ public class RapidDebugProcess extends XDebugProcess {
 
     @Override
     public void startPausing() {
-        stop(StopMode.INSTRUCTION);
+        try {
+            stop(StopMode.INSTRUCTION);
+        } catch (IOException e) {
+            onFailure(e);
+        } catch (InterruptedException ignored) {}
     }
 
     @Override
     public void startStepOver(@Nullable XSuspendContext context) {
-        start(ExecutionMode.STEP_OVER);
+        try {
+            start(ExecutionMode.STEP_OVER);
+        } catch (IOException e) {
+            onFailure(e);
+        } catch (InterruptedException ignored) {}
     }
 
     @Override
@@ -317,12 +336,20 @@ public class RapidDebugProcess extends XDebugProcess {
 
     @Override
     public void startStepInto(@Nullable XSuspendContext context) {
-        start(ExecutionMode.STEP_IN);
+        try {
+            start(ExecutionMode.STEP_IN);
+        } catch (IOException e) {
+            onFailure(e);
+        } catch (InterruptedException ignored) {}
     }
 
     @Override
     public void startStepOut(@Nullable XSuspendContext context) {
-        start(ExecutionMode.STEP_OUT);
+        try {
+            start(ExecutionMode.STEP_OUT);
+        } catch (IOException e) {
+            onFailure(e);
+        } catch (InterruptedException ignored) {}
     }
 
     private @Nullable String getTaskName(@NotNull XSourcePosition sourcePosition) {
@@ -388,8 +415,12 @@ public class RapidDebugProcess extends XDebugProcess {
 
     @Override
     public void resume(@Nullable XSuspendContext context) {
-        start(ExecutionMode.CONTINUE);
+        try {
+            start(ExecutionMode.CONTINUE);
+        } catch (IOException e) {
+            onFailure(e);
+        } catch (InterruptedException ignored) {}
     }
 
-    private record BreakpointEntity(@NotNull String taskName, @NotNull Breakpoint breakpoint) {}
+    public record BreakpointEntity(@NotNull String taskName, @NotNull Breakpoint breakpoint) {}
 }

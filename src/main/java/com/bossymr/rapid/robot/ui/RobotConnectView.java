@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.ui;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.RemoteRobotService;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
@@ -19,10 +20,12 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.ExecutionException;
 
 public class RobotConnectView extends DialogWrapper {
+
+    private static final Logger logger = Logger.getInstance(RobotConnectView.class);
 
     private final Project project;
 
@@ -111,9 +114,10 @@ public class RobotConnectView extends DialogWrapper {
                 Credentials credentials = authenticationComboBox.getItem().equals(AuthenticationType.DEFAULT) ? new Credentials("Default User", "robotics".toCharArray()) :
                         new Credentials(userField.getText(), passwordField.getPassword());
                 try {
-                    service.connect(path, credentials).get();
-                } catch (ExecutionException | InterruptedException ignored) {
-                    indicator.stop();
+                    service.connect(path, credentials);
+                } catch (InterruptedException ignored) {
+                } catch (IOException e) {
+                    logger.error(e);
                 }
             }
         };

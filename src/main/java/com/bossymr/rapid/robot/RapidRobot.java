@@ -2,9 +2,9 @@ package com.bossymr.rapid.robot;
 
 import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.EntityModel;
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.NetworkManager;
 import com.bossymr.network.client.proxy.EntityProxy;
-import com.bossymr.network.client.proxy.ProxyException;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidTask;
@@ -34,8 +34,6 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.util.io.FileUtil;
-import com.intellij.openapi.vfs.LocalFileSystem;
-import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -48,7 +46,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -94,33 +91,32 @@ public class RapidRobot implements Disposable {
      */
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         setCredentials(path, credentials);
-        NetworkManager manager = NetworkManager.newBuilder(path)
-                .setCredentials(credentials)
-                .build();
-        State state = getState(path, manager);
+        NetworkManager manager = new NetworkManager(path, credentials);
+        State state;
+        try (NetworkAction action = manager.createAction()) {
+            state = getState(path, action);
+        }
         RapidRobot robot = new RapidRobot(manager, state);
         RobotEventListener.publish().onRefresh(robot, manager);
         robot.download();
         return robot;
     }
 
-    private static <T> @NotNull CompletableFuture<Void> combine(@NotNull Collection<? extends T> elements, @NotNull Function<T, CompletableFuture<Void>> converter) {
-        return CompletableFuture.allOf(elements.stream().map(converter).filter(Objects::nonNull).toList().toArray(CompletableFuture[]::new));
-    }
-
-    private static @NotNull State getState(@NotNull URI path, @NotNull NetworkManager manager) throws IOException, InterruptedException {
+    private static @NotNull State getState(@NotNull URI path, @NotNull NetworkAction action) throws IOException, InterruptedException {
         State state = new State();
         state.path = path.getScheme() + "://" + path.getHost() + ":" + path.getPort();
         state.cache = new HashSet<>();
-        Identity identity = manager.createService(ControllerService.class).getIdentity().get();
+        Identity identity = action.createService(ControllerService.class).getIdentity().get();
         state.name = identity.getName();
         SymbolQuery query = new SymbolQuery()
                 .setRecursive(true)
                 .setMethod(SymbolSearchMethod.BLOCK)
                 .setBlock("RAPID")
                 .setSymbolType(SymbolType.ANY);
-        List<SymbolModel> symbols = manager.createService(RapidService.class).findSymbols(query).get();
-        state.symbols = symbols.stream().map(Entity::convert).collect(Collectors.toSet());
+        List<SymbolModel> symbols = action.createService(RapidService.class).findSymbols(query).get();
+        state.symbols = symbols.stream()
+                .map(Entity::convert)
+                .collect(Collectors.toSet());
         Map<String, Set<String>> states = new HashMap<>();
         for (SymbolModel symbol : symbols) {
             String title = symbol.getTitle();
@@ -135,17 +131,17 @@ public class RapidRobot implements Disposable {
             if (entry.getKey().equals("RAPID")) continue;
             String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
             if (states.get("RAPID").contains(name)) continue;
-            SymbolModel model = getSymbol(manager, name);
-            Objects.requireNonNull(model);
+            SymbolModel model = getSymbol(action, "RAPID" + "/" + name);
+            Objects.requireNonNull(model, entry.toString());
             Entity entity = Entity.convert(model);
             state.symbols.add(entity);
         }
         return state;
     }
 
-    private static @Nullable SymbolModel getSymbol(@NotNull NetworkManager manager, @NotNull String name) throws IOException, InterruptedException {
+    private static @Nullable SymbolModel getSymbol(@NotNull NetworkAction action, @NotNull String name) throws IOException, InterruptedException {
         try {
-            return manager.createService(RapidService.class).findSymbol(name).get();
+            return action.createService(RapidService.class).findSymbol(name).get();
         } catch (ResponseStatusException e) {
             if (e.getResponse().statusCode() == 400) {
                 return null;
@@ -241,7 +237,7 @@ public class RapidRobot implements Disposable {
      */
     public @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException {
         if (symbols.containsKey(name.toLowerCase())) {
-            return symbols.get(name);
+            return symbols.get(name.toLowerCase());
         }
         if (state.cache != null && state.cache.contains(name.toLowerCase())) {
             return null;
@@ -249,22 +245,24 @@ public class RapidRobot implements Disposable {
         if (manager == null) {
             return null;
         }
-        SymbolModel model = getSymbol(manager, "RAPID" + "/" + name);
-        if (model == null) {
-            if (state.cache == null) {
-                state.cache = new HashSet<>();
+        try (NetworkAction action = manager.createAction()) {
+            SymbolModel model = getSymbol(action, "RAPID" + "/" + name);
+            if (model == null) {
+                if (state.cache == null) {
+                    state.cache = new HashSet<>();
+                }
+                state.cache.add(name.toLowerCase());
+                return null;
             }
-            state.cache.add(name.toLowerCase());
-            return null;
+            VirtualSymbol symbol = SymbolConverter.getSymbol(model);
+            symbols.put(symbol.getName().toLowerCase(), symbol);
+            if (state.symbols == null) {
+                state.symbols = new HashSet<>();
+            }
+            state.symbols.add(Entity.convert(model));
+            RobotEventListener.publish().onSymbol(this, symbol);
+            return symbol;
         }
-        VirtualSymbol symbol = SymbolConverter.getSymbol(model);
-        symbols.put(symbol.getName().toLowerCase(), symbol);
-        if (state.symbols == null) {
-            state.symbols = new HashSet<>();
-        }
-        state.symbols.add(Entity.convert(model));
-        RobotEventListener.publish().onSymbol(this, symbol);
-        return symbol;
     }
 
     /**
@@ -281,81 +279,74 @@ public class RapidRobot implements Disposable {
         if (manager == null) {
             throw new IllegalStateException("Robot is not connected");
         }
-        VirtualFile finalDirectory;
-        Set<RapidTask> updated;
+        File finalDirectory;
+        Set<RapidTask> updated = new HashSet<>();
         try (CloseableDirectory directory = new CloseableDirectory("download")) {
             File file = Path.of(PathManager.getSystemPath(), "robot").toFile();
             if (file.exists()) {
                 FileUtil.delete(file);
             }
-            finalDirectory = LocalFileSystem.getInstance().findFileByNioFile(PathManager.getSystemDir());
-            if (finalDirectory == null) {
-                throw new IOException();
-            }
-            updated = new HashSet<>();
-            List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
-            for (Task task : tasks) {
-                File temporaryTask = directory.getVirtualFile().toNioPath().resolve(task.getName()).toFile();
-                File finalTask = finalDirectory.toNioPath().resolve("robot").resolve(task.getName()).toFile();
-                if (!(WriteAction.computeAndWait(() -> FileUtil.createDirectory(temporaryTask)))) {
-                    throw new IllegalStateException();
-                }
-                RapidTask local = new RapidTaskImpl(task.getName(), finalTask, new HashSet<>());
-                List<ModuleInfo> modules = task.getModules().get();
-                for (ModuleInfo moduleInfo : modules) {
-                    ModuleEntity module = moduleInfo.getModule();
-                    try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-                        module.save(module.getName(), temporaryTask.toPath().toString()).get();
+            finalDirectory = PathManager.getSystemDir().toFile();
+            try (NetworkAction action = manager.createAction()) {
+                List<Task> tasks = action.createService(TaskService.class).getTasks().get();
+                for (Task task : tasks) {
+                    File temporaryTask = directory.getFile().toPath().resolve(task.getName()).toFile();
+                    File finalTask = Path.of(finalDirectory.getPath(), "robot").resolve(task.getName()).toFile();
+                    if (!(WriteAction.computeAndWait(() -> FileUtil.createDirectory(temporaryTask)))) {
+                        throw new IllegalStateException();
                     }
-                    File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
-                    local.getFiles().add(result);
+                    RapidTask local = new RapidTaskImpl(task.getName(), finalTask, new HashSet<>());
+                    List<ModuleInfo> modules = task.getModules().get();
+                    for (ModuleInfo moduleInfo : modules) {
+                        ModuleEntity module = moduleInfo.getModule().get();
+                        try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
+                            module.save(module.getName(), temporaryTask.toPath().toString()).get();
+                        }
+                        File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
+                        local.getFiles().add(result);
+                    }
+                    updated.add(local);
                 }
-                LocalFileSystem.getInstance().refreshIoFiles(local.getFiles());
+                WriteAction.runAndWait(() -> {
+                    File directoryChild = Path.of(finalDirectory.getPath(), "robot").toFile();
+                    if (directoryChild.exists()) {
+                        FileUtil.delete(directoryChild);
+                    }
+                    FileUtil.copyDirContent(directory.getFile(), Path.of(finalDirectory.getPath(), "robot").toFile());
+                });
             }
-            WriteAction.runAndWait(() -> {
-                VirtualFile directoryChild = finalDirectory.findChild("robot");
-                if (directoryChild != null) {
-                    directoryChild.delete(this);
-                }
-                directory.getVirtualFile().copy(this, finalDirectory, "robot");
-            });
         }
-        finalDirectory.refresh(false, true);
         RobotEventListener.publish().onDownload(this);
         this.tasks = updated;
     }
 
     public void upload() throws IOException, InterruptedException {
-        LocalFileSystem localFileSystem = LocalFileSystem.getInstance();
         for (RapidTask task : getTasks()) {
-            Set<VirtualFile> virtualFiles = task.getFiles().stream()
-                    .map(localFileSystem::findFileByIoFile)
-                    .collect(Collectors.toSet());
+            Set<File> virtualFiles = new HashSet<>(task.getFiles());
             upload(task, virtualFiles);
         }
     }
 
-    public void upload(@NotNull RapidTask task, @NotNull Set<VirtualFile> modules) throws IOException, InterruptedException {
+    public void upload(@NotNull RapidTask task, @NotNull Set<File> modules) throws IOException, InterruptedException {
         if (manager == null) {
             throw new IllegalStateException("Robot is not connected");
         }
-        try (CloseableDirectory temporaryDirectory = new CloseableDirectory("upload")) {
-            LocalFileSystem.getInstance().refreshFiles(modules);
-            Task remote = manager.createService(TaskService.class).getTask(task.getName()).get();
+        try (CloseableDirectory temporaryDirectory = new CloseableDirectory("upload"); NetworkAction action = manager.createAction()) {
+            Task remote = action.createService(TaskService.class).getTask(task.getName()).get();
             Program program = remote.getProgram().get();
-            File file = temporaryDirectory.getVirtualFile().toNioPath().resolve(program.getName() + ".pgf").toFile();
+            File file = temporaryDirectory.getFile().toPath().resolve(program.getName() + ".pgf").toFile();
             WriteAction.runAndWait(() -> {
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                     writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
                     writer.write("<Program>\r\n");
-                    for (VirtualFile module : modules) {
+                    for (File module : modules) {
                         writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
-                        module.copy(this, temporaryDirectory.getVirtualFile(), module.getName());
+                        FileUtil.copy(module, temporaryDirectory.getFile().toPath().resolve(module.getName()).toFile());
                     }
                     writer.write("</Program>");
                 }
             });
-            try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+            try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
                 program.load(file.getPath(), LoadProgramMode.REPLACE).get();
             }
             RobotEventListener.publish().onUpload(this);
@@ -378,10 +369,11 @@ public class RapidRobot implements Disposable {
     }
 
     private @NotNull NetworkManager reconnect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
-        NetworkManager manager = NetworkManager.newBuilder(path)
-                .setCredentials(credentials)
-                .build();
-        State state = getState(path, manager);
+        NetworkManager manager = new NetworkManager(path, credentials);
+        State state;
+        try (NetworkAction action = manager.createAction()) {
+            state = getState(path, action);
+        }
         Objects.requireNonNull(state.symbols);
         List<SymbolModel> models = state.symbols.stream()
                 .map(symbol -> symbol.convert(SymbolModel.class, manager))
@@ -556,11 +548,11 @@ public class RapidRobot implements Disposable {
          * state was edited manually.
          *
          * @param entityType the entity type.
-         * @param engine the network engine, used to send requests from the created entity.
+         * @param manager the network manager, used to send requests from the created entity.
          * @param <T> the entity type.
          * @return the entity, or {@code null} if this entity is invalid.
          */
-        public <T> @Nullable T convert(@NotNull Class<T> entityType, @Nullable NetworkManager engine) {
+        public <T> @Nullable T convert(@NotNull Class<T> entityType, @Nullable NetworkManager manager) {
             if (title == null || type == null || fields == null || links == null) {
                 /*
                  * The state of this entity has changed and is invalid.
@@ -568,10 +560,14 @@ public class RapidRobot implements Disposable {
                 return null;
             }
             EntityModel model = new EntityModel(title, type, convert(links, k -> k, URI::create), fields);
-            if (engine == null) {
-                return NetworkManager.createLightEntity(entityType, model);
+            if (manager == null) {
+                return NetworkAction.createLightEntity(entityType, model);
             } else {
-                return engine.createEntity(entityType, model);
+                try (NetworkAction action = manager.createAction()) {
+                    return action.createEntity(entityType, model);
+                } catch (IOException | InterruptedException e) {
+                    throw new AssertionError(e);
+                }
             }
         }
 

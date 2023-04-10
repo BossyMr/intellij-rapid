@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 @Entity(subtype = {
         AtomicModel.class, AliasModel.class, RecordModel.class, ComponentModel.class,
         ConstantModel.class, VariableModel.class, PersistentModel.class, ParameterModel.class, FunctionModel.class,
-        ProcedureModel.class, TrapModel.class, ModuleModel.class, TaskModel.class})
+        ProcedureModel.class, TrapModel.class, ModuleModel.class})
 public interface SymbolModel {
 
     @Title

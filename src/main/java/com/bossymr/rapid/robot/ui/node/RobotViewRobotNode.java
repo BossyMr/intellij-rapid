@@ -32,7 +32,7 @@ public class RobotViewRobotNode extends RobotViewNode<RapidRobot> {
         RobotViewDirectoryNode<String> directoryNode = new RobotViewDirectoryNode<>(getProject(), "Symbols", RapidIcons.ROBOT_DIRECTORY, symbols) {
             @Override
             public @NotNull AbstractTreeNode<?> getChild(@NotNull String value) {
-                RapidRobot robot = RemoteRobotService.getInstance().getRobot().getNow(null);
+                RapidRobot robot = RemoteRobotService.getInstance().getRobot();
                 Set<RapidSymbol> symbols = robot != null ? robot.getSymbols().stream()
                         .filter(symbol -> switch (value) {
                             case "atm" -> symbol instanceof RapidAtomic;

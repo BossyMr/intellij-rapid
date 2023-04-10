@@ -1,6 +1,7 @@
 package com.bossymr.rapid.ide.execution;
 
 import com.bossymr.network.SubscriptionPriority;
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.robot.CloseableMastership;
 import com.bossymr.rapid.robot.network.EventLogCategory;
@@ -24,47 +25,57 @@ import java.util.function.BiConsumer;
 public class RapidProcessHandler extends ProcessHandler {
 
     private static final Logger logger = Logger.getInstance(RapidProcessHandler.class);
-    private final @NotNull NetworkManager manager;
+    private final @NotNull NetworkAction action;
 
     public RapidProcessHandler(@NotNull NetworkManager manager) throws IOException, InterruptedException {
-        this.manager = manager;
-        try {
-            subscribe(manager);
-            onExecutionState(manager);
-            start(manager);
-        } finally {
-            notifyProcessTerminated(1);
-        }
+        this.action = manager.createAction();
+        subscribe(action);
+        onExecutionState(action);
+        start(action);
     }
 
-    public @NotNull NetworkManager getNetworkManager() {
-        return manager;
+    public @NotNull NetworkAction getNetworkManager() {
+        return action;
     }
 
-    private void subscribe(@NotNull NetworkManager manager) throws IOException, InterruptedException {
-        EventLogService eventLogService = manager.createService(EventLogService.class);
+    private void subscribe(@NotNull NetworkAction action) throws IOException, InterruptedException {
+        logger.debug("Subscribing to process event log");
+        EventLogService eventLogService = action.createService(EventLogService.class);
         List<EventLogCategory> categories = eventLogService.getCategories("en").get();
-        if (categories.size() > 0) {
-            EventLogCategory category = categories.get(0);
-            category.onMessage().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
-                EventLogMessage message = event.getMessage("en").get();
-                StringJoiner stringJoiner = new StringJoiner("\n");
-                stringJoiner.add(message.getMessageType() + " " + "[" + message.getTimestamp() + "]: " + message.getMessageTitle());
-                stringJoiner.add(message.getDescription());
-                BiConsumer<String, String> append = (name, string) -> {
-                    if (string != null && string.length() > 0) {
-                        stringJoiner.add(name + ": " + string);
-                    }
-                };
-                append.accept("Actions", message.getActions());
-                append.accept("Causes", message.getCauses());
-                append.accept("Consequences", message.getConsequences());
-                notifyTextAvailable(stringJoiner + "\n", switch (message.getMessageType()) {
-                    case INFORMATION -> ProcessOutputType.STDOUT;
-                    case ERROR, WARNING -> ProcessOutputType.STDERR;
-                });
-            });
+        if (categories.size() == 0) {
+            logger.warn("Couldn't find process event log");
+            return;
         }
+        EventLogCategory category = categories.get(0);
+        category.onMessage().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+            logger.debug("Received event '" + event + "'");
+            EventLogMessage message;
+            try {
+                message = event.getMessage("en").get();
+                logger.debug("Retrieved message '" + message + "' for event '" + event + "'");
+            } catch (IOException e) {
+                logger.error(e);
+                throw new AssertionError(e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            StringJoiner stringJoiner = new StringJoiner("\n");
+            stringJoiner.add(message.getMessageType() + " " + "[" + message.getTimestamp() + "]: " + message.getMessageTitle());
+            stringJoiner.add(message.getDescription());
+            BiConsumer<String, String> append = (name, string) -> {
+                if (string != null && string.length() > 0) {
+                    stringJoiner.add(name + ": " + string);
+                }
+            };
+            append.accept("Actions", message.getActions());
+            append.accept("Causes", message.getCauses());
+            append.accept("Consequences", message.getConsequences());
+            notifyTextAvailable(stringJoiner + "\n", switch (message.getMessageType()) {
+                case INFORMATION -> ProcessOutputType.STDOUT;
+                case ERROR, WARNING -> ProcessOutputType.STDERR;
+            });
+        });
     }
 
     private void onFailure(@NotNull Throwable throwable) {
@@ -73,28 +84,39 @@ public class RapidProcessHandler extends ProcessHandler {
         }
         notifyTextAvailable(throwable + "\n", ProcessOutputType.STDERR);
         notifyProcessTerminated(1);
+        try {
+            action.close();
+        } catch (IOException e) {
+            e.addSuppressed(throwable);
+            logger.error(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        logger.error(throwable);
     }
 
-    private void start(@NotNull NetworkManager manager) throws IOException, InterruptedException {
+    private void start(@NotNull NetworkAction action) throws IOException, InterruptedException {
         logger.debug("Starting process");
-        ExecutionService executionService = manager.createService(ExecutionService.class);
+        ExecutionService executionService = action.createService(ExecutionService.class);
         executionService.resetProgramPointer().get();
-        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+        try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
             executionService.start(RegainMode.REGAIN, ExecutionMode.CONTINUE, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.DISABLED, TaskExecutionMode.NORMAL).get();
             logger.debug("Started process");
         }
     }
 
-    private void onExecutionState(@NotNull NetworkManager engine) throws IOException, InterruptedException {
-        ExecutionService executionService = engine.createService(ExecutionService.class);
+    private void onExecutionState(@NotNull NetworkAction action) throws IOException, InterruptedException {
+        ExecutionService executionService = action.createService(ExecutionService.class);
         executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
             if (event.getState().equals(ExecutionState.STOPPED)) {
                 logger.debug("Program stopped");
                 notifyProcessTerminated(0);
                 try {
-                    engine.close();
-                } catch (IOException | InterruptedException ex) {
-                    onFailure(ex);
+                    this.action.close();
+                } catch (IOException e) {
+                    logger.error(e);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
             }
         });
@@ -104,7 +126,7 @@ public class RapidProcessHandler extends ProcessHandler {
     @Override
     protected void destroyProcessImpl() {
         try {
-            manager.createService(ExecutionService.class).stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
+            action.createService(ExecutionService.class).stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
         } catch (IOException | InterruptedException ex) {
             onFailure(ex);
         }
@@ -112,12 +134,13 @@ public class RapidProcessHandler extends ProcessHandler {
 
     @Override
     protected void detachProcessImpl() {
+        notifyProcessDetached();
         try {
-            manager.close();
-        } catch (IOException | InterruptedException ex) {
-            onFailure(ex);
-        } finally {
-            notifyProcessDetached();
+            action.close();
+        } catch (IOException e) {
+            logger.error(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

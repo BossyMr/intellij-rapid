@@ -1,7 +1,6 @@
 package com.bossymr.network.annotations;
 
 import com.bossymr.network.client.NetworkManager;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.ElementType;

@@ -1,12 +1,12 @@
 package com.bossymr.rapid.ide.execution.configurations.ui;
 
-import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
-import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidTask;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.intellij.application.options.ModulesComboBox;
@@ -61,14 +61,13 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
         NameColumnInfo NAME = new NameColumnInfo();
         ModuleColumnInfo MODULE = new ModuleColumnInfo(project);
         this.taskModel = new ListTableModel<>(new ColumnInfo[]{ENABLED, NAME, MODULE});
-        RemoteRobotService.getInstance().getRobot().thenAcceptAsync(robot -> {
-            if (robot != null) {
-                robotComboBox.addItem(robot);
-                taskModel.setItems(robot.getTasks().stream()
-                        .map(task -> new TaskState(task.getName(), true, null))
-                        .toList());
-            }
-        });
+        RapidRobot robot = RemoteRobotService.getInstance().getRobot();
+        if (robot != null) {
+            robotComboBox.addItem(robot);
+            taskModel.setItems(robot.getTasks().stream()
+                    .map(task -> new TaskState(task.getName(), true, null))
+                    .toList());
+        }
         this.taskTable = new TableView<>(taskModel);
         taskTable.getEmptyText().setText(RapidBundle.message("run.configuration.panel.no.task"));
 
@@ -115,7 +114,7 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
 
         RobotEventListener.connect(new RobotEventListener() {
             @Override
-            public void onConnect(@NotNull RapidRobot robot, @NotNull NetworkEngine engine) {
+            public void onConnect(@NotNull RapidRobot robot, @NotNull NetworkManager manager) {
                 robotComboBox.addItem(robot);
             }
 
@@ -238,11 +237,6 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
         @Override
         public @Nullable String valueOf(@NotNull TaskState taskState) {
             return taskState.getName();
-        }
-
-        @Override
-        public Class<?> getColumnClass() {
-            return String.class;
         }
     }
 

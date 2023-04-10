@@ -22,17 +22,17 @@ import java.util.regex.Pattern;
 
 public class RequestFactory {
 
-    private final @NotNull NetworkManager manager;
+    private final @NotNull NetworkAction action;
 
-    public RequestFactory(@NotNull NetworkManager manager) {
-        this.manager = manager;
+    public RequestFactory(@NotNull NetworkAction action) {
+        this.action = action;
     }
 
     public @Nullable Object createQuery(@NotNull Class<?> type, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (method.getReturnType().isAnnotationPresent(Service.class)) {
             Class<?> returnType = method.getReturnType();
             if (returnType.isAnnotationPresent(Service.class)) {
-                return manager.createService((returnType));
+                return action.createService((returnType));
             } else {
                 throw new ProxyException();
             }
@@ -71,20 +71,20 @@ public class RequestFactory {
             }
             collected.add(key, value);
         }
-        HttpRequest request = manager.getNetworkClient().createRequest()
+        HttpRequest request = action.getManager().getNetworkClient().createRequest()
                 .setMethod(command)
                 .setPath(URI.create(interpolate(path, proxy, method, args)))
                 .setFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
                 .setArguments(collected)
                 .build();
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        return manager.createQuery(GenericType.of(returnType), request);
+        return action.createQuery(GenericType.of(returnType), request);
     }
 
     private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkQuery(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         Class<?> returnType = (Class<?>) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
         SubscribableEvent<?> event = new SubscribableEvent<>(URI.create(interpolate(path, proxy, method, args)), returnType);
-        return manager.createSubscribableQuery(event);
+        return action.createSubscribableQuery(event);
     }
 
     private @NotNull String interpolate(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {

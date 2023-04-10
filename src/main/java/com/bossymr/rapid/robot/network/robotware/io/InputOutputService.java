@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.annotations.Fetch;
 import com.bossymr.network.annotations.FetchMethod;
 import com.bossymr.network.annotations.Field;
@@ -14,26 +15,26 @@ import java.util.List;
 @Service("/rw/iosystem")
 public interface InputOutputService {
 
-        @Fetch("/networks/{network}")
-  @NotNull NetworkQuery<InputOutputNetwork> getNetwork(@NotNull @Field("network") String network);
+    @Fetch("/networks/{network}")
+    @NotNull NetworkQuery<InputOutputNetwork> getNetwork(@NotNull @Field("network") String network);
 
-        @Fetch("/networks")
-  @NotNull NetworkQuery<List<InputOutputNetwork>> getNetworks();
+    @Fetch("/networks")
+    @NotNull NetworkQuery<List<InputOutputNetwork>> getNetworks();
 
-        @Fetch("/devices")
-  @NotNull NetworkQuery<List<InputOutputDevice>> getDevices();
+    @Fetch("/devices")
+    @NotNull NetworkQuery<List<InputOutputDevice>> getDevices();
 
-        @Fetch("/devices/{device}")
-  @NotNull NetworkQuery<InputOutputNetwork> getDevices(@NotNull @Field("device") String device);
+    @Fetch("/devices/{device}")
+    @NotNull NetworkQuery<InputOutputNetwork> getDevices(@NotNull @Field("device") String device);
 
-        @Fetch("/signals")
-  @NotNull NetworkQuery<List<InputOutputSignal>> getSignals();
+    @Fetch("/signals")
+    @NotNull NetworkQuery<List<InputOutputSignal>> getSignals();
 
-        @Fetch("/signals/{network}/{device}/{signal}")
-  @NotNull NetworkQuery<InputOutputSignal> getSignal(@NotNull @Field("network") String network,
-                                              @NotNull @Field("device") String device,
-                                              @NotNull @Field("signal") String signal);
+    @Fetch("/signals/{network}/{device}/{signal}")
+    @NotNull NetworkQuery<InputOutputSignal> getSignal(@NotNull @Field("network") String network,
+                                                       @NotNull @Field("device") String device,
+                                                       @NotNull @Field("signal") String signal);
 
     @Fetch(method = FetchMethod.POST, value = "/signals?action=unblock-signals")
-  @NotNull NetworkQuery<Void> unblockSignals();
+    @NotNull NetworkQuery<Void> unblockSignals();
 }

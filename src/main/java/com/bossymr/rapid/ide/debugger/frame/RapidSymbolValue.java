@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.debugger.frame;
 
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.rapid.ide.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
@@ -7,28 +8,31 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolValue;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
-import com.intellij.openapi.application.ReadAction;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.xdebugger.frame.*;
+import com.intellij.xdebugger.frame.presentation.XErrorValuePresentation;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
-import java.util.concurrent.CompletableFuture;
 
 public class RapidSymbolValue extends XNamedValue {
 
     private final @NotNull RapidVariable symbol;
     private final @NotNull StackFrame stackFrame;
+    private final @NotNull NetworkAction action;
 
-    public RapidSymbolValue(@NotNull RapidVariable symbol, @NotNull StackFrame stackFrame) {
+    public RapidSymbolValue(@NotNull NetworkAction action, @NotNull RapidVariable symbol, @NotNull StackFrame stackFrame) {
         super(symbol.getName() != null ? symbol.getName() : "");
+        this.action = action;
         this.symbol = symbol;
         this.stackFrame = stackFrame;
     }
@@ -61,24 +65,31 @@ public class RapidSymbolValue extends XNamedValue {
         return stringJoiner.toString();
     }
 
-    protected @NotNull CompletableFuture<QueryableSymbol> findSymbol() {
-        return stackFrame.getNetworkEngine().createService(RapidService.class)
-                .findSymbol(getCanonicalName()).sendAsync()
-                .thenApplyAsync(symbol -> (QueryableSymbol) symbol);
+    protected @NotNull QueryableSymbol findSymbol() throws IOException, InterruptedException {
+        SymbolModel symbolModel = action.createService(RapidService.class)
+                .findSymbol(getCanonicalName()).get();
+        if (!(symbolModel instanceof QueryableSymbol queryableSymbol)) {
+            throw new IllegalStateException();
+        }
+        return queryableSymbol;
     }
 
     @Override
     public void computePresentation(@NotNull XValueNode node, @NotNull XValuePlace place) {
-        getValue().thenAcceptAsync(value -> ReadAction.run(() -> {
+        try {
+            String value = getValue();
             RapidType dataType = symbol.getType();
             boolean hasChildren = dataType != null && dataType.getTargetStructure() instanceof RapidRecord record && record.getComponents().size() > 0;
             node.setPresentation(symbol.getIcon(), new RapidValuePresentation(dataType, value), hasChildren);
-        }));
+        } catch (IOException e) {
+            node.setPresentation(null, new XErrorValuePresentation(e.getLocalizedMessage()), false);
+        } catch (InterruptedException ignored) {}
     }
 
-    protected @NotNull CompletableFuture<String> getValue() {
-        return findSymbol().thenComposeAsync(symbol -> symbol.getValue().sendAsync())
-                .thenApplyAsync(SymbolValue::getValue);
+    protected @NotNull String getValue() throws IOException, InterruptedException {
+        QueryableSymbol symbol = findSymbol();
+        SymbolValue value = symbol.getValue().get();
+        return value.getValue();
     }
 
     @Override
@@ -125,7 +136,7 @@ public class RapidSymbolValue extends XNamedValue {
             XValueChildrenList childrenList = new XValueChildrenList();
             List<RapidComponent> components = record.getComponents();
             for (int i = 0; i < components.size(); i++) {
-                childrenList.add(new RapidComponentValue(components.get(i), i));
+                childrenList.add(new RapidComponentValue(action, components.get(i), i));
             }
             node.addChildren(childrenList, true);
         }
@@ -135,8 +146,8 @@ public class RapidSymbolValue extends XNamedValue {
 
         private final int index;
 
-        public RapidComponentValue(@NotNull RapidComponent symbol, int index) {
-            super(symbol, stackFrame);
+        public RapidComponentValue(@NotNull NetworkAction action, @NotNull RapidComponent symbol, int index) {
+            super(action, symbol, stackFrame);
             this.index = index;
         }
 
@@ -190,8 +201,9 @@ public class RapidSymbolValue extends XNamedValue {
         }
 
         @Override
-        protected @NotNull CompletableFuture<String> getValue() {
-            return RapidSymbolValue.this.getValue().thenApplyAsync(value -> getValue(value, index));
+        protected @NotNull String getValue() throws IOException, InterruptedException {
+            String value = RapidSymbolValue.this.getValue();
+            return getValue(value, index);
         }
     }
 }

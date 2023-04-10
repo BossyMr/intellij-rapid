@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.annotations.Fetch;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
@@ -14,8 +15,8 @@ public interface QueryableSymbol extends SymbolModel, TypeSymbol {
      *
      * @return the string value of the symbol.
      */
-        @Fetch("/rw/rapid/symbol/data/{#symburl}")
-  @NotNull NetworkQuery<SymbolValue> getValue();
+    @Fetch("/rw/rapid/symbol/data/{#symburl}")
+    @NotNull NetworkQuery<SymbolValue> getValue();
 
     @Property("ndim")
     int getSize();

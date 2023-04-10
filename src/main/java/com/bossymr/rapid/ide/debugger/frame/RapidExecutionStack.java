@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.debugger.frame;
 
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskExecutionState;
@@ -10,20 +11,22 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 public class RapidExecutionStack extends XExecutionStack {
 
     private final @NotNull Project project;
     private final @NotNull Task task;
     private @NotNull List<RapidStackFrame> stackFrames = new ArrayList<>();
+    private final @NotNull NetworkAction action;
 
-    public RapidExecutionStack(@NotNull Project project, @NotNull Task task, @NotNull StackFrame stackFrame, boolean isAtBreakpoint, boolean current) {
+    public RapidExecutionStack(@NotNull NetworkAction action, @NotNull Project project, @NotNull Task task, @NotNull StackFrame stackFrame, boolean isAtBreakpoint, boolean current) {
         super(task.getName() + ": " + stackFrame.getExecutionLevel(), getIcon(task, isAtBreakpoint, current));
-        this.stackFrames.add(new RapidStackFrame(project, stackFrame));
+        this.action = action;
+        this.stackFrames.add(new RapidStackFrame(action, project, stackFrame));
         this.project = project;
         this.task = task;
     }
@@ -60,19 +63,23 @@ public class RapidExecutionStack extends XExecutionStack {
             return;
         }
         stackFrames = new ArrayList<>();
-        getStackFrameAsync(firstFrameIndex, firstFrameIndex + 1, container);
+        try {
+            getStackFrame(firstFrameIndex, container);
+        } catch (IOException e) {
+            container.errorOccurred(e.getLocalizedMessage());
+        } catch (InterruptedException ignored) {}
     }
 
-    private @NotNull CompletableFuture<Void> getStackFrameAsync(int firstFrameIndex, int index, @NotNull XStackFrameContainer container) {
-        return task.getStackFrame(index).sendAsync()
-                .thenComposeAsync(stackFrame -> {
-                    if (stackFrame.getStartRow() == 0) {
-                        container.addStackFrames(stackFrames.subList(firstFrameIndex, stackFrames.size()), true);
-                        return CompletableFuture.completedFuture(null);
-                    }
-                    stackFrames.add(new RapidStackFrame(project, stackFrame));
-                    return getStackFrameAsync(firstFrameIndex, index + 1, container);
-                });
+    private void getStackFrame(int firstFrameIndex, @NotNull XStackFrameContainer container) throws IOException, InterruptedException {
+        for (int i = firstFrameIndex; ; i++) {
+            StackFrame stackFrame = task.getStackFrame(i).get();
+            if (stackFrame.getStartRow() < 1) {
+                container.addStackFrames(stackFrames.subList(firstFrameIndex, stackFrames.size()), true);
+                break;
+            } else {
+                stackFrames.add(new RapidStackFrame(action, project, stackFrame));
+            }
+        }
     }
 
     @Override

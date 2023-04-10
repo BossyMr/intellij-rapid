@@ -9,6 +9,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -20,11 +21,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 public class ResolveScopeVisitor extends RapidElementVisitor {
+
+    private static final Logger logger = Logger.getInstance(ResolveScopeVisitor.class);
 
     private final ResolveScopeProcessor processor;
     private @NotNull PsiElement previous;
@@ -146,7 +149,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         PhysicalModule physicalModule = PsiTreeUtil.getParentOfType(context, PhysicalModule.class);
         boolean isRemoteFile = isRemoteFile(context);
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot().getNow(null);
+        RapidRobot robot = service.getRobot();
         if (robot != null) {
             for (RapidTask task : robot.getTasks()) {
                 for (PhysicalModule module : task.getModules(context.getProject())) {
@@ -173,7 +176,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         PsiFile containingFile = element.getContainingFile();
         VirtualFile virtualFile = containingFile.getVirtualFile();
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot().getNow(null);
+        RapidRobot robot = service.getRobot();
         if (robot != null && virtualFile != null) {
             for (RapidTask task : robot.getTasks()) {
                 if (task.getFiles().contains(new File(virtualFile.getPath()))) {
@@ -186,12 +189,16 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
 
     private void visitRobot() {
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot().getNow(null);
+        RapidRobot robot = service.getRobot();
         if (robot != null) {
             if (processor.getName() != null) {
                 try {
-                    process(robot.getSymbol(processor.getName()).get());
-                } catch (InterruptedException | ExecutionException ignored) {}
+                    process(robot.getSymbol(processor.getName()));
+                } catch (IOException e) {
+                    logger.error(e);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             } else {
                 for (VirtualSymbol symbol : robot.getSymbols()) {
                     process(symbol);

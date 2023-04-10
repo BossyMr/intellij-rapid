@@ -1,7 +1,8 @@
 package com.bossymr.rapid.ide.execution;
 
-import com.bossymr.network.client.NetworkEngine;
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.NetworkManager;
+import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfigurationOptions;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.filter.RapidFileFilter;
@@ -32,11 +33,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public class RapidRunProfileState implements RunProfileState {
 
@@ -61,7 +60,7 @@ public class RapidRunProfileState implements RunProfileState {
      */
     public static @Nullable RapidRunProfileState create(@NotNull Project project, @NotNull RapidRunConfigurationOptions options) throws ExecutionException {
         RemoteRobotService service = RemoteRobotService.getInstance();
-        RapidRobot robot = service.getRobot().getNow(null);
+        RapidRobot robot = service.getRobot();
         if (robot == null) {
             return null;
         }
@@ -73,8 +72,7 @@ public class RapidRunProfileState implements RunProfileState {
             if (robot.getPath().equals(path)) {
                 return new RapidRunProfileState(project, robot, options.getRobotTasks());
             }
-            // TODO: 2023-03-16 If the current robot is not the specified robot, offer an opportunity to set credentials to connect to the specified robot.
-            return null;
+            throw new ExecutionException(RapidBundle.message("run.execution.robot.not.connected", path));
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -125,22 +123,24 @@ public class RapidRunProfileState implements RunProfileState {
             Module module = ModuleManager.getInstance(getProject()).findModuleByName(moduleName);
             if (module != null) {
                 Collection<VirtualFile> modules = ReadAction.compute(() -> FileTypeIndex.getFiles(RapidFileType.getInstance(), module.getModuleContentScope()));
-                getRobot().upload(task, Set.copyOf(modules));
+                getRobot().upload(task, modules.stream().map(file -> file.toNioPath().toFile()).collect(Collectors.toSet()));
             }
         }
     }
 
     private void activate(@NotNull NetworkManager manager, @NotNull TaskState taskState, @NotNull String taskName) throws IOException, InterruptedException {
-        Task task = manager.createService(TaskService.class).getTask(taskName).get();
-        switch (task.getActivityState()) {
-            case ENABLED -> {
-                if (!taskState.isEnabled()) {
-                    task.deactivate().get();
+        try (NetworkAction action = manager.createAction()) {
+            Task task = action.createService(TaskService.class).getTask(taskName).get();
+            switch (task.getActivityState()) {
+                case ENABLED -> {
+                    if (!taskState.isEnabled()) {
+                        task.deactivate().get();
+                    }
                 }
-            }
-            case DISABLED -> {
-                if (taskState.isEnabled()) {
-                    task.activate().get();
+                case DISABLED -> {
+                    if (taskState.isEnabled()) {
+                        task.activate().get();
+                    }
                 }
             }
         }
@@ -149,13 +149,20 @@ public class RapidRunProfileState implements RunProfileState {
 
     @Override
     public @Nullable ExecutionResult execute(@NotNull Executor executor, @NotNull ProgramRunner<?> runner) throws ExecutionException {
-        CompletableFuture<NetworkEngine> completableFuture = setupExecution();
-        RapidProcessHandler processHandler = new RapidProcessHandler(completableFuture);
-        ConsoleView consoleView = TextConsoleBuilderFactory.getInstance()
-                .createBuilder(getProject())
-                .filters(new RapidFileFilter(project))
-                .getConsole();
-        consoleView.attachToProcess(processHandler);
-        return new DefaultExecutionResult(consoleView, processHandler);
+        try {
+            NetworkManager manager = setupExecution();
+            RapidProcessHandler processHandler = new RapidProcessHandler(manager);
+            ConsoleView consoleView = TextConsoleBuilderFactory.getInstance()
+                    .createBuilder(getProject())
+                    .filters(new RapidFileFilter(project))
+                    .getConsole();
+            consoleView.attachToProcess(processHandler);
+            return new DefaultExecutionResult(consoleView, processHandler);
+        } catch (IOException e) {
+            throw new ExecutionException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ExecutionException(e);
+        }
     }
 }

@@ -1,13 +1,14 @@
 package com.bossymr.rapid.ide.debugger.frame;
 
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.rapid.ide.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.RapidField;
-import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.intellij.openapi.application.ReadAction;
@@ -36,9 +37,11 @@ public class RapidStackFrame extends XStackFrame {
     private final @NotNull StackFrame stackFrame;
     private final @Nullable String equalityObject;
     private final @Nullable RapidSourcePosition sourcePosition;
+    private final @NotNull NetworkAction action;
 
-    public RapidStackFrame(@NotNull Project project, @NotNull StackFrame stackFrame) {
+    public RapidStackFrame(@NotNull NetworkAction action, @NotNull Project project, @NotNull StackFrame stackFrame) {
         this.project = project;
+        this.action = action;
         this.equalityObject = stackFrame.getRoutine();
         this.sourcePosition = findSourcePosition(stackFrame);
         this.stackFrame = stackFrame;
@@ -59,7 +62,7 @@ public class RapidStackFrame extends XStackFrame {
     }
 
     private @Nullable File findFile(@NotNull String taskName, @NotNull String moduleName) {
-        RapidRobot robot = RemoteRobotService.getInstance().getRobot().getNow(null);
+        RapidRobot robot = RemoteRobotService.getInstance().getRobot();
         if (robot == null) return null;
         for (RapidTask task : robot.getTasks()) {
             if (task.getName().equals(taskName)) {
@@ -104,7 +107,7 @@ public class RapidStackFrame extends XStackFrame {
             PhysicalModule module = PsiTreeUtil.getStubOrPsiParentOfType(routine, PhysicalModule.class);
             if (module != null) {
                 for (RapidField child : module.getFields()) {
-                    childrenList.add(new RapidSymbolValue(child, stackFrame));
+                    childrenList.add(new RapidSymbolValue(action, child, stackFrame));
                 }
             }
             node.addChildren(childrenList, true);
