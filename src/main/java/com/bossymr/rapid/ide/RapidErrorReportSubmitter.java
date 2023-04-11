@@ -31,7 +31,11 @@ import java.awt.*;
 public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
 
     static {
-        Sentry.init(options -> options.setDsn("https://3e701f47c3e045cca57ce91c003b818c@o4504737309458432.ingest.sentry.io/4504737556987904"));
+        Sentry.init(options -> {
+            options.setDsn("https://695867e6cecb4232a39f8db866b46897@sentry.bossymr.com/2");
+            boolean internal = ApplicationManager.getApplication().isInternal();
+            options.setEnvironment(internal ? "development" : "production");
+        });
     }
 
     @Override
@@ -63,16 +67,10 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
                         IdeaPluginDescriptor descriptor = reportingEvent.getPlugin();
                         if (descriptor != null) {
                             sentryEvent.setRelease(descriptor.getVersion());
-                            boolean internal = ApplicationManager.getApplication().isInternal();
-                            sentryEvent.setEnvironment(internal ? "development" : "production");
                         }
 
                         sentryEvent.setTag("IDE", ApplicationInfo.getInstance().getBuild().asString());
                         sentryEvent.setTag("OS", SystemInfo.getOsNameAndVersion());
-
-                        Breadcrumb breadcrumb = Breadcrumb.info(IdeaLogger.ourLastActionId);
-                        breadcrumb.setCategory("action");
-                        sentryEvent.addBreadcrumb(breadcrumb);
 
                         SentryId sentryId = Sentry.captureEvent(sentryEvent);
 
