@@ -8,14 +8,14 @@ import com.bossymr.network.client.GenericType;
 import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.ResponseModel;
 import com.bossymr.network.client.proxy.ProxyException;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -48,11 +48,11 @@ public class EntityConverter<T> implements ResponseConverter<T> {
     }
 
     @Override
-    public @Nullable T convert(@NotNull HttpResponse<byte[]> response) throws IOException, InterruptedException {
+    public @Nullable T convert(@NotNull Response response) throws IOException, InterruptedException {
         return convert(response, type.getType());
     }
 
-    private @Nullable T convert(@NotNull HttpResponse<byte[]> response, @NotNull Type returnType) throws IOException, InterruptedException {
+    private @Nullable T convert(@NotNull Response response, @NotNull Type returnType) throws IOException, InterruptedException {
         List<EntityModel> models = get(response);
         if (models == null) return null;
         return convert(models, returnType);
@@ -109,18 +109,21 @@ public class EntityConverter<T> implements ResponseConverter<T> {
         throw new ProxyException("'" + returnType + "' is not supported");
     }
 
-    private @Nullable List<EntityModel> get(@NotNull HttpResponse<byte[]> response) throws IOException, InterruptedException {
-        byte[] body = response.body();
+    private @Nullable List<EntityModel> get(@NotNull Response response) throws IOException, InterruptedException {
+        byte[] body = response.body().bytes();
+        response.close();
         if (body.length == 0) return null;
         ResponseModel collectionModel = ResponseModel.convert(body);
         List<EntityModel> models = new ArrayList<>(collectionModel.entities());
         onSingleEntity(models, collectionModel);
         while (collectionModel.model().reference("next") != null) {
-            HttpRequest next = HttpRequest.newBuilder(response.request(), (n, v) -> true)
-                    .uri(collectionModel.model().reference("next"))
+            Request next = new Request.Builder(response.request())
+                    .url(Objects.requireNonNull(collectionModel.model().reference("next")).toURL())
                     .build();
-            response = action.getManager().getNetworkClient().send(next);
-            collectionModel = ResponseModel.convert(response.body());
+            try (@NotNull Response closeable = action.getManager().getNetworkClient().send(next)) {
+                response = closeable;
+                collectionModel = ResponseModel.convert(response.body().bytes());
+            }
             models.addAll(collectionModel.entities());
         }
         return models;

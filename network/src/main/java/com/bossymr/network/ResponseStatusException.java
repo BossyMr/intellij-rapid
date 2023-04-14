@@ -1,5 +1,7 @@
 package com.bossymr.network;
 
+import okhttp3.Request;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -13,29 +15,25 @@ import java.net.http.HttpResponse;
  */
 public class ResponseStatusException extends IOException {
 
-    private final HttpResponse<byte[]> response;
+    private final Response response;
 
-    public ResponseStatusException(@NotNull HttpResponse<byte[]> response) {
+    public ResponseStatusException(@NotNull Response response, @NotNull String message) {
+        super(message);
         this.response = response;
     }
 
-    public @NotNull HttpResponse<byte[]> getResponse() {
+    public @NotNull Response getResponse() {
         return response;
     }
 
-    public @NotNull HttpRequest getRequest() {
+    public @NotNull Request getRequest() {
         return response.request();
     }
 
     @Override
-    public @NotNull String getMessage() {
-        return new String(response.body());
-    }
-
-    @Override
     public @NotNull String toString() {
-        int statusCode = getResponse().statusCode();
-        URI path = getRequest().uri();
+        int statusCode = getResponse().code();
+        URI path = getRequest().url().uri();
         return "ResponseStatusException: " + statusCode + " " + path + " '" + getMessage() + "'";
     }
 }

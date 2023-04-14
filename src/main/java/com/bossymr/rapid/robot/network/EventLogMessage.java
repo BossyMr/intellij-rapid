@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDateTime;
 
-@Entity({"elog-message", "elog-message-li"})
+@Entity("elog-message")
 public interface EventLogMessage {
 
     @Property("msgtype")

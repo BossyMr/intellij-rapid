@@ -1,20 +1,24 @@
 package com.bossymr.network;
 
 import com.bossymr.network.client.EntityModel;
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.SubscribableEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.*;
 
 /**
  * A {@code SubscriptionEntity} represents an ongoing subscription.
  */
 public abstract class SubscriptionEntity {
 
-    private final SubscribableEvent<?> event;
-    private final SubscriptionPriority priority;
+    private final @NotNull SubscribableEvent<?> event;
+    private final @NotNull SubscriptionPriority priority;
+    private final @NotNull NetworkAction networkAction;
 
-    public SubscriptionEntity(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority) {
+    public SubscriptionEntity(@NotNull NetworkAction networkAction, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority) {
+        this.networkAction = networkAction;
         this.event = event;
         this.priority = priority;
     }
@@ -37,35 +41,35 @@ public abstract class SubscriptionEntity {
         return priority;
     }
 
+    public @NotNull NetworkAction getNetworkAction() {
+        return networkAction;
+    }
+
     /**
      * Unsubscribes from this subscription.
      */
-    public abstract void unsubscribe() throws IOException, InterruptedException;
+    public void unsubscribe() throws IOException, InterruptedException {
+        getNetworkAction().unsubscribe(List.of(this));
+    }
+
+    public static void unsubscribe(@NotNull Collection<SubscriptionEntity> entities) throws IOException, InterruptedException {
+        Map<NetworkAction, List<SubscriptionEntity>> organized = new HashMap<>();
+        for (SubscriptionEntity entity : entities) {
+            organized.putIfAbsent(entity.getNetworkAction(), new ArrayList<>());
+            organized.get(entity.getNetworkAction()).add(entity);
+        }
+        for (NetworkAction networkAction : organized.keySet()) {
+            networkAction.unsubscribe(organized.get(networkAction));
+        }
+    }
 
     public abstract void event(@NotNull EntityModel model);
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        SubscriptionEntity that = (SubscriptionEntity) o;
-
-        if (!event.equals(that.event)) return false;
-        return priority == that.priority;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = event.hashCode();
-        result = 31 * result + priority.hashCode();
-        return result;
-    }
-
-    @Override
     public String toString() {
         return "SubscriptionEntity{" +
-                "event=" + event +
+                "identity=" + Integer.toHexString(hashCode()) +
+                ", event=" + event +
                 ", priority=" + priority +
                 '}';
     }

@@ -21,8 +21,8 @@ public interface ExecutionService {
      * @return the current execution state.
      * @see #onExecutionState()
      */
-        @Fetch("")
-  @NotNull NetworkQuery<ExecutionStatus> getState();
+    @Fetch("")
+    @NotNull NetworkQuery<ExecutionStatus> getState();
 
     /**
      * Start program execution. To start program execution the robot must in automatic mode. Additionally, mastership
@@ -37,12 +37,12 @@ public interface ExecutionService {
      * @param taskMode the task execution mode.
      */
     @Fetch(method = FetchMethod.POST, value = "", arguments = "action=start")
-  @NotNull NetworkQuery<Void> start(@NotNull @Field("regain") RegainMode regainMode,
-                             @NotNull @Field("execmode") ExecutionMode executionMode,
-                             @NotNull @Field("cycle") ExecutionCycle executionCycle,
-                             @NotNull @Field("condition") ConditionState conditionState,
-                             @NotNull @Field("stopatbp") BreakpointMode breakpointMode,
-                             @NotNull @Field("alltaskbytsp") TaskExecutionMode taskMode);
+    @NotNull NetworkQuery<Void> start(@NotNull @Field("regain") RegainMode regainMode,
+                                      @NotNull @Field("execmode") ExecutionMode executionMode,
+                                      @NotNull @Field("cycle") ExecutionCycle executionCycle,
+                                      @NotNull @Field("condition") ConditionState conditionState,
+                                      @NotNull @Field("stopatbp") BreakpointMode breakpointMode,
+                                      @NotNull @Field("alltaskbytsp") TaskExecutionMode taskMode);
 
     /**
      * Stops program execution.
@@ -61,20 +61,20 @@ public interface ExecutionService {
 
     @ApiStatus.Internal
     @Fetch(method = FetchMethod.POST, value = "", arguments = "action=stop")
-  @NotNull NetworkQuery<Void> stop(@NotNull @Field("stopmode") StopMode stopMode,
-                            @NotNull @Field("usetsp") String taskMode);
+    @NotNull NetworkQuery<Void> stop(@NotNull @Field("stopmode") StopMode stopMode,
+                                     @NotNull @Field("usetsp") String taskMode);
 
     /**
      * Starts execution from the production entry.
      */
     @Fetch(method = FetchMethod.POST, value = "", arguments = "action=startprodentry")
-  @NotNull NetworkQuery<Void> startProduction();
+    @NotNull NetworkQuery<Void> startProduction();
 
     /**
      * Resets the program pointer to the main routine.
      */
     @Fetch(method = FetchMethod.POST, value = "", arguments = "action=resetpp")
-  @NotNull NetworkQuery<Void> resetProgramPointer();
+    @NotNull NetworkQuery<Void> resetProgramPointer();
 
     /**
      * Sets the number of cycles to use.
@@ -82,7 +82,7 @@ public interface ExecutionService {
      * @param executionCycle the number of cycles.
      */
     @Fetch(method = FetchMethod.POST, value = "", arguments = "action=setcycle")
-  @NotNull NetworkQuery<Void> setCycles(@NotNull @Field("cycle") ExecutionCycle executionCycle);
+    @NotNull NetworkQuery<Void> setCycles(@NotNull @Field("cycle") ExecutionCycle executionCycle);
 
     /**
      * Subscribe to updates to the program execution state.
@@ -117,5 +117,5 @@ public interface ExecutionService {
      * @param mode the new state.
      */
     @Fetch(method = FetchMethod.POST, value = "", arguments = "action=holdtorun-state")
-  @NotNull NetworkQuery<Void> setHoldToRun(@NotNull @Field("state") HoldToRunMode mode);
+    @NotNull NetworkQuery<Void> setHoldToRun(@NotNull @Field("state") HoldToRunMode mode);
 }

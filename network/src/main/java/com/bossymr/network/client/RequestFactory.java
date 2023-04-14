@@ -6,6 +6,7 @@ import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
 import com.bossymr.network.client.proxy.EntityProxy;
 import com.bossymr.network.client.proxy.ProxyException;
+import okhttp3.Request;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,7 +16,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
-import java.net.http.HttpRequest;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -71,7 +71,7 @@ public class RequestFactory {
             }
             collected.add(key, value);
         }
-        HttpRequest request = action.getManager().getNetworkClient().createRequest()
+        Request request = action.getManager().getNetworkClient().createRequest()
                 .setMethod(command)
                 .setPath(URI.create(interpolate(path, proxy, method, args)))
                 .setFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))

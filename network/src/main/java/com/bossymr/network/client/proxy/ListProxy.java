@@ -3,6 +3,7 @@ package com.bossymr.network.client.proxy;
 import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.ResponseModel;
+import okhttp3.Request;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -14,11 +15,11 @@ public class ListProxy<T> extends AbstractList<T> {
 
     private final @NotNull NetworkAction action;
     private final @NotNull Class<T> entityType;
-    private final @NotNull HttpRequest request;
+    private final @NotNull Request request;
 
     private List<List<T>> sections;
 
-    public ListProxy(@NotNull NetworkAction action, @NotNull Class<T> entityType, @NotNull HttpRequest request) {
+    public ListProxy(@NotNull NetworkAction action, @NotNull Class<T> entityType, @NotNull Request request) {
         this.action = action;
         this.entityType = entityType;
         this.request = request;
@@ -31,8 +32,8 @@ public class ListProxy<T> extends AbstractList<T> {
         this.sections.add(createElements(model));
         URI next;
         while ((next = model.model().reference("next")) != null) {
-            HttpRequest copy = HttpRequest.newBuilder(request, (k, v) -> true)
-                    .uri(next)
+            Request copy = new Request.Builder(request)
+                    .url(next.toString())
                     .build();
             model = getModel(copy);
             this.sections.add(createElements(model));
@@ -46,7 +47,7 @@ public class ListProxy<T> extends AbstractList<T> {
                 .toList();
     }
 
-    private @NotNull ResponseModel getModel(@NotNull HttpRequest request) {
+    private @NotNull ResponseModel getModel(@NotNull Request request) {
         NetworkQuery<ResponseModel> query = action.createQuery(ResponseModel.class, request);
         try {
             ResponseModel model = query.get();

@@ -8,13 +8,13 @@ import com.bossymr.network.client.proxy.ProxyException;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import okhttp3.Request;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpRequest;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,7 +27,7 @@ class NetworkManagerTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(okForContentType("text/plain", "Hello, World!")));
         NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null);
-        HttpRequest request = manager.getNetworkClient().createRequest()
+        Request request = manager.getNetworkClient().createRequest()
                 .setPath(URI.create("/"))
                 .build();
         try (NetworkAction action = manager.createAction()) {
@@ -49,7 +49,7 @@ class NetworkManagerTest {
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toText())));
         NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null);
-        HttpRequest request = manager.getNetworkClient().createRequest()
+        Request request = manager.getNetworkClient().createRequest()
                 .setPath(URI.create("/"))
                 .build();
         try (NetworkAction action = manager.createAction()) {
@@ -79,7 +79,7 @@ class NetworkManagerTest {
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toText())));
         NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null);
-        HttpRequest request = manager.getNetworkClient().createRequest()
+        Request request = manager.getNetworkClient().createRequest()
                 .setPath(URI.create("/"))
                 .build();
         try (NetworkAction action = manager.createAction()) {
@@ -112,7 +112,7 @@ class NetworkManagerTest {
         wireMock.register(delete("/failPath")
                 .willReturn(badRequest()));
         NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null);
-        HttpRequest request = manager.getNetworkClient().createRequest()
+        Request request = manager.getNetworkClient().createRequest()
                 .setMethod("POST")
                 .setPath(URI.create("/selfPath/request"))
                 .setArgument("argument", "value")
@@ -130,7 +130,7 @@ class NetworkManagerTest {
                 testFetch.fail("failPath").get();
                 fail();
             } catch (ResponseStatusException e) {
-                assertEquals(400, e.getResponse().statusCode());
+                assertEquals(400, e.getResponse().code());
             }
         }
     }

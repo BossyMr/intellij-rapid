@@ -2,6 +2,11 @@ package com.bossymr.network.client;
 
 import com.bossymr.network.MultiMap;
 import com.bossymr.network.SubscriptionEntity;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
+import okio.ByteString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
@@ -10,18 +15,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.WebSocket;
 import java.util.*;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Semaphore;
 
 public class SubscriptionGroup {
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionGroup.class);
 
     private final @NotNull NetworkClient networkClient;
-    private final @NotNull Set<SubscriptionEntity> entities;
+    private final @NotNull List<SubscriptionEntity> entities;
     private final @NotNull Semaphore semaphore = new Semaphore(1);
 
     private @Nullable WebSocket webSocket;
@@ -29,12 +30,12 @@ public class SubscriptionGroup {
 
     public SubscriptionGroup(@NotNull NetworkClient networkClient) {
         this.networkClient = networkClient;
-        this.entities = new HashSet<>();
+        this.entities = new ArrayList<>();
     }
 
-    private static void onEntity(@NotNull Set<SubscriptionEntity> entities, @NotNull EntityModel model) {
+    private static void onEntity(@NotNull List<SubscriptionEntity> entities, @NotNull EntityModel model) {
         logger.debug("Received event '" + model + "'");
-        for (SubscriptionEntity entity : entities) {
+        for (SubscriptionEntity entity : List.copyOf(entities)) {
             String path = Objects.requireNonNull(model.reference("self")).getPath();
             String event = entity.getEvent().getResource().toString();
             if (path.startsWith(event)) {
@@ -44,7 +45,7 @@ public class SubscriptionGroup {
         }
     }
 
-    private static @NotNull @Unmodifiable List<SubscriptionEntity> getUnique(@NotNull Set<SubscriptionEntity> entities) {
+    private static @NotNull @Unmodifiable List<SubscriptionEntity> getUnique(@NotNull List<SubscriptionEntity> entities) {
         Map<URI, SubscriptionEntity> cache = new HashMap<>();
         for (SubscriptionEntity entity : entities) {
             URI resource = entity.getEvent().getResource();
@@ -59,7 +60,7 @@ public class SubscriptionGroup {
         return List.copyOf(cache.values());
     }
 
-    private static @NotNull MultiMap<String, String> getBody(@NotNull Set<SubscriptionEntity> entities) {
+    private static @NotNull MultiMap<String, String> getBody(@NotNull List<SubscriptionEntity> entities) {
         MultiMap<String, String> map = new MultiMap<>();
         List<SubscriptionEntity> unique = getUnique(entities);
         for (int i = 0; i < unique.size(); i++) {
@@ -80,12 +81,12 @@ public class SubscriptionGroup {
                 start();
             } else {
                 logger.atDebug().log("Updating SubscriptionGroup '{}'", getEntities());
-                HttpRequest request = networkClient.createRequest()
+                Request request = networkClient.createRequest()
                         .setMethod("PUT")
                         .setPath(path)
                         .setFields(getBody(getEntities()))
                         .build();
-                networkClient.send(request);
+                networkClient.send(request).close();
             }
         } finally {
             semaphore.release();
@@ -94,19 +95,58 @@ public class SubscriptionGroup {
 
     private void start() throws IOException, InterruptedException {
         logger.atDebug().log("Starting SubscriptionGroup '{}'", getEntities());
-        HttpRequest request = networkClient.createRequest()
+        Request request = networkClient.createRequest()
                 .setMethod("POST")
                 .setPath(URI.create("/subscription"))
                 .setFields(getBody(entities))
                 .build();
-        HttpResponse<byte[]> response = networkClient.send(request);
-        ResponseModel model = ResponseModel.convert(response.body());
-        URI path = URI.create(response.headers().firstValue("Location").orElseThrow());
-        WebSocket webSocket = NetworkClient.computeAsync(networkClient.getHttpClient().newWebSocketBuilder()
-                .subprotocols("robapi2_subscription")
-                .buildAsync(path, new SubscriptionListener(entities)));
-        this.path = model.model().reference("group");
-        this.webSocket = webSocket;
+        ResponseModel model;
+        try (Response response = networkClient.send(request)) {
+            model = ResponseModel.convert(response.body().bytes());
+            Request webSocketRequest = new Request.Builder()
+                    .url(Objects.requireNonNull(response.header("Location")))
+                    .header("Sec-WebSocket-Protocol", "robapi2_subscription")
+                    .build();
+            WebSocket webSocket = networkClient.getHttpClient().newWebSocket(webSocketRequest, new WebSocketListener() {
+                @Override
+                public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
+                    ResponseModel model = ResponseModel.convert(bytes.toByteArray());
+                    for (EntityModel entity : model.entities()) {
+                        onEntity(entities, entity);
+                    }
+                }
+
+                @Override
+                public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
+                    ResponseModel model = ResponseModel.convert(text.getBytes());
+                    for (EntityModel entity : model.entities()) {
+                        onEntity(entities, entity);
+                    }
+                }
+
+                @Override
+                public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
+                    logger.atError().setCause(t).log("WebSocket failed");
+                }
+
+                @Override
+                public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+                    logger.atDebug().log("WebSocket started");
+                }
+
+                @Override
+                public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+                    logger.atDebug().log("WebSocket closed");
+                }
+
+                @Override
+                public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+                    logger.atDebug().log("WebSocket closing");
+                }
+            });
+            this.path = model.model().reference("group");
+            this.webSocket = webSocket;
+        }
     }
 
     private void close() throws IOException, InterruptedException {
@@ -114,44 +154,21 @@ public class SubscriptionGroup {
         if (path == null || webSocket == null) {
             return;
         }
-        HttpRequest request = networkClient.createRequest()
+        Request request = networkClient.createRequest()
                 .setMethod("DELETE")
                 .setPath(path)
                 .build();
         this.path = null;
         try {
-            networkClient.send(request);
-            NetworkClient.computeAsync(webSocket.sendClose(WebSocket.NORMAL_CLOSURE, ""));
+            networkClient.send(request).close();
+            webSocket.close(1000, "");
         } finally {
             webSocket = null;
         }
     }
 
-    public @NotNull Set<SubscriptionEntity> getEntities() {
+    public @NotNull List<SubscriptionEntity> getEntities() {
         return entities;
     }
 
-    private static class SubscriptionListener implements WebSocket.Listener {
-
-        private final @NotNull Set<SubscriptionEntity> entities;
-        private @NotNull StringBuilder stringBuilder = new StringBuilder();
-
-        public SubscriptionListener(@NotNull Set<SubscriptionEntity> entities) {
-            this.entities = entities;
-        }
-
-        @Override
-        public @Nullable CompletionStage<?> onText(@NotNull WebSocket webSocket, @NotNull CharSequence data, boolean last) {
-            stringBuilder.append(data);
-            if (last) {
-                String event = stringBuilder.toString();
-                ResponseModel model = ResponseModel.convert(event.getBytes());
-                for (EntityModel entity : model.entities()) {
-                    onEntity(entities, entity);
-                }
-                stringBuilder = new StringBuilder();
-            }
-            return WebSocket.Listener.super.onText(webSocket, data, last);
-        }
-    }
 }

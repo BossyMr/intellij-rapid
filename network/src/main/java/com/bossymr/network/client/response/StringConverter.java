@@ -4,9 +4,11 @@ import com.bossymr.network.ResponseConverter;
 import com.bossymr.network.ResponseConverterFactory;
 import com.bossymr.network.client.GenericType;
 import com.bossymr.network.client.NetworkAction;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.net.http.HttpResponse;
 
 public class StringConverter implements ResponseConverter<String> {
@@ -23,7 +25,7 @@ public class StringConverter implements ResponseConverter<String> {
     };
 
     @Override
-    public @Nullable String convert(@NotNull HttpResponse<byte[]> response) {
-        return new String(response.body());
+    public @Nullable String convert(@NotNull Response response) throws IOException {
+        return response.body().string();
     }
 }

@@ -9,14 +9,14 @@ import com.bossymr.network.client.response.EntityConverter;
 import com.bossymr.network.client.response.ResponseModelConverter;
 import com.bossymr.network.client.response.StringConverter;
 import com.bossymr.network.client.security.Credentials;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Set;
 
@@ -47,7 +47,7 @@ public class NetworkManager {
         return networkClient;
     }
 
-    <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkAction action, @NotNull Class<T> type, @NotNull HttpRequest request) {
+    <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkAction action, @NotNull Class<T> type, @NotNull Request request) {
         if (closed) {
             throw new IllegalStateException("NetworkManager is closed");
         }
@@ -55,7 +55,7 @@ public class NetworkManager {
     }
 
     @SuppressWarnings("unchecked")
-    <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkAction action, @NotNull GenericType<T> type, @NotNull HttpRequest request) {
+    <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkAction action, @NotNull GenericType<T> type, @NotNull Request request) {
         if (closed) {
             throw new IllegalStateException("NetworkManager is closed");
         }
@@ -65,7 +65,7 @@ public class NetworkManager {
                 Class<T> typeArgument = (Class<T>) parameterizedType.getActualTypeArguments()[0];
                 return (T) new ListProxy<>(action, typeArgument, request);
             }
-            HttpResponse<byte[]> response = networkClient.send(request);
+            Response response = networkClient.send(request);
             for (ResponseConverterFactory converter : converters) {
                 ResponseConverter<T> responseConverter = converter.create(action, type);
                 if (responseConverter != null) {
@@ -77,7 +77,7 @@ public class NetworkManager {
     }
 
     <T> @NotNull SubscribableNetworkQuery<T> createSubscribableQuery(@NotNull NetworkAction action, @NotNull SubscribableEvent<T> subscribableEvent) {
-        return (priority, listener) -> networkClient.subscribe(subscribableEvent, priority, (entity, event) -> {
+        return (priority, listener) -> networkClient.subscribe(action, subscribableEvent, priority, (entity, event) -> {
             T response = action.createEntity(subscribableEvent.getEventType(), event);
             if (response != null) {
                 listener.onEvent(entity, response);

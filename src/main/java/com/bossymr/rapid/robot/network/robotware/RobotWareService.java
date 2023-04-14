@@ -4,6 +4,7 @@ import com.bossymr.network.annotations.Service;
 import com.bossymr.rapid.robot.network.EventLogService;
 import com.bossymr.rapid.robot.network.robotware.io.InputOutputService;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipService;
+import com.bossymr.rapid.robot.network.robotware.panel.PanelService;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import org.jetbrains.annotations.NotNull;
 
@@ -41,4 +42,5 @@ public interface RobotWareService {
      */
     @NotNull InputOutputService getInputOutputService();
 
+    @NotNull PanelService getPanelService();
 }

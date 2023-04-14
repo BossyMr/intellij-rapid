@@ -46,6 +46,9 @@ configurations {
 dependencies {
     implementation(project(mapOf("path" to ":network")))
     implementation("org.slf4j:slf4j-jdk14:2.0.5")
+    implementation("com.github.mizosoft.methanol:methanol:1.7.0")
+    implementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.11")
     testImplementation(platform("org.junit:junit-bom:5.9.0"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
     testImplementation("junit:junit:4.13.2")

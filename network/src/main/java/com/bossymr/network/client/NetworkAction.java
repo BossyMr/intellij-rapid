@@ -7,6 +7,7 @@ import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.client.proxy.EntityProxy;
 import com.bossymr.network.entity.EntityInvocationHandler;
 import com.bossymr.network.entity.ServiceInvocationHandler;
+import okhttp3.Request;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -17,7 +18,6 @@ import java.lang.reflect.Proxy;
 import java.net.http.HttpRequest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class NetworkAction implements AutoCloseable {
 
@@ -34,10 +34,6 @@ public class NetworkAction implements AutoCloseable {
 
     public static <T> @Nullable T createLightEntity(@NotNull Class<T> entityType, @NotNull EntityModel model) {
         return createEntity(null, entityType, model);
-    }
-
-    public @NotNull NetworkManager getManager() {
-        return manager;
     }
 
     @SuppressWarnings("unchecked")
@@ -80,11 +76,15 @@ public class NetworkAction implements AutoCloseable {
         }
     }
 
-    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull Class<T> type, @NotNull HttpRequest request) {
+    public @NotNull NetworkManager getManager() {
+        return manager;
+    }
+
+    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull Class<T> type, @NotNull Request request) {
         return createQuery(GenericType.of(type), request);
     }
 
-    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull GenericType<T> type, @NotNull HttpRequest request) {
+    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull GenericType<T> type, @NotNull Request request) {
         return manager.createQuery(this, type, request);
     }
 
@@ -93,24 +93,24 @@ public class NetworkAction implements AutoCloseable {
         SubscribableNetworkQuery<T> delegateQuery = manager.createSubscribableQuery(this, subscribableEvent);
         return (priority, listener) -> {
             logger.atDebug().log("Subscribing to delegate SubscribableNetworkQuery '{}'", subscribableEvent);
-            SubscriptionEntity delegate = delegateQuery.subscribe(priority, listener);
-            AtomicReference<SubscriptionEntity> entity = new AtomicReference<>();
-            entity.set(new SubscriptionEntity(delegate.getEvent(), delegate.getPriority()) {
-                @Override
-                public void unsubscribe() throws IOException, InterruptedException {
-                    logger.atDebug().log("Unsubscribing from delegate SubscribableNetworkQuery '{}'", subscribableEvent);
-                    entities.remove(entity.get());
-                    delegate.unsubscribe();
-                }
-
-                @Override
-                public void event(@NotNull EntityModel model) {
-                    delegate.event(model);
-                }
-            });
-            entities.add(entity.get());
-            return delegate;
+            /*
+             * The delegate SubscriptionEntity represents the actual subscription to the remote client.
+             */
+            SubscriptionEntity entity = delegateQuery.subscribe(priority, listener);
+            entities.add(entity);
+            return entity;
         };
+    }
+
+    public void unsubscribe(@NotNull List<SubscriptionEntity> entities) throws IOException, InterruptedException {
+        for (SubscriptionEntity entity : entities) {
+            if (entity.getNetworkAction() != this) {
+                throw new IllegalArgumentException("Cannot unsubscribe entity '" + entity + "'");
+            }
+        }
+        List<SubscriptionEntity> copy = List.copyOf(entities);
+        copy.forEach(this.entities::remove);
+        getManager().getNetworkClient().unsubscribe(copy);
     }
 
     public <T> @Nullable T createEntity(@NotNull Class<T> entityType, @NotNull EntityModel model) {
@@ -130,10 +130,8 @@ public class NetworkAction implements AutoCloseable {
 
     @Override
     public void close() throws IOException, InterruptedException {
-        for (SubscriptionEntity entity : entities) {
-            logger.atDebug().log("Closing delegate subscription '{}'", entity);
-            entity.unsubscribe();
-        }
+        logger.atDebug().log("Closing delegate subscription '{}'", entities);
+        SubscriptionEntity.unsubscribe(entities);
     }
 
     public static class ServiceCache {

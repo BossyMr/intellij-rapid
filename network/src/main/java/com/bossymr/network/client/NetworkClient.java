@@ -4,61 +4,63 @@ import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionListener;
 import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.client.security.Authenticator;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.network.client.security.impl.DigestAuthenticator;
+import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.CookieManager;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Semaphore;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 
 public class NetworkClient {
 
     private static final Logger logger = LoggerFactory.getLogger(NetworkClient.class);
 
-    private static final int MAX_CONNECTIONS = 2;
-    private final @NotNull Semaphore semaphore = new Semaphore(MAX_CONNECTIONS);
-
-    private final @NotNull Authenticator authenticator;
     private final @NotNull URI defaultPath;
 
     private final @NotNull SubscriptionGroup subscriptionGroup;
-    private final @NotNull HttpClient httpClient;
+    private final @NotNull OkHttpClient httpClient;
+
 
     public NetworkClient(@NotNull URI defaultPath, @Nullable Credentials credentials) {
         this.defaultPath = defaultPath;
-        this.authenticator = new DigestAuthenticator(credentials);
-        this.httpClient = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
-                .cookieHandler(new CookieManager())
+        CookieJar cookieJar = new CookieJar() {
+            private final HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
+
+            @Override
+            public void saveFromResponse(@NotNull HttpUrl url, @NotNull List<Cookie> cookies) {
+                cookieStore.put(url.host(), cookies);
+            }
+
+            @Override
+            public @NotNull List<Cookie> loadForRequest(@NotNull HttpUrl url) {
+                List<Cookie> cookies = cookieStore.get(url.host());
+                return cookies != null ? cookies : new ArrayList<Cookie>();
+            }
+        };
+        Dispatcher dispatcher = new Dispatcher();
+        dispatcher.setMaxRequestsPerHost(1);
+        this.httpClient = new OkHttpClient.Builder()
+                .authenticator(new DigestAuthenticator(credentials))
+                .cookieJar(cookieJar)
+                .addInterceptor(chain -> {
+                    Response response = chain.proceed(chain.request());
+                    logger.atDebug().log("Request {} -> {}", chain.request(), response);
+                    if(response.code() >= 300) {
+                        throw new ResponseStatusException(response, response.body().string());
+                    }
+                    return response;
+                })
+                .dispatcher(dispatcher)
                 .build();
         this.subscriptionGroup = new SubscriptionGroup(this);
-    }
-
-    public static <T> @NotNull T computeAsync(@NotNull CompletableFuture<T> completableFuture) throws IOException, InterruptedException {
-        try {
-            return completableFuture.get();
-        } catch (ExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException runtimeException) {
-                throw runtimeException;
-            }
-            if (cause instanceof IOException exception) {
-                throw exception;
-            }
-            throw new IOException(e);
-        }
     }
 
     public @NotNull RequestBuilder createRequest() {
@@ -69,55 +71,17 @@ public class NetworkClient {
         return defaultPath;
     }
 
-    public @NotNull HttpClient getHttpClient() {
+    public @NotNull OkHttpClient getHttpClient() {
         return httpClient;
     }
 
-    public @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
-        HttpResponse<byte[]> response = retry(request, HttpResponse.BodyHandlers.ofByteArray());
-        logger.atDebug().log("Sending request '{}' synchronously with response '{}'", request, response);
-        if (response.statusCode() >= 300) {
-            throw new ResponseStatusException(response);
-        }
-        return response;
+    public @NotNull Response send(@NotNull Request request) throws IOException, InterruptedException {
+        return httpClient.newCall(request).execute();
     }
 
-    private <T> @NotNull HttpResponse<T> retry(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
-        HttpRequest authenticated = authenticator.authenticate(request);
-        HttpResponse<T> response = send(Objects.requireNonNullElse(authenticated, request), bodyHandler);
-        if (response.statusCode() == 401 || response.statusCode() == 407) {
-            HttpRequest retry = authenticator.authenticate(response);
-            if (retry != null) {
-                logger.atDebug().log("Re-authenticated request '{}' with authenticator '{}'", request, authenticator);
-                return send(retry, bodyHandler);
-            }
-            logger.atDebug().log("Failed to re-authenticated request '{}' with authenticator '{}'", request, authenticator);
-        }
-        return response;
-    }
-
-    private <T> @NotNull HttpResponse<T> send(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
-        semaphore.acquire();
-        try {
-            HttpResponse<T> response = httpClient.send(request, bodyHandler);
-            if (response.statusCode() == 503) {
-                logger.atDebug().log("Retrying request with response'" + response + "'");
-                return httpClient.send(request, bodyHandler);
-            }
-            return response;
-        } finally {
-            semaphore.release();
-        }
-    }
-
-    public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
-        logger.atDebug().log("Subscribing to {} with priority {}", event.getResource(), priority);
-        SubscriptionEntity entity = new SubscriptionEntity(event, priority) {
-            @Override
-            public void unsubscribe() throws IOException, InterruptedException {
-                NetworkClient.this.unsubscribe(this);
-            }
-
+    public @NotNull SubscriptionEntity subscribe(@NotNull NetworkAction action, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
+        logger.atDebug().log("Subscribing to '{}' with priority {}", event.getResource(), priority);
+        SubscriptionEntity entity = new SubscriptionEntity(action, event, priority) {
             @Override
             public void event(@NotNull EntityModel model) {
                 listener.onEvent(this, model);
@@ -125,12 +89,13 @@ public class NetworkClient {
         };
         subscriptionGroup.getEntities().add(entity);
         subscriptionGroup.update();
-        logger.atDebug().log("Subscribed to {} with priority {}", event.getResource(), priority);
+        logger.atDebug().log("Subscribed to '{}' with priority {}", event.getResource(), priority);
         return entity;
     }
 
-    public void unsubscribe(@NotNull SubscriptionEntity entity) throws IOException, InterruptedException {
-        subscriptionGroup.getEntities().remove(entity);
+
+    public void unsubscribe(@NotNull Collection<SubscriptionEntity> entities) throws IOException, InterruptedException {
+        entities.forEach(subscriptionGroup.getEntities()::remove);
         subscriptionGroup.update();
     }
 

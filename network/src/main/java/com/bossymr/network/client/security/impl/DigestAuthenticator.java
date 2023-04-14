@@ -1,12 +1,10 @@
 package com.bossymr.network.client.security.impl;
 
-import com.bossymr.network.client.security.Authenticator;
 import com.bossymr.network.client.security.Credentials;
+import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -51,8 +49,8 @@ public class DigestAuthenticator implements Authenticator {
     }
 
     private @Nullable String getQuality() {
-        if (challenge.values().containsKey("qop")) {
-            Set<String> qualities = new HashSet<>(Arrays.asList(challenge.values().get("qop").split(",")));
+        if (challenge.authParams().containsKey("qop")) {
+            Set<String> qualities = new HashSet<>(Arrays.asList(challenge.authParams().get("qop").split(",")));
             if (qualities.contains("auth-int")) return "auth-int";
             if (qualities.contains("auth")) return "auth";
         }
@@ -60,15 +58,26 @@ public class DigestAuthenticator implements Authenticator {
     }
 
     private @NotNull Charset getCharset() {
-        String charset = challenge.values().get("charset");
+        String charset = challenge.authParams().get("charset");
         return charset != null ? Charset.forName(charset) : StandardCharsets.UTF_8;
     }
 
+    @Nullable
     @Override
-    public @Nullable HttpRequest authenticate(@NotNull HttpRequest request) {
+    public Request authenticate(@Nullable Route route, @NotNull Response response) {
+        for (Challenge challenge : response.challenges()) {
+            // If this is preemptive auth, use a preemptive credential.
+            if (challenge.scheme().equalsIgnoreCase("OkHttp-Preemptive")) {
+                return authenticate(response.request());
+            }
+        }
+        return authenticate(response);
+    }
+
+    public @Nullable Request authenticate(@NotNull Request request) {
         if (challenge == null || credentials == null) return null;
         Charset charset = getCharset();
-        String algorithm = challenge.values().getOrDefault("algorithm", "MD5");
+        String algorithm = challenge.authParams().getOrDefault("algorithm", "MD5");
         boolean session = algorithm.endsWith("-sess");
         if (session) algorithm = algorithm.substring(0, algorithm.length() - "-sess".length());
         MessageDigest digest;
@@ -78,9 +87,9 @@ public class DigestAuthenticator implements Authenticator {
             throw new IllegalStateException(e);
         }
         usages += 1;
-        String path = Objects.requireNonNull(request.uri().getPath());
-        String realm = Objects.requireNonNull(challenge.values().get("realm"));
-        String nonce = Objects.requireNonNull(challenge.values().get("nonce"));
+        String path = Objects.requireNonNull(request.url().uri().getPath());
+        String realm = Objects.requireNonNull(challenge.authParams().get("realm"));
+        String nonce = Objects.requireNonNull(challenge.authParams().get("nonce"));
         String nc = String.format("%08X", usages);
         String A1, A2;
         if (session) {
@@ -112,10 +121,10 @@ public class DigestAuthenticator implements Authenticator {
             parameters.put("qop", quality);
             parameters.put("cnonce", unique);
         }
-        parameters.put("opaque", Objects.requireNonNull(challenge.values().get("opaque")));
+        parameters.put("opaque", Objects.requireNonNull(challenge.authParams().get("opaque")));
         String name = isProxy ? "Proxy-Authorization" : "Authorization";
         String output = parse(parameters);
-        return HttpRequest.newBuilder(request, (n, v) -> !n.equalsIgnoreCase("Authorization") && !n.equalsIgnoreCase("Proxy-Authorization"))
+        return new Request.Builder(request)
                 .header(name, output)
                 .build();
     }
@@ -140,19 +149,18 @@ public class DigestAuthenticator implements Authenticator {
         return "Digest" + " " + joiner;
     }
 
-    @Override
-    public @Nullable HttpRequest authenticate(@NotNull HttpResponse<?> response) {
-        if (response.request().headers().firstValue("Proxy-Authorization").isPresent() || response.request().headers().firstValue("Authorization").isPresent()) {
+    public @Nullable Request authenticate(@NotNull Response response) {
+        if (response.request().header("Proxy-Authorization") != null || response.request().header("Authorization") != null) {
             // The specified response was already authenticated.
             Challenge challenge = findChallenge(response);
             if (challenge != null) {
-                Map<String, String> arguments = challenge.values();
+                Map<String, String> arguments = challenge.authParams();
                 if (Boolean.parseBoolean(arguments.get("stale"))) {
                     // Calculate new authorization with previous credentials.
                     this.challenge = challenge;
                 } else {
                     // Calculate new authorization with new credentials.
-                    this.isProxy = response.statusCode() == 407;
+                    this.isProxy = response.code() == 407;
                     setChallenge(challenge);
                 }
                 return authenticate(response.request());
@@ -160,8 +168,8 @@ public class DigestAuthenticator implements Authenticator {
         } else {
             // The specified response was not authenticated.
             // This authenticator should be updated to use a new challenge.
-            for (Challenge challenge : Challenge.challenges(response)) {
-                this.isProxy = response.statusCode() == 407;
+            for (Challenge challenge : response.challenges()) {
+                this.isProxy = response.code() == 407;
                 setChallenge(challenge);
                 return authenticate(response.request());
             }
@@ -174,8 +182,8 @@ public class DigestAuthenticator implements Authenticator {
         this.usages = 0;
     }
 
-    private @Nullable Challenge findChallenge(@NotNull HttpResponse<?> response) {
-        for (Challenge challenge : Challenge.challenges(response)) {
+    private @Nullable Challenge findChallenge(@NotNull Response response) {
+        for (Challenge challenge : response.challenges()) {
             if (challenge.scheme().equals(this.challenge.scheme())) {
                 return challenge;
             }

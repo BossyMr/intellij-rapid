@@ -20,7 +20,7 @@ public class RobotViewTaskNode extends RobotViewNode<RapidTask> {
 
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
-        if (getValue() == null) {
+        if (getValue() == null || !(getValue().isValid())) {
             return Collections.emptyList();
         }
         Set<PhysicalModule> modules = getValue().getModules(getProject());

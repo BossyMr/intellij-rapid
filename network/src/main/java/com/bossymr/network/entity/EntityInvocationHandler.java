@@ -10,6 +10,8 @@ import com.bossymr.network.client.ResponseModel;
 import com.bossymr.network.client.proxy.EntityProxy;
 import com.bossymr.network.client.proxy.NetworkProxy;
 import com.bossymr.network.client.proxy.ProxyException;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,8 +21,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -188,10 +188,12 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         if (reference == null) {
             throw new ProxyException("Entity '" + model + "' has no reference to itself");
         }
-        HttpRequest httpRequest = HttpRequest.newBuilder(reference).build();
+        Request httpRequest = new Request.Builder().url(reference.toString()).build();
         try {
-            HttpResponse<byte[]> response = action.getManager().getNetworkClient().send(httpRequest);
-            ResponseModel collectionModel = ResponseModel.convert(response.body());
+            ResponseModel collectionModel;
+            try (Response response = action.getManager().getNetworkClient().send(httpRequest)) {
+                collectionModel = ResponseModel.convert(response.body().bytes());
+            }
             if (collectionModel.entities().size() != 1) {
                 throw new ProxyException("Request to self reference '" + reference + "' responded with multiple entities");
             }

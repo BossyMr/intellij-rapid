@@ -6,6 +6,7 @@ import com.bossymr.network.client.EntityModel;
 import com.bossymr.network.client.GenericType;
 import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.ResponseModel;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Document;
@@ -20,7 +21,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,8 +53,10 @@ public class ResponseModelConverter implements ResponseConverter<ResponseModel> 
     }
 
     @Override
-    public @Nullable ResponseModel convert(@NotNull HttpResponse<byte[]> response) {
-        return convert(response.body());
+    public @Nullable ResponseModel convert(@NotNull Response response) throws IOException {
+        byte[] body = response.body().bytes();
+        response.close();
+        return convert(body);
     }
 
     public @NotNull ResponseModel convert(byte @NotNull [] body) {
@@ -67,7 +69,7 @@ public class ResponseModelConverter implements ResponseConverter<ResponseModel> 
         URI defaultPath = getDefaultPath(element);
         Map<String, URI> links = getLinks(defaultPath, section);
         Map<String, String> fields = getFields(section);
-        List<EntityModel> models = getModels(defaultPath, element);
+        List<EntityModel> models = List.copyOf(getModels(defaultPath, element));
         return new ResponseModel(new EntityModel(title, type, links, fields), models);
     }
 
