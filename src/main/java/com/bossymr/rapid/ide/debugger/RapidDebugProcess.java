@@ -53,6 +53,7 @@ public class RapidDebugProcess extends XDebugProcess {
             new RapidLineBreakpointHandler(this)
     );
     private final @NotNull Project project;
+
     /**
      * A {@code Phaser} used to control access to start the program.
      */
@@ -62,6 +63,7 @@ public class RapidDebugProcess extends XDebugProcess {
             return false;
         }
     };
+
     /**
      * A {@code Set} containing all breakpoints which are currently registered.
      */
@@ -70,12 +72,46 @@ public class RapidDebugProcess extends XDebugProcess {
     private final @NotNull NetworkAction action;
     private final @NotNull RapidProcessHandler processHandler;
 
-    public RapidDebugProcess(@NotNull Project project, @NotNull XDebugSession session, @NotNull List<TaskState> tasks, @NotNull NetworkManager manager) throws IOException, InterruptedException {
+    public RapidDebugProcess(@NotNull Project project, @NotNull XDebugSession session, @NotNull List<TaskState> taskStates, @NotNull NetworkManager manager) throws IOException, InterruptedException {
         super(session);
         this.project = project;
-        this.tasks = tasks;
+        this.tasks = taskStates;
         this.processHandler = new RapidProcessHandler(manager);
         this.action = processHandler.getNetworkManager();
+        ExecutionService executionService = action.createService(ExecutionService.class);
+        executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+            switch (event.getState()) {
+                case RUNNING -> getSession().sessionResumed();
+                case STOPPED -> {
+                    phaser.register();
+                    try {
+                        List<Task> tasks = action.createService(TaskService.class).getTasks().get();
+                        for (Task task : tasks) {
+                            if (task.getActivityState() == TaskActiveState.DISABLED) return;
+                            StackFrame stackFrame = task.getStackFrame(1).get();
+                            StackFrame nextStackFrame = task.getStackFrame(2).get();
+                            onProgramStop(task, stackFrame, nextStackFrame);
+                        }
+                    } catch (IOException e) {
+                        try {
+                            entity.unsubscribe();
+                        } catch (IOException | InterruptedException ignored) {}
+                        onFailure(e);
+                    } catch (InterruptedException ignored) {
+                    } finally {
+                        phaser.arriveAndDeregister();
+                    }
+                }
+            }
+        });
+    }
+
+    public @NotNull Project getProject() {
+        return project;
+    }
+
+    public @NotNull NetworkAction getAction() {
+        return action;
     }
 
     private @NotNull ExecutionService getExecutionService() {
@@ -89,35 +125,11 @@ public class RapidDebugProcess extends XDebugProcess {
 
     @Override
     public void sessionInitialized() {
+        getSession().getConsoleView().attachToProcess(processHandler);
         ExecutionService executionService = getExecutionService();
         try {
             executionService.resetProgramPointer().get();
             start(ExecutionMode.CONTINUE);
-            executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
-                switch (event.getState()) {
-                    case RUNNING -> getSession().sessionResumed();
-                    case STOPPED -> {
-                        phaser.register();
-                        try {
-                            List<Task> tasks = action.createService(TaskService.class).getTasks().get();
-                            for (Task task : tasks) {
-                                if (task.getActivityState() == TaskActiveState.DISABLED) return;
-                                StackFrame stackFrame = task.getStackFrame(1).get();
-                                StackFrame nextStackFrame = task.getStackFrame(2).get();
-                                onProgramStop(task, stackFrame, nextStackFrame);
-                            }
-                        } catch (IOException e) {
-                            try {
-                                entity.unsubscribe();
-                            } catch (IOException | InterruptedException ignored) {}
-                            onFailure(e);
-                        } catch (InterruptedException ignored) {
-                        } finally {
-                            phaser.arriveAndDeregister();
-                        }
-                    }
-                }
-            });
         } catch (IOException e) {
             onFailure(e);
         } catch (InterruptedException ignored) {}
@@ -125,14 +137,6 @@ public class RapidDebugProcess extends XDebugProcess {
 
     private void onProgramStop(@NotNull Task task, @NotNull StackFrame stackFrame, @NotNull StackFrame nextStackFrame) {
         logger.debug("Process paused at '" + stackFrame + "' invoked by '" + nextStackFrame + "'");
-        RapidSuspendContext suspendContext = new RapidSuspendContext(project, breakpoints, action, task, stackFrame);
-        for (XBreakpoint<?> breakpoint : breakpoints) {
-            if (isAtBreakpoint(stackFrame, breakpoint)) {
-                logger.debug("Breakpoint '" + breakpoint + "' reached");
-                getSession().breakpointReached(breakpoint, null, suspendContext);
-                return;
-            }
-        }
         if (hasStopped(stackFrame) || hasStopped(nextStackFrame)) {
             logger.debug("Process stopped");
             getSession().stop();
@@ -144,6 +148,14 @@ public class RapidDebugProcess extends XDebugProcess {
                 Thread.currentThread().interrupt();
             }
         } else {
+            RapidSuspendContext suspendContext = new RapidSuspendContext(project, breakpoints, action, task, stackFrame);
+            for (XBreakpoint<?> breakpoint : breakpoints) {
+                if (isAtBreakpoint(stackFrame, breakpoint)) {
+                    logger.debug("Breakpoint '" + breakpoint + "' reached");
+                    getSession().breakpointReached(breakpoint, null, suspendContext);
+                    return;
+                }
+            }
             logger.debug("Process paused");
             getSession().positionReached(suspendContext);
         }
@@ -405,12 +417,7 @@ public class RapidDebugProcess extends XDebugProcess {
 
     @Override
     public void stop() {
-        try {
-            stop(StopMode.STOP);
-        } catch (IOException e) {
-            onFailure(e);
-        } catch (InterruptedException ignored) {}
-        super.stop();
+        getSession().stop();
     }
 
     @Override

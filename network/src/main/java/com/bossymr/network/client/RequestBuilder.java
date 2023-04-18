@@ -81,7 +81,7 @@ public class RequestBuilder {
         RequestBody bodyPublisher = body != null ? RequestBody.create(body.getBytes(), MediaType.get("application/x-www-form-urlencoded")) : null;
         if(method.equals("POST") || method.equals("PUT")) {
             if(bodyPublisher == null) {
-                bodyPublisher = RequestBody.create(new byte[0]);
+                bodyPublisher = RequestBody.create(new byte[0], MediaType.get("application/x-www-form-urlencoded"));
             }
         }
         builder = builder.method(method, bodyPublisher);

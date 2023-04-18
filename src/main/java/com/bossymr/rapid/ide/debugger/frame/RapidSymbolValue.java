@@ -37,7 +37,7 @@ public class RapidSymbolValue extends XNamedValue {
         this.stackFrame = stackFrame;
     }
 
-    protected @NotNull String getCanonicalName() {
+    protected static @NotNull String getCanonicalName(@NotNull RapidVariable symbol, @NotNull StackFrame stackFrame) {
         StringJoiner stringJoiner = new StringJoiner("/");
         stringJoiner.add("RAPID");
         RapidSymbol parent = symbol;
@@ -65,9 +65,9 @@ public class RapidSymbolValue extends XNamedValue {
         return stringJoiner.toString();
     }
 
-    protected @NotNull QueryableSymbol findSymbol() throws IOException, InterruptedException {
+    public static @NotNull QueryableSymbol findSymbol(@NotNull NetworkAction action, @NotNull RapidVariable symbol, @NotNull StackFrame stackFrame) throws IOException, InterruptedException {
         SymbolModel symbolModel = action.createService(RapidService.class)
-                .findSymbol(getCanonicalName()).get();
+                .findSymbol(getCanonicalName(symbol, stackFrame)).get();
         if (!(symbolModel instanceof QueryableSymbol queryableSymbol)) {
             throw new IllegalStateException();
         }
@@ -87,8 +87,8 @@ public class RapidSymbolValue extends XNamedValue {
     }
 
     protected @NotNull String getValue() throws IOException, InterruptedException {
-        QueryableSymbol symbol = findSymbol();
-        SymbolValue value = symbol.getValue().get();
+        QueryableSymbol queryableSymbol = findSymbol(action, symbol, stackFrame);
+        SymbolValue value = queryableSymbol.getValue().get();
         return value.getValue();
     }
 

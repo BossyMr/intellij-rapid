@@ -16,6 +16,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -89,7 +92,8 @@ public class RequestFactory {
 
     private @NotNull String interpolate(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         MultiMap<String, String> map = collect(method, args, annotation -> annotation instanceof Path argument ? argument.value() : null);
-        return Pattern.compile("\\{([^}]*)}").matcher(path)
+        List<String> query = new ArrayList<>();
+        String replaced = Pattern.compile("\\{([^}]*)}").matcher(path)
                 .replaceAll(result -> {
                     String value = result.group().substring(1, result.group().length() - 1);
                     if (value.startsWith("@")) {
@@ -100,8 +104,10 @@ public class RequestFactory {
                         if (link == null) {
                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
                         }
-                        String query = link.getQuery();
-                        return link.getPath() + (query != null ? "?" + query : "");
+                        if (link.getQuery() != null) {
+                            query.add(link.getQuery());
+                        }
+                        return link.getPath();
                     }
                     if (value.startsWith("#")) {
                         if (!(proxy instanceof EntityProxy model)) {
@@ -118,6 +124,20 @@ public class RequestFactory {
                     }
                     throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' does not provide value for '" + value + "'");
                 });
+        if (query.isEmpty()) {
+            return replaced;
+        }
+        URI processed = URI.create(replaced);
+        if (processed.getQuery() != null) {
+            query.add(processed.getQuery());
+            try {
+                replaced = new URI(processed.getScheme(), processed.getUserInfo(), processed.getHost(), processed.getPort(), processed.getPath(), null, null).toString();
+            } catch (URISyntaxException e) {
+                throw new ProxyException(e);
+            }
+        }
+        String complete = String.join("&", query);
+        return replaced + "?" + complete;
     }
 
     private @NotNull MultiMap<String, String> collect(@NotNull Method method, Object @NotNull [] args, @NotNull Function<Annotation, String> function) throws NoSuchFieldException {

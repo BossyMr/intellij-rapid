@@ -13,14 +13,15 @@ public interface CloseableMastership extends AutoCloseable {
     static @NotNull CloseableMastership withMastership(@NotNull NetworkAction action, @NotNull MastershipType mastershipType) throws IOException, InterruptedException {
         MastershipService mastershipService = action.createService(MastershipService.class);
         MastershipDomain mastershipDomain = mastershipService.getDomain(mastershipType).get();
-        if (Boolean.FALSE.equals(mastershipDomain.isHolding())) {
-            mastershipDomain.request();
-            return mastershipDomain::release;
-        } else {
+        Boolean isHolding = mastershipDomain.isHolding();
+        if (isHolding != null && isHolding) {
             return () -> {};
+        } else {
+            mastershipDomain.request().get();
+            return () -> mastershipDomain.release().get();
         }
     }
 
     @Override
-    void close();
+    void close() throws IOException, InterruptedException;
 }

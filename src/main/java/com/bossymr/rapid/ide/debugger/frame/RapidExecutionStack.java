@@ -64,7 +64,7 @@ public class RapidExecutionStack extends XExecutionStack {
         }
         stackFrames = new ArrayList<>();
         try {
-            getStackFrame(firstFrameIndex, container);
+            getStackFrame(firstFrameIndex + 1, container);
         } catch (IOException e) {
             container.errorOccurred(e.getLocalizedMessage());
         } catch (InterruptedException ignored) {}
@@ -74,7 +74,7 @@ public class RapidExecutionStack extends XExecutionStack {
         for (int i = firstFrameIndex; ; i++) {
             StackFrame stackFrame = task.getStackFrame(i).get();
             if (stackFrame.getStartRow() < 1) {
-                container.addStackFrames(stackFrames.subList(firstFrameIndex, stackFrames.size()), true);
+                container.addStackFrames(stackFrames.subList(firstFrameIndex - 1, stackFrames.size()), true);
                 break;
             } else {
                 stackFrames.add(new RapidStackFrame(action, project, stackFrame));

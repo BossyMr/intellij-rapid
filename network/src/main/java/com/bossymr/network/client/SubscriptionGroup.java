@@ -125,11 +125,6 @@ public class SubscriptionGroup {
                 }
 
                 @Override
-                public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
-                    logger.atError().setCause(t).log("WebSocket failed");
-                }
-
-                @Override
                 public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
                     logger.atDebug().log("WebSocket started");
                 }

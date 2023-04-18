@@ -1,17 +1,20 @@
 package com.bossymr.rapid.ide.debugger.frame;
 
+import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.NetworkAction;
 import com.bossymr.rapid.ide.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
-import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
-import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
+import com.bossymr.rapid.language.symbol.physical.*;
 import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolValue;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.project.Project;
@@ -20,7 +23,6 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.ui.ColoredTextContainer;
 import com.intellij.ui.SimpleTextAttributes;
-import com.intellij.xdebugger.evaluation.XDebuggerEvaluator;
 import com.intellij.xdebugger.frame.XCompositeNode;
 import com.intellij.xdebugger.frame.XStackFrame;
 import com.intellij.xdebugger.frame.XValueChildrenList;
@@ -28,10 +30,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 public class RapidStackFrame extends XStackFrame {
+
+    private static final @NotNull Logger logger = Logger.getInstance(RapidStackFrame.class);
 
     private final @NotNull Project project;
     private final @NotNull StackFrame stackFrame;
@@ -46,6 +52,7 @@ public class RapidStackFrame extends XStackFrame {
         this.sourcePosition = findSourcePosition(stackFrame);
         this.stackFrame = stackFrame;
     }
+
 
     private @Nullable RapidSourcePosition findSourcePosition(@NotNull StackFrame stackFrame) {
         String[] sections = stackFrame.getRoutine().split("/");
@@ -84,12 +91,6 @@ public class RapidStackFrame extends XStackFrame {
     }
 
     @Override
-    public @Nullable XDebuggerEvaluator getEvaluator() {
-        // TODO: 2023-02-26 Add RapidDebuggerEvaluator
-        return null;
-    }
-
-    @Override
     public @Nullable RapidSourcePosition getSourcePosition() {
         return sourcePosition;
     }
@@ -103,8 +104,34 @@ public class RapidStackFrame extends XStackFrame {
             if (!(symbol instanceof PhysicalRoutine routine)) {
                 return;
             }
-            // TODO: 2023-02-27 Add more symbols to list
+            for (PhysicalField field : routine.getFields()) {
+                childrenList.add(new RapidSymbolValue(action, field, stackFrame));
+            }
+            List<PhysicalParameterGroup> parameters = routine.getParameters();
+            if (parameters != null) {
+                for (PhysicalParameterGroup group : parameters) {
+                    for (PhysicalParameter parameter : group.getParameters()) {
+                        try {
+                            QueryableSymbol queryableSymbol = RapidSymbolValue.findSymbol(action, parameter, stackFrame);
+                            SymbolValue symbolValue = queryableSymbol.getValue().get();
+                            if (symbolValue.getValue().length() > 0) {
+                                childrenList.add(new RapidSymbolValue(action, parameter, stackFrame));
+                            }
+                        } catch (ResponseStatusException e) {
+                            if (e.getResponse().code() == 400) {
+                                // If an optional parameter is not provided, attempting to retrieve its value will
+                                // throw a ResponseStatusException with code 400.
+                                continue;
+                            }
+                            logger.error(e);
+                        } catch (IOException | InterruptedException e) {
+                            logger.error(e);
+                        }
+                    }
+                }
+            }
             PhysicalModule module = PsiTreeUtil.getStubOrPsiParentOfType(routine, PhysicalModule.class);
+
             if (module != null) {
                 for (RapidField child : module.getFields()) {
                     childrenList.add(new RapidSymbolValue(action, child, stackFrame));

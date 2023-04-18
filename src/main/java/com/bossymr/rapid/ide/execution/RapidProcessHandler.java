@@ -11,10 +11,7 @@ import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.process.ProcessOutputType;
-import com.intellij.openapi.Disposable;
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.util.messages.MessageBusConnection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,16 +29,21 @@ public class RapidProcessHandler extends ProcessHandler {
 
     public RapidProcessHandler(@NotNull NetworkManager manager) throws IOException, InterruptedException {
         this.action = manager.createAction();
-        subscribe(action);
-        onExecutionState(action);
-        start(action);
+        subscribe();
+    }
+
+    public static @NotNull RapidProcessHandler create(@NotNull NetworkManager manager) throws IOException, InterruptedException {
+        RapidProcessHandler processHandler = new RapidProcessHandler(manager);
+        processHandler.onExecutionState();
+        processHandler.start();
+        return processHandler;
     }
 
     public @NotNull NetworkAction getNetworkManager() {
         return action;
     }
 
-    private void subscribe(@NotNull NetworkAction action) throws IOException, InterruptedException {
+    private void subscribe() throws IOException, InterruptedException {
         logger.debug("Subscribing to process event log");
         EventLogService eventLogService = action.createService(EventLogService.class);
         List<EventLogCategory> categories = eventLogService.getCategories("en").get();
@@ -98,17 +100,17 @@ public class RapidProcessHandler extends ProcessHandler {
         logger.error(throwable);
     }
 
-    private void start(@NotNull NetworkAction action) throws IOException, InterruptedException {
+    private void start() throws IOException, InterruptedException {
         logger.debug("Starting process");
         ExecutionService executionService = action.createService(ExecutionService.class);
-        executionService.resetProgramPointer().get();
         try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
+            executionService.resetProgramPointer().get();
             executionService.start(RegainMode.REGAIN, ExecutionMode.CONTINUE, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.DISABLED, TaskExecutionMode.NORMAL).get();
             logger.debug("Started process");
         }
     }
 
-    private void onExecutionState(@NotNull NetworkAction action) throws IOException, InterruptedException {
+    private void onExecutionState() throws IOException, InterruptedException {
         ExecutionService executionService = action.createService(ExecutionService.class);
         executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
             if (event.getState().equals(ExecutionState.STOPPED)) {
@@ -129,7 +131,24 @@ public class RapidProcessHandler extends ProcessHandler {
     @Override
     protected void destroyProcessImpl() {
         try {
-            action.createService(ExecutionService.class).stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
+
+            ExecutionService executionService = action.createService(ExecutionService.class);
+            ExecutionStatus executionStatus = executionService.getState().get();
+            if (executionStatus.getState() == ExecutionState.STOPPED) {
+                notifyProcessTerminated(0);
+                return;
+            }
+            executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+                if (executionStatus.getState() == ExecutionState.STOPPED) {
+                    notifyProcessTerminated(0);
+                    try {
+                        entity.unsubscribe();
+                    } catch (IOException | InterruptedException e) {
+                        logger.error(e);
+                    }
+                }
+            });
+            executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
         } catch (IOException | InterruptedException ex) {
             onFailure(ex);
         }

@@ -153,7 +153,7 @@ public class ResponseModelConverter implements ResponseConverter<ResponseModel> 
 
     private @NotNull Document parse(byte @NotNull [] body) {
         try {
-            return builder.parse(new ByteArrayInputStream(new String(body, StandardCharsets.ISO_8859_1).getBytes(StandardCharsets.UTF_8)));
+            return builder.parse(new ByteArrayInputStream(new String(body, StandardCharsets.UTF_8).getBytes(StandardCharsets.UTF_8)));
         } catch (SAXException | IOException e) {
             throw new RuntimeException(new String(body), e);
         }

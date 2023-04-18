@@ -151,7 +151,7 @@ public class RapidRunProfileState implements RunProfileState {
     public @Nullable ExecutionResult execute(@NotNull Executor executor, @NotNull ProgramRunner<?> runner) throws ExecutionException {
         try {
             NetworkManager manager = setupExecution();
-            RapidProcessHandler processHandler = new RapidProcessHandler(manager);
+            RapidProcessHandler processHandler = RapidProcessHandler.create(manager);
             ConsoleView consoleView = TextConsoleBuilderFactory.getInstance()
                     .createBuilder(getProject())
                     .filters(new RapidFileFilter(project))

@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
-import com.bossymr.network.NetworkQuery;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
 import org.jetbrains.annotations.NotNull;
@@ -14,6 +14,9 @@ public interface Task {
 
     @Fetch("{@modules}")
     @NotNull NetworkQuery<List<ModuleInfo>> getModules();
+
+    @Fetch("{@modules}/{module}")
+    @NotNull NetworkQuery<ModuleInfo> getModule(@NotNull @Path("module") String module);
 
     @Fetch("{@program}")
     @NotNull NetworkQuery<Program> getProgram();

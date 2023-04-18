@@ -18,8 +18,9 @@ import com.intellij.execution.configurations.RunProfile;
 import com.intellij.execution.configurations.RunProfileState;
 import com.intellij.execution.configurations.RunnerSettings;
 import com.intellij.execution.executors.DefaultDebugExecutor;
+import com.intellij.execution.runners.AsyncProgramRunner;
 import com.intellij.execution.runners.ExecutionEnvironment;
-import com.intellij.execution.runners.ProgramRunner;
+import com.intellij.execution.ui.RunContentDescriptor;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.xdebugger.XDebugProcess;
@@ -28,6 +29,9 @@ import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.XDebuggerManager;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.concurrency.AsyncPromise;
+import org.jetbrains.concurrency.Promise;
+import org.jetbrains.concurrency.Promises;
 
 import java.io.IOException;
 import java.util.List;
@@ -37,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * A {@code ProgramRunner} for starting a debugging session.
  */
-public class RapidDebugRunner implements ProgramRunner<RunnerSettings> {
+public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
 
     public static final @NotNull String RUNNER_ID = "RapidDebugRunner";
 
@@ -53,35 +57,37 @@ public class RapidDebugRunner implements ProgramRunner<RunnerSettings> {
     }
 
     @Override
-    public void execute(@NotNull ExecutionEnvironment environment) throws ExecutionException {
-        RunProfileState runProfileState = environment.getState();
-        if (runProfileState instanceof RapidRunProfileState state) {
-            try {
-                NetworkManager manager = state.setupExecution();
-                setupExecution(manager);
-                Project project = environment.getProject();
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    try {
-                        XDebuggerManager.getInstance(project).startSession(environment, new XDebugProcessStarter() {
-                            @Override
-                            public @NotNull XDebugProcess start(@NotNull XDebugSession session) throws ExecutionException {
-                                try {
-                                    return new RapidDebugProcess(project, session, state.getTasks(), manager);
-                                } catch (IOException | InterruptedException e) {
-                                    throw new ExecutionException(e);
-                                }
+    protected @NotNull Promise<RunContentDescriptor> execute(@NotNull ExecutionEnvironment environment, @NotNull RunProfileState runProfileState) throws ExecutionException {
+        if (!(runProfileState instanceof RapidRunProfileState state)) {
+            return Promises.rejectedPromise();
+        }
+        try {
+            NetworkManager manager = state.setupExecution();
+            setupExecution(manager);
+            Project project = environment.getProject();
+            AsyncPromise<RunContentDescriptor> promise = new AsyncPromise<>();
+            ApplicationManager.getApplication().invokeLater(() -> {
+                try {
+                    XDebugSession session = XDebuggerManager.getInstance(project).startSession(environment, new XDebugProcessStarter() {
+                        @Override
+                        public @NotNull XDebugProcess start(@NotNull XDebugSession session) throws ExecutionException {
+                            try {
+                                return new RapidDebugProcess(project, session, state.getTasks(), manager);
+                            } catch (IOException | InterruptedException e) {
+                                throw new ExecutionException(e);
                             }
-                        });
-                    } catch (ExecutionException e) {
-                        throw new AssertionError(e);
-                    }
-                });
-            } catch (IOException | InterruptedException e) {
-                throw new ExecutionException(e);
-            }
+                        }
+                    });
+                    promise.setResult(session.getRunContentDescriptor());
+                } catch (ExecutionException e) {
+                    promise.setError(e);
+                }
+            });
+            return promise;
+        } catch (IOException | InterruptedException e) {
+            return Promises.rejectedPromise(e);
         }
     }
-
 
     private void removeBreakpoint(@NotNull NetworkAction action, @NotNull Task task, @NotNull Map<String, ModuleEntity> modules, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
         ModuleEntity module = modules.get(breakpoint.getModuleName());
@@ -107,7 +113,9 @@ public class RapidDebugRunner implements ProgramRunner<RunnerSettings> {
     private void setupExecution(@NotNull NetworkManager manager) throws IOException, InterruptedException {
         try (NetworkAction action = manager.createAction()) {
             ExecutionService executionService = action.createService(ExecutionService.class);
-            executionService.resetProgramPointer().get();
+            try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
+                executionService.resetProgramPointer().get();
+            }
             TaskService taskService = action.createService(TaskService.class);
             List<Task> tasks = taskService.getTasks().get();
             for (Task task : tasks) {
