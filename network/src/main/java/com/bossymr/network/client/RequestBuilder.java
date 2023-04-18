@@ -1,6 +1,9 @@
 package com.bossymr.network.client;
 
 import com.bossymr.network.MultiMap;
+import okhttp3.MediaType;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,8 +14,6 @@ import java.util.stream.Collectors;
 
 /**
  * A {@code RequestBuilder} is used to build a {@link HttpRequest}.
- *
- * @see NetworkEngine#createRequest()
  */
 public class RequestBuilder {
 
@@ -26,7 +27,6 @@ public class RequestBuilder {
      * Creates a new {@code RequestBuilder} with the specified default path, which all paths are resolved against.
      *
      * @param defaultPath the default path.
-     * @see NetworkEngine#createRequest()
      */
     public RequestBuilder(@NotNull URI defaultPath) {
         this.method = "GET";
@@ -74,14 +74,16 @@ public class RequestBuilder {
         return this;
     }
 
-    public @NotNull HttpRequest build() {
+    public @NotNull Request build() {
         String body = getBody(fields);
-        HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.noBody();
-        HttpRequest.Builder builder = HttpRequest.newBuilder(getResource(path, arguments));
-        if (body != null) {
-            bodyPublisher = HttpRequest.BodyPublishers.ofString(body);
+        Request.Builder builder = new Request.Builder()
+                .url(getResource(path, arguments).toString());
+        RequestBody bodyPublisher = body != null ? RequestBody.create(body.getBytes(), MediaType.get("application/x-www-form-urlencoded")) : null;
+        if(method.equals("POST") || method.equals("PUT")) {
+            if(bodyPublisher == null) {
+                bodyPublisher = RequestBody.create(new byte[0], MediaType.get("application/x-www-form-urlencoded"));
+            }
         }
-        builder = builder.setHeader("Content-Type", "application/x-www-form-urlencoded");
         builder = builder.method(method, bodyPublisher);
         return builder.build();
     }

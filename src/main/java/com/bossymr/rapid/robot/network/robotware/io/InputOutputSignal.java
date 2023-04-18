@@ -1,13 +1,12 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.network.EntityModel;
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"ios-signal-li", "ios-signal"})
-public interface InputOutputSignal extends EntityModel {
+public interface InputOutputSignal {
 
     @Property("name")
     @NotNull String getName();
@@ -48,14 +47,12 @@ public interface InputOutputSignal extends EntityModel {
     @Property("quality")
     int getSignalQuality();
 
-    @GET("{@device}")
-    @NotNull NetworkCall<InputOutputDevice> getDevice();
+        @Fetch("{@device}")
+  @NotNull NetworkQuery<InputOutputDevice> getDevice();
 
-    @POST("{@self}?action=set")
-    @NotNull NetworkCall<Void> setState(
-            @NotNull InputOutputSignalLogicalState logicalState
-    );
+    @Fetch(method = FetchMethod.POST, value = "{@self}?action=set")
+  @NotNull NetworkQuery<Void> setState(@NotNull InputOutputSignalLogicalState logicalState);
 
     @Subscribable("{@self};state")
-    @NotNull SubscribableNetworkCall<InputOutputSignalEvent> onState();
+    @NotNull SubscribableNetworkQuery<InputOutputSignalEvent> onState();
 }

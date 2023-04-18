@@ -7,7 +7,9 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -24,6 +26,8 @@ import java.util.Collection;
 import java.util.List;
 
 public class ResolveScopeVisitor extends RapidElementVisitor {
+
+    private static final Logger logger = Logger.getInstance(ResolveScopeVisitor.class);
 
     private final ResolveScopeProcessor processor;
     private @NotNull PsiElement previous;
@@ -187,15 +191,18 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         RemoteRobotService service = RemoteRobotService.getInstance();
         RapidRobot robot = service.getRobot();
         if (robot != null) {
-            try {
-                if (processor.getName() != null) {
+            if (processor.getName() != null) {
+                try {
                     process(robot.getSymbol(processor.getName()));
-                } else {
-                    for (VirtualSymbol symbol : robot.getSymbols()) {
-                        process(symbol);
-                    }
+                } catch (IOException e) {
+                    logger.error(e);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
-            } catch (IOException | InterruptedException ignored) {
+            } else {
+                for (VirtualSymbol symbol : robot.getSymbols()) {
+                    process(symbol);
+                }
             }
         }
     }

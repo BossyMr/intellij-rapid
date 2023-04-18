@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.ui.node;
 
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.openapi.project.Project;

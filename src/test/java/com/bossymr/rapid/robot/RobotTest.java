@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.network.NetworkTestUtil;
 import com.intellij.testFramework.junit5.TestApplication;
@@ -22,26 +21,26 @@ public class RobotTest {
     private static RapidRobot robot;
 
     @BeforeEach
-    void setUp() throws IOException, InterruptedException {
+    void setUp() throws InterruptedException, IOException {
         RemoteRobotService remoteService = RemoteRobotService.getInstance();
         robot = remoteService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
     }
 
     @AfterEach
-    void tearDown() throws IOException, InterruptedException {
+    void tearDown() throws InterruptedException, IOException {
         RemoteRobotService remoteService = RemoteRobotService.getInstance();
         remoteService.disconnect();
     }
 
     @Test
-    public void symbol() throws IOException, InterruptedException {
+    public void symbol() throws InterruptedException, IOException {
         Set<VirtualSymbol> symbols = robot.getSymbols();
         VirtualSymbol symbol = robot.getSymbol("num");
         assertTrue(symbols.contains(symbol));
     }
 
     @Test
-    public void fetchSymbol() throws IOException, InterruptedException {
+    public void fetchSymbol() throws InterruptedException, IOException {
         String symbolName = "TPErase";
         Set<String> names = robot.getSymbols().stream()
                 .map(VirtualSymbol::getName)

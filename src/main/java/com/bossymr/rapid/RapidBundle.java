@@ -1,6 +1,7 @@
 package com.bossymr.rapid;
 
 import com.intellij.DynamicBundle;
+import com.intellij.notification.NotificationType;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.PropertyKey;
@@ -26,7 +27,7 @@ public class RapidBundle extends DynamicBundle {
      * @param parameters the message arguments.
      * @return the message.
      */
-    public static @NotNull @Nls String message(@NotNull @PropertyKey(resourceBundle = BUNDLE) String key, Object @NotNull ... parameters) {
+    public static String message(@NotNull @PropertyKey(resourceBundle = BUNDLE) String key, Object @NotNull ... parameters) {
         return INSTANCE.getMessage(key, parameters);
     }
 

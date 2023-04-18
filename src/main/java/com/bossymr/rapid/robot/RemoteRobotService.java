@@ -1,7 +1,6 @@
 package com.bossymr.rapid.robot;
 
 import com.bossymr.network.client.security.Credentials;
-import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
@@ -27,6 +26,15 @@ public interface RemoteRobotService extends PersistentStateComponent<RemoteRobot
         return ApplicationManager.getApplication().getService(RemoteRobotService.class);
     }
 
+    static boolean isConnected() {
+        RemoteRobotService service = RemoteRobotService.getInstance();
+        RapidRobot robot = service.getRobot();
+        if (robot != null) {
+            return robot.isConnected();
+        }
+        return false;
+    }
+
     /**
      * Returns the robot which is currently persisted, or connected.
      *
@@ -40,22 +48,19 @@ public interface RemoteRobotService extends PersistentStateComponent<RemoteRobot
      * @param path the path to connect to.
      * @param credentials the credentials to authenticate with.
      * @return the connected robot.
-     * @throws IOException if an I/O error occurs.
      */
     @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException;
 
     /**
      * Disconnects the currently persisted robot, and deletes all persisted state associated with it.
-     *
-     * @throws IOException if an I/O error occurs.
      */
     void disconnect() throws IOException, InterruptedException;
 
-    @Nullable RobotState getRobotState();
+    @Nullable RapidRobot.State getRobotState();
 
-    void setRobotState(@Nullable RobotState robotState);
+    void setRobotState(@Nullable RapidRobot.State robotState);
 
     class State {
-        public RobotState state;
+        public RapidRobot.State state;
     }
 }

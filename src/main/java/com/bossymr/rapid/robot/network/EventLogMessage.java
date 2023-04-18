@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
@@ -8,8 +7,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDateTime;
 
-@Entity({"elog-message", "elog-message-li"})
-public interface EventLogMessage extends EntityModel {
+@Entity("elog-message")
+public interface EventLogMessage {
 
     @Property("msgtype")
     @NotNull EventLogMessageType getMessageType();

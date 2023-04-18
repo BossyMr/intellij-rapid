@@ -25,7 +25,7 @@ public final class RapidSymbolIndex extends StringStubIndexExtension<PhysicalSym
         return KEY;
     }
 
-    public Collection<PhysicalSymbol> get(@NotNull String name, @NotNull Project project, @NotNull GlobalSearchScope scope) {
+    public @NotNull Collection<PhysicalSymbol> get(@NotNull String name, @NotNull Project project, @NotNull GlobalSearchScope scope) {
         return StubIndex.getElements(getKey(), StringUtil.toLowerCase(name), project, scope, PhysicalSymbol.class);
     }
 }

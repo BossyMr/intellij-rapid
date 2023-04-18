@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.rapid.robot.network.Grant;
 import com.bossymr.rapid.robot.network.HoldToRunMode;
 import com.bossymr.rapid.robot.network.HoldToRunState;
@@ -21,8 +21,8 @@ public interface ExecutionService {
      * @return the current execution state.
      * @see #onExecutionState()
      */
-    @GET
-    @NotNull NetworkCall<ExecutionStatus> getState();
+    @Fetch("")
+    @NotNull NetworkQuery<ExecutionStatus> getState();
 
     /**
      * Start program execution. To start program execution the robot must in automatic mode. Additionally, mastership
@@ -36,15 +36,13 @@ public interface ExecutionService {
      * @param breakpointMode whether to stop at a breakpoint.
      * @param taskMode the task execution mode.
      */
-    @POST(arguments = "action=start")
-    @NotNull NetworkCall<Void> start(
-            @NotNull @Field("regain") RegainMode regainMode,
-            @NotNull @Field("execmode") ExecutionMode executionMode,
-            @NotNull @Field("cycle") ExecutionCycle executionCycle,
-            @NotNull @Field("condition") ConditionState conditionState,
-            @NotNull @Field("stopatbp") BreakpointMode breakpointMode,
-            @NotNull @Field("alltaskbytsp") TaskExecutionMode taskMode
-    );
+    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=start")
+    @NotNull NetworkQuery<Void> start(@NotNull @Field("regain") RegainMode regainMode,
+                                      @NotNull @Field("execmode") ExecutionMode executionMode,
+                                      @NotNull @Field("cycle") ExecutionCycle executionCycle,
+                                      @NotNull @Field("condition") ConditionState conditionState,
+                                      @NotNull @Field("stopatbp") BreakpointMode breakpointMode,
+                                      @NotNull @Field("alltaskbytsp") TaskExecutionMode taskMode);
 
     /**
      * Stops program execution.
@@ -52,11 +50,9 @@ public interface ExecutionService {
      * @param stopMode the stop mode.
      * @param taskMode the task execution mode.
      */
-    @POST(arguments = "action=stop")
-    default @NotNull NetworkCall<Void> stop(
-            @NotNull @Field("stopmode") StopMode stopMode,
-            @NotNull @Field("usetsp") TaskExecutionMode taskMode
-    ) {
+    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=stop")
+    default NetworkQuery<Void> stop(@NotNull @Field("stopmode") StopMode stopMode,
+                                    @NotNull @Field("usetsp") TaskExecutionMode taskMode) {
         return stop(stopMode, switch (taskMode) {
             case ALL -> "alltsk";
             case NORMAL -> "normal";
@@ -64,51 +60,47 @@ public interface ExecutionService {
     }
 
     @ApiStatus.Internal
-    @POST(arguments = "action=stop")
-    @NotNull NetworkCall<Void> stop(
-            @NotNull @Field("stopmode") StopMode stopMode,
-            @NotNull @Field("usetsp") String taskMode
-    );
+    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=stop")
+    @NotNull NetworkQuery<Void> stop(@NotNull @Field("stopmode") StopMode stopMode,
+                                     @NotNull @Field("usetsp") String taskMode);
 
     /**
      * Starts execution from the production entry.
      */
-    @POST(arguments = "action=startprodentry")
-    @NotNull NetworkCall<Void> startProduction();
+    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=startprodentry")
+    @NotNull NetworkQuery<Void> startProduction();
 
     /**
      * Resets the program pointer to the main routine.
      */
-    @POST(arguments = "action=resetpp")
-    @NotNull NetworkCall<Void> resetProgramPointer();
+    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=resetpp")
+    @NotNull NetworkQuery<Void> resetProgramPointer();
 
     /**
      * Sets the number of cycles to use.
      *
      * @param executionCycle the number of cycles.
      */
-    @POST(arguments = "action=setcycle")
-    @NotNull NetworkCall<Void> setCycles(
-            @NotNull @Field("cycle") ExecutionCycle executionCycle
-    );
+    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=setcycle")
+    @NotNull NetworkQuery<Void> setCycles(@NotNull @Field("cycle") ExecutionCycle executionCycle);
 
     /**
      * Subscribe to updates to the program execution state.
      */
     @Subscribable("/rw/rapid/execution;ctrlexecstate")
-    @NotNull SubscribableNetworkCall<ExecutionStatusEvent> onExecutionState();
+    @NotNull SubscribableNetworkQuery<ExecutionStatusEvent> onExecutionState();
 
     /**
      * Subscribe to updates to the execution cycles.
      */
     @Subscribable("/rw/rapid/execution;rapidexeccycle")
-    @NotNull SubscribableNetworkCall<ExecutionCycleEvent> onExecutionCycle();
+    @NotNull SubscribableNetworkQuery<ExecutionCycleEvent> onExecutionCycle();
 
     /**
      * Subscribe to updates to the {@link HoldToRunState}.
      */
     @Subscribable("/rw/rapid/execution;hdtrun")
-    @NotNull SubscribableNetworkCall<HoldToRunEvent> onHoldToRun();
+    @NotNull SubscribableNetworkQuery<HoldToRunEvent> onHoldToRun();
 
     /**
      * Sets the hold to run state.
@@ -124,8 +116,6 @@ public interface ExecutionService {
      *
      * @param mode the new state.
      */
-    @POST(arguments = "action=holdtorun-state")
-    @NotNull NetworkCall<Void> setHoldToRun(
-            @NotNull @Field("state") HoldToRunMode mode
-    );
+    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=holdtorun-state")
+    @NotNull NetworkQuery<Void> setHoldToRun(@NotNull @Field("state") HoldToRunMode mode);
 }

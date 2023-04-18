@@ -1,15 +1,14 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.network.EntityModel;
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 @Entity({"ios-network-li", "ios-network"})
-public interface InputOutputNetwork extends EntityModel {
+public interface InputOutputNetwork {
 
     @Property("name")
     @NotNull String getName();
@@ -20,28 +19,22 @@ public interface InputOutputNetwork extends EntityModel {
     @Property("lstate")
     @NotNull InputOutputLogicalState getLogicalState();
 
-    @GET("{@devices}")
-    @NotNull NetworkCall<List<InputOutputDevice>> getDevices();
+        @Fetch("{@devices}")
+  @NotNull NetworkQuery<List<InputOutputDevice>> getDevices();
 
-    @POST("{@self}?action=set")
-    @NotNull NetworkCall<Void> setState(
-            @NotNull InputOutputLogicalState logicalState
-    );
+    @Fetch(method = FetchMethod.POST, value = "{@self}?action=set")
+  @NotNull NetworkQuery<Void> setState(@NotNull InputOutputLogicalState logicalState);
 
     @Subscribable("{@self};state")
-    @NotNull SubscribableNetworkCall<InputOutputNetworkEvent> onState();
+    @NotNull SubscribableNetworkQuery<InputOutputNetworkEvent> onState();
 
-    @GET("{@self}?resource=config")
-    @NotNull NetworkCall<InputOutputNetworkConfiguration> getConfigurationType();
+        @Fetch("{@self}?resource=config")
+  @NotNull NetworkQuery<InputOutputNetworkConfiguration> getConfigurationType();
 
-    @GET("{@self}?resource=config")
-    @NotNull NetworkCall<InputOutputNetworkConfiguration> getConfigurationType(
-            @NotNull @Field("configtype") InputOutputNetworkConfigurationRealm configurationType
-    );
+        @Fetch("{@self}?resource=config")
+  @NotNull NetworkQuery<InputOutputNetworkConfiguration> getConfigurationType(@NotNull @Field("configtype") InputOutputNetworkConfigurationRealm configurationType);
 
-    @POST("{@self}?action=config")
-    @NotNull NetworkCall<Void> setConfigurationType(
-            @NotNull @Field("config-type") InputOutputNetworkConfigurationType configurationType
-    );
+    @Fetch(method = FetchMethod.POST, value = "{@self}?action=config")
+  @NotNull NetworkQuery<Void> setConfigurationType(@NotNull @Field("config-type") InputOutputNetworkConfigurationType configurationType);
 
 }

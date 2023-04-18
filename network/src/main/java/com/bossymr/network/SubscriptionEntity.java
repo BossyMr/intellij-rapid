@@ -1,28 +1,26 @@
 package com.bossymr.network;
 
-import com.bossymr.network.client.NetworkClient;
+import com.bossymr.network.client.EntityModel;
+import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.SubscribableEvent;
-import com.bossymr.network.model.Model;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.CompletableFuture;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * A {@code SubscriptionEntity} represents an ongoing subscription.
  */
-public class SubscriptionEntity {
+public abstract class SubscriptionEntity {
 
-    private final NetworkClient networkClient;
-    private final SubscribableEvent<?> event;
-    private final SubscriptionPriority priority;
+    private final @NotNull SubscribableEvent<?> event;
+    private final @NotNull SubscriptionPriority priority;
+    private final @NotNull NetworkAction networkAction;
 
-    private final SubscriptionListener<Model> listener;
-
-    public SubscriptionEntity(@NotNull NetworkClient networkClient, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener) {
-        this.networkClient = networkClient;
+    public SubscriptionEntity(@NotNull NetworkAction networkAction, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority) {
+        this.networkAction = networkAction;
         this.event = event;
         this.priority = priority;
-        this.listener = listener;
     }
 
     /**
@@ -43,21 +41,36 @@ public class SubscriptionEntity {
         return priority;
     }
 
-    /**
-     * This method is called for each retrieved model.
-     *
-     * @param model the event.
-     */
-    public void onEvent(@NotNull Model model) {
-        listener.onEvent(this, model);
+    public @NotNull NetworkAction getNetworkAction() {
+        return networkAction;
     }
 
     /**
      * Unsubscribes from this subscription.
-     *
-     * @return the request.
      */
-    public CompletableFuture<Void> unsubscribe() {
-        return networkClient.unsubscribe(this);
+    public void unsubscribe() throws IOException, InterruptedException {
+        getNetworkAction().unsubscribe(List.of(this));
+    }
+
+    public static void unsubscribe(@NotNull Collection<SubscriptionEntity> entities) throws IOException, InterruptedException {
+        Map<NetworkAction, List<SubscriptionEntity>> organized = new HashMap<>();
+        for (SubscriptionEntity entity : entities) {
+            organized.putIfAbsent(entity.getNetworkAction(), new ArrayList<>());
+            organized.get(entity.getNetworkAction()).add(entity);
+        }
+        for (NetworkAction networkAction : organized.keySet()) {
+            networkAction.unsubscribe(organized.get(networkAction));
+        }
+    }
+
+    public abstract void event(@NotNull EntityModel model);
+
+    @Override
+    public String toString() {
+        return "SubscriptionEntity{" +
+                "identity=" + Integer.toHexString(hashCode()) +
+                ", event=" + event +
+                ", priority=" + priority +
+                '}';
     }
 }

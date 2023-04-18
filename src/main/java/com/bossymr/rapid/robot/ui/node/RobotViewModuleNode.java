@@ -22,7 +22,10 @@ public class RobotViewModuleNode extends RobotViewNode<RapidModule> {
 
     @Override
     protected void update(@NotNull PresentationData presentation) {
-        presentation.setPresentableText(getValue().getName());
-        presentation.setIcon(getValue().getIcon());
+        RapidModule module = getValue();
+        if (module != null) {
+            presentation.setPresentableText(module.getName());
+            presentation.setIcon(module.getIcon());
+        }
     }
 }

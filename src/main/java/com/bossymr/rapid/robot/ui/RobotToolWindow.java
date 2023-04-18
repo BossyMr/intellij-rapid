@@ -1,8 +1,9 @@
 package com.bossymr.rapid.robot.ui;
 
+import com.bossymr.network.client.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.symbol.RapidRobot;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
@@ -31,6 +32,7 @@ import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class RobotToolWindow implements Disposable {
 
@@ -78,23 +80,34 @@ public class RobotToolWindow implements Disposable {
                 e -> ActionUtil.invokeAction(action, panel, "RobotToolWindow", null, null));
 
         RobotEventListener.connect(new RobotEventListener() {
+
             @Override
-            public void afterConnect(@NotNull RapidRobot robot) {
+            public void onConnect(@NotNull RapidRobot robot, @NotNull NetworkManager manager) {
                 model.invalidateAsync();
             }
 
             @Override
-            public void afterRefresh(@NotNull RapidRobot robot) {
+            public void onDisconnect(@NotNull RapidRobot robot) {
                 model.invalidateAsync();
             }
 
             @Override
-            public void afterRemoval() {
+            public void onRefresh(@NotNull RapidRobot robot, @NotNull NetworkManager manager) {
+                model.invalidateAsync();
+            }
+
+            @Override
+            public void onRemoval(@NotNull RapidRobot robot) {
                 model.invalidateAsync();
             }
 
             @Override
             public void onSymbol(@NotNull RapidRobot robot, @NotNull VirtualSymbol symbol) {
+                model.invalidateAsync();
+            }
+
+            @Override
+            public void onDownload(@NotNull RapidRobot robot) {
                 model.invalidateAsync();
             }
         });
@@ -121,17 +134,6 @@ public class RobotToolWindow implements Disposable {
             if (CommonDataKeys.PROJECT.is(dataId)) {
                 return project;
             }
-            if (PlatformCoreDataKeys.SELECTED_ITEM.is(dataId)) {
-                AbstractTreeNode<?> selectedNode = getSelectedNode();
-                return selectedNode != null ? selectedNode.getValue() : null;
-            }
-            if (PlatformCoreDataKeys.SELECTED_ITEMS.is(dataId)) {
-                List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
-                if (selectedNodes == null) return null;
-                return selectedNodes.stream()
-                        .map(AbstractTreeNode::getValue)
-                        .toArray(Object[]::new);
-            }
             if (PlatformCoreDataKeys.BGT_DATA_PROVIDER.is(dataId)) {
                 return (DataProvider) this::getSlowData;
             }
@@ -145,6 +147,18 @@ public class RobotToolWindow implements Disposable {
             }
             if (PlatformCoreDataKeys.PSI_ELEMENT_ARRAY.is(dataId)) {
                 return getSelectedElements();
+            }
+            if (PlatformCoreDataKeys.SELECTED_ITEM.is(dataId)) {
+                AbstractTreeNode<?> selectedNode = getSelectedNode();
+                return selectedNode != null ? selectedNode.getValue() : null;
+            }
+            if (PlatformCoreDataKeys.SELECTED_ITEMS.is(dataId)) {
+                List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
+                if (selectedNodes == null) return null;
+                return selectedNodes.stream()
+                        .map(AbstractTreeNode::getValue)
+                        .filter(Objects::nonNull)
+                        .toArray(Object[]::new);
             }
             return null;
         }

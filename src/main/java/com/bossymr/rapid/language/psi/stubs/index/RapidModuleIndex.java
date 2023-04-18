@@ -25,7 +25,7 @@ public final class RapidModuleIndex extends StringStubIndexExtension<PhysicalMod
         return KEY;
     }
 
-    public Collection<PhysicalModule> get(@NotNull String name, @NotNull Project project, @NotNull GlobalSearchScope scope) {
+    public @NotNull Collection<PhysicalModule> get(@NotNull String name, @NotNull Project project, @NotNull GlobalSearchScope scope) {
         return StubIndex.getElements(getKey(), StringUtil.toLowerCase(name), project, scope, PhysicalModule.class);
     }
 }

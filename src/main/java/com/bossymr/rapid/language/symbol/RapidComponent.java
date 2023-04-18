@@ -16,4 +16,6 @@ public interface RapidComponent extends RapidSymbol, RapidVariable {
         return RapidIcons.COMPONENT;
     }
 
+    @NotNull RapidRecord getRecord();
+
 }

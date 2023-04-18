@@ -1,14 +1,13 @@
 package com.bossymr.rapid.language.symbol.virtual;
 
 import com.bossymr.rapid.language.symbol.RapidParameter;
-import com.bossymr.rapid.language.symbol.RapidParameterGroup;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
 public record VirtualParameter(
-        @NotNull RapidParameterGroup parameterGroup,
+        @NotNull VirtualParameterGroup parameterGroup,
         @NotNull Attribute attribute,
         @NotNull String name,
         @NotNull RapidType type
@@ -25,7 +24,7 @@ public record VirtualParameter(
     }
 
     @Override
-    public @NotNull RapidParameterGroup getParameterGroup() {
+    public @NotNull VirtualParameterGroup getParameterGroup() {
         return parameterGroup();
     }
 

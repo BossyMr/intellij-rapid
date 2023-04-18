@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -16,8 +16,8 @@ public interface ManualModePrivilegeService {
      *
      * @return the current {@code Manual Mode Privilege (RMMP)} state.
      */
-    @GET("")
-    @NotNull NetworkCall<ManualModePrivilegeState> getStatus();
+        @Fetch("")
+  @NotNull NetworkQuery<ManualModePrivilegeState> getStatus();
 
     /**
      * Requests {@code Manual Mode Privilege (RMMP)}. The request must be accepted by a local client within 10 seconds.
@@ -28,10 +28,8 @@ public interface ManualModePrivilegeService {
      * @param privilege the privilege to request, must be {@link ManualModePrivilege#MODIFY MODIFY} or
      * {@link ManualModePrivilege#EXECUTE EXECUTE}.
      */
-    @POST("")
-    @NotNull NetworkCall<Void> request(
-            @NotNull @Field("privilege") RequestManualModePrivilege privilege
-    );
+    @Fetch(method = FetchMethod.POST, value = "")
+  @NotNull NetworkQuery<Void> request(@NotNull @Field("privilege") RequestManualModePrivilege privilege);
 
     /**
      * Responds to a request for {@code Manual Mode Privilege (RMMP)}.
@@ -39,23 +37,21 @@ public interface ManualModePrivilegeService {
      * @param identifier the identifier of the user who made the request.
      * @param privilege the response to the request.
      */
-    @POST("?action=set")
-    @NotNull NetworkCall<Void> respond(
-            @NotNull @Field("uid") String identifier,
-            @NotNull @Field("privilege") RequestManualModePrivilege privilege
-    );
+    @Fetch(method = FetchMethod.POST, value = "?action=set")
+  @NotNull NetworkQuery<Void> respond(@NotNull @Field("uid") String identifier,
+                               @NotNull @Field("privilege") RequestManualModePrivilege privilege);
 
     /**
      * Cancels a held {@code Manual Mode Privilege (RMMP)} or a requested privilege.
      */
-    @POST("?action=cancel")
-    @NotNull NetworkCall<Void> cancel();
+    @Fetch(method = FetchMethod.POST, value = "?action=cancel")
+  @NotNull NetworkQuery<Void> cancel();
 
     /**
      * Subscribes to requests for {@code Manual Mode Privilege (RMMP)}.
      */
     @Subscribable("/users/rmmp'")
-    @NotNull SubscribableNetworkCall<ManualModePrivilegeEvent> onRequest();
+    @NotNull SubscribableNetworkQuery<ManualModePrivilegeEvent> onRequest();
 
     /**
      * Returns the state of a {@code Manual Mode Privilege (RMMP)} request. This method is also used to extend the
@@ -63,7 +59,7 @@ public interface ManualModePrivilegeService {
      *
      * @return the state of a {@code Manual Mode Privilege (RMMP)} request.
      */
-    @GET("/users/rmmp/poll")
-    @NotNull NetworkCall<ManualModePrivilegePoll> poll();
+        @Fetch("/users/rmmp/poll")
+  @NotNull NetworkQuery<ManualModePrivilegePoll> poll();
 
 }

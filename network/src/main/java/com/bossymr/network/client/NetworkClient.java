@@ -1,69 +1,107 @@
 package com.bossymr.network.client;
 
+import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionListener;
 import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.model.Model;
+import com.bossymr.network.client.security.Credentials;
+import com.bossymr.network.client.security.impl.DigestAuthenticator;
+import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.concurrent.CompletableFuture;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 
-/**
- * A {@code NetworkClient} can send synchronous and asynchronous requests, as well as subscribe to a
- * {@link SubscribableEvent}.
- */
-public interface NetworkClient extends AutoCloseable {
+public class NetworkClient {
 
-    @NotNull URI getDefaultPath();
+    private static final Logger logger = LoggerFactory.getLogger(NetworkClient.class);
 
-    @NotNull RequestBuilder createRequest();
+    private final @NotNull URI defaultPath;
 
-    /**
-     * Sends the specified request synchronously.
-     *
-     * @param request the request.
-     * @return the response.
-     * @throws IOException if an I/O error has occurred.
-     * @throws InterruptedException if this {@code NetworkClient} is interrupted.
-     */
-    @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException;
+    private final @NotNull SubscriptionGroup subscriptionGroup;
+    private final @NotNull OkHttpClient httpClient;
 
-    /**
-     * Sends the specified request asynchronously.
-     *
-     * @param request the request.
-     * @return the response.
-     */
-    @NotNull CompletableFuture<HttpResponse<byte[]>> sendAsync(@NotNull HttpRequest request);
 
-    /**
-     * Subscribes to the specified event with the specified priority and callback.
-     *
-     * @param event the event.
-     * @param priority the priority.
-     * @param listener the listener.
-     * @return an entity representing this subscription.
-     */
-    @NotNull CompletableFuture<SubscriptionEntity> subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<Model> listener);
+    public NetworkClient(@NotNull URI defaultPath, @Nullable Credentials credentials) {
+        this.defaultPath = defaultPath;
+        CookieJar cookieJar = new CookieJar() {
+            private final HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
 
-    /**
-     * Unsubscribes from the subscription associated with the specified entity.
-     *
-     * @param entity the entity.
-     */
-    @NotNull CompletableFuture<Void> unsubscribe(@NotNull SubscriptionEntity entity);
+            @Override
+            public void saveFromResponse(@NotNull HttpUrl url, @NotNull List<Cookie> cookies) {
+                cookieStore.put(url.host(), cookies);
+            }
 
-    /**
-     * Closes this {@code NetworkClient}. All ongoing subscriptions are unsubscribed and all ongoing requests are
-     * interrupted.
-     *
-     * @throws IOException if an I/O error occurs.
-     * @throws InterruptedException if this {@code NetworkClient} is interrupted.
-     */
-    @Override
-    void close() throws IOException, InterruptedException;
+            @Override
+            public @NotNull List<Cookie> loadForRequest(@NotNull HttpUrl url) {
+                List<Cookie> cookies = cookieStore.get(url.host());
+                return cookies != null ? cookies : new ArrayList<Cookie>();
+            }
+        };
+        Dispatcher dispatcher = new Dispatcher();
+        dispatcher.setMaxRequestsPerHost(1);
+        this.httpClient = new OkHttpClient.Builder()
+                .authenticator(new DigestAuthenticator(credentials))
+                .cookieJar(cookieJar)
+                .addInterceptor(chain -> {
+                    Response response = chain.proceed(chain.request());
+                    logger.atDebug().log("Request {} -> {}", chain.request(), response);
+                    if(response.code() >= 300) {
+                        throw new ResponseStatusException(response, response.body().string());
+                    }
+                    return response;
+                })
+                .dispatcher(dispatcher)
+                .build();
+        this.subscriptionGroup = new SubscriptionGroup(this);
+    }
+
+    public @NotNull RequestBuilder createRequest() {
+        return new RequestBuilder(getDefaultPath());
+    }
+
+    public @NotNull URI getDefaultPath() {
+        return defaultPath;
+    }
+
+    public @NotNull OkHttpClient getHttpClient() {
+        return httpClient;
+    }
+
+    public @NotNull Response send(@NotNull Request request) throws IOException, InterruptedException {
+        return httpClient.newCall(request).execute();
+    }
+
+    public @NotNull SubscriptionEntity subscribe(@NotNull NetworkAction action, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
+        logger.atDebug().log("Subscribing to '{}' with priority {}", event.getResource(), priority);
+        SubscriptionEntity entity = new SubscriptionEntity(action, event, priority) {
+            @Override
+            public void event(@NotNull EntityModel model) {
+                listener.onEvent(this, model);
+            }
+        };
+        subscriptionGroup.getEntities().add(entity);
+        subscriptionGroup.update();
+        logger.atDebug().log("Subscribed to '{}' with priority {}", event.getResource(), priority);
+        return entity;
+    }
+
+
+    public void unsubscribe(@NotNull Collection<SubscriptionEntity> entities) throws IOException, InterruptedException {
+        entities.forEach(subscriptionGroup.getEntities()::remove);
+        subscriptionGroup.update();
+    }
+
+    public void close() throws IOException, InterruptedException {
+        logger.atDebug().log("Closing NetworkClient");
+        subscriptionGroup.getEntities().clear();
+        subscriptionGroup.update();
+    }
 }

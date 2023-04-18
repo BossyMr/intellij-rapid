@@ -1,15 +1,17 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.network.EntityModel;
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.NetworkQuery;
+import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 @Entity({"ios-device", "ios-device-li"})
-public interface InputOutputDevice extends EntityModel {
+public interface InputOutputDevice {
+
+    @Title
+    @NotNull String getTitle();
 
     @Property("name")
     @NotNull String getName();
@@ -35,41 +37,33 @@ public interface InputOutputDevice extends EntityModel {
     @Property("outmask")
     @NotNull String getOutputMask();
 
-    @GET("{@network}")
-    @NotNull NetworkCall<InputOutputNetwork> getNetwork();
+    @Fetch("{@network}")
+    @NotNull NetworkQuery<InputOutputNetwork> getNetwork();
 
-    @POST("/rw/iosystem/signals?action=signal-search")
-    @NotNull NetworkCall<List<InputOutputSignal>> getSignals(
-            @Field("network") String network,
-            @Field("device") String device
-    );
+    @Fetch(method = FetchMethod.POST, value = "/rw/iosystem/signals?action=signal-search")
+    @NotNull NetworkQuery<List<InputOutputSignal>> getSignals(@Field("network") String network,
+                                                              @Field("device") String device);
 
-    default @NotNull NetworkCall<List<InputOutputSignal>> getSignals() {
+    default @NotNull NetworkQuery<List<InputOutputSignal>> getSignals() {
         String network = getTitle().substring(0, getTitle().lastIndexOf('/'));
         String device = getTitle().substring(getTitle().lastIndexOf('/') + 1);
         return getSignals(network, device);
     }
 
-    @POST("{@self}?action=set")
-    @NotNull NetworkCall<Void> setState(
-            @NotNull InputOutputLogicalState logicalState
-    );
+    @Fetch(method = FetchMethod.POST, value = "{@self}?action=set")
+    @NotNull NetworkQuery<Void> setState(@NotNull InputOutputLogicalState logicalState);
 
     @Subscribable("{@self};state")
-    @NotNull SubscribableNetworkCall<InputOutputNetworkEvent> onState();
+    @NotNull SubscribableNetworkQuery<InputOutputNetworkEvent> onState();
 
-    @POST("{@self}?action=set-inputdata")
-    @NotNull NetworkCall<Void> setInputData(
-            @Field("startbyte") int index,
-            @Field("signaldata") byte data,
-            @Field("datamask") byte mask
-    );
+    @Fetch(method = FetchMethod.POST, value = "{@self}?action=set-inputdata")
+    @NotNull NetworkQuery<Void> setInputData(@Field("startbyte") int index,
+                                             @Field("signaldata") byte data,
+                                             @Field("datamask") byte mask);
 
 
-    @POST("{@self}?action=set-outputdata")
-    @NotNull NetworkCall<Void> setOutputData(
-            @Field("startbyte") int index,
-            @Field("signaldata") byte data,
-            @Field("datamask") byte mask
-    );
+    @Fetch(method = FetchMethod.POST, value = "{@self}?action=set-outputdata")
+    @NotNull NetworkQuery<Void> setOutputData(@Field("startbyte") int index,
+                                              @Field("signaldata") byte data,
+                                              @Field("datamask") byte mask);
 }

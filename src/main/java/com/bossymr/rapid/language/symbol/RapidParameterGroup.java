@@ -6,6 +6,8 @@ import java.util.List;
 
 public interface RapidParameterGroup {
 
+    @NotNull RapidRoutine getRoutine();
+
     boolean isOptional();
 
     @NotNull List<? extends RapidParameter> getParameters();

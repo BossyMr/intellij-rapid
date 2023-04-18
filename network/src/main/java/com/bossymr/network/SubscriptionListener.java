@@ -19,11 +19,4 @@ public interface SubscriptionListener<T> extends EventListener {
      */
     void onEvent(@NotNull SubscriptionEntity entity, @NotNull T event);
 
-    /**
-     * This method is called when this subscription is closed.
-     *
-     * @param entity the subscription.
-     */
-    default void onClose(@NotNull SubscriptionEntity entity) {}
-
 }

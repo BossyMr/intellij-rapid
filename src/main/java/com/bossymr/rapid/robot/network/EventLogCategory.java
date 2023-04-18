@@ -1,16 +1,16 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.EntityModel;
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.SubscribableNetworkCall;
+import com.bossymr.network.NetworkQuery;
+import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 @Entity({"elog-domain", "elog-domain-li"})
-public interface EventLogCategory extends EntityModel {
+public interface EventLogCategory {
 
     @Property("domain-name")
     @Nullable String getName();
@@ -26,8 +26,8 @@ public interface EventLogCategory extends EntityModel {
      *
      * @return all messages in this event log category.
      */
-    @GET("{@self}")
-    @NotNull NetworkCall<List<EventLogMessage>> getMessages();
+    @Fetch("{@self}")
+    @NotNull NetworkQuery<List<EventLogMessage>> getMessages();
 
     /**
      * Returns all messages in this event log category, starting with the specified message.
@@ -35,10 +35,8 @@ public interface EventLogCategory extends EntityModel {
      * @param message the identifier of the first message.
      * @return all messages in this event log category, starting with the specified message.
      */
-    @GET("{@self}")
-    @NotNull NetworkCall<List<EventLogMessage>> getMessages(
-            @Argument("elogseqnum") int message
-    );
+    @Fetch("{@self}")
+    @NotNull NetworkQuery<List<EventLogMessage>> getMessages(@Argument("elogseqnum") int message);
 
     /**
      * Returns the message in this category with the specified sequence identifier.
@@ -46,21 +44,19 @@ public interface EventLogCategory extends EntityModel {
      * @param message the message sequence identifier.
      * @return the message in this category with the specified sequence identifier.
      */
-    @GET("{@self}/{message}")
-    @NotNull NetworkCall<EventLogMessage> getMessage(
-            @Path("message") int message
-    );
+    @Fetch("{@self}/{message}")
+    @NotNull NetworkQuery<EventLogMessage> getMessage(@Path("message") int message);
 
     /**
      * Clears all messages in this category.
      */
-    @POST("{@self}?action=clear")
-    @NotNull NetworkCall<Void> clear();
+    @Fetch(method = FetchMethod.POST, value = "{@self}?action=clear")
+    @NotNull NetworkQuery<Void> clear();
 
     /**
      * Subscribes to new events in this category.
      */
     @Subscribable("{@self}")
-    @NotNull SubscribableNetworkCall<EventLogMessageEvent> onMessage();
+    @NotNull SubscribableNetworkQuery<EventLogMessageEvent> onMessage();
 
 }

@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 
@@ -9,7 +8,7 @@ import com.bossymr.network.annotations.Property;
  * elevated privilege.
  */
 @Entity("user-rmmp-poll")
-public interface ManualModePrivilegePoll extends EntityModel {
+public interface ManualModePrivilegePoll {
 
     /**
      * Returns the code of the status.

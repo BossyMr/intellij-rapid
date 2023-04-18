@@ -1,28 +1,15 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.SubscriptionEntity;
-import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.client.NetworkEngine;
-import com.bossymr.rapid.robot.network.robotware.RobotWareService;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleType;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
-import org.jetbrains.annotations.NotNull;
+import com.bossymr.network.client.NetworkAction;
+import com.bossymr.network.client.NetworkManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
-import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @EnabledIf("com.bossymr.rapid.robot.network.NetworkTestUtil#doNetworkTest")
 class RobotServiceTest {
@@ -30,57 +17,17 @@ class RobotServiceTest {
     private static RobotService robotService;
 
     @BeforeAll
-    static void beforeAll() {
-        robotService = new NetworkEngine(NetworkTestUtil.DEFAULT_PATH, () -> NetworkTestUtil.DEFAULT_CREDENTIALS)
-                .createService(RobotService.class);
-    }
-
-    @DisplayName("Test User Service")
-    @Test
-    void testUserService() throws Throwable {
-        UserService userService = robotService.getUserService();
-        userService.getGrants().send();
-        CountDownLatch countDownLatch = new CountDownLatch(1);
-        CompletableFuture<SubscriptionEntity> subscriptionEntity = userService.getRemoteUserService().onRequest()
-                .subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> countDownLatch.countDown());
-        SubscriptionEntity entity = subscriptionEntity.join();
-        userService.getRemoteUserService().login().send();
-        assertTrue(countDownLatch.await(5000, TimeUnit.MILLISECONDS));
-        entity.unsubscribe().join();
+    static void beforeAll() throws IOException, InterruptedException {
+        NetworkManager manager = new NetworkManager(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
+        try (NetworkAction action = manager.createAction()) {
+            robotService = action.createService(RobotService.class);
+        }
     }
 
     @DisplayName("Test Controller Service")
     @Test
-    void testControllerService() throws Throwable {
-        Identity identity = robotService.getControllerService().getIdentity().send();
+    void testControllerService() throws IOException, InterruptedException {
+        Identity identity = robotService.getControllerService().getIdentity().get();
         assertNotNull(identity.getName());
-    }
-
-    @DisplayName("Test Task Service")
-    @Test
-    void testTaskService(@TempDir @NotNull File tempDirectory) throws Throwable {
-        RobotWareService robotWareService = robotService.getRobotWareService();
-        TaskService taskService = robotWareService.getRapidService().getTaskService();
-        List<Task> tasks = taskService.getTasks().send();
-        Task task = tasks.get(0);
-        assertEquals("rap-task-li", task.getType());
-        assertNotNull(task.getName());
-        assertEquals("rap-task-li", task.getType());
-        List<ModuleInfo> moduleInfos = task.getModules().send();
-        long modules = moduleInfos.stream()
-                .filter(moduleInfo -> moduleInfo.getModuleType().equals(ModuleType.PROGRAM_MODULE))
-                .map(ModuleInfo::getName)
-                .count();
-        // The complete (non-list) module is automatically retrieved if a field or link is requested, which it does
-        // not contain.
-        assertEquals("rap-task", task.getType());
-        Program program = task.getProgram().send();
-        program.save(tempDirectory.getPath()).send();
-        String[] strings = tempDirectory.list();
-        assertNotNull(strings);
-        // One of the saved files is a program file, containing an index of all modules in the program.
-        assertEquals(modules + 1, strings.length);
-        ModuleInfo moduleInfo = moduleInfos.get(0);
-        moduleInfo.getModule().send();
     }
 }

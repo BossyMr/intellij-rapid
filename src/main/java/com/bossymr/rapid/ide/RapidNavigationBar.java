@@ -4,7 +4,7 @@ import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.FormatUtil;
 import com.bossymr.rapid.language.psi.FormatUtil.Option;
 import com.bossymr.rapid.language.psi.RapidFile;
-import com.bossymr.rapid.language.symbol.RapidRobot;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;

@@ -1,15 +1,15 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.client.security.Credentials;
-import com.bossymr.rapid.language.symbol.RapidRobot;
-import com.bossymr.rapid.robot.impl.RobotUtil;
+import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.network.NetworkTestUtil;
 import com.intellij.testFramework.junit5.TestApplication;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -24,11 +24,14 @@ class RemoteRobotServiceTest {
         assertNull(remoteService.getRobotState());
         assertNull(remoteService.getRobot());
         RapidRobot robot = remoteService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
-        Credentials credentials = RobotUtil.getCredentials(NetworkTestUtil.DEFAULT_PATH);
-        assertNotNull(credentials);
+        RapidTask task = robot.getTask("T_ROB1");
+        assertNotNull(task);
+        File directory = task.getDirectory();
+        assertTrue(directory.exists());
         assertEquals(robot, remoteService.getRobot());
         assertNotNull(remoteService.getRobotState());
         remoteService.disconnect();
+        assertFalse(directory.exists());
         assertNull(remoteService.getRobotState());
         assertNull(remoteService.getRobot());
         assertFalse(robot.isConnected());

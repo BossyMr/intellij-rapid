@@ -1,116 +1,169 @@
 package com.bossymr.rapid.ide.execution;
 
-import com.bossymr.network.NetworkCall;
-import com.bossymr.network.ServiceModel;
-import com.bossymr.network.SubscriptionEntity;
 import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.client.DelegatingNetworkEngine;
+import com.bossymr.network.client.NetworkAction;
+import com.bossymr.network.client.NetworkManager;
+import com.bossymr.rapid.robot.CloseableMastership;
 import com.bossymr.rapid.robot.network.EventLogCategory;
-import com.bossymr.rapid.robot.network.RobotService;
-import com.bossymr.rapid.robot.network.robotware.mastership.CloseableMastership;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipDomain;
+import com.bossymr.rapid.robot.network.EventLogMessage;
+import com.bossymr.rapid.robot.network.EventLogService;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.process.ProcessOutputType;
+import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.List;
+import java.util.StringJoiner;
+import java.util.concurrent.CompletionException;
+import java.util.function.BiConsumer;
 
 public class RapidProcessHandler extends ProcessHandler {
 
-    private final @NotNull DelegatingNetworkEngine delegatingNetworkEngine;
-    private final @NotNull RobotService robotService;
+    private static final Logger logger = Logger.getInstance(RapidProcessHandler.class);
+    private final @NotNull NetworkAction action;
 
-    public RapidProcessHandler(@NotNull RobotService robotService) {
-        this.delegatingNetworkEngine = new DelegatingNetworkEngine(robotService.getNetworkEngine()) {
-            @Override
-            protected void onFailure(@NotNull NetworkCall<?> request, @NotNull Throwable throwable) {
-                destroyProcess();
-            }
-
-            @Override
-            protected void onFailure(@NotNull Throwable throwable) {
-                destroyProcess();
-            }
-        };
-        this.robotService = ServiceModel.move(robotService, delegatingNetworkEngine);
+    public RapidProcessHandler(@NotNull NetworkManager manager) throws IOException, InterruptedException {
+        this.action = manager.createAction();
+        subscribe();
     }
 
-    public void startProcess() throws IOException, InterruptedException {
-        try {
-            subscribeToOutput();
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof IOException exception) throw exception;
-            throw new IOException(e.getCause());
+    public static @NotNull RapidProcessHandler create(@NotNull NetworkManager manager) throws IOException, InterruptedException {
+        RapidProcessHandler processHandler = new RapidProcessHandler(manager);
+        processHandler.onExecutionState();
+        processHandler.start();
+        return processHandler;
+    }
+
+    public @NotNull NetworkAction getNetworkManager() {
+        return action;
+    }
+
+    private void subscribe() throws IOException, InterruptedException {
+        logger.debug("Subscribing to process event log");
+        EventLogService eventLogService = action.createService(EventLogService.class);
+        List<EventLogCategory> categories = eventLogService.getCategories("en").get();
+        if (categories.size() == 0) {
+            logger.warn("Couldn't find process event log");
+            return;
         }
-        MastershipDomain mastershipDomain = robotService.getRobotWareService().getMastershipService().getDomain(MastershipType.RAPID).send();
-        try (CloseableMastership ignored = CloseableMastership.request(mastershipDomain)) {
-            ExecutionService executionService = robotService.getRobotWareService().getRapidService().getExecutionService();
-            executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
-                if (event.getState() == ExecutionState.STOPPED) {
-                    notifyProcessTerminated(0);
-                    delegatingNetworkEngine.closeAsync();
+        EventLogCategory category = categories.get(0);
+        category.onMessage().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+            logger.debug("Received event '" + event + "'");
+            EventLogMessage message;
+            try {
+                message = event.getMessage("en").get();
+                logger.debug("Retrieved message '" + message + "' for event '" + event + "'");
+            } catch (IOException e) {
+                logger.error(e);
+                throw new AssertionError(e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            StringJoiner stringJoiner = new StringJoiner("\n");
+            stringJoiner.add(message.getMessageType() + " " + "[" + message.getTimestamp() + "]: " + message.getMessageTitle());
+            stringJoiner.add(message.getDescription());
+            BiConsumer<String, String> append = (name, string) -> {
+                if (string != null && string.length() > 0) {
+                    stringJoiner.add(name + ": " + string);
                 }
-            }).get();
-            executionService.resetProgramPointer().send();
-            executionService.start(RegainMode.REGAIN, ExecutionMode.CONTINUE, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.DISABLED, TaskExecutionMode.NORMAL).send();
-            startNotify();
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof IOException exception) {
-                throw exception;
-            } else {
-                throw new IOException(e.getCause());
-            }
+            };
+            append.accept("Actions", message.getActions());
+            append.accept("Causes", message.getCauses());
+            append.accept("Consequences", message.getConsequences());
+            notifyTextAvailable(stringJoiner + "\n", switch (message.getMessageType()) {
+                case INFORMATION -> ProcessOutputType.STDOUT;
+                case ERROR, WARNING -> ProcessOutputType.STDERR;
+            });
+        });
+    }
+
+    private void onFailure(@NotNull Throwable throwable) {
+        while (throwable instanceof CompletionException) {
+            throwable = throwable.getCause();
+        }
+        notifyTextAvailable(throwable + "\n", ProcessOutputType.STDERR);
+        notifyProcessTerminated(1);
+        try {
+            action.close();
+        } catch (IOException e) {
+            e.addSuppressed(throwable);
+            logger.error(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        logger.error(throwable);
+    }
+
+    private void start() throws IOException, InterruptedException {
+        logger.debug("Starting process");
+        ExecutionService executionService = action.createService(ExecutionService.class);
+        try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
+            executionService.resetProgramPointer().get();
+            executionService.start(RegainMode.REGAIN, ExecutionMode.CONTINUE, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.DISABLED, TaskExecutionMode.NORMAL).get();
+            logger.debug("Started process");
         }
     }
 
-    private void subscribeToOutput() throws ExecutionException, InterruptedException {
-        robotService.getRobotWareService().getEventLogService().getCategories("en").sendAsync()
-                .thenComposeAsync(categories -> {
-                    if (categories.isEmpty()) {
-                        return CompletableFuture.completedFuture(null);
-                    }
-                    return subscribeToOutput(categories.get(0));
-                }).get();
-    }
-
-    private @NotNull CompletableFuture<SubscriptionEntity> subscribeToOutput(@NotNull EventLogCategory category) {
-        return category.onMessage().subscribe(SubscriptionPriority.MEDIUM, (entity, event) ->
-                event.getMessage("en").sendAsync()
-                        .thenAcceptAsync(message -> {
-                            String text = message.getMessageType().name() + " ";
-                            text += "[" + message.getTimestamp() + "]: ";
-                            text += message.getMessageTitle() + '\n';
-                            text += message.getDescription() + '\n';
-                            String actions = message.getActions();
-                            if (actions != null && actions.length() > 0) text += "Actions: " + actions + '\n';
-                            String causes = message.getCauses();
-                            if (causes != null && causes.length() > 0) text += "Causes: " + causes + '\n';
-                            String consequences = message.getConsequences();
-                            if (consequences != null && consequences.length() > 0)
-                                text += "Consequences: " + consequences + '\n';
-                            notifyTextAvailable(text, switch (message.getMessageType()) {
-                                case INFORMATION, WARNING -> ProcessOutputType.STDOUT;
-                                case ERROR -> ProcessOutputType.STDERR;
-                            });
-                        }));
+    private void onExecutionState() throws IOException, InterruptedException {
+        ExecutionService executionService = action.createService(ExecutionService.class);
+        executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+            if (event.getState().equals(ExecutionState.STOPPED)) {
+                logger.debug("Program stopped");
+                notifyProcessTerminated(0);
+                try {
+                    this.action.close();
+                } catch (IOException e) {
+                    logger.error(e);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        logger.debug("Subscribed to execution state");
     }
 
     @Override
     protected void destroyProcessImpl() {
-        robotService.getRobotWareService().getRapidService().getExecutionService()
-                .stop(StopMode.STOP, TaskExecutionMode.NORMAL).sendAsync();
+        try {
+
+            ExecutionService executionService = action.createService(ExecutionService.class);
+            ExecutionStatus executionStatus = executionService.getState().get();
+            if (executionStatus.getState() == ExecutionState.STOPPED) {
+                notifyProcessTerminated(0);
+                return;
+            }
+            executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+                if (executionStatus.getState() == ExecutionState.STOPPED) {
+                    notifyProcessTerminated(0);
+                    try {
+                        entity.unsubscribe();
+                    } catch (IOException | InterruptedException e) {
+                        logger.error(e);
+                    }
+                }
+            });
+            executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
+        } catch (IOException | InterruptedException ex) {
+            onFailure(ex);
+        }
     }
 
     @Override
     protected void detachProcessImpl() {
-        delegatingNetworkEngine.closeAsync();
         notifyProcessDetached();
+        try {
+            action.close();
+        } catch (IOException e) {
+            logger.error(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override

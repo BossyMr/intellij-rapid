@@ -69,6 +69,9 @@
         <notificationGroup displayType="STICKY_BALLOON" id="Robot Connection Error" bundle="messages.RapidBundle"
                            key="notification.group.robot.connect.error"/>
 
+        <notificationGroup displayType="BALLOON" id="Robot Mastership Error" bundle="messages.RapidBundle"
+                           key="notification.group.robot.mastership.error"/>
+
         <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
 
         <gotoSymbolContributor implementation="com.bossymr.rapid.ide.navigation.RapidSymbolNavigationContributor"/>
@@ -95,17 +98,24 @@
         <lang.braceMatcher language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidBraceMatcher"/>
         <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.RapidQuoteHandler"/>
 
+        <!-- Execution -->
+
         <configurationType implementation="com.bossymr.rapid.ide.execution.configurations.RapidConfigurationType"/>
+
+        <!-- Debugging -->
+
+        <programRunner implementation="com.bossymr.rapid.ide.debugger.RapidDebugRunner"/>
+
+        <xdebugger.settings implementation="com.bossymr.rapid.ide.debugger.settings.RapidDebuggerSettings"/>
+
+        <xdebugger.breakpointType implementation="com.bossymr.rapid.ide.debugger.breakpoints.RapidLineBreakpointType"/>
+
+        <!-- Error Handling -->
 
         <errorHandler implementation="com.bossymr.rapid.ide.RapidErrorReportSubmitter"/>
     </extensions>
 
     <actions>
-        <action id="com.bossymr.rapid.ide.actions.RapidCreateFileAction"
-                class="com.bossymr.rapid.ide.actions.RapidCreateFileAction">
-            <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>
-        </action>
-
         <action id="com.bossymr.rapid.robot.actions.ConnectAction" icon="AllIcons.General.Add"
                 class="com.bossymr.rapid.robot.actions.ConnectAction" text="Connect..."/>
 

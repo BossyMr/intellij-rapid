@@ -12,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Objects;
 
 public class PhysicalParameterGroup extends RapidStubElement<RapidParameterGroupStub> implements RapidParameterGroup, RapidElement {
 
@@ -26,6 +27,11 @@ public class PhysicalParameterGroup extends RapidStubElement<RapidParameterGroup
     @Override
     public void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitParameterGroup(this);
+    }
+
+    @Override
+    public @NotNull PhysicalRoutine getRoutine() {
+        return Objects.requireNonNull(getStubOrPsiParentOfType(PhysicalRoutine.class));
     }
 
     @Override

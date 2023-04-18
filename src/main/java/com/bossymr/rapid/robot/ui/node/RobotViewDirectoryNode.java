@@ -6,10 +6,7 @@ import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public abstract class RobotViewDirectoryNode<T> extends RobotViewNode<Set<T>> {
 
@@ -24,6 +21,9 @@ public abstract class RobotViewDirectoryNode<T> extends RobotViewNode<Set<T>> {
 
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
+        if (getValue() == null) {
+            return Collections.emptyList();
+        }
         List<AbstractTreeNode<?>> symbols = new ArrayList<>();
         for (T value : getValue()) {
             AbstractTreeNode<?> child = getChild(value);

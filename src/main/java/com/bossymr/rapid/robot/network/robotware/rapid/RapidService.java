@@ -1,10 +1,10 @@
 package com.bossymr.rapid.robot.network.robotware.rapid;
 
-import com.bossymr.network.NetworkCall;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.NetworkQuery;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionService;
+import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
-import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolState;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
 import org.jetbrains.annotations.NotNull;
 
@@ -38,10 +38,8 @@ public interface RapidService {
      * @param fields the NetworkCall arguments.
      * @return the symbols on this robot.
      */
-    @POST(value = "/symbols", arguments = "action=search-symbols")
-    @NotNull NetworkCall<List<SymbolState>> findSymbols(
-            @Field Map<String, String> fields
-    );
+        @Fetch(method = FetchMethod.POST, value = "/symbols", arguments = "action=search-symbols")
+  @NotNull NetworkQuery<List<SymbolModel>> findSymbols(@Field Map<String, String> fields);
 
     /**
      * Returns the symbol with the specified path.
@@ -49,8 +47,6 @@ public interface RapidService {
      * @param symbol the path of the symbol.
      * @return the symbol.
      */
-    @GET("/symbol/properties/{symbol}")
-    @NotNull NetworkCall<SymbolState> findSymbol(
-            @Path("symbol") String symbol
-    );
+        @Fetch("/symbol/properties/{symbol}")
+  @NotNull NetworkQuery<SymbolModel> findSymbol(@Path("symbol") String symbol);
 }

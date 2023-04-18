@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot.network.robotware.mastership;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.annotations.Property;
 import org.jetbrains.annotations.NotNull;
@@ -10,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
  * A {@code MastershipEvent} represents an event for a mastership change.
  */
 @Entity("msh-resource-value")
-public interface MastershipEvent extends EntityModel {
+public interface MastershipEvent {
 
     /**
      * Checks if mastership is currently being held.

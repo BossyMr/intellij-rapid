@@ -1,11 +1,17 @@
 package com.bossymr.network.entity;
 
-import com.bossymr.network.EntityModel;
 import com.bossymr.network.annotations.Deserializable;
 import com.bossymr.network.annotations.Property;
-import com.bossymr.network.client.NetworkEngine;
-import com.bossymr.network.model.CollectionModel;
-import com.bossymr.network.model.Model;
+import com.bossymr.network.annotations.Title;
+import com.bossymr.network.client.EntityModel;
+import com.bossymr.network.client.NetworkAction;
+import com.bossymr.network.client.RequestFactory;
+import com.bossymr.network.client.ResponseModel;
+import com.bossymr.network.client.proxy.EntityProxy;
+import com.bossymr.network.client.proxy.NetworkProxy;
+import com.bossymr.network.client.proxy.ProxyException;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,76 +21,82 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class EntityInvocationHandler extends AbstractInvocationHandler {
 
-    private final @Nullable NetworkEngine engine;
-    private @NotNull Model model;
+    private final @NotNull Class<?> type;
+    private @Nullable NetworkAction action;
+    private @NotNull EntityModel model;
 
-    public EntityInvocationHandler(@Nullable NetworkEngine engine, @NotNull Model model) {
+    public EntityInvocationHandler(@Nullable NetworkAction action, @NotNull Class<?> type, @NotNull EntityModel model) {
         this.model = model;
-        this.engine = engine;
-    }
-
-    public static @NotNull EntityInvocationHandler getInstance(@NotNull EntityModel entityModel) {
-        InvocationHandler invocationHandler = Proxy.getInvocationHandler(entityModel);
-        if (!(invocationHandler instanceof EntityInvocationHandler)) {
-            throw new IllegalStateException();
-        }
-        return (EntityInvocationHandler) invocationHandler;
-    }
-
-    public @NotNull Model getModel() {
-        return model;
+        this.action = action;
+        this.type = type;
     }
 
     @Override
     public @Nullable Object execute(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
-        if (isMethod(method, EntityModel.class, "getNetworkEngine")) {
-            return engine;
+        if (isMethod(method, NetworkProxy.class, "getNetworkAction")) {
+            return action;
         }
-        if (isMethod(method, EntityModel.class, "getTitle")) {
-            return model.getTitle();
+        if (isMethod(method, NetworkProxy.class, "move", NetworkAction.class)) {
+            this.action = (NetworkAction) args[0];
+            return null;
         }
-        if (isMethod(method, EntityModel.class, "getType")) {
-            return model.getType();
+        if (isMethod(method, EntityProxy.class, "refresh")) {
+            if (model.reference("self") == null) {
+                throw new ProxyException("Could not refresh");
+            }
+            getSelf();
         }
-        if (isMethod(method, EntityModel.class, "getLinks")) {
-            return model.getLinks();
+        if (isMethod(method, EntityProxy.class, "getProperty", String.class)) {
+            return getProperty((String) args[0]);
         }
-        if (isMethod(method, EntityModel.class, "getFields")) {
-            return model.getFields();
+        if (isMethod(method, EntityProxy.class, "getReference", String.class)) {
+            return getReference((String) args[0]);
         }
-        if (isMethod(method, EntityModel.class, "getNetworkFactory")) {
-            return engine;
+        if (isMethod(method, EntityProxy.class, "getModel")) {
+            return model;
         }
-        if (isMethod(method, EntityModel.class, "getLink", String.class)) {
-            return getLink((String) args[0]);
-        }
-        if (isMethod(method, EntityModel.class, "getField", String.class)) {
-            return getField((String) args[0]);
+        if (method.isAnnotationPresent(Title.class)) {
+            return model.title();
         }
         if (method.isAnnotationPresent(Property.class)) {
             Property property = method.getAnnotation(Property.class);
             String[] names = property.value();
             for (String name : names) {
-                String value = getField(name);
-                if (value != null) {
-                    return convert(value, method.getReturnType());
+                if (name.startsWith("{") && name.endsWith("}")) {
+                    name = name.substring(1, name.length() - 1);
+                    if (name.startsWith("@")) {
+                        URI reference = getReference(name.substring(1));
+                        if (reference != null) {
+                            return convert(reference.toString(), method.getReturnType());
+                        }
+                    }
+                    if (name.startsWith("#")) {
+                        String value = getProperty(name.substring(1));
+                        if (value != null) {
+                            return convert(value, method.getReturnType());
+                        }
+                    }
+                } else {
+                    String value = getProperty(name);
+                    if (value != null) {
+                        return convert(value, method.getReturnType());
+                    }
                 }
             }
             return null;
         }
-        if (engine == null) {
-            throw new IllegalStateException();
+        if (action == null) {
+            throw new IllegalStateException("Entity is not managed");
         }
-        return engine.getRequestFactory().createQuery(proxy, method, args);
+        return new RequestFactory(action).createQuery(type, proxy, method, args);
     }
 
     private @NotNull Object convert(@NotNull String value, @NotNull Class<?> type) throws IllegalAccessException {
@@ -98,6 +110,13 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         if (type == Double.class) return Double.parseDouble(value);
         if (type == Boolean.class) return Boolean.parseBoolean(value);
         if (type == Character.class) return value.charAt(0);
+        if (type == URI.class) {
+            try {
+                return URI.create(value);
+            } catch (IllegalArgumentException e) {
+                throw new ProxyException(e);
+            }
+        }
         if (type == LocalDateTime.class) {
             return LocalDateTime.parse(value.replaceAll(" ", ""), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         }
@@ -139,56 +158,68 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         return type;
     }
 
-    private @Nullable URI getLink(@NotNull String type) {
-        URI path = model.getLink(type);
-        if (path != null) {
-            return path;
+    private @Nullable URI getReference(@NotNull String type) {
+        URI reference = model.reference(type);
+        if (reference != null) {
+            return reference;
         }
-        if (fetch()) {
-            return model.getLink(type);
+        if (model.type().endsWith("-li")) {
+            return getSelf().reference(type);
         }
         return null;
     }
 
-    private @Nullable String getField(@NotNull String type) {
-        String field = model.getField(type);
+    private @Nullable String getProperty(@NotNull String type) {
+        String field = model.property(type);
         if (field != null) {
             return field;
         }
-        if (fetch()) {
-            return model.getField(type);
+        if (model.type().endsWith("-li")) {
+            return getSelf().property(type);
         }
         return null;
     }
 
-    private boolean fetch() {
-        if (engine == null) {
-            throw new IllegalStateException();
+    private @NotNull EntityModel getSelf() {
+        if (action == null) {
+            throw new IllegalStateException("Entity is not managed");
         }
-        if (model.getLink("self") == null) {
-            return false;
+        URI reference = model.reference("self");
+        if (reference == null) {
+            throw new ProxyException("Entity '" + model + "' has no reference to itself");
         }
-        HttpRequest httpRequest = HttpRequest.newBuilder(model.getLink("self")).build();
+        Request httpRequest = new Request.Builder().url(reference.toString()).build();
         try {
-            HttpResponse<byte[]> response = engine.getNetworkClient().send(httpRequest);
-            CollectionModel collectionModel = CollectionModel.convert(response.body());
-            if (collectionModel.getModels().size() != 1) {
-                return false;
+            ResponseModel collectionModel;
+            try (Response response = action.getManager().getNetworkClient().send(httpRequest)) {
+                collectionModel = ResponseModel.convert(response.body().bytes());
             }
-            Model updated = collectionModel.getModels().get(0);
-            String previous = model.getType().substring(0, model.getType().length() - "-li".length());
-            if (updated.getType().equals(previous)) {
-                model = updated;
-                return true;
+            if (collectionModel.entities().size() != 1) {
+                throw new ProxyException("Request to self reference '" + reference + "' responded with multiple entities");
             }
+            return model = collectionModel.entities().get(0);
         } catch (IOException | InterruptedException e) {
-            return false;
+            throw new ProxyException(e);
         }
-        return false;
+    }
+
+    @Override
+    public boolean equals(@NotNull Object proxy, @NotNull Object obj) {
+        InvocationHandler invocationHandler = Proxy.getInvocationHandler(obj);
+        if (!(invocationHandler instanceof EntityInvocationHandler entity)) return false;
+        return entity.type.equals(type) && entity.model.equals(model) && Objects.equals(entity.action, action);
+    }
+
+    @Override
+    public int hashCode(@NotNull Object proxy) {
+        int result = type.hashCode();
+        result = 31 * result + (action != null ? action.hashCode() : 0);
+        result = 31 * result + model.hashCode();
+        return result;
     }
 
     @Override
     public String toString(@NotNull Object proxy) {
-        return proxy.getClass().getInterfaces()[0].getName() + ":" + model;
+        return type.getName() + ":" + model;
     }
 }

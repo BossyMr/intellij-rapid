@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.ui.node;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RemoteRobotService;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
@@ -20,6 +21,9 @@ public class RobotViewRobotNode extends RobotViewNode<RapidRobot> {
 
     @Override
     public @NotNull Collection<? extends AbstractTreeNode<?>> getChildren() {
+        if (getValue() == null) {
+            return Collections.emptyList();
+        }
         Set<String> symbols = Set.of("atm", "rec", "ali", "var", "prc");
         List<RobotViewNode<?>> nodes = new ArrayList<>();
         for (RapidTask task : getValue().getTasks()) {
@@ -63,7 +67,10 @@ public class RobotViewRobotNode extends RobotViewNode<RapidRobot> {
 
     @Override
     protected void update(@NotNull PresentationData presentation) {
-        presentation.setIcon(RapidIcons.ROBOT_ICON);
-        presentation.setPresentableText(getValue().getName());
+        RapidRobot value = getValue();
+        if (value != null) {
+            presentation.setIcon(RapidIcons.ROBOT_ICON);
+            presentation.setPresentableText(value.getName());
+        }
     }
 }
