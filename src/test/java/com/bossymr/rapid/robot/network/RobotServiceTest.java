@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.client.NetworkAction;
-import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.client.HeavyNetworkManager;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,13 +15,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class RobotServiceTest {
 
     private static RobotService robotService;
+    private static HeavyNetworkManager manager;
 
     @BeforeAll
-    static void beforeAll() throws IOException, InterruptedException {
-        NetworkManager manager = new NetworkManager(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
-        try (NetworkAction action = manager.createAction()) {
-            robotService = action.createService(RobotService.class);
-        }
+    static void beforeAll() {
+        manager = new HeavyNetworkManager(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
+        robotService = manager.createLight().createService(RobotService.class);
+    }
+
+    @AfterAll
+    static void afterAll() throws IOException, InterruptedException {
+        manager.close();
     }
 
     @DisplayName("Test Controller Service")

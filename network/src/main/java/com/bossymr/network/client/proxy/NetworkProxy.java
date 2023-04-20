@@ -1,11 +1,11 @@
 package com.bossymr.network.client.proxy;
 
-import com.bossymr.network.client.NetworkAction;
+import com.bossymr.network.NetworkManager;
 import org.jetbrains.annotations.Nullable;
 
 public interface NetworkProxy {
 
-    @Nullable NetworkAction getNetworkManager();
+    @Nullable NetworkManager getNetworkManager();
 
-    void move(@Nullable NetworkAction manager);
+    void move(@Nullable NetworkManager manager);
 }

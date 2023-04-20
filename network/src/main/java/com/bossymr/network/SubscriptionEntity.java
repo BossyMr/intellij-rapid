@@ -1,7 +1,7 @@
 package com.bossymr.network;
 
 import com.bossymr.network.client.EntityModel;
-import com.bossymr.network.client.NetworkAction;
+import com.bossymr.network.client.NetworkClient;
 import com.bossymr.network.client.SubscribableEvent;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,12 +15,30 @@ public abstract class SubscriptionEntity {
 
     private final @NotNull SubscribableEvent<?> event;
     private final @NotNull SubscriptionPriority priority;
-    private final @NotNull NetworkAction networkAction;
+    private final @NotNull NetworkClient client;
 
-    public SubscriptionEntity(@NotNull NetworkAction networkAction, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority) {
-        this.networkAction = networkAction;
+    public SubscriptionEntity(@NotNull NetworkClient client, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority) {
+        this.client = client;
         this.event = event;
         this.priority = priority;
+    }
+
+    /**
+     * Unsubscribes all specified entities simultaneously.
+     *
+     * @param entities the entities to unsubscribe.
+     * @throws IOException if an I/O error occurs.
+     * @throws InterruptedException if the current thread is interrupted.
+     */
+    public static void unsubscribe(@NotNull Collection<SubscriptionEntity> entities) throws IOException, InterruptedException {
+        Map<NetworkClient, List<SubscriptionEntity>> sorted = new HashMap<>();
+        for (SubscriptionEntity entity : entities) {
+            sorted.putIfAbsent(entity.client, new ArrayList<>());
+            sorted.get(entity.client).add(entity);
+        }
+        for (NetworkClient client : sorted.keySet()) {
+            client.unsubscribe(sorted.get(client));
+        }
     }
 
     /**
@@ -41,27 +59,13 @@ public abstract class SubscriptionEntity {
         return priority;
     }
 
-    public @NotNull NetworkAction getNetworkAction() {
-        return networkAction;
-    }
-
     /**
      * Unsubscribes from this subscription.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws InterruptedException if the current thread is interrupted.
      */
-    public void unsubscribe() throws IOException, InterruptedException {
-        getNetworkAction().unsubscribe(List.of(this));
-    }
-
-    public static void unsubscribe(@NotNull Collection<SubscriptionEntity> entities) throws IOException, InterruptedException {
-        Map<NetworkAction, List<SubscriptionEntity>> organized = new HashMap<>();
-        for (SubscriptionEntity entity : entities) {
-            organized.putIfAbsent(entity.getNetworkAction(), new ArrayList<>());
-            organized.get(entity.getNetworkAction()).add(entity);
-        }
-        for (NetworkAction networkAction : organized.keySet()) {
-            networkAction.unsubscribe(organized.get(networkAction));
-        }
-    }
+    public abstract void unsubscribe() throws IOException, InterruptedException;
 
     public abstract void event(@NotNull EntityModel model);
 

@@ -1,7 +1,7 @@
 package com.bossymr.rapid.ide.debugger;
 
-import com.bossymr.network.client.NetworkAction;
-import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.NetworkManager;
+import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.RapidRunProfileState;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
 import com.bossymr.rapid.robot.CloseableMastership;
@@ -22,6 +22,7 @@ import com.intellij.execution.runners.AsyncProgramRunner;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.ui.RunContentDescriptor;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.xdebugger.XDebugProcess;
 import com.intellij.xdebugger.XDebugProcessStarter;
@@ -42,6 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * A {@code ProgramRunner} for starting a debugging session.
  */
 public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
+
+    private static final Logger logger = Logger.getInstance(RapidDebugRunner.class);
 
     public static final @NotNull String RUNNER_ID = "RapidDebugRunner";
 
@@ -85,14 +88,15 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
             });
             return promise;
         } catch (IOException | InterruptedException e) {
-            return Promises.rejectedPromise(e);
+            logger.error(e);
+            throw new ExecutionException(RapidBundle.message("run.execution.exception"));
         }
     }
 
-    private void removeBreakpoint(@NotNull NetworkAction action, @NotNull Task task, @NotNull Map<String, ModuleEntity> modules, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
+    private void removeBreakpoint(@NotNull NetworkManager manager, @NotNull Task task, @NotNull Map<String, ModuleEntity> modules, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
         ModuleEntity module = modules.get(breakpoint.getModuleName());
         ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
-        try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
+        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
             module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.TRY, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
         }
     }
@@ -111,7 +115,7 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
      * Resets the robot to allow for a new debugging session to be executed.
      */
     private void setupExecution(@NotNull NetworkManager manager) throws IOException, InterruptedException {
-        try (NetworkAction action = manager.createAction()) {
+        try (NetworkManager action = manager.createLight()) {
             ExecutionService executionService = action.createService(ExecutionService.class);
             try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
                 executionService.resetProgramPointer().get();

@@ -1,26 +1,25 @@
 package com.bossymr.network.client.proxy;
 
+import com.bossymr.network.NetworkManager;
 import com.bossymr.network.NetworkQuery;
-import com.bossymr.network.client.NetworkAction;
+import com.bossymr.network.client.NetworkRequest;
 import com.bossymr.network.client.ResponseModel;
-import okhttp3.Request;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpRequest;
 import java.util.*;
 
 public class ListProxy<T> extends AbstractList<T> {
 
-    private final @NotNull NetworkAction action;
+    private final @NotNull NetworkManager manager;
     private final @NotNull Class<T> entityType;
-    private final @NotNull Request request;
+    private final @NotNull NetworkRequest request;
 
     private List<List<T>> sections;
 
-    public ListProxy(@NotNull NetworkAction action, @NotNull Class<T> entityType, @NotNull Request request) {
-        this.action = action;
+    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkRequest request) {
+        this.manager = manager;
         this.entityType = entityType;
         this.request = request;
     }
@@ -32,9 +31,10 @@ public class ListProxy<T> extends AbstractList<T> {
         this.sections.add(createElements(model));
         URI next;
         while ((next = model.model().reference("next")) != null) {
-            Request copy = new Request.Builder(request)
-                    .url(next.toString())
-                    .build();
+            NetworkRequest copy = new NetworkRequest()
+                    .setMethod(request.getMethod())
+                    .addFields(request.getFields())
+                    .setPath(next);
             model = getModel(copy);
             this.sections.add(createElements(model));
         }
@@ -42,13 +42,20 @@ public class ListProxy<T> extends AbstractList<T> {
 
     private @NotNull List<T> createElements(@NotNull ResponseModel response) {
         return response.entities().stream()
-                .map(entity -> action.createEntity(entityType, entity))
+                .map(entity -> {
+                    try {
+                        return manager.createEntity(entityType, entity);
+                    } catch (IllegalArgumentException e) {
+                        // Skip entities which could not converted.
+                        return null;
+                    }
+                })
                 .filter(Objects::nonNull)
                 .toList();
     }
 
-    private @NotNull ResponseModel getModel(@NotNull Request request) {
-        NetworkQuery<ResponseModel> query = action.createQuery(ResponseModel.class, request);
+    private @NotNull ResponseModel getModel(@NotNull NetworkRequest request) {
+        NetworkQuery<ResponseModel> query = manager.createQuery(ResponseModel.class, request);
         try {
             ResponseModel model = query.get();
             if (model == null) {

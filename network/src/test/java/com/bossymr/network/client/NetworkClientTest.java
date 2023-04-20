@@ -5,13 +5,12 @@ import com.bossymr.network.client.security.Credentials;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,11 +24,11 @@ public class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(ok("Hello, World!")));
         NetworkClient networkClient = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
-        HttpRequest request = networkClient.createRequest()
-                .setPath(URI.create("/"))
-                .build();
-        HttpResponse<byte[]> response = networkClient.send(request);
-        assertEquals("Hello, World!", new String(response.body()));
+        NetworkRequest request = new NetworkRequest()
+                .setPath(URI.create("/"));
+        try (Response response = networkClient.send(request)) {
+            assertEquals("Hello, World!", response.body().string());
+        }
     }
 
     @Test
@@ -37,9 +36,8 @@ public class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(badRequest()));
         NetworkClient networkClient = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
-        HttpRequest request = networkClient.createRequest()
-                .setPath(URI.create("/"))
-                .build();
-        assertThrows(ResponseStatusException.class, () -> networkClient.send(request));
+        NetworkRequest request = new NetworkRequest()
+                .setPath(URI.create("/"));
+        assertThrows(ResponseStatusException.class, () -> networkClient.send(request).close());
     }
 }

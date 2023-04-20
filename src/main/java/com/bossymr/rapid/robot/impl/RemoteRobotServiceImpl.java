@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.impl;
 
-import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.NetworkManager;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.robot.RapidRobot;

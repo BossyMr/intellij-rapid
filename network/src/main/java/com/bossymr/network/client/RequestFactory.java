@@ -1,12 +1,9 @@
 package com.bossymr.network.client;
 
-import com.bossymr.network.MultiMap;
-import com.bossymr.network.NetworkQuery;
-import com.bossymr.network.SubscribableNetworkQuery;
+import com.bossymr.network.*;
 import com.bossymr.network.annotations.*;
 import com.bossymr.network.client.proxy.EntityProxy;
 import com.bossymr.network.client.proxy.ProxyException;
-import okhttp3.Request;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,17 +22,17 @@ import java.util.regex.Pattern;
 
 public class RequestFactory {
 
-    private final @NotNull NetworkAction action;
+    private final @NotNull NetworkManager manager;
 
-    public RequestFactory(@NotNull NetworkAction action) {
-        this.action = action;
+    public RequestFactory(@NotNull NetworkManager manager) {
+        this.manager = manager;
     }
 
     public @Nullable Object createQuery(@NotNull Class<?> type, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (method.getReturnType().isAnnotationPresent(Service.class)) {
             Class<?> returnType = method.getReturnType();
             if (returnType.isAnnotationPresent(Service.class)) {
-                return action.createService((returnType));
+                return manager.createService((returnType));
             } else {
                 throw new ProxyException();
             }
@@ -74,20 +71,19 @@ public class RequestFactory {
             }
             collected.add(key, value);
         }
-        Request request = action.getManager().getNetworkClient().createRequest()
+        NetworkRequest request = new NetworkRequest()
                 .setMethod(command)
                 .setPath(URI.create(interpolate(path, proxy, method, args)))
-                .setFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
-                .setArguments(collected)
-                .build();
+                .addFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
+                .addArguments(collected);
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        return action.createQuery(GenericType.of(returnType), request);
+        return manager.createQuery(GenericType.of(returnType), request);
     }
 
     private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkQuery(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         Class<?> returnType = (Class<?>) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
         SubscribableEvent<?> event = new SubscribableEvent<>(URI.create(interpolate(path, proxy, method, args)), returnType);
-        return action.createSubscribableQuery(event);
+        return manager.createSubscribableQuery(event);
     }
 
     private @NotNull String interpolate(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {

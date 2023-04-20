@@ -1,5 +1,6 @@
 package com.bossymr.network.client;
 
+import com.bossymr.network.NetworkManager;
 import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.annotations.*;
@@ -8,7 +9,6 @@ import com.bossymr.network.client.proxy.ProxyException;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import okhttp3.Request;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -20,19 +20,19 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @WireMockTest
-class NetworkManagerTest {
+class HeavyNetworkManagerTest {
 
     @Test
     void stringQuery(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(okForContentType("text/plain", "Hello, World!")));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null);
-        Request request = manager.getNetworkClient().createRequest()
-                .setPath(URI.create("/"))
-                .build();
-        try (NetworkAction action = manager.createAction()) {
-            NetworkQuery<String> query = action.createQuery(String.class, request);
-            assertEquals("Hello, World!", assertDoesNotThrow(query::get));
+        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+            NetworkRequest request = new NetworkRequest()
+                    .setPath(URI.create("/"));
+            try (NetworkManager action = manager.createLight()) {
+                NetworkQuery<String> query = action.createQuery(String.class, request);
+                assertEquals("Hello, World!", assertDoesNotThrow(query::get));
+            }
         }
     }
 
@@ -48,20 +48,20 @@ class NetworkManagerTest {
                 .setEntity(entity)
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toText())));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null);
-        Request request = manager.getNetworkClient().createRequest()
-                .setPath(URI.create("/"))
-                .build();
-        try (NetworkAction action = manager.createAction()) {
-            NetworkQuery<ResponseModel> modelQuery = action.createQuery(ResponseModel.class, request);
-            assertEquals(model, assertDoesNotThrow(modelQuery::get));
-            NetworkQuery<TestEntity> entityQuery = action.createQuery(TestEntity.class, request);
-            TestEntity testEntity = assertDoesNotThrow(entityQuery::get);
-            assertEquals("Hello!", testEntity.getTitle());
-            assertEquals("Hello, World!", testEntity.getProperty());
-            assertEquals(TestEntity.State.STATE, testEntity.getState());
-            assertEquals(1, testEntity.getInteger());
-            assertNull(testEntity.getEmpty());
+        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+            NetworkRequest request = new NetworkRequest()
+                    .setPath(URI.create("/"));
+            try (NetworkManager action = manager.createLight()) {
+                NetworkQuery<ResponseModel> modelQuery = action.createQuery(ResponseModel.class, request);
+                assertEquals(model, assertDoesNotThrow(modelQuery::get));
+                NetworkQuery<TestEntity> entityQuery = action.createQuery(TestEntity.class, request);
+                TestEntity testEntity = assertDoesNotThrow(entityQuery::get);
+                assertEquals("Hello!", testEntity.getTitle());
+                assertEquals("Hello, World!", testEntity.getProperty());
+                assertEquals(TestEntity.State.STATE, testEntity.getState());
+                assertEquals(1, testEntity.getInteger());
+                assertNull(testEntity.getEmpty());
+            }
         }
     }
 
@@ -78,19 +78,19 @@ class NetworkManagerTest {
                 .setEntity(entity)
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toText())));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null);
-        Request request = manager.getNetworkClient().createRequest()
-                .setPath(URI.create("/"))
-                .build();
-        try (NetworkAction action = manager.createAction()) {
-            NetworkQuery<ResponseModel> modelQuery = action.createQuery(ResponseModel.class, request);
-            assertEquals(model, assertDoesNotThrow(modelQuery::get));
-            assertInstanceOf(TestSubType.class, assertDoesNotThrow(() -> action.createQuery(TestEntity.class, request).get()));
-            NetworkQuery<TestSubType> entityQuery = action.createQuery(TestSubType.class, request);
-            TestSubType testEntity = assertDoesNotThrow(entityQuery::get);
-            assertThrows(ProxyException.class, testEntity::getProperty);
-            assertEquals("Greetings, World!", testEntity.getCustom());
-            assertEquals(2, testEntity.getInteger());
+        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+            NetworkRequest request = new NetworkRequest()
+                    .setPath(URI.create("/"));
+            try (NetworkManager action = manager.createLight()) {
+                NetworkQuery<ResponseModel> modelQuery = action.createQuery(ResponseModel.class, request);
+                assertEquals(model, assertDoesNotThrow(modelQuery::get));
+                assertInstanceOf(TestSubType.class, assertDoesNotThrow(() -> action.createQuery(TestEntity.class, request).get()));
+                NetworkQuery<TestSubType> entityQuery = action.createQuery(TestSubType.class, request);
+                TestSubType testEntity = assertDoesNotThrow(entityQuery::get);
+                assertThrows(ProxyException.class, testEntity::getProperty);
+                assertEquals("Greetings, World!", testEntity.getCustom());
+                assertEquals(2, testEntity.getInteger());
+            }
         }
     }
 
@@ -111,26 +111,26 @@ class NetworkManagerTest {
                 .willReturn(ok()));
         wireMock.register(delete("/failPath")
                 .willReturn(badRequest()));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null);
-        Request request = manager.getNetworkClient().createRequest()
-                .setMethod("POST")
-                .setPath(URI.create("/selfPath/request"))
-                .setArgument("argument", "value")
-                .setArgument("arguments", "values")
-                .build();
-        try (NetworkAction action = manager.createAction()) {
-            NetworkQuery<TestFetch> modelQuery = action.createQuery(TestFetch.class, request);
-            TestFetch testFetch = modelQuery.get();
-            assertNotNull(testFetch);
-            assertEquals("/selfPath", testFetch.getSelf());
-            assertEquals("Hello, World!", testFetch.withPath().get());
-            assertEquals(model, testFetch.withArguments().get());
-            testFetch.withProperty().get();
-            try {
-                testFetch.fail("failPath").get();
-                fail();
-            } catch (ResponseStatusException e) {
-                assertEquals(400, e.getResponse().code());
+        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+            NetworkRequest request = new NetworkRequest()
+                    .setMethod("POST")
+                    .setPath(URI.create("/selfPath/request"))
+                    .setArgument("argument", "value")
+                    .setArgument("arguments", "values");
+            try (NetworkManager action = manager.createLight()) {
+                NetworkQuery<TestFetch> modelQuery = action.createQuery(TestFetch.class, request);
+                TestFetch testFetch = modelQuery.get();
+                assertNotNull(testFetch);
+                assertEquals("/selfPath", testFetch.getSelf());
+                assertEquals("Hello, World!", testFetch.withPath().get());
+                assertEquals(model, testFetch.withArguments().get());
+                testFetch.withProperty().get();
+                try {
+                    testFetch.fail("failPath").get();
+                    fail();
+                } catch (ResponseStatusException e) {
+                    assertEquals(400, e.getResponse().code());
+                }
             }
         }
     }
@@ -154,19 +154,20 @@ class NetworkManagerTest {
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", simpleModel.toText())));
         wireMock.register(get("/complete").willReturn(okForContentType("application/xhtml+xml", completeModel.toText())));
-        NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null);
-        try (NetworkAction action = manager.createAction()) {
-            TestService service = action.createService(TestService.class);
-            TestEntity entity = service.getEntity().get();
-            EntityProxy proxy = assertInstanceOf(EntityProxy.class, entity);
-            assertEquals("entity-li", proxy.getType());
-            int events = wireMock.getServeEvents().size();
-            entity.getProperty();
-            assertEquals(events, wireMock.getServeEvents().size());
-            assertEquals("entity-li", proxy.getType());
-            entity.getInteger();
-            assertEquals(events + 1, wireMock.getServeEvents().size());
-            assertEquals("entity", proxy.getType());
+        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+            try (NetworkManager action = manager.createLight()) {
+                TestService service = action.createService(TestService.class);
+                TestEntity entity = service.getEntity().get();
+                EntityProxy proxy = assertInstanceOf(EntityProxy.class, entity);
+                assertEquals("entity-li", proxy.getType());
+                int events = wireMock.getServeEvents().size();
+                entity.getProperty();
+                assertEquals(events, wireMock.getServeEvents().size());
+                assertEquals("entity-li", proxy.getType());
+                entity.getInteger();
+                assertEquals(events + 1, wireMock.getServeEvents().size());
+                assertEquals("entity", proxy.getType());
+            }
         }
     }
 

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.NetworkManager;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.intellij.openapi.application.ApplicationManager;
 import org.jetbrains.annotations.NotNull;

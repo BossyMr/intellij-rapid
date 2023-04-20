@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.ui;
 
-import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RapidRobot;

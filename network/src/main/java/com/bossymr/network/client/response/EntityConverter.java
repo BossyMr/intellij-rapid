@@ -1,11 +1,11 @@
 package com.bossymr.network.client.response;
 
+import com.bossymr.network.GenericType;
+import com.bossymr.network.NetworkManager;
 import com.bossymr.network.ResponseConverter;
 import com.bossymr.network.ResponseConverterFactory;
 import com.bossymr.network.annotations.Entity;
 import com.bossymr.network.client.EntityModel;
-import com.bossymr.network.client.GenericType;
-import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.ResponseModel;
 import com.bossymr.network.client.proxy.ProxyException;
 import okhttp3.Request;
@@ -25,19 +25,19 @@ public class EntityConverter<T> implements ResponseConverter<T> {
 
     public static final ResponseConverterFactory FACTORY = new ResponseConverterFactory() {
         @Override
-        public <E> ResponseConverter<E> create(@NotNull NetworkAction action, @NotNull GenericType<E> type) {
+        public <E> ResponseConverter<E> create(@NotNull NetworkManager manager, @NotNull GenericType<E> type) {
             if (type.getRawType().isAnnotationPresent(Entity.class)) {
-                return new EntityConverter<>(action, type);
+                return new EntityConverter<>(manager, type);
             }
             return null;
         }
     };
 
-    private final @NotNull NetworkAction action;
+    private final @NotNull NetworkManager manager;
     private final @NotNull GenericType<T> type;
 
-    public EntityConverter(@NotNull NetworkAction action, @NotNull GenericType<T> type) {
-        this.action = action;
+    public EntityConverter(@NotNull NetworkManager manager, @NotNull GenericType<T> type) {
+        this.manager = manager;
         this.type = type;
     }
 
@@ -50,6 +50,10 @@ public class EntityConverter<T> implements ResponseConverter<T> {
     @Override
     public @Nullable T convert(@NotNull Response response) throws IOException, InterruptedException {
         return convert(response, type.getType());
+    }
+
+    public @Nullable T convert(@NotNull EntityModel model) {
+        return convert(List.of(model), type.getType());
     }
 
     private @Nullable T convert(@NotNull Response response, @NotNull Type returnType) throws IOException, InterruptedException {
@@ -65,8 +69,8 @@ public class EntityConverter<T> implements ResponseConverter<T> {
         List<?> entities = models.stream()
                 .map(model -> {
                     try {
-                        return ((Object) action.createEntity(entityType, model));
-                    } catch (ProxyException e) {
+                        return ((Object) manager.createEntity(entityType, model));
+                    } catch (IllegalArgumentException e) {
                         return null;
                     }
                 })
@@ -120,7 +124,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
             Request next = new Request.Builder(response.request())
                     .url(Objects.requireNonNull(collectionModel.model().reference("next")).toURL())
                     .build();
-            try (@NotNull Response closeable = action.getManager().getNetworkClient().send(next)) {
+            try (@NotNull Response closeable = manager.getNetworkClient().send(next)) {
                 response = closeable;
                 collectionModel = ResponseModel.convert(response.body().bytes());
             }

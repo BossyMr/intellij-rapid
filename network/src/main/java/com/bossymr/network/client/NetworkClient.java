@@ -23,11 +23,10 @@ public class NetworkClient {
 
     private static final Logger logger = LoggerFactory.getLogger(NetworkClient.class);
 
-    private final @NotNull URI defaultPath;
-
     private final @NotNull SubscriptionGroup subscriptionGroup;
     private final @NotNull OkHttpClient httpClient;
 
+    private final @NotNull URI defaultPath;
 
     public NetworkClient(@NotNull URI defaultPath, @Nullable Credentials credentials) {
         this.defaultPath = defaultPath;
@@ -63,25 +62,28 @@ public class NetworkClient {
         this.subscriptionGroup = new SubscriptionGroup(this);
     }
 
-    public @NotNull RequestBuilder createRequest() {
-        return new RequestBuilder(getDefaultPath());
-    }
-
-    public @NotNull URI getDefaultPath() {
-        return defaultPath;
-    }
-
     public @NotNull OkHttpClient getHttpClient() {
         return httpClient;
+    }
+
+    public @NotNull Response send(@NotNull NetworkRequest request) throws IOException, InterruptedException {
+        return send(request.build(defaultPath));
     }
 
     public @NotNull Response send(@NotNull Request request) throws IOException, InterruptedException {
         return httpClient.newCall(request).execute();
     }
 
-    public @NotNull SubscriptionEntity subscribe(@NotNull NetworkAction action, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
+    public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
         logger.atDebug().log("Subscribing to '{}' with priority {}", event.getResource(), priority);
-        SubscriptionEntity entity = new SubscriptionEntity(action, event, priority) {
+        SubscriptionEntity entity = new SubscriptionEntity(this, event, priority) {
+
+            @Override
+            public void unsubscribe() throws IOException, InterruptedException {
+                NetworkClient.this.unsubscribe(this);
+                listener.onClose(this);
+            }
+
             @Override
             public void event(@NotNull EntityModel model) {
                 listener.onEvent(this, model);
@@ -93,9 +95,20 @@ public class NetworkClient {
         return entity;
     }
 
+    public void unsubscribe(@NotNull SubscriptionEntity entity) throws IOException, InterruptedException {
+        if (!(subscriptionGroup.getEntities().remove(entity))) {
+            throw new IllegalArgumentException("Entity '" + entity + "' is not subscribed");
+        }
+        subscriptionGroup.update();
+    }
+
 
     public void unsubscribe(@NotNull Collection<SubscriptionEntity> entities) throws IOException, InterruptedException {
-        entities.forEach(subscriptionGroup.getEntities()::remove);
+        for (SubscriptionEntity entity : entities) {
+            if (!(subscriptionGroup.getEntities().remove(entity))) {
+                throw new IllegalArgumentException("Entity '" + entity + "' is not subscribed");
+            }
+        }
         subscriptionGroup.update();
     }
 

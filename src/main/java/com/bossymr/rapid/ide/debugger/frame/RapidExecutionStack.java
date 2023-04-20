@@ -1,6 +1,6 @@
 package com.bossymr.rapid.ide.debugger.frame;
 
-import com.bossymr.network.client.NetworkAction;
+import com.bossymr.network.NetworkManager;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskExecutionState;
@@ -21,12 +21,12 @@ public class RapidExecutionStack extends XExecutionStack {
     private final @NotNull Project project;
     private final @NotNull Task task;
     private @NotNull List<RapidStackFrame> stackFrames = new ArrayList<>();
-    private final @NotNull NetworkAction action;
+    private final @NotNull NetworkManager manager;
 
-    public RapidExecutionStack(@NotNull NetworkAction action, @NotNull Project project, @NotNull Task task, @NotNull StackFrame stackFrame, boolean isAtBreakpoint, boolean current) {
+    public RapidExecutionStack(@NotNull NetworkManager manager, @NotNull Project project, @NotNull Task task, @NotNull StackFrame stackFrame, boolean isAtBreakpoint, boolean current) {
         super(task.getName() + ": " + stackFrame.getExecutionLevel(), getIcon(task, isAtBreakpoint, current));
-        this.action = action;
-        this.stackFrames.add(new RapidStackFrame(action, project, stackFrame));
+        this.manager = manager;
+        this.stackFrames.add(new RapidStackFrame(manager, project, stackFrame));
         this.project = project;
         this.task = task;
     }
@@ -77,7 +77,7 @@ public class RapidExecutionStack extends XExecutionStack {
                 container.addStackFrames(stackFrames.subList(firstFrameIndex - 1, stackFrames.size()), true);
                 break;
             } else {
-                stackFrames.add(new RapidStackFrame(action, project, stackFrame));
+                stackFrames.add(new RapidStackFrame(manager, project, stackFrame));
             }
         }
     }

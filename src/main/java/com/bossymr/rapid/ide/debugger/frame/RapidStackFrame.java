@@ -1,7 +1,7 @@
 package com.bossymr.rapid.ide.debugger.frame;
 
+import com.bossymr.network.NetworkManager;
 import com.bossymr.network.ResponseStatusException;
-import com.bossymr.network.client.NetworkAction;
 import com.bossymr.rapid.ide.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
@@ -43,11 +43,11 @@ public class RapidStackFrame extends XStackFrame {
     private final @NotNull StackFrame stackFrame;
     private final @Nullable String equalityObject;
     private final @Nullable RapidSourcePosition sourcePosition;
-    private final @NotNull NetworkAction action;
+    private final @NotNull NetworkManager manager;
 
-    public RapidStackFrame(@NotNull NetworkAction action, @NotNull Project project, @NotNull StackFrame stackFrame) {
+    public RapidStackFrame(@NotNull NetworkManager manager, @NotNull Project project, @NotNull StackFrame stackFrame) {
         this.project = project;
-        this.action = action;
+        this.manager = manager;
         this.equalityObject = stackFrame.getRoutine();
         this.sourcePosition = findSourcePosition(stackFrame);
         this.stackFrame = stackFrame;
@@ -105,17 +105,17 @@ public class RapidStackFrame extends XStackFrame {
                 return;
             }
             for (PhysicalField field : routine.getFields()) {
-                childrenList.add(new RapidSymbolValue(action, field, stackFrame));
+                childrenList.add(new RapidSymbolValue(manager, field, stackFrame));
             }
             List<PhysicalParameterGroup> parameters = routine.getParameters();
             if (parameters != null) {
                 for (PhysicalParameterGroup group : parameters) {
                     for (PhysicalParameter parameter : group.getParameters()) {
                         try {
-                            QueryableSymbol queryableSymbol = RapidSymbolValue.findSymbol(action, parameter, stackFrame);
+                            QueryableSymbol queryableSymbol = RapidSymbolValue.findSymbol(manager, parameter, stackFrame);
                             SymbolValue symbolValue = queryableSymbol.getValue().get();
                             if (symbolValue.getValue().length() > 0) {
-                                childrenList.add(new RapidSymbolValue(action, parameter, stackFrame));
+                                childrenList.add(new RapidSymbolValue(manager, parameter, stackFrame));
                             }
                         } catch (ResponseStatusException e) {
                             if (e.getResponse().code() == 400) {
@@ -134,7 +134,7 @@ public class RapidStackFrame extends XStackFrame {
 
             if (module != null) {
                 for (RapidField child : module.getFields()) {
-                    childrenList.add(new RapidSymbolValue(action, child, stackFrame));
+                    childrenList.add(new RapidSymbolValue(manager, child, stackFrame));
                 }
             }
             node.addChildren(childrenList, true);

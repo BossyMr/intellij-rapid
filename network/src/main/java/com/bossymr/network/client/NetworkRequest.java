@@ -9,78 +9,103 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpRequest;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
-/**
- * A {@code RequestBuilder} is used to build a {@link HttpRequest}.
- */
-public class RequestBuilder {
+public class NetworkRequest {
 
-    private final @NotNull URI defaultPath;
-    private @NotNull MultiMap<String, String> fields = new MultiMap<>();
-    private @NotNull MultiMap<String, String> arguments = new MultiMap<>();
+    private final @NotNull MultiMap<String, String> fields = new MultiMap<>();
+    private final @NotNull MultiMap<String, String> arguments = new MultiMap<>();
     private @NotNull String method;
     private @NotNull URI path;
 
-    /**
-     * Creates a new {@code RequestBuilder} with the specified default path, which all paths are resolved against.
-     *
-     * @param defaultPath the default path.
-     */
-    public RequestBuilder(@NotNull URI defaultPath) {
+    public NetworkRequest() {
         this.method = "GET";
-        this.defaultPath = defaultPath;
-        this.path = defaultPath;
+        this.path = URI.create("/");
     }
 
-    public @NotNull RequestBuilder setMethod(@NotNull String method) {
+    public @NotNull MultiMap<String, String> getFields() {
+        return fields;
+    }
+
+    public @NotNull MultiMap<String, String> getArguments() {
+        return arguments;
+    }
+
+    public @NotNull String getMethod() {
+        return method;
+    }
+
+    public @NotNull NetworkRequest setMethod(@NotNull String method) {
         this.method = method;
         return this;
     }
 
-    public @NotNull RequestBuilder setPath(@NotNull URI path) {
-        this.path = defaultPath.resolve(path);
+    public @NotNull URI getPath() {
+        return path;
+    }
+
+    public @NotNull NetworkRequest setPath(@NotNull URI path) {
+        String query = path.getQuery();
+        if (query != null) {
+            String[] sections = query.split("&");
+            for (String argument : sections) {
+                String[] strings = argument.split("=");
+                if (strings.length != 2) {
+                    throw new IllegalArgumentException("Unexpected query " + argument);
+                }
+                arguments.putIfAbsent(strings[0], new ArrayList<>());
+                if (!(arguments.get(strings[0]).contains(strings[1]))) {
+                    arguments.get(strings[0]).add(strings[1]);
+                }
+            }
+        }
+        try {
+            this.path = new URI(path.getScheme(), path.getUserInfo(), path.getHost(), path.getPort(), path.getPath(), null, path.getFragment());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
         return this;
     }
 
-    public @NotNull RequestBuilder setFields(@NotNull MultiMap<String, String> fields) {
-        this.fields = fields;
+    public @NotNull NetworkRequest addFields(@NotNull MultiMap<String, String> fields) {
+        this.fields.putAll(fields);
         return this;
     }
 
-    public @NotNull RequestBuilder addField(@NotNull String name, @NotNull String value) {
+    public @NotNull NetworkRequest addField(@NotNull String name, @NotNull String value) {
         fields.add(name, value);
         return this;
     }
 
-    public @NotNull RequestBuilder setField(@NotNull String name, @NotNull String value) {
+    public @NotNull NetworkRequest setField(@NotNull String name, @NotNull String value) {
         fields.set(name, value);
         return this;
     }
 
-    public @NotNull RequestBuilder setArguments(@NotNull MultiMap<String, String> arguments) {
-        this.arguments = arguments;
+    public @NotNull NetworkRequest addArguments(@NotNull MultiMap<String, String> arguments) {
+        this.arguments.putAll(arguments);
         return this;
     }
 
-    public @NotNull RequestBuilder addArgument(@NotNull String name, @NotNull String value) {
+    public @NotNull NetworkRequest addArgument(@NotNull String name, @NotNull String value) {
         arguments.add(name, value);
         return this;
     }
 
-    public @NotNull RequestBuilder setArgument(@NotNull String name, @NotNull String value) {
+    public @NotNull NetworkRequest setArgument(@NotNull String name, @NotNull String value) {
         arguments.set(name, value);
         return this;
     }
 
-    public @NotNull Request build() {
+    public @NotNull Request build(@NotNull URI defaultPath) {
+        path = defaultPath.resolve(path);
         String body = getBody(fields);
         Request.Builder builder = new Request.Builder()
                 .url(getResource(path, arguments).toString());
         RequestBody bodyPublisher = body != null ? RequestBody.create(body.getBytes(), MediaType.get("application/x-www-form-urlencoded")) : null;
-        if(method.equals("POST") || method.equals("PUT")) {
-            if(bodyPublisher == null) {
+        if (method.equals("POST") || method.equals("PUT")) {
+            if (bodyPublisher == null) {
                 bodyPublisher = RequestBody.create(new byte[0], MediaType.get("application/x-www-form-urlencoded"));
             }
         }

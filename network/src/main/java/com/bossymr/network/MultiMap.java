@@ -46,6 +46,10 @@ public class MultiMap<K, V> implements Map<K, List<V>> {
         return delegate.values().stream().anyMatch(list -> list.contains(value));
     }
 
+    public boolean containsElement(@NotNull K key, @Nullable V value) {
+        return delegate.containsKey(key) && delegate.get(key).contains(value);
+    }
+
     @Override
     public int size() {
         return delegate.size();
@@ -84,6 +88,10 @@ public class MultiMap<K, V> implements Map<K, List<V>> {
 
     @Override
     public void putAll(@NotNull Map<? extends K, ? extends List<V>> m) {
+        for (Entry<? extends K, ? extends List<V>> entry : m.entrySet()) {
+            delegate.putIfAbsent(entry.getKey(), new ArrayList<>());
+            delegate.get(entry.getKey()).addAll(entry.getValue());
+        }
         delegate.putAll(m);
     }
 

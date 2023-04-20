@@ -1,4 +1,4 @@
-package com.bossymr.network.client;
+package com.bossymr.network;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -64,5 +64,12 @@ public abstract class GenericType<T> implements Comparable<T> {
     @Override
     public int compareTo(@NotNull T o) {
         return 0;
+    }
+
+    @Override
+    public String toString() {
+        return "GenericType{" +
+                "type=" + getType() +
+                '}';
     }
 }

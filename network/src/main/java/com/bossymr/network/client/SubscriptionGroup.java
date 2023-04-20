@@ -81,11 +81,10 @@ public class SubscriptionGroup {
                 start();
             } else {
                 logger.atDebug().log("Updating SubscriptionGroup '{}'", getEntities());
-                Request request = networkClient.createRequest()
+                NetworkRequest request = new NetworkRequest()
                         .setMethod("PUT")
                         .setPath(path)
-                        .setFields(getBody(getEntities()))
-                        .build();
+                        .addFields(getBody(getEntities()));
                 networkClient.send(request).close();
             }
         } finally {
@@ -95,11 +94,10 @@ public class SubscriptionGroup {
 
     private void start() throws IOException, InterruptedException {
         logger.atDebug().log("Starting SubscriptionGroup '{}'", getEntities());
-        Request request = networkClient.createRequest()
+        NetworkRequest request = new NetworkRequest()
                 .setMethod("POST")
                 .setPath(URI.create("/subscription"))
-                .setFields(getBody(entities))
-                .build();
+                .addFields(getBody(entities));
         ResponseModel model;
         try (Response response = networkClient.send(request)) {
             model = ResponseModel.convert(response.body().bytes());
@@ -149,10 +147,9 @@ public class SubscriptionGroup {
         if (path == null || webSocket == null) {
             return;
         }
-        Request request = networkClient.createRequest()
+        NetworkRequest request = new NetworkRequest()
                 .setMethod("DELETE")
-                .setPath(path)
-                .build();
+                .setPath(path);
         this.path = null;
         try {
             networkClient.send(request).close();

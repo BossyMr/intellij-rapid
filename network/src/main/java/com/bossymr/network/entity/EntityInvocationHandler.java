@@ -1,10 +1,10 @@
 package com.bossymr.network.entity;
 
+import com.bossymr.network.NetworkManager;
 import com.bossymr.network.annotations.Deserializable;
 import com.bossymr.network.annotations.Property;
 import com.bossymr.network.annotations.Title;
 import com.bossymr.network.client.EntityModel;
-import com.bossymr.network.client.NetworkAction;
 import com.bossymr.network.client.RequestFactory;
 import com.bossymr.network.client.ResponseModel;
 import com.bossymr.network.client.proxy.EntityProxy;
@@ -30,22 +30,22 @@ import java.util.Objects;
 public class EntityInvocationHandler extends AbstractInvocationHandler {
 
     private final @NotNull Class<?> type;
-    private @Nullable NetworkAction action;
+    private @Nullable NetworkManager manager;
     private @NotNull EntityModel model;
 
-    public EntityInvocationHandler(@Nullable NetworkAction action, @NotNull Class<?> type, @NotNull EntityModel model) {
+    public EntityInvocationHandler(@Nullable NetworkManager manager, @NotNull Class<?> type, @NotNull EntityModel model) {
         this.model = model;
-        this.action = action;
+        this.manager = manager;
         this.type = type;
     }
 
     @Override
     public @Nullable Object execute(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (isMethod(method, NetworkProxy.class, "getNetworkAction")) {
-            return action;
+            return manager;
         }
-        if (isMethod(method, NetworkProxy.class, "move", NetworkAction.class)) {
-            this.action = (NetworkAction) args[0];
+        if (isMethod(method, NetworkProxy.class, "move", NetworkManager.class)) {
+            this.manager = (NetworkManager) args[0];
             return null;
         }
         if (isMethod(method, EntityProxy.class, "refresh")) {
@@ -93,10 +93,10 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             }
             return null;
         }
-        if (action == null) {
+        if (manager == null) {
             throw new IllegalStateException("Entity is not managed");
         }
-        return new RequestFactory(action).createQuery(type, proxy, method, args);
+        return new RequestFactory(manager).createQuery(type, proxy, method, args);
     }
 
     private @NotNull Object convert(@NotNull String value, @NotNull Class<?> type) throws IllegalAccessException {
@@ -181,7 +181,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     }
 
     private @NotNull EntityModel getSelf() {
-        if (action == null) {
+        if (manager == null) {
             throw new IllegalStateException("Entity is not managed");
         }
         URI reference = model.reference("self");
@@ -191,7 +191,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         Request httpRequest = new Request.Builder().url(reference.toString()).build();
         try {
             ResponseModel collectionModel;
-            try (Response response = action.getManager().getNetworkClient().send(httpRequest)) {
+            try (Response response = manager.getNetworkClient().send(httpRequest)) {
                 collectionModel = ResponseModel.convert(response.body().bytes());
             }
             if (collectionModel.entities().size() != 1) {
@@ -207,13 +207,13 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     public boolean equals(@NotNull Object proxy, @NotNull Object obj) {
         InvocationHandler invocationHandler = Proxy.getInvocationHandler(obj);
         if (!(invocationHandler instanceof EntityInvocationHandler entity)) return false;
-        return entity.type.equals(type) && entity.model.equals(model) && Objects.equals(entity.action, action);
+        return entity.type.equals(type) && entity.model.equals(model) && Objects.equals(entity.manager, manager);
     }
 
     @Override
     public int hashCode(@NotNull Object proxy) {
         int result = type.hashCode();
-        result = 31 * result + (action != null ? action.hashCode() : 0);
+        result = 31 * result + (manager != null ? manager.hashCode() : 0);
         result = 31 * result + model.hashCode();
         return result;
     }

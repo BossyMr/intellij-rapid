@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.network.NetworkManager;
 import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.EntityModel;
-import com.bossymr.network.client.NetworkAction;
-import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.client.HeavyNetworkManager;
 import com.bossymr.network.client.proxy.EntityProxy;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
@@ -57,7 +57,7 @@ public class RapidRobot implements Disposable {
     public static final Topic<StateListener> STATE_TOPIC = Topic.create("Robot State", StateListener.class);
     private static final Logger logger = Logger.getInstance(RapidRobot.class);
     private @NotNull State state = new State();
-    private @Nullable NetworkAction action;
+    private @Nullable NetworkManager manager;
     private @NotNull Set<RapidTask> tasks;
     private @NotNull Map<String, VirtualSymbol> symbols;
 
@@ -93,30 +93,30 @@ public class RapidRobot implements Disposable {
      */
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         setCredentials(path, credentials);
-        NetworkManager manager = new NetworkManager(path, credentials);
+        NetworkManager manager = new HeavyNetworkManager(path, credentials);
         State state;
-        try (NetworkAction action = manager.createAction()) {
+        try (NetworkManager action = manager.createLight()) {
             state = getState(path, action);
         }
         RapidRobot robot = new RapidRobot(state);
         RobotEventListener.publish().onRefresh(robot, manager);
-        robot.setAction(manager.createAction());
+        robot.setManager(manager);
         robot.download();
         return robot;
     }
 
-    private static @NotNull State getState(@NotNull URI path, @NotNull NetworkAction action) throws IOException, InterruptedException {
+    private static @NotNull State getState(@NotNull URI path, @NotNull NetworkManager manager) throws IOException, InterruptedException {
         State state = new State();
         state.path = path.getScheme() + "://" + path.getHost() + ":" + path.getPort();
         state.cache = new HashSet<>();
-        Identity identity = action.createService(ControllerService.class).getIdentity().get();
+        Identity identity = manager.createService(ControllerService.class).getIdentity().get();
         state.name = identity.getName();
         SymbolQuery query = new SymbolQuery()
                 .setRecursive(true)
                 .setMethod(SymbolSearchMethod.BLOCK)
                 .setBlock("RAPID")
                 .setSymbolType(SymbolType.ANY);
-        List<SymbolModel> symbols = action.createService(RapidService.class).findSymbols(query).get();
+        List<SymbolModel> symbols = manager.createService(RapidService.class).findSymbols(query).get();
         state.symbols = symbols.stream()
                 .map(Entity::convert)
                 .collect(Collectors.toSet());
@@ -134,7 +134,7 @@ public class RapidRobot implements Disposable {
             if (entry.getKey().equals("RAPID")) continue;
             String name = entry.getKey().substring(entry.getKey().lastIndexOf('/') + 1);
             if (states.get("RAPID").contains(name)) continue;
-            SymbolModel model = getSymbol(action, "RAPID" + "/" + name);
+            SymbolModel model = getSymbol(manager, "RAPID" + "/" + name);
             Objects.requireNonNull(model, entry.toString());
             Entity entity = Entity.convert(model);
             state.symbols.add(entity);
@@ -142,9 +142,9 @@ public class RapidRobot implements Disposable {
         return state;
     }
 
-    private static @Nullable SymbolModel getSymbol(@NotNull NetworkAction action, @NotNull String name) throws IOException, InterruptedException {
+    private static @Nullable SymbolModel getSymbol(@NotNull NetworkManager manager, @NotNull String name) throws IOException, InterruptedException {
         try {
-            return action.createService(RapidService.class).findSymbol(name).get();
+            return manager.createService(RapidService.class).findSymbol(name).get();
         } catch (ResponseStatusException e) {
             if (e.getResponse().code() == 400) {
                 return null;
@@ -195,7 +195,7 @@ public class RapidRobot implements Disposable {
      * @return if this robot is currently connected.
      */
     public boolean isConnected() {
-        return action != null;
+        return manager != null;
     }
 
     /**
@@ -204,7 +204,7 @@ public class RapidRobot implements Disposable {
      * @return the network engine, or {@code null} if this robot is not currently connected.
      */
     public @Nullable NetworkManager getNetworkManager() {
-        return action != null ? action.getManager() : null;
+        return manager;
     }
 
     /**
@@ -245,10 +245,10 @@ public class RapidRobot implements Disposable {
         if (state.cache != null && state.cache.contains(name.toLowerCase())) {
             return null;
         }
-        if (action == null) {
+        if (manager == null) {
             return null;
         }
-        SymbolModel model = getSymbol(action, "RAPID" + "/" + name);
+        SymbolModel model = getSymbol(manager, "RAPID" + "/" + name);
         if (model == null) {
             if (state.cache == null) {
                 state.cache = new HashSet<>();
@@ -277,7 +277,7 @@ public class RapidRobot implements Disposable {
     }
 
     public void download() throws IOException, InterruptedException {
-        if (action == null) {
+        if (manager == null) {
             throw new IllegalStateException("Robot is not connected");
         }
         File finalDirectory;
@@ -288,7 +288,7 @@ public class RapidRobot implements Disposable {
                 FileUtil.delete(file);
             }
             finalDirectory = PathManager.getSystemDir().toFile();
-            List<Task> tasks = action.createService(TaskService.class).getTasks().get();
+            List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
             for (Task task : tasks) {
                 File temporaryTask = directory.getFile().toPath().resolve(task.getName()).toFile();
                 File finalTask = Path.of(finalDirectory.getPath(), "robot").resolve(task.getName()).toFile();
@@ -299,7 +299,7 @@ public class RapidRobot implements Disposable {
                 List<ModuleInfo> modules = task.getModules().get();
                 for (ModuleInfo moduleInfo : modules) {
                     ModuleEntity module = moduleInfo.getModule().get();
-                    try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
+                    try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
                         module.save(module.getName(), temporaryTask.toPath().toString()).get();
                     }
                     File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
@@ -335,11 +335,11 @@ public class RapidRobot implements Disposable {
     }
 
     public void upload(@NotNull RapidTask task, @NotNull Set<File> modules) throws IOException, InterruptedException {
-        if (action == null) {
+        if (manager == null) {
             throw new IllegalStateException("Robot is not connected");
         }
         try (CloseableDirectory temporaryDirectory = new CloseableDirectory("upload")) {
-            Task remote = action.createService(TaskService.class).getTask(task.getName()).get();
+            Task remote = manager.createService(TaskService.class).getTask(task.getName()).get();
             Program program = remote.getProgram().get();
             File file = temporaryDirectory.getFile().toPath().resolve(program.getName() + ".pgf").toFile();
             WriteAction.runAndWait(() -> {
@@ -353,7 +353,7 @@ public class RapidRobot implements Disposable {
                     writer.write("</Program>");
                 }
             });
-            try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
+            try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
                 program.load(file.getPath(), LoadProgramMode.REPLACE).get();
             }
             RobotEventListener.publish().onUpload(this);
@@ -376,9 +376,11 @@ public class RapidRobot implements Disposable {
     }
 
     private @NotNull NetworkManager reconnect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
-        NetworkManager manager = new NetworkManager(path, credentials);
-        NetworkAction action = manager.createAction();
-        State state = getState(path, action);
+        NetworkManager manager = new HeavyNetworkManager(path, credentials);
+        State state;
+        try (NetworkManager action = manager.createLight()) {
+            state = getState(path, action);
+        }
         Objects.requireNonNull(state.symbols);
         List<SymbolModel> models = state.symbols.stream()
                 .map(symbol -> symbol.convert(SymbolModel.class, manager))
@@ -387,12 +389,12 @@ public class RapidRobot implements Disposable {
         setState(state);
         this.tasks = getPersistedTasks();
         RobotEventListener.publish().onRefresh(this, manager);
-        setAction(action);
+        setManager(manager);
         return manager;
     }
 
-    public void setAction(@NotNull NetworkAction action) {
-        this.action = action;
+    private void setManager(@NotNull NetworkManager manager) {
+        this.manager = manager;
     }
 
     private @NotNull Path getDefaultPath() {
@@ -430,11 +432,11 @@ public class RapidRobot implements Disposable {
     }
 
     public void disconnect() throws IOException, InterruptedException {
-        if (action == null) {
+        if (manager == null) {
             return;
         }
-        action.close();
-        action = null;
+        manager.close();
+        manager = null;
         RobotEventListener.publish().onDisconnect(this);
     }
 
@@ -571,13 +573,9 @@ public class RapidRobot implements Disposable {
             }
             EntityModel model = new EntityModel(title, type, convert(links, k -> k, URI::create), fields);
             if (manager == null) {
-                return NetworkAction.createLightEntity(entityType, model);
+                return NetworkManager.createLightEntity(entityType, model);
             } else {
-                try (NetworkAction action = manager.createAction()) {
-                    return action.createEntity(entityType, model);
-                } catch (IOException | InterruptedException e) {
-                    throw new AssertionError(e);
-                }
+                return manager.createEntity(entityType, model);
             }
         }
 

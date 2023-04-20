@@ -1,7 +1,6 @@
 package com.bossymr.rapid.ide.execution;
 
-import com.bossymr.network.client.NetworkAction;
-import com.bossymr.network.client.NetworkManager;
+import com.bossymr.network.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfigurationOptions;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
@@ -129,7 +128,7 @@ public class RapidRunProfileState implements RunProfileState {
     }
 
     private void activate(@NotNull NetworkManager manager, @NotNull TaskState taskState, @NotNull String taskName) throws IOException, InterruptedException {
-        try (NetworkAction action = manager.createAction()) {
+        try (NetworkManager action = manager.createLight()) {
             Task task = action.createService(TaskService.class).getTask(taskName).get();
             switch (task.getActivityState()) {
                 case ENABLED -> {
