@@ -7,8 +7,8 @@ import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.RobotEventListener;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.application.options.ModulesComboBox;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
@@ -61,7 +61,7 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
         NameColumnInfo NAME = new NameColumnInfo();
         ModuleColumnInfo MODULE = new ModuleColumnInfo(project);
         this.taskModel = new ListTableModel<>(new ColumnInfo[]{ENABLED, NAME, MODULE});
-        RapidRobot robot = RemoteRobotService.getInstance().getRobot();
+        RapidRobot robot = RobotService.getInstance().getRobot();
         if (robot != null) {
             robotComboBox.addItem(robot);
             taskModel.setItems(robot.getTasks().stream()

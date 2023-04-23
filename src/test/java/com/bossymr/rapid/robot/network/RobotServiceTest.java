@@ -14,13 +14,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @EnabledIf("com.bossymr.rapid.robot.network.NetworkTestUtil#doNetworkTest")
 class RobotServiceTest {
 
-    private static RobotService robotService;
+    private static RootService robotService;
     private static HeavyNetworkManager manager;
 
     @BeforeAll
     static void beforeAll() {
         manager = new HeavyNetworkManager(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
-        robotService = manager.createLight().createService(RobotService.class);
+        robotService = manager.createLight().createService(RootService.class);
     }
 
     @AfterAll

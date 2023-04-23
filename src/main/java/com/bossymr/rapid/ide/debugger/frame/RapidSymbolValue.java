@@ -74,13 +74,14 @@ public class RapidSymbolValue extends XNamedValue {
         return queryableSymbol;
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     @Override
     public void computePresentation(@NotNull XValueNode node, @NotNull XValuePlace place) {
         try {
             String value = getValue();
             RapidType dataType = symbol.getType();
             boolean hasChildren = dataType != null && dataType.getTargetStructure() instanceof RapidRecord record && record.getComponents().size() > 0;
-            node.setPresentation(symbol.getIcon(), new RapidValuePresentation(dataType, value), hasChildren);
+            node.setPresentation(symbol.getTargetPresentation().getIcon(), new RapidValuePresentation(dataType, value), hasChildren);
         } catch (IOException e) {
             node.setPresentation(null, new XErrorValuePresentation(e.getLocalizedMessage()), false);
         } catch (InterruptedException ignored) {}

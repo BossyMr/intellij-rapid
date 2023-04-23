@@ -3,7 +3,7 @@ package com.bossymr.rapid.robot.actions;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.symbol.RapidModule;
 import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -45,7 +45,7 @@ public class DeleteAction extends AnAction {
             new Task.Backgroundable(project, RapidBundle.message("robot.delete.action")) {
                 @Override
                 public void run(@NotNull ProgressIndicator indicator) {
-                    RemoteRobotService service = RemoteRobotService.getInstance();
+                    RobotService service = RobotService.getInstance();
                     try {
                         service.disconnect();
                     } catch (IOException | InterruptedException ignored) {}
@@ -58,7 +58,7 @@ public class DeleteAction extends AnAction {
     public void update(@NotNull AnActionEvent event) {
         Project project = event.getProject();
         if (project != null) {
-            RemoteRobotService service = RemoteRobotService.getInstance();
+            RobotService service = RobotService.getInstance();
             RapidRobot robot = service.getRobot();
             event.getPresentation().setEnabled(robot != null && isAvailable(event));
         } else {

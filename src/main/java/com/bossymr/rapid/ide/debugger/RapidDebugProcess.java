@@ -9,7 +9,7 @@ import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.CloseableMastership;
 import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
@@ -365,7 +365,7 @@ public class RapidDebugProcess extends XDebugProcess {
                 }
             }
         } else {
-            RemoteRobotService service = RemoteRobotService.getInstance();
+            RobotService service = RobotService.getInstance();
             RapidRobot robot = service.getRobot();
             if (robot == null) return null;
             for (RapidTask task : robot.getTasks()) {

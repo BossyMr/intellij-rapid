@@ -1,7 +1,5 @@
-package com.bossymr.rapid.language.psi.impl;
+package com.bossymr.rapid.language.psi;
 
-import com.bossymr.rapid.language.psi.RapidElement;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElementVisitor;
@@ -10,9 +8,9 @@ import org.jetbrains.annotations.NotNull;
 /**
  * A standard implementation for a {@link RapidElement}.
  */
-public abstract class RapidElementImpl extends ASTWrapperPsiElement implements RapidElement {
+public abstract class PhysicalElement extends ASTWrapperPsiElement implements RapidElement {
 
-    protected RapidElementImpl(@NotNull ASTNode node) {
+    protected PhysicalElement(@NotNull ASTNode node) {
         super(node);
     }
 

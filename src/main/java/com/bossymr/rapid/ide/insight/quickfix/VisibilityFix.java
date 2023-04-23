@@ -1,7 +1,7 @@
 package com.bossymr.rapid.ide.insight.quickfix;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.symbol.RapidAccessibleSymbol;
+import com.bossymr.rapid.language.symbol.RapidVisibleSymbol;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.intellij.codeInsight.intention.FileModifier;
@@ -47,7 +47,7 @@ public final class VisibilityFix implements IntentionAction {
 
     @Override
     public void invoke(@NotNull Project project, Editor editor, PsiFile file) throws IncorrectOperationException {
-        if (symbol instanceof RapidAccessibleSymbol accessibleSymbol) {
+        if (symbol instanceof RapidVisibleSymbol) {
             ASTNode node = getVisibility(symbol);
             ASTNode element = createVisibility(visibility);
             if (node != null) {
@@ -80,7 +80,7 @@ public final class VisibilityFix implements IntentionAction {
     @Override
     public boolean isAvailable(@NotNull Project project, Editor editor, PsiFile file) {
         if (!(symbol.isValid()) || !(BaseIntentionAction.canModify(symbol))) return false;
-        if (!(symbol instanceof RapidAccessibleSymbol accessibleSymbol)) return false;
+        if (!(symbol instanceof RapidVisibleSymbol accessibleSymbol)) return false;
         return accessibleSymbol.getVisibility() != visibility;
     }
 

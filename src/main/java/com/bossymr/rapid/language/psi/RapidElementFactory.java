@@ -2,8 +2,8 @@ package com.bossymr.rapid.language.psi;
 
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.impl.fragment.RapidExpressionCodeFragmentImpl;
+import com.bossymr.rapid.language.symbol.ModuleType;
 import com.bossymr.rapid.language.symbol.RapidField;
-import com.bossymr.rapid.language.symbol.RapidModule;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFileFactory;
@@ -61,12 +61,12 @@ public final class RapidElementFactory {
     /**
      * Creates a new attribute list with the specified attributes.
      *
-     * @param attributes the attributes.
+     * @param moduleTypes the attributes.
      * @return the attribute list.
      */
-    public @NotNull RapidAttributeList createAttributeList(@NotNull List<RapidModule.Attribute> attributes) {
-        String text = attributes.stream()
-                .map(RapidModule.Attribute::getText)
+    public @NotNull RapidAttributeList createAttributeList(@NotNull List<ModuleType> moduleTypes) {
+        String text = moduleTypes.stream()
+                .map(ModuleType::getText)
                 .collect(Collectors.joining(","));
         RapidFile file = createDummyFile("MODULE DUMMY(" + text + ") ENDMODULE");
         return file.getModules().get(0).getAttributeList();

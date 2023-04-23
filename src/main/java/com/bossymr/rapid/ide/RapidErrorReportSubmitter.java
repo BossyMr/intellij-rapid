@@ -35,6 +35,8 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
     static {
         Sentry.init(options -> {
             options.setDsn("https://695867e6cecb4232a39f8db866b46897@sentry.bossymr.com/2");
+            options.setEnableUncaughtExceptionHandler(false);
+            options.setEnableAutoSessionTracking(false);
             boolean internal = ApplicationManager.getApplication().isInternal();
             options.setEnvironment(internal ? "development" : "production");
         });

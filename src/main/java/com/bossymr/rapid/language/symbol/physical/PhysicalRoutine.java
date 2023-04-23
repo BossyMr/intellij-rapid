@@ -4,10 +4,7 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidRoutineStub;
-import com.bossymr.rapid.language.symbol.RapidRoutine;
-import com.bossymr.rapid.language.symbol.RapidType;
-import com.bossymr.rapid.language.symbol.SymbolUtil;
-import com.bossymr.rapid.language.symbol.Visibility;
+import com.bossymr.rapid.language.symbol.*;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -15,7 +12,6 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,11 +23,6 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
 
     public PhysicalRoutine(@NotNull ASTNode node) {
         super(node);
-    }
-
-    @Override
-    public @Nullable Icon getIcon(int flags) {
-        return getIcon();
     }
 
     @Override
@@ -50,12 +41,12 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     }
 
     @Override
-    public @NotNull Attribute getAttribute() {
+    public @NotNull RoutineType getRoutineType() {
         RapidRoutineStub stub = getGreenStub();
         if (stub != null) {
             return stub.getAttribute();
         } else {
-            return Attribute.getAttribute(this);
+            return RoutineType.getAttribute(this);
         }
     }
 
@@ -85,20 +76,20 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     }
 
     public @NotNull RapidStatementList getStatementList() {
-        RapidStatementList statementList = getStatementList(RapidStatementList.Attribute.STATEMENT_LIST);
+        RapidStatementList statementList = getStatementList(StatementListType.STATEMENT_LIST);
         return Objects.requireNonNull(statementList);
     }
 
     @Override
-    public @Nullable List<RapidStatement> getStatements(@NotNull RapidStatementList.Attribute attribute) {
-        RapidStatementList statementList = getStatementList(attribute);
+    public @Nullable List<RapidStatement> getStatements(@NotNull StatementListType statementListType) {
+        RapidStatementList statementList = getStatementList(statementListType);
         return statementList != null ? statementList.getStatements() : null;
     }
 
-    public @Nullable RapidStatementList getStatementList(@NotNull RapidStatementList.Attribute attribute) {
+    public @Nullable RapidStatementList getStatementList(@NotNull StatementListType statementListType) {
         List<RapidStatementList> statementLists = findChildrenByType(RapidElementTypes.STATEMENT_LIST);
         for (RapidStatementList statementList : statementLists) {
-            if (attribute == statementList.getAttribute()) {
+            if (statementListType == statementList.getAttribute()) {
                 return statementList;
             }
         }
@@ -122,7 +113,17 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     }
 
     @Override
+    public @NotNull PhysicalPointer<PhysicalRoutine> createPointer() {
+        return new PhysicalPointer<>(this);
+    }
+
+    @Override
     public String toString() {
-        return "PhysicalRoutine:" + this.getName();
+        return "PhysicalRoutine{" +
+                "visibility=" + getVisibility() +
+                ", routineType=" + getRoutineType() +
+                ", type=" + getType() +
+                ", name='" + getName() + '\'' +
+                '}';
     }
 }

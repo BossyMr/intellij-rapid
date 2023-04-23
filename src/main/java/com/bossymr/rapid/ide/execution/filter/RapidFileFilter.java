@@ -3,7 +3,7 @@ package com.bossymr.rapid.ide.execution.filter;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.execution.filters.Filter;
 import com.intellij.execution.filters.HyperlinkInfo;
 import com.intellij.openapi.application.ApplicationManager;
@@ -56,7 +56,7 @@ public class RapidFileFilter implements Filter {
     }
 
     private @Nullable HyperlinkInfo getHyperLink(@NotNull String[] sections) {
-        RemoteRobotService robotService = RemoteRobotService.getInstance();
+        RobotService robotService = RobotService.getInstance();
         RapidRobot robot = robotService.getRobot();
         if(robot == null) {
             return null;

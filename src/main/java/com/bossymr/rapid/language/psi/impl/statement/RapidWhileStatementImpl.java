@@ -1,12 +1,11 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidWhileStatementImpl extends RapidElementImpl implements RapidWhileStatement {
+public class RapidWhileStatementImpl extends PhysicalElement implements RapidWhileStatement {
 
     public RapidWhileStatementImpl(@NotNull ASTNode node) {
         super(node);

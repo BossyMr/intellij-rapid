@@ -4,12 +4,12 @@ import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.FormatUtil;
 import com.bossymr.rapid.language.psi.FormatUtil.Option;
 import com.bossymr.rapid.language.psi.RapidFile;
-import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
-import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.RapidRobot;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.ide.navigationToolbar.StructureAwareNavBarModelExtension;
 import com.intellij.lang.Language;
 import com.intellij.openapi.util.io.FileUtil;
@@ -51,7 +51,7 @@ public class RapidNavigationBar extends StructureAwareNavBarModelExtension {
     public @Nullable PsiElement adjustElement(@NotNull PsiElement element) {
         if (element instanceof PsiDirectory directory) {
             VirtualFile virtualFile = directory.getVirtualFile();
-            RemoteRobotService remoteService = RemoteRobotService.getInstance();
+            RobotService remoteService = RobotService.getInstance();
             RapidRobot robot = remoteService.getRobot();
             if (robot != null) {
                 for (RapidTask task : robot.getTasks()) {

@@ -17,17 +17,17 @@ import java.net.URI;
  * only persisted state (modules, routines and symbols) can be retrieved. If a robot is not persisted, no state is
  * available.
  */
-public interface RemoteRobotService extends PersistentStateComponent<RemoteRobotService.State>, Disposable {
+public interface RobotService extends PersistentStateComponent<RobotService.State>, Disposable {
 
     @Topic.AppLevel
     Topic<RobotEventListener> TOPIC = Topic.create("Robot Refresh", RobotEventListener.class);
 
-    static @NotNull RemoteRobotService getInstance() {
-        return ApplicationManager.getApplication().getService(RemoteRobotService.class);
+    static @NotNull RobotService getInstance() {
+        return ApplicationManager.getApplication().getService(RobotService.class);
     }
 
     static boolean isConnected() {
-        RemoteRobotService service = RemoteRobotService.getInstance();
+        RobotService service = RobotService.getInstance();
         RapidRobot robot = service.getRobot();
         if (robot != null) {
             return robot.isConnected();

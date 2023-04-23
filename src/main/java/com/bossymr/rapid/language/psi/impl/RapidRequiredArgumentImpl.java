@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class RapidRequiredArgumentImpl extends RapidElementImpl implements RapidRequiredArgument {
+public class RapidRequiredArgumentImpl extends PhysicalElement implements RapidRequiredArgument {
 
     public RapidRequiredArgumentImpl(@NotNull ASTNode node) {
         super(node);

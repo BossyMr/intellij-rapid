@@ -1,9 +1,6 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.bossymr.rapid.language.psi.RapidBinaryExpression;
-import com.bossymr.rapid.language.psi.RapidElementTypes;
-import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.RapidUnaryExpression;
+import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.lang.ASTFactory;
 import com.intellij.lang.ASTNode;
@@ -21,7 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import static com.bossymr.rapid.language.psi.RapidElementTypes.*;
 import static com.bossymr.rapid.language.psi.RapidTokenTypes.*;
 
-public abstract class RapidExpressionImpl extends RapidElementImpl implements RapidExpression {
+public abstract class RapidExpressionImpl extends PhysicalElement implements RapidExpression {
 
     protected RapidExpressionImpl(@NotNull ASTNode node) {
         super(node);

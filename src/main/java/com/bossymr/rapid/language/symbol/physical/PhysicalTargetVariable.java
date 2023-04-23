@@ -1,9 +1,9 @@
 package com.bossymr.rapid.language.symbol.physical;
 
+import com.bossymr.rapid.language.psi.PhysicalElement;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidTargetVariable;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
@@ -13,10 +13,9 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Objects;
 
-public class PhysicalTargetVariable extends RapidElementImpl implements RapidTargetVariable, PhysicalVariable {
+public class PhysicalTargetVariable extends PhysicalElement implements RapidTargetVariable, PhysicalVariable {
 
     public PhysicalTargetVariable(@NotNull ASTNode node) {
         super(node);
@@ -28,13 +27,8 @@ public class PhysicalTargetVariable extends RapidElementImpl implements RapidTar
     }
 
     @Override
-    public @Nullable Icon getIcon(int flags) {
-        return getIcon();
-    }
-
-    @Override
-    public boolean readOnly() {
-        return true;
+    public boolean isModifiable() {
+        return false;
     }
 
     @Override
@@ -65,7 +59,15 @@ public class PhysicalTargetVariable extends RapidElementImpl implements RapidTar
     }
 
     @Override
+    public @NotNull PhysicalPointer<PhysicalTargetVariable> createPointer() {
+        return new PhysicalPointer<>(this);
+    }
+
+    @Override
     public String toString() {
-        return "RapidTargetVariable:" + this.getName();
+        return "PhysicalTargetVariable{" +
+                "name='" + getName() + '\'' +
+                ", type=" + getType() +
+                '}';
     }
 }

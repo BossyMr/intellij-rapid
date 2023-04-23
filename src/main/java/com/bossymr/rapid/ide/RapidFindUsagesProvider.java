@@ -51,14 +51,14 @@ public class RapidFindUsagesProvider implements FindUsagesProvider {
         if (element instanceof RapidRecord) return RapidBundle.message("element.type.alias");
         if (element instanceof RapidComponent) return RapidBundle.message("element.type.alias");
         if (element instanceof RapidRoutine routine) {
-            return switch (routine.getAttribute()) {
+            return switch (routine.getRoutineType()) {
                 case FUNCTION -> RapidBundle.message("element.type.function");
                 case PROCEDURE -> RapidBundle.message("element.type.procedure");
                 case TRAP -> RapidBundle.message("element.type.trap");
             };
         }
         if (element instanceof RapidField field) {
-            return switch (field.getAttribute()) {
+            return switch (field.getFieldType()) {
                 case VARIABLE -> RapidBundle.message("element.type.variable");
                 case CONSTANT -> RapidBundle.message("element.type.constant");
                 case PERSISTENT -> RapidBundle.message("element.type.persistent");

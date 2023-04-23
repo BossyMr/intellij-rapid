@@ -15,11 +15,11 @@ import org.jetbrains.annotations.NotNull;
 
 public abstract class RapidStubElement<T extends StubElement<?>> extends StubBasedPsiElementBase<T> implements StubBasedPsiElement<T> {
 
-    public RapidStubElement(@NotNull T stub, @NotNull IStubElementType<?, ?> nodeType) {
+    protected RapidStubElement(@NotNull T stub, @NotNull IStubElementType<?, ?> nodeType) {
         super(stub, nodeType);
     }
 
-    public RapidStubElement(@NotNull ASTNode node) {
+    protected RapidStubElement(@NotNull ASTNode node) {
         super(node);
     }
 
@@ -38,7 +38,7 @@ public abstract class RapidStubElement<T extends StubElement<?>> extends StubBas
         }
     }
 
-    public abstract void accept(@NotNull RapidElementVisitor visitor);
+    protected abstract void accept(@NotNull RapidElementVisitor visitor);
 
     @Override
     public @NotNull Language getLanguage() {

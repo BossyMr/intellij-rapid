@@ -2,91 +2,55 @@ package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.RapidTokenTypes;
-import com.intellij.lang.ASTNode;
-import com.intellij.lang.LighterAST;
-import com.intellij.lang.LighterASTNode;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.impl.source.tree.LightTreeUtil;
-import com.intellij.psi.tree.IElementType;
-import com.intellij.psi.tree.TokenSet;
+import com.intellij.navigation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
+/**
+ * A {@code RapidField} represents a field.
+ */
+@SuppressWarnings("UnstableApiUsage")
+public interface RapidField extends RapidVariable, RapidVisibleSymbol {
 
-public interface RapidField extends RapidVariable, RapidAccessibleSymbol {
-    @NotNull Attribute getAttribute();
+    /**
+     * Returns the field type.
+     *
+     * @return the filed type.
+     */
+    @NotNull FieldType getFieldType();
 
+    /**
+     * Returns the initializer of this field.
+     *
+     * @return the initializer of this field, or {@code null} if it does not have an initializer.
+     */
     @Nullable RapidExpression getInitializer();
 
+    /**
+     * Sets the initializer to the specified expression, if the expression is {@code null}, the initializer is removed.
+     *
+     * @param expression the new initializer.
+     * @throws UnsupportedOperationException if this field is not modifiable.
+     */
     default void setInitializer(@Nullable RapidExpression expression) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Checks if this field has an initializer.
+     *
+     * @return if this field has an initializer.
+     */
     boolean hasInitializer();
 
     @Override
-    default @NotNull Icon getIcon() {
-        return switch (getAttribute()) {
-            case CONSTANT -> RapidIcons.CONSTANT;
-            case VARIABLE -> RapidIcons.VARIABLE;
-            case PERSISTENT -> RapidIcons.PERSISTENT;
-        };
+    default @NotNull TargetPresentation getTargetPresentation() {
+        return TargetPresentation.builder(this.getName())
+                .icon(switch (getFieldType()) {
+                    case VARIABLE -> RapidIcons.VARIABLE;
+                    case CONSTANT -> RapidIcons.CONSTANT;
+                    case PERSISTENT -> RapidIcons.PERSISTENT;
+                }).presentation();
     }
 
-    enum Attribute {
-        VARIABLE(RapidTokenTypes.VAR_KEYWORD, "VAR"),
-        CONSTANT(RapidTokenTypes.CONST_KEYWORD, "CONST"),
-        PERSISTENT(RapidTokenTypes.PERS_KEYWORD, "PERS");
-
-        private final IElementType elementType;
-        private final String text;
-
-        Attribute(@NotNull IElementType elementType, @NotNull String text) {
-            this.elementType = elementType;
-            this.text = text;
-        }
-
-        public @NotNull IElementType getElementType() {
-            return elementType;
-        }
-
-        public @NotNull String getText() {
-            return text;
-        }
-
-        public static @NotNull Attribute getAttribute(@NotNull PsiElement element) {
-            TokenSet tokenSet = TokenSet.create(RapidTokenTypes.VAR_KEYWORD, RapidTokenTypes.CONST_KEYWORD, RapidTokenTypes.PERS_KEYWORD);
-            ASTNode node = element.getNode().findChildByType(tokenSet);
-            if (node == null) {
-                throw new IllegalArgumentException();
-            }
-            IElementType elementType = node.getElementType();
-            return getAttribute(elementType);
-        }
-
-        public static @NotNull Attribute getAttribute(@NotNull LighterAST tree, @NotNull LighterASTNode node) {
-            TokenSet tokenSet = TokenSet.create(RapidTokenTypes.VAR_KEYWORD, RapidTokenTypes.CONST_KEYWORD, RapidTokenTypes.PERS_KEYWORD);
-            LighterASTNode element = LightTreeUtil.firstChildOfType(tree, node, tokenSet);
-            if (element == null) {
-                throw new IllegalArgumentException();
-            }
-            IElementType elementType = element.getTokenType();
-            return getAttribute(elementType);
-        }
-
-        private static @NotNull Attribute getAttribute(@NotNull IElementType elementType) {
-            if (elementType == RapidTokenTypes.VAR_KEYWORD) {
-                return Attribute.VARIABLE;
-            }
-            if (elementType == RapidTokenTypes.CONST_KEYWORD) {
-                return Attribute.CONSTANT;
-            }
-            if (elementType == RapidTokenTypes.PERS_KEYWORD) {
-                return Attribute.PERSISTENT;
-            }
-            throw new AssertionError();
-        }
-    }
 }

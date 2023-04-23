@@ -8,7 +8,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
@@ -61,7 +61,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
             for (PhysicalModule module : file.getModules()) {
                 if (previous.equals(module)) continue;
                 process(module);
-                for (RapidAccessibleSymbol symbol : module.getSymbols()) {
+                for (RapidVisibleSymbol symbol : module.getSymbols()) {
                     process(symbol);
                 }
             }
@@ -113,7 +113,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     @Override
     public void visitModule(@NotNull PhysicalModule module) {
         process(module);
-        for (RapidAccessibleSymbol symbol : module.getSymbols()) {
+        for (RapidVisibleSymbol symbol : module.getSymbols()) {
             process(symbol);
         }
         super.visitModule(module);
@@ -148,13 +148,13 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     private void visitProject(@NotNull PsiElement context) {
         PhysicalModule physicalModule = PsiTreeUtil.getParentOfType(context, PhysicalModule.class);
         boolean isRemoteFile = isRemoteFile(context);
-        RemoteRobotService service = RemoteRobotService.getInstance();
+        RobotService service = RobotService.getInstance();
         RapidRobot robot = service.getRobot();
         if (robot != null) {
             for (RapidTask task : robot.getTasks()) {
                 for (PhysicalModule module : task.getModules(context.getProject())) {
                     if (!(module.equals(physicalModule))) {
-                        if (module.hasAttribute(RapidModule.Attribute.SYSTEM_MODULE) || isRemoteFile) {
+                        if (module.hasAttribute(ModuleType.SYSTEM_MODULE) || isRemoteFile) {
                             visitModule(module);
                         }
                     }
@@ -175,7 +175,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     private boolean isRemoteFile(@NotNull PsiElement element) {
         PsiFile containingFile = element.getContainingFile();
         VirtualFile virtualFile = containingFile.getVirtualFile();
-        RemoteRobotService service = RemoteRobotService.getInstance();
+        RobotService service = RobotService.getInstance();
         RapidRobot robot = service.getRobot();
         if (robot != null && virtualFile != null) {
             for (RapidTask task : robot.getTasks()) {
@@ -188,7 +188,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     }
 
     private void visitRobot() {
-        RemoteRobotService service = RemoteRobotService.getInstance();
+        RobotService service = RobotService.getInstance();
         RapidRobot robot = service.getRobot();
         if (robot != null) {
             if (processor.getName() != null) {

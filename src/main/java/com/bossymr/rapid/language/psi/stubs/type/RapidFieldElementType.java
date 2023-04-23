@@ -7,7 +7,7 @@ import com.bossymr.rapid.language.psi.stubs.RapidFieldStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
 import com.bossymr.rapid.language.psi.stubs.index.RapidFieldIndex;
 import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
-import com.bossymr.rapid.language.symbol.RapidField.Attribute;
+import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.intellij.lang.ASTNode;
@@ -40,13 +40,13 @@ public class RapidFieldElementType extends RapidStubElementType<RapidFieldStub, 
 
     @Override
     public @NotNull RapidFieldStub createStub(@NotNull LighterAST tree, @NotNull LighterASTNode node, @NotNull StubElement<?> parentStub) {
-        Attribute attribute = Attribute.getAttribute(tree, node);
+        FieldType fieldType = FieldType.getAttribute(tree, node);
         Visibility visibility = Visibility.getVisibility(tree, node);
         String name = StubUtil.getText(tree, node, RapidTokenTypes.IDENTIFIER);
         String type = StubUtil.getText(tree, node, RapidElementTypes.TYPE_ELEMENT);
         String initializer = StubUtil.getText(tree, node, RapidElementTypes.EXPRESSIONS);
         int dimensions = StubUtil.getLength(tree, node);
-        return new RapidFieldStub(parentStub, visibility, attribute, name, type, dimensions, initializer);
+        return new RapidFieldStub(parentStub, visibility, fieldType, name, type, dimensions, initializer);
     }
 
     @Override
@@ -62,12 +62,12 @@ public class RapidFieldElementType extends RapidStubElementType<RapidFieldStub, 
     @Override
     public @NotNull RapidFieldStub deserialize(@NotNull StubInputStream dataStream, StubElement parentStub) throws IOException {
         Visibility visibility = Visibility.valueOf(dataStream.readNameString());
-        Attribute attribute = Attribute.valueOf(dataStream.readNameString());
+        FieldType fieldType = FieldType.valueOf(dataStream.readNameString());
         String name = dataStream.readNameString();
         String type = dataStream.readNameString();
         int dimensions = dataStream.readVarInt();
         String initializer = dataStream.readNameString();
-        return new RapidFieldStub(parentStub, visibility, attribute, name, type, dimensions, initializer);
+        return new RapidFieldStub(parentStub, visibility, fieldType, name, type, dimensions, initializer);
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.bossymr.rapid.ide.completion;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.symbol.RapidRoutine;
+import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.physical.*;
 import com.intellij.codeInsight.TailType;
 import com.intellij.codeInsight.completion.*;
@@ -147,7 +147,7 @@ public class RapidKeywordCompletionContributor extends CompletionContributor {
             protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                 PhysicalRoutine routine = PsiTreeUtil.getParentOfType(parameters.getPosition(), PhysicalRoutine.class);
                 if (routine == null) return;
-                TailType tailType = routine.getAttribute() != RapidRoutine.Attribute.FUNCTION ? TailType.SEMICOLON : TailType.SPACE;
+                TailType tailType = routine.getRoutineType() != RoutineType.FUNCTION ? TailType.SEMICOLON : TailType.SPACE;
                 LookupElement lookupElement = RapidKeywordCompletionProvider.getLookupElement(tailType, "RETURN", null);
                 result.caseInsensitive().addElement(lookupElement);
             }
@@ -158,7 +158,7 @@ public class RapidKeywordCompletionContributor extends CompletionContributor {
             protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                 RapidStatementList statementList = PsiTreeUtil.getParentOfType(parameters.getPosition(), RapidStatementList.class);
                 if (statementList == null) return;
-                if (statementList.getAttribute() == RapidStatementList.Attribute.ERROR_CLAUSE) {
+                if (statementList.getAttribute() == StatementListType.ERROR_CLAUSE) {
                     result.caseInsensitive().addElement(RapidKeywordCompletionProvider.getLookupElement(TailType.SEMICOLON, "RETRY", null));
                     result.caseInsensitive().addElement(RapidKeywordCompletionProvider.getLookupElement(TailType.SEMICOLON, "TRYNEXT", null));
                 }
@@ -170,7 +170,7 @@ public class RapidKeywordCompletionContributor extends CompletionContributor {
             protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                 PhysicalRoutine routine = PsiTreeUtil.getParentOfType(parameters.getPosition(), PhysicalRoutine.class);
                 if (routine == null) return;
-                String keyword = switch (routine.getAttribute()) {
+                String keyword = switch (routine.getRoutineType()) {
                     case FUNCTION -> "ENDFUNC";
                     case PROCEDURE -> "ENDPROC";
                     case TRAP -> "ENDTRAP";

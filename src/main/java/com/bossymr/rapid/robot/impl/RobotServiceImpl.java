@@ -4,8 +4,8 @@ import com.bossymr.network.NetworkManager;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.RemoteRobotService;
 import com.bossymr.rapid.robot.RobotEventListener;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.application.WriteAction;
@@ -35,7 +35,7 @@ import java.util.Objects;
         storages = {
                 @Storage("robot.xml")
         })
-public class RemoteRobotServiceImpl implements RemoteRobotService {
+public class RobotServiceImpl implements RobotService {
 
     private @NotNull State state = new State();
     private @Nullable RapidRobot robot;

@@ -22,13 +22,13 @@ public class RobotTest {
 
     @BeforeEach
     void setUp() throws InterruptedException, IOException {
-        RemoteRobotService remoteService = RemoteRobotService.getInstance();
+        RobotService remoteService = RobotService.getInstance();
         robot = remoteService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
     }
 
     @AfterEach
     void tearDown() throws InterruptedException, IOException {
-        RemoteRobotService remoteService = RemoteRobotService.getInstance();
+        RobotService remoteService = RobotService.getInstance();
         remoteService.disconnect();
     }
 

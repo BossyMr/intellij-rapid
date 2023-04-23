@@ -3,13 +3,13 @@ package com.bossymr.rapid.ide.completion;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
-import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
 import com.intellij.codeInsight.TailType;
 import com.intellij.codeInsight.completion.*;
 import com.intellij.codeInsight.completion.util.ParenthesesInsertHandler;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.codeInsight.lookup.TailTypeDecorator;
+import com.intellij.navigation.TargetPresentation;
 import com.intellij.patterns.PsiElementPattern;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.ProcessingContext;
@@ -45,14 +45,14 @@ public class RapidSymbolCompletionContributor extends CompletionContributor {
             protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                 List<RapidSymbol> symbols = getSymbols(parameters);
                 if (PROCEDURE.accepts(parameters.getPosition(), context)) {
-                    result.caseInsensitive().addAllElements(getLookupElements(symbols, (symbol) -> symbol instanceof RapidRoutine routine && routine.getAttribute().equals(RapidRoutine.Attribute.PROCEDURE)));
+                    result.caseInsensitive().addAllElements(getLookupElements(symbols, (symbol) -> symbol instanceof RapidRoutine routine && routine.getRoutineType().equals(RoutineType.PROCEDURE)));
                 }
                 if (FIELD.accepts(parameters.getPosition(), context)) {
                     result.caseInsensitive().addAllElements(getLookupElements(symbols, (symbol) -> symbol instanceof RapidVariable));
-                    result.caseInsensitive().addAllElements(getLookupElements(symbols, (symbol) -> symbol instanceof RapidRoutine routine && routine.getAttribute().equals(RapidRoutine.Attribute.FUNCTION)));
+                    result.caseInsensitive().addAllElements(getLookupElements(symbols, (symbol) -> symbol instanceof RapidRoutine routine && routine.getRoutineType().equals(RoutineType.FUNCTION)));
                 }
                 if (TRAP.accepts(parameters.getPosition(), context)) {
-                    result.caseInsensitive().addAllElements(getLookupElements(symbols, (symbol) -> symbol instanceof RapidRoutine routine && routine.getAttribute().equals(RapidRoutine.Attribute.TRAP)));
+                    result.caseInsensitive().addAllElements(getLookupElements(symbols, (symbol) -> symbol instanceof RapidRoutine routine && routine.getRoutineType().equals(RoutineType.TRAP)));
                 }
                 if (TYPE.accepts(parameters.getPosition(), context)) {
                     result.caseInsensitive().addAllElements(getLookupElements(symbols, (symbol) -> symbol instanceof RapidStructure));
@@ -67,14 +67,18 @@ public class RapidSymbolCompletionContributor extends CompletionContributor {
                 .toList();
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     private @NotNull LookupElement createLookupElement(@NotNull RapidSymbol symbol) {
         String name = symbol.getName() != null ? symbol.getName() : "";
+        TargetPresentation presentation = symbol.getTargetPresentation();
         LookupElementBuilder lookupElementBuilder = LookupElementBuilder.create(symbol, name)
-                .withIcon(symbol.getIcon());
+                .withIcon(presentation.getIcon())
+                .withPresentableText(presentation.getPresentableText())
+                .withTailText(presentation.getLocationText());
         if (symbol instanceof RapidRoutine routine) {
             List<? extends RapidParameterGroup> parameters = routine.getParameters();
             String tailText = FormatUtil.format(routine, EnumSet.of(FormatUtil.Option.SHOW_PARAMETERS), EnumSet.of(FormatUtil.Option.SHOW_TYPE, FormatUtil.Option.SHOW_NAME));
-            return switch (routine.getAttribute()) {
+            return switch (routine.getRoutineType()) {
                 case FUNCTION -> lookupElementBuilder
                         .withInsertHandler(ParenthesesInsertHandler.getInstance(parameters != null && parameters.size() > 0))
                         .withTailText(tailText, true)
@@ -93,10 +97,10 @@ public class RapidSymbolCompletionContributor extends CompletionContributor {
 
     private @NotNull List<RapidSymbol> getSymbols(@NotNull CompletionParameters parameters) {
         PsiElement parent = parameters.getPosition().getParent();
-        if (!(parent instanceof RapidReferenceExpression referenceExpression)) {
+        if (!(parent instanceof RapidReferenceExpression expression)) {
             throw new IllegalStateException();
         }
-        List<RapidSymbol> symbols = ResolveUtil.getSymbols(referenceExpression);
+        List<RapidSymbol> symbols = expression.getSymbols();
         symbols.removeIf(symbol -> {
             if (symbol instanceof PhysicalSymbol physicalSymbol) {
                 return physicalSymbol.getContainingFile().equals(parameters.getOriginalFile());

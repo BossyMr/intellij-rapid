@@ -2,7 +2,7 @@ package com.bossymr.rapid.robot.actions;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -22,7 +22,7 @@ public class RefreshAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         Project project = e.getProject();
-        e.getPresentation().setEnabled(project != null && RemoteRobotService.getInstance().getRobot() != null);
+        e.getPresentation().setEnabled(project != null && RobotService.getInstance().getRobot() != null);
     }
 
     @Override
@@ -30,9 +30,10 @@ public class RefreshAction extends AnAction {
         Project project = e.getProject();
         assert project != null;
         new Task.Backgroundable(project, RapidBundle.message("robot.refresh.action")) {
+            @SuppressWarnings("resource")
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
-                RemoteRobotService service = RemoteRobotService.getInstance();
+                RobotService service = RobotService.getInstance();
                 RapidRobot robot = service.getRobot();
                 if (robot != null) {
                     try {

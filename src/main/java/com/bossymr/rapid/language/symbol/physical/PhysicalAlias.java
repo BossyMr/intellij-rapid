@@ -14,7 +14,6 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements RapidAlias, PhysicalStructure {
@@ -28,27 +27,17 @@ public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements R
     }
 
     @Override
-    public int getTextOffset() {
-        return super.getTextOffset();
-    }
-
-    @Override
-    public @Nullable Icon getIcon(int flags) {
-        return getIcon();
-    }
-
-    @Override
-    public void accept(@NotNull RapidElementVisitor visitor) {
+    protected void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitAlias(this);
+    }
+
+    public @Nullable RapidTypeElement getTypeElement() {
+        return findChildByType(RapidElementTypes.TYPE_ELEMENT);
     }
 
     @Override
     public @NotNull Visibility getVisibility() {
         return SymbolUtil.getVisibility(this);
-    }
-
-    public @Nullable RapidTypeElement getTypeElement() {
-        return findChildByType(RapidElementTypes.TYPE_ELEMENT);
     }
 
     @Override
@@ -61,9 +50,13 @@ public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements R
         return SymbolUtil.getName(this);
     }
 
-    @Override
     public @Nullable PsiElement getNameIdentifier() {
         return findChildByType(RapidTokenTypes.IDENTIFIER);
+    }
+
+    @Override
+    public @NotNull PhysicalPointer<PhysicalAlias> createPointer() {
+        return new PhysicalPointer<>(this);
     }
 
     @Override
@@ -74,6 +67,10 @@ public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements R
 
     @Override
     public String toString() {
-        return "PhysicalAlias:" + this.getName();
+        return "PhysicalAlias{" +
+                "name='" + getName() + '\'' +
+                ", type=" + getType() +
+                ", visibility=" + getVisibility() +
+                '}';
     }
 }

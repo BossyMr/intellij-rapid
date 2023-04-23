@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.psi.impl;
 
+import com.bossymr.rapid.language.psi.PhysicalElement;
 import com.bossymr.rapid.language.psi.RapidElementTypes;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.lang.ASTNode;
@@ -8,7 +9,7 @@ import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class RapidElementListImpl extends RapidElementImpl {
+public abstract class RapidElementListImpl extends PhysicalElement {
 
     private final TokenSet tokenSet;
 

@@ -3,19 +3,25 @@ package com.bossymr.rapid.language.psi.impl.expression;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.*;
-import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
+import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
+import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.intellij.lang.ASTNode;
+import com.intellij.openapi.util.NlsSafe;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiElementResolveResult;
 import com.intellij.psi.PsiReference;
+import com.intellij.psi.ResolveResult;
 import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
+@SuppressWarnings("UnstableApiUsage")
 public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements RapidReferenceExpression {
 
     public RapidReferenceExpressionImpl(@NotNull ASTNode node) {
@@ -23,8 +29,23 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
     }
 
     @Override
-    public @NotNull PsiReference getReference() {
-        return this;
+    public @Nullable PsiReference getReference() {
+        PsiElement element = getIdentifier();
+        if (element != null) {
+            return this;
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public @NotNull Collection<RapidReferenceExpression> getOwnReferences() {
+        PsiElement element = getIdentifier();
+        if (element != null) {
+            return List.of(this);
+        } else {
+            return List.of();
+        }
     }
 
     @Override
@@ -55,7 +76,7 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
     @Override
     public boolean isConstant() {
         RapidSymbol resolve = getSymbol();
-        return resolve instanceof RapidField field && field.getAttribute() == RapidField.Attribute.CONSTANT;
+        return resolve instanceof RapidField field && field.getFieldType() == FieldType.CONSTANT;
     }
 
     @Override
@@ -69,7 +90,34 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
     }
 
     @Override
-    public @NotNull String getCanonicalText() {
+    public void accept(@NotNull RapidElementVisitor visitor) {
+        visitor.visitReferenceExpression(this);
+    }
+
+    @Override
+    public @NotNull TextRange getRangeInElement() {
+        PsiElement identifier = Objects.requireNonNull(getIdentifier());
+        return TextRange.from(identifier.getStartOffsetInParent(), identifier.getTextLength());
+    }
+
+    @Override
+    public @Nullable PsiElement resolve() {
+        RapidSymbol symbol = getSymbol();
+        return symbol instanceof PhysicalSymbol physicalSymbol ? physicalSymbol : null;
+    }
+
+    @Override
+    public @NotNull ResolveResult @NotNull [] multiResolve(boolean incompleteCode) {
+        List<RapidSymbol> symbols = getSymbols();
+        return symbols.stream()
+                .filter(symbol -> symbol instanceof PhysicalSymbol)
+                .map(symbol -> (PhysicalSymbol) symbol)
+                .map(PsiElementResolveResult::new)
+                .toList().toArray(ResolveResult.EMPTY_ARRAY);
+    }
+
+    @Override
+    public @NotNull @NlsSafe String getCanonicalText() {
         return getText();
     }
 
@@ -109,36 +157,8 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
     }
 
     @Override
-    public void accept(@NotNull RapidElementVisitor visitor) {
-        visitor.visitReferenceExpression(this);
-    }
-
-    @Override
-    public @NotNull PsiElement getElement() {
-        return this;
-    }
-
-    @Override
-    public @NotNull TextRange getRangeInElement() {
-        PsiElement identifier = getIdentifier();
-        if (identifier != null) {
-            return TextRange.from(identifier.getStartOffsetInParent(), identifier.getTextLength());
-        }
-        ASTNode node = findChildByType(RapidTokenTypes.DOT);
-        assert node != null;
-        return TextRange.from(node.getStartOffsetInParent() + node.getTextLength(), 0);
-    }
-
-    @Override
     public @NotNull List<RapidSymbol> getSymbols() {
-        return CachedValuesManager.getProjectPsiDependentCache(this, (ignored) -> doResolve());
-    }
-
-    private @NotNull List<RapidSymbol> doResolve() {
-        PsiElement identifier = getIdentifier();
-        if (identifier == null) return Collections.emptyList();
-        String name = identifier.getText();
-        return ResolveUtil.getSymbols(this, name);
+        return CachedValuesManager.getProjectPsiDependentCache(this, (context) -> ResolveService.getInstance(context.getProject()).findSymbols(context));
     }
 
 
@@ -150,6 +170,9 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
 
     @Override
     public String toString() {
-        return "RapidReferenceExpression:" + getText();
+        return "RapidReferenceExpressionImpl{" +
+                "type=" + getType() +
+                ", symbols=" + getSymbols() +
+                '}';
     }
 }

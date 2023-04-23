@@ -1,17 +1,13 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
-import com.bossymr.rapid.language.psi.RapidConnectStatement;
-import com.bossymr.rapid.language.psi.RapidElementTypes;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.bossymr.rapid.language.psi.*;
 import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class RapidConnectStatementImpl extends RapidElementImpl implements RapidConnectStatement {
+public class RapidConnectStatementImpl extends PhysicalElement implements RapidConnectStatement {
 
     public RapidConnectStatementImpl(@NotNull ASTNode node) {
         super(node);

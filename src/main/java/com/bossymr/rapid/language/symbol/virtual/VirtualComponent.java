@@ -7,25 +7,36 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-public record VirtualComponent(
-        @NotNull VirtualRecord record,
-        @NotNull String name,
-        @NotNull RapidType type
-) implements RapidComponent, VirtualSymbol {
+public class VirtualComponent implements RapidComponent, VirtualSymbol {
+
+    private final @NotNull VirtualRecord record;
+    private final @NotNull String name;
+    private final @NotNull RapidType type;
+
+    public VirtualComponent(@NotNull VirtualRecord record, @NotNull String name, @NotNull RapidType type) {
+        this.record = record;
+        this.name = name;
+        this.type = type;
+    }
 
     @Override
     public @NotNull RapidType getType() {
-        return type();
+        return type;
     }
 
     @Override
     public @NotNull RapidRecord getRecord() {
-        return record();
+        return record;
+    }
+
+    @Override
+    public @NotNull String getCanonicalName() {
+        return RapidComponent.super.getCanonicalName();
     }
 
     @Override
     public @NotNull String getName() {
-        return name();
+        return name;
     }
 
     @Override
@@ -33,19 +44,26 @@ public record VirtualComponent(
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         VirtualComponent that = (VirtualComponent) o;
-        return getName().equals(that.getName()) && getType().equals(that.getType());
+        return Objects.equals(record.getName(), that.record.getName()) && Objects.equals(name, that.name) && Objects.equals(type, that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getType());
+        return Objects.hash(record.getName(), name, type);
     }
 
     @Override
     public String toString() {
         return "VirtualComponent{" +
-                "name='" + name + '\'' +
+                "record=" + record.getName() +
+                ", name='" + name + '\'' +
                 ", type=" + type +
                 '}';
     }
+
+    @Override
+    public @NotNull VirtualPointer<VirtualComponent> createPointer() {
+        return new VirtualPointer<>(this, getClass());
+    }
+
 }

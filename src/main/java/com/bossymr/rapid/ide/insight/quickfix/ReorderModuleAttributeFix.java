@@ -3,7 +3,7 @@ package com.bossymr.rapid.ide.insight.quickfix;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.psi.RapidAttributeList;
 import com.bossymr.rapid.language.psi.RapidElementFactory;
-import com.bossymr.rapid.language.symbol.RapidModule;
+import com.bossymr.rapid.language.symbol.ModuleType;
 import com.intellij.codeInsight.intention.FileModifier;
 import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.codeInsight.intention.impl.BaseIntentionAction;
@@ -49,7 +49,7 @@ public final class ReorderModuleAttributeFix implements IntentionAction {
         attributeList.replace(copy);
     }
 
-    private @NotNull List<RapidModule.Attribute> getAttributes() {
+    private @NotNull List<ModuleType> getAttributes() {
         return attributeList.getAttributes().stream().sorted(Comparator.comparing(Enum::ordinal)).distinct().toList();
     }
 

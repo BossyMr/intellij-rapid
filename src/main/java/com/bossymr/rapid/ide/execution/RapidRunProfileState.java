@@ -8,7 +8,7 @@ import com.bossymr.rapid.ide.execution.filter.RapidFileFilter;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
 import com.intellij.execution.DefaultExecutionResult;
@@ -58,7 +58,7 @@ public class RapidRunProfileState implements RunProfileState {
      * @see RunConfiguration#getState(Executor, ExecutionEnvironment)
      */
     public static @Nullable RapidRunProfileState create(@NotNull Project project, @NotNull RapidRunConfigurationOptions options) throws ExecutionException {
-        RemoteRobotService service = RemoteRobotService.getInstance();
+        RobotService service = RobotService.getInstance();
         RapidRobot robot = service.getRobot();
         if (robot == null) {
             return null;

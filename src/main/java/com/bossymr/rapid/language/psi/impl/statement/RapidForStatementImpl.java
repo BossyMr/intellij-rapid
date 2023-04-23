@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
@@ -9,7 +8,7 @@ import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidForStatementImpl extends RapidElementImpl implements RapidForStatement {
+public class RapidForStatementImpl extends PhysicalElement implements RapidForStatement {
 
     public RapidForStatementImpl(@NotNull ASTNode node) {
         super(node);

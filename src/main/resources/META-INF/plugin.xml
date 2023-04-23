@@ -34,6 +34,8 @@
 
         <navbar implementation="com.bossymr.rapid.ide.RapidNavigationBar"/>
 
+        <projectService serviceImplementation="com.bossymr.rapid.language.symbol.resolve.ResolveService"/>
+
         <!-- Refactoring -->
 
         <lang.refactoringSupport language="RAPID"
@@ -58,8 +60,8 @@
 
         <!-- Robot -->
 
-        <applicationService serviceInterface="com.bossymr.rapid.robot.RemoteRobotService"
-                            serviceImplementation="com.bossymr.rapid.robot.impl.RemoteRobotServiceImpl"/>
+        <applicationService serviceInterface="com.bossymr.rapid.robot.RobotService"
+                            serviceImplementation="com.bossymr.rapid.robot.impl.RobotServiceImpl"/>
 
         <toolWindow id="Robot" anchor="right" icon="com.bossymr.rapid.RapidIcons.ROBOT_TOOL_WINDOW"
                     factoryClass="com.bossymr.rapid.robot.ui.RobotToolWindowFactory"/>
@@ -86,7 +88,6 @@
                          groupPath="Rapid" groupKey="inspection.group.declaration.redundancy"
                          bundle="messages.RapidBundle" key="inspection.name.unused.declaration"
                          implementationClass="com.bossymr.rapid.ide.inspection.UnusedDeclarationInspection"/>
-        <documentationProvider implementation="com.bossymr.rapid.ide.documentation.RapidDocumentationProvider"/>
 
         <langCodeStyleSettingsProvider
                 implementation="com.bossymr.rapid.ide.codeStyle.RapidLanguageCodeStyleSettingsProvider"/>
@@ -113,6 +114,11 @@
         <!-- Error Handling -->
 
         <errorHandler implementation="com.bossymr.rapid.ide.RapidErrorReportSubmitter"/>
+
+        <platform.backend.documentation.linkHandler
+                implementation="com.bossymr.rapid.ide.documentation.RapidDocumentationLinkHandler"/>
+
+        <lang.codeReferenceSearcher implementation="com.bossymr.rapid.language.symbol.RapidCodeReferenceSearcher"/>
     </extensions>
 
     <actions>

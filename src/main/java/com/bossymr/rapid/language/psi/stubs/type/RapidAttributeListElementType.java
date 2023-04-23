@@ -4,7 +4,7 @@ import com.bossymr.rapid.language.psi.RapidAttributeList;
 import com.bossymr.rapid.language.psi.RapidStubElementType;
 import com.bossymr.rapid.language.psi.impl.RapidAttributeListImpl;
 import com.bossymr.rapid.language.psi.stubs.RapidAttributeListStub;
-import com.bossymr.rapid.language.symbol.RapidModule.Attribute;
+import com.bossymr.rapid.language.symbol.ModuleType;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
 import com.intellij.lang.LighterASTNode;
@@ -36,8 +36,8 @@ public class RapidAttributeListElementType extends RapidStubElementType<RapidAtt
 
     @Override
     public @NotNull RapidAttributeListStub createStub(@NotNull LighterAST tree, @NotNull LighterASTNode node, @NotNull StubElement<?> parentStub) {
-        List<Attribute> attributeSet = Attribute.getAttributes(tree, node);
-        return new RapidAttributeListStub(parentStub, attributeSet);
+        List<ModuleType> moduleTypeSet = ModuleType.getAttributes(tree, node);
+        return new RapidAttributeListStub(parentStub, moduleTypeSet);
     }
 
     @Override

@@ -16,7 +16,6 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -34,11 +33,6 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
     }
 
     @Override
-    public @Nullable Icon getIcon(int flags) {
-        return getIcon();
-    }
-
-    @Override
     public void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitModule(this);
     }
@@ -48,22 +42,22 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
     }
 
     @Override
-    public @NotNull List<Attribute> getAttributes() {
+    public @NotNull List<ModuleType> getAttributes() {
         RapidAttributeList attributeList = getAttributeList();
         return attributeList.getAttributes();
     }
 
     @Override
-    public boolean hasAttribute(@NotNull Attribute attribute) {
+    public boolean hasAttribute(@NotNull ModuleType moduleType) {
         RapidAttributeList attributeList = getAttributeList();
-        return attributeList.hasAttribute(attribute);
+        return attributeList.hasAttribute(moduleType);
     }
 
     @Override
-    public @NotNull List<RapidAccessibleSymbol> getSymbols() {
+    public @NotNull List<RapidVisibleSymbol> getSymbols() {
         return Stream.of(getStructures(), getFields(), getRoutines())
                 .flatMap(Collection::stream)
-                .map(symbol -> (RapidAccessibleSymbol) symbol)
+                .map(symbol -> (RapidVisibleSymbol) symbol)
                 .toList();
     }
 
@@ -93,7 +87,7 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
     }
 
     @Override
-    public String getName() {
+    public @Nullable String getName() {
         return SymbolUtil.getName(this);
     }
 
@@ -149,7 +143,14 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
     }
 
     @Override
+    public @NotNull PhysicalPointer<PhysicalModule> createPointer() {
+        return new PhysicalPointer<>(this);
+    }
+
+    @Override
     public String toString() {
-        return "PhysicalModule:" + this.getName();
+        return "PhysicalModule{" +
+                "name='" + getName() + '\'' +
+                '}';
     }
 }

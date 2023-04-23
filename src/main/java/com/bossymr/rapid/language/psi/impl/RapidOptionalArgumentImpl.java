@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class RapidOptionalArgumentImpl extends RapidElementImpl implements RapidOptionalArgument {
+public class RapidOptionalArgumentImpl extends PhysicalElement implements RapidOptionalArgument {
 
     public RapidOptionalArgumentImpl(@NotNull ASTNode node) {
         super(node);

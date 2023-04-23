@@ -17,7 +17,6 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,11 +28,6 @@ public class PhysicalRecord extends RapidStubElement<RapidRecordStub> implements
 
     public PhysicalRecord(@NotNull ASTNode node) {
         super(node);
-    }
-
-    @Override
-    public @Nullable Icon getIcon(int flags) {
-        return getIcon();
     }
 
     @Override
@@ -54,6 +48,11 @@ public class PhysicalRecord extends RapidStubElement<RapidRecordStub> implements
     @Override
     public @NotNull List<RapidComponent> getComponents() {
         return List.of(getStubOrPsiChildren(RapidStubElementTypes.COMPONENT, new PhysicalComponent[0]));
+    }
+
+    @Override
+    public @NotNull PhysicalPointer<PhysicalRecord> createPointer() {
+        return new PhysicalPointer<>(this);
     }
 
     @Override
@@ -89,6 +88,9 @@ public class PhysicalRecord extends RapidStubElement<RapidRecordStub> implements
 
     @Override
     public String toString() {
-        return "PhysicalRecord:" + this.getName();
+        return "PhysicalRecord{" +
+                "visibility=" + getVisibility() +
+                ", name='" + getName() + '\'' +
+                '}';
     }
 }

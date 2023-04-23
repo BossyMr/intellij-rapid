@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.psi.stubs;
 
 import com.bossymr.rapid.language.psi.RapidStubElementTypes;
 import com.bossymr.rapid.language.psi.RapidTypeStub;
-import com.bossymr.rapid.language.symbol.RapidParameter.Attribute;
+import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameter;
 import com.intellij.psi.stubs.NamedStubBase;
 import com.intellij.psi.stubs.StubElement;
@@ -13,18 +13,18 @@ import java.util.Objects;
 
 public class RapidParameterStub extends NamedStubBase<PhysicalParameter> implements RapidTypeStub {
 
-    private final Attribute attribute;
+    private final ParameterType attribute;
     private final String type;
     private final int dimensions;
 
-    public RapidParameterStub(StubElement parent, @NotNull Attribute attribute, @Nullable String name, @Nullable String type, int dimensions) {
+    public RapidParameterStub(StubElement parent, @NotNull ParameterType attribute, @Nullable String name, @Nullable String type, int dimensions) {
         super(parent, RapidStubElementTypes.PARAMETER, name);
         this.attribute = attribute;
         this.type = type;
         this.dimensions = dimensions;
     }
 
-    public @NotNull Attribute getAttribute() {
+    public @NotNull ParameterType getAttribute() {
         return attribute;
     }
 

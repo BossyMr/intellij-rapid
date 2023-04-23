@@ -15,7 +15,6 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalComponent extends RapidStubElement<RapidComponentStub> implements RapidComponent, PhysicalSymbol {
@@ -26,11 +25,6 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
 
     public PhysicalComponent(@NotNull ASTNode node) {
         super(node);
-    }
-
-    @Override
-    public @Nullable Icon getIcon(int flags) {
-        return getIcon();
     }
 
     @Override
@@ -49,14 +43,25 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
     }
 
     @Override
+    public @NotNull String getCanonicalName() {
+        return RapidComponent.super.getCanonicalName();
+    }
+
+    @Override
     public @Nullable PsiElement getNameIdentifier() {
         return findChildByType(RapidTokenTypes.IDENTIFIER);
+    }
+
+    @Override
+    public @NotNull PhysicalPointer<PhysicalComponent> createPointer() {
+        return new PhysicalPointer<>(this);
     }
 
     @Override
     public String getName() {
         return SymbolUtil.getName(this);
     }
+
 
     @Override
     public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
@@ -66,6 +71,10 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
 
     @Override
     public String toString() {
-        return "PhysicalComponent:" + this.getName();
+        return "PhysicalComponent{" +
+                "name='" + getName() + '\'' +
+                ", type=" + getType() +
+                ", record=" + getRecord().getName() +
+                '}';
     }
 }

@@ -1,14 +1,13 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class RapidTestStatementImpl extends RapidElementImpl implements RapidTestStatement {
+public class RapidTestStatementImpl extends PhysicalElement implements RapidTestStatement {
 
     public RapidTestStatementImpl(@NotNull ASTNode node) {
         super(node);

@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
  * dynamically.
  */
 @Service
-public interface RobotService {
+public interface RootService {
 
     /**
      * Logs out of the currently logged-in user.

@@ -1,8 +1,8 @@
 package com.bossymr.rapid.language.symbol.physical;
 
+import com.bossymr.rapid.language.psi.PhysicalElement;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.symbol.RapidLabelStatement;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
@@ -12,18 +12,12 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Objects;
 
-public class PhysicalLabelStatement extends RapidElementImpl implements RapidLabelStatement, PhysicalSymbol {
+public class PhysicalLabelStatement extends PhysicalElement implements RapidLabelStatement, PhysicalSymbol {
 
     public PhysicalLabelStatement(@NotNull ASTNode node) {
         super(node);
-    }
-
-    @Override
-    public @Nullable Icon getIcon(int flags) {
-        return getIcon();
     }
 
     @Override
@@ -48,7 +42,14 @@ public class PhysicalLabelStatement extends RapidElementImpl implements RapidLab
     }
 
     @Override
+    public @NotNull PhysicalPointer<PhysicalLabelStatement> createPointer() {
+        return new PhysicalPointer<>(this);
+    }
+
+    @Override
     public String toString() {
-        return "PhysicalLabelStatement:" + this.getName();
+        return "PhysicalLabelStatement{" +
+                "name='" + getName() + '\'' +
+                '}';
     }
 }

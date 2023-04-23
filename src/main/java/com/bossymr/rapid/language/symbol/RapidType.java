@@ -73,7 +73,7 @@ public class RapidType {
         if (this == RapidType.BOOLEAN) return ValueType.VALUE_TYPE;
         if (this == RapidType.STRING) return ValueType.VALUE_TYPE;
         if (structure instanceof RapidAtomic atomic) {
-            return atomic.getType() != null ? ValueType.SEMI_VALUE_TYPE : ValueType.NON_VALUE_TYPE;
+            return atomic.getAssociatedType() != null ? ValueType.SEMI_VALUE_TYPE : ValueType.NON_VALUE_TYPE;
         }
         if (structure instanceof RapidAlias alias) {
             RapidType type = alias.getType();
@@ -119,7 +119,7 @@ public class RapidType {
                 type = alias.getType();
             } else {
                 RapidAtomic atomic = (RapidAtomic) structure;
-                type = atomic.getType();
+                type = atomic.getAssociatedType();
             }
             if (type != null) {
                 structure = type.getStructure();

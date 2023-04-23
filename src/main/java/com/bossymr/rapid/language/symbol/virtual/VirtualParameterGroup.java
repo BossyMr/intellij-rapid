@@ -7,20 +7,31 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Objects;
 
-public record VirtualParameterGroup(
-        @NotNull VirtualRoutine routine,
-        boolean isOptional,
-        @NotNull List<VirtualParameter> parameters
-) implements RapidParameterGroup {
+public class VirtualParameterGroup implements RapidParameterGroup {
+
+    private final @NotNull VirtualRoutine routine;
+    private final boolean isOptional;
+    private final @NotNull List<VirtualParameter> parameters;
+
+    public VirtualParameterGroup(@NotNull VirtualRoutine routine, boolean isOptional, @NotNull List<VirtualParameter> parameters) {
+        this.routine = routine;
+        this.isOptional = isOptional;
+        this.parameters = parameters;
+    }
 
     @Override
     public @NotNull RapidRoutine getRoutine() {
-        return routine();
+        return routine;
+    }
+
+    @Override
+    public boolean isOptional() {
+        return isOptional;
     }
 
     @Override
     public @NotNull List<VirtualParameter> getParameters() {
-        return parameters();
+        return parameters;
     }
 
     @Override
@@ -28,18 +39,19 @@ public record VirtualParameterGroup(
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         VirtualParameterGroup that = (VirtualParameterGroup) o;
-        return isOptional() == that.isOptional() && getParameters().equals(that.getParameters());
+        return isOptional == that.isOptional && Objects.equals(routine, that.routine) && Objects.equals(parameters, that.parameters);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(isOptional(), getParameters());
+        return Objects.hash(routine, isOptional, parameters);
     }
 
     @Override
     public String toString() {
         return "VirtualParameterGroup{" +
-                "isOptional=" + isOptional +
+                "routine=" + routine +
+                ", isOptional=" + isOptional +
                 ", parameters=" + parameters +
                 '}';
     }

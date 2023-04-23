@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class RapidStatementListImpl extends RapidElementImpl implements RapidStatementList {
+public class RapidStatementListImpl extends PhysicalElement implements RapidStatementList {
 
     public RapidStatementListImpl(@NotNull ASTNode node) {
         super(node);
@@ -19,15 +19,15 @@ public class RapidStatementListImpl extends RapidElementImpl implements RapidSta
     }
 
     @Override
-    public Attribute getAttribute() {
+    public StatementListType getAttribute() {
         if (findChildByType(RapidTokenTypes.BACKWARD_KEYWORD) != null) {
-            return Attribute.BACKWARD_CLAUSE;
+            return StatementListType.BACKWARD_CLAUSE;
         } else if (findChildByType(RapidTokenTypes.ERROR_KEYWORD) != null) {
-            return Attribute.ERROR_CLAUSE;
+            return StatementListType.ERROR_CLAUSE;
         } else if (findChildByType(RapidTokenTypes.UNDO_KEYWORD) != null) {
-            return Attribute.UNDO_CLAUSE;
+            return StatementListType.UNDO_CLAUSE;
         } else {
-            return Attribute.STATEMENT_LIST;
+            return StatementListType.STATEMENT_LIST;
         }
     }
 

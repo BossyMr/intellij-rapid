@@ -5,7 +5,7 @@ import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidStubElementTypes;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.stubs.RapidAttributeListStub;
-import com.bossymr.rapid.language.symbol.RapidModule.Attribute;
+import com.bossymr.rapid.language.symbol.ModuleType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.CompositeElement;
@@ -34,34 +34,34 @@ public class RapidAttributeListImpl extends RapidStubElement<RapidAttributeListS
     }
 
     @Override
-    public @NotNull List<Attribute> getAttributes() {
+    public @NotNull List<ModuleType> getAttributes() {
         RapidAttributeListStub stub = getGreenStub();
         if (stub != null) {
             return stub.getAttributes();
         } else {
-            return Attribute.getAttributes(this);
+            return ModuleType.getAttributes(this);
         }
     }
 
     @Override
-    public boolean hasAttribute(@NotNull Attribute attribute) {
+    public boolean hasAttribute(@NotNull ModuleType moduleType) {
         RapidAttributeListStub stub = getGreenStub();
         if (stub != null) {
-            return stub.hasAttribute(attribute);
+            return stub.hasAttribute(moduleType);
         } else {
-            IElementType elementType = attribute.getElementType();
+            IElementType elementType = moduleType.getElementType();
             return findChildByType(elementType) != null;
         }
     }
 
     @Override
-    public void setAttribute(@NotNull Attribute attribute, boolean value) throws UnsupportedOperationException {
+    public void setAttribute(@NotNull ModuleType moduleType, boolean value) throws UnsupportedOperationException {
         CompositeElement node = (CompositeElement) getNode();
         if (value) {
-            LeafElement element = Factory.createSingleLeafElement(attribute.getElementType(), attribute.getText(), null, getManager());
+            LeafElement element = Factory.createSingleLeafElement(moduleType.getElementType(), moduleType.getText(), null, getManager());
             node.addInternal(element, element, null, null);
         } else {
-            PsiElement child = findChildByType(attribute.getElementType());
+            PsiElement child = findChildByType(moduleType.getElementType());
             if (child != null) {
                 child.delete();
             }

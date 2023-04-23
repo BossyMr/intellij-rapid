@@ -1,15 +1,11 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.RapidReturnStatement;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.bossymr.rapid.language.psi.*;
 import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidReturnStatementImpl extends RapidElementImpl implements RapidReturnStatement {
+public class RapidReturnStatementImpl extends PhysicalElement implements RapidReturnStatement {
 
     public RapidReturnStatementImpl(@NotNull ASTNode node) {
         super(node);

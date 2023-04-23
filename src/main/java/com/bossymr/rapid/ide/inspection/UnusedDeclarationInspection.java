@@ -4,7 +4,7 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.insight.quickfix.SafeDeleteFix;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidTargetVariable;
-import com.bossymr.rapid.language.symbol.RapidRoutine;
+import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
@@ -27,7 +27,7 @@ public class UnusedDeclarationInspection extends LocalInspectionTool {
             public void visitSymbol(@NotNull PhysicalSymbol symbol) {
                 if (symbol instanceof PhysicalModule || symbol instanceof RapidTargetVariable) return;
                 if (symbol instanceof PhysicalRoutine routine) {
-                    if (routine.getAttribute().equals(RapidRoutine.Attribute.PROCEDURE) && "Main".equals(routine.getName())) {
+                    if (routine.getRoutineType().equals(RoutineType.PROCEDURE) && "Main".equals(routine.getName())) {
                         return;
                     }
                 }

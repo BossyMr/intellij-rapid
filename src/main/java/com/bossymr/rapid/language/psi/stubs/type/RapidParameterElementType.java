@@ -5,7 +5,7 @@ import com.bossymr.rapid.language.psi.RapidStubElementType;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
-import com.bossymr.rapid.language.symbol.RapidParameter.Attribute;
+import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameter;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
@@ -37,7 +37,7 @@ public class RapidParameterElementType extends RapidStubElementType<RapidParamet
 
     @Override
     public @NotNull RapidParameterStub createStub(@NotNull LighterAST tree, @NotNull LighterASTNode node, @NotNull StubElement<?> parentStub) {
-        Attribute attribute = Attribute.getAttribute(tree, node);
+        ParameterType attribute = ParameterType.getAttribute(tree, node);
         String name = StubUtil.getText(tree, node, RapidTokenTypes.IDENTIFIER);
         String type = StubUtil.getText(tree, node, RapidElementTypes.TYPE_ELEMENT);
         int dimensions = StubUtil.getLength(tree, node);
@@ -54,7 +54,7 @@ public class RapidParameterElementType extends RapidStubElementType<RapidParamet
 
     @Override
     public @NotNull RapidParameterStub deserialize(@NotNull StubInputStream dataStream, StubElement parentStub) throws IOException {
-        Attribute attribute = Attribute.valueOf(dataStream.readNameString());
+        ParameterType attribute = ParameterType.valueOf(dataStream.readNameString());
         String name = dataStream.readNameString();
         String type = dataStream.readNameString();
         int dimensions = dataStream.readVarInt();

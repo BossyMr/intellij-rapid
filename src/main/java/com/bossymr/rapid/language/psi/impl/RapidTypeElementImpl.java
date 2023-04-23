@@ -1,9 +1,6 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidReferenceExpression;
-import com.bossymr.rapid.language.psi.RapidTypeElement;
+import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidType;
@@ -12,7 +9,7 @@ import com.intellij.psi.util.CachedValuesManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidTypeElementImpl extends RapidElementImpl implements RapidTypeElement {
+public class RapidTypeElementImpl extends PhysicalElement implements RapidTypeElement {
 
     public RapidTypeElementImpl(@NotNull ASTNode node) {
         super(node);

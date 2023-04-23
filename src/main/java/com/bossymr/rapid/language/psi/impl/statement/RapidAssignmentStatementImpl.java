@@ -1,10 +1,6 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
-import com.bossymr.rapid.language.psi.RapidAssignmentStatement;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.RapidTokenTypes;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
@@ -12,7 +8,7 @@ import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidAssignmentStatementImpl extends RapidElementImpl implements RapidAssignmentStatement {
+public class RapidAssignmentStatementImpl extends PhysicalElement implements RapidAssignmentStatement {
 
     public RapidAssignmentStatementImpl(@NotNull ASTNode node) {
         super(node);

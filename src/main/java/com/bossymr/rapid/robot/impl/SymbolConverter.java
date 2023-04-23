@@ -57,12 +57,12 @@ public final class SymbolConverter {
             case ATOMIC -> getAtomic((AtomicModel) state);
             case RECORD -> getRecord((RecordModel) state);
             case ALIAS -> getAlias((AliasModel) state);
-            case CONSTANT -> getField((FieldModel) state, RapidField.Attribute.CONSTANT);
-            case VARIABLE -> getField((FieldModel) state, RapidField.Attribute.VARIABLE);
-            case PERSISTENT -> getField((FieldModel) state, RapidField.Attribute.PERSISTENT);
-            case FUNCTION -> getRoutine((RoutineModel) state, RapidRoutine.Attribute.FUNCTION);
-            case PROCEDURE -> getRoutine((RoutineModel) state, RapidRoutine.Attribute.PROCEDURE);
-            case TRAP -> getRoutine((RoutineModel) state, RapidRoutine.Attribute.TRAP);
+            case CONSTANT -> getField((FieldModel) state, FieldType.CONSTANT);
+            case VARIABLE -> getField((FieldModel) state, FieldType.VARIABLE);
+            case PERSISTENT -> getField((FieldModel) state, FieldType.PERSISTENT);
+            case FUNCTION -> getRoutine((RoutineModel) state, RoutineType.FUNCTION);
+            case PROCEDURE -> getRoutine((RoutineModel) state, RoutineType.PROCEDURE);
+            case TRAP -> getRoutine((RoutineModel) state, RoutineType.TRAP);
             default -> null;
         };
     }
@@ -82,7 +82,7 @@ public final class SymbolConverter {
         if (!(symbol.getDataType() == null || symbol.getDataType().isEmpty())) {
             dataType = new RapidType(getStructure(symbol.getDataType()));
         }
-        return getSymbol(new VirtualAtomic(Visibility.GLOBAL, getName(symbol), dataType));
+        return getSymbol(new VirtualAtomic(getName(symbol), dataType));
     }
 
     private @NotNull RapidRecord getRecord(@NotNull RecordModel symbol) {
@@ -104,16 +104,18 @@ public final class SymbolConverter {
     }
 
     private @NotNull RapidAlias getAlias(@NotNull AliasModel state) {
-        RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
-        return getSymbol(new VirtualAlias(Visibility.GLOBAL, getName(state), dataType));
+        String name = Objects.requireNonNull(state.getDataType());
+        RapidStructure structure = Objects.requireNonNull(getStructure(name));
+        return getSymbol(new VirtualAlias(getName(state), structure.createType()));
     }
 
     private @NotNull RapidComponent getComponent(@NotNull VirtualRecord record, @NotNull ComponentModel state) {
-        RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
-        return new VirtualComponent(record, getName(state), dataType);
+        String name = Objects.requireNonNull(state.getDataType());
+        RapidStructure structure = Objects.requireNonNull(getStructure(name));
+        return new VirtualComponent(record, getName(state), structure.createType());
     }
 
-    private @NotNull RapidField getField(@NotNull FieldModel state, @NotNull RapidField.Attribute attribute) {
+    private @NotNull RapidField getField(@NotNull FieldModel state, @NotNull FieldType fieldType) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
         boolean readOnly = false;
         if (state instanceof PersistentModel persistentSymbol) {
@@ -122,23 +124,23 @@ public final class SymbolConverter {
         if (state instanceof VariableModel variableSymbol) {
             readOnly = variableSymbol.isReadOnly();
         }
-        return getSymbol(new VirtualField(Visibility.GLOBAL, attribute, getName(state), dataType, readOnly));
+        return getSymbol(new VirtualField(fieldType, getName(state), dataType, !(readOnly)));
     }
 
     private @NotNull VirtualParameter getParameter(@NotNull VirtualParameterGroup parameterGroup, @NotNull ParameterModel state) {
         RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
-        RapidParameter.Attribute attribute = switch (state.getMode()) {
-            case "in" -> RapidParameter.Attribute.INPUT;
-            case "var" -> RapidParameter.Attribute.VARIABLE;
-            case "pers" -> RapidParameter.Attribute.PERSISTENT;
-            case "ref" -> RapidParameter.Attribute.REFERENCE;
-            case "inout" -> RapidParameter.Attribute.INOUT;
+        ParameterType parameterType = switch (state.getMode()) {
+            case "in" -> ParameterType.INPUT;
+            case "var" -> ParameterType.VARIABLE;
+            case "pers" -> ParameterType.PERSISTENT;
+            case "ref" -> ParameterType.REFERENCE;
+            case "inout" -> ParameterType.INOUT;
             default -> throw new IllegalStateException("Unexpected mode: " + state.getMode());
         };
-        return new VirtualParameter(parameterGroup, attribute, getName(state), dataType);
+        return new VirtualParameter(parameterGroup, parameterType, getName(state), dataType);
     }
 
-    private @NotNull RapidRoutine getRoutine(@NotNull RoutineModel state, @NotNull RapidRoutine.Attribute attribute) {
+    private @NotNull RapidRoutine getRoutine(@NotNull RoutineModel state, @NotNull RoutineType routineType) {
         List<VirtualParameterGroup> groups = new ArrayList<>();
         Map<String, SymbolModel> parameters = this.states.get(state.getTitle());
         Collection<SymbolModel> states = parameters != null ? parameters.values() : List.of();
@@ -147,7 +149,7 @@ public final class SymbolConverter {
             groups.add(null);
         }
         RapidType dataType = state instanceof FunctionModel functionSymbolState && functionSymbolState.getDataType().length() > 0 ? new RapidType(getStructure(functionSymbolState.getDataType())) : null;
-        VirtualRoutine routine = new VirtualRoutine(Visibility.GLOBAL, attribute, getName(state), dataType, groups);
+        VirtualRoutine routine = new VirtualRoutine(routineType, getName(state), dataType, groups);
         for (SymbolModel symbolModel : states) {
             assert symbolModel instanceof ParameterModel;
             ParameterModel parameterSymbolState = (ParameterModel) symbolModel;

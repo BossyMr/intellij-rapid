@@ -1,15 +1,12 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.bossymr.rapid.language.psi.RapidArray;
-import com.bossymr.rapid.language.psi.RapidElementTypes;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.*;
 import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public class RapidArrayImpl extends RapidElementImpl implements RapidArray {
+public class RapidArrayImpl extends PhysicalElement implements RapidArray {
 
     public RapidArrayImpl(@NotNull ASTNode node) {
         super(node);

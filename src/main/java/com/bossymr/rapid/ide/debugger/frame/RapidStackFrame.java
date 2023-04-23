@@ -7,9 +7,9 @@ import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.*;
-import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
+import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolValue;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
@@ -69,7 +69,7 @@ public class RapidStackFrame extends XStackFrame {
     }
 
     private @Nullable File findFile(@NotNull String taskName, @NotNull String moduleName) {
-        RapidRobot robot = RemoteRobotService.getInstance().getRobot();
+        RapidRobot robot = RobotService.getInstance().getRobot();
         if (robot == null) return null;
         for (RapidTask task : robot.getTasks()) {
             if (task.getName().equals(taskName)) {
@@ -99,7 +99,7 @@ public class RapidStackFrame extends XStackFrame {
     public void computeChildren(@NotNull XCompositeNode node) {
         if (node.isObsolete()) return;
         CompletableFuture.runAsync(() -> ReadAction.run(() -> {
-            RapidSymbol symbol = ResolveUtil.findSymbol(project, stackFrame.getRoutine());
+            RapidSymbol symbol = ResolveService.getInstance(project).findSymbol(stackFrame.getRoutine());
             XValueChildrenList childrenList = new XValueChildrenList();
             if (!(symbol instanceof PhysicalRoutine routine)) {
                 return;

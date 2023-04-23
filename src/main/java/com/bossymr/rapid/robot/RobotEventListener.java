@@ -10,11 +10,11 @@ import java.util.EventListener;
 public interface RobotEventListener extends EventListener {
 
     static @NotNull RobotEventListener publish() {
-        return ApplicationManager.getApplication().getMessageBus().syncPublisher(RemoteRobotService.TOPIC);
+        return ApplicationManager.getApplication().getMessageBus().syncPublisher(RobotService.TOPIC);
     }
 
     static void connect(@NotNull RobotEventListener eventListener) {
-        ApplicationManager.getApplication().getMessageBus().connect().subscribe(RemoteRobotService.TOPIC, eventListener);
+        ApplicationManager.getApplication().getMessageBus().connect().subscribe(RobotService.TOPIC, eventListener);
     }
 
     /**

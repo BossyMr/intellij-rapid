@@ -1,15 +1,11 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
-import com.bossymr.rapid.language.psi.RapidElementTypes;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidGotoStatement;
-import com.bossymr.rapid.language.psi.RapidReferenceExpression;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
+import com.bossymr.rapid.language.psi.*;
 import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RapidGotoStatementImpl extends RapidElementImpl implements RapidGotoStatement {
+public class RapidGotoStatementImpl extends PhysicalElement implements RapidGotoStatement {
 
     public RapidGotoStatementImpl(@NotNull ASTNode node) {
         super(node);

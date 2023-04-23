@@ -7,7 +7,7 @@ import com.bossymr.rapid.language.psi.stubs.RapidRoutineStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
 import com.bossymr.rapid.language.psi.stubs.index.RapidRoutineIndex;
 import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
-import com.bossymr.rapid.language.symbol.RapidRoutine.Attribute;
+import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.lang.ASTNode;
@@ -42,7 +42,7 @@ public class RapidRoutineElementType extends RapidStubElementType<RapidRoutineSt
     @Override
     public @NotNull RapidRoutineStub createStub(@NotNull LighterAST tree, @NotNull LighterASTNode node, @NotNull StubElement<?> parentStub) {
         Visibility visibility = Visibility.getVisibility(tree, node);
-        Attribute attribute = Attribute.getAttribute(tree, node);
+        RoutineType attribute = RoutineType.getAttribute(tree, node);
         String name = StubUtil.getText(tree, node, RapidTokenTypes.IDENTIFIER);
         String type = StubUtil.getText(tree, node, RapidElementTypes.TYPE_ELEMENT);
         return new RapidRoutineStub(parentStub, visibility, attribute, name, type);
@@ -59,7 +59,7 @@ public class RapidRoutineElementType extends RapidStubElementType<RapidRoutineSt
     @Override
     public @NotNull RapidRoutineStub deserialize(@NotNull StubInputStream dataStream, StubElement parentStub) throws IOException {
         Visibility visibility = Visibility.valueOf(dataStream.readNameString());
-        Attribute attribute = Attribute.valueOf(dataStream.readNameString());
+        RoutineType attribute = RoutineType.valueOf(dataStream.readNameString());
         String name = dataStream.readNameString();
         String type = dataStream.readNameString();
         return new RapidRoutineStub(parentStub, visibility, attribute, name, type);

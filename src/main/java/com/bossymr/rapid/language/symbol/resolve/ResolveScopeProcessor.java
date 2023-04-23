@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.symbol.resolve;
 
-import com.bossymr.rapid.language.symbol.RapidAccessibleSymbol;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
+import com.bossymr.rapid.language.symbol.RapidVisibleSymbol;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.intellij.psi.PsiElement;
@@ -54,7 +54,7 @@ public class ResolveScopeProcessor implements Processor<RapidSymbol> {
             if (Objects.equals(SymbolUtil.getModule(physical), SymbolUtil.getModule(context))) {
                 return true;
             } else {
-                if (symbol instanceof RapidAccessibleSymbol accessibleSymbol) {
+                if (symbol instanceof RapidVisibleSymbol accessibleSymbol) {
                     return switch (accessibleSymbol.getVisibility()) {
                         case LOCAL -> false;
                         case TASK, GLOBAL -> true;

@@ -125,7 +125,7 @@ public class RapidAnnotatorVisitor extends RapidElementVisitor {
         RapidReferenceExpression referenceExpression = expression.getReferenceExpression();
         validator.checkType(referenceExpression,
                 symbol -> RapidBundle.message("annotation.reference.not.function", symbol.getName()),
-                symbol -> RapidRoutine.isRoutine(symbol, RapidRoutine.Attribute.FUNCTION)
+                symbol -> symbol instanceof RapidRoutine routine && routine.getRoutineType() == RoutineType.FUNCTION
         );
         RapidSymbol symbol = referenceExpression.getSymbol();
         if (symbol instanceof RapidRoutine routine) {
@@ -162,7 +162,7 @@ public class RapidAnnotatorVisitor extends RapidElementVisitor {
         if (expression instanceof RapidReferenceExpression referenceExpression) {
             validator.checkType(referenceExpression,
                     symbol -> RapidBundle.message("annotation.reference.not.procedure", symbol.getName()),
-                    symbol -> RapidRoutine.isRoutine(symbol, RapidRoutine.Attribute.PROCEDURE)
+                    symbol -> symbol instanceof RapidRoutine routine && routine.getRoutineType() == RoutineType.PROCEDURE
             );
             RapidSymbol symbol = referenceExpression.getSymbol();
             if (symbol instanceof RapidRoutine routine) {

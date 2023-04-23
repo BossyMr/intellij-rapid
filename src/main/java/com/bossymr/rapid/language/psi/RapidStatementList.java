@@ -14,7 +14,7 @@ public interface RapidStatementList extends RapidElement {
      *
      * @return the attribute of this statement list.
      */
-    Attribute getAttribute();
+    StatementListType getAttribute();
 
     /**
      * Returns the expression list containing the errors which are handled by this error clause.
@@ -30,29 +30,4 @@ public interface RapidStatementList extends RapidElement {
      */
     List<RapidStatement> getStatements();
 
-    /**
-     * Represents the different attributes of a statement list.
-     */
-    enum Attribute {
-        /**
-         * This statement list is a regular statement list.
-         */
-        STATEMENT_LIST,
-
-        /**
-         * This statement list is an error clause, and {@link #getExpressions()} can be used to get the errors which are
-         * handled.
-         */
-        ERROR_CLAUSE,
-
-        /**
-         * This statement list is an undo clause.
-         */
-        UNDO_CLAUSE,
-
-        /**
-         * This statement list is a backward clause.
-         */
-        BACKWARD_CLAUSE
-    }
 }

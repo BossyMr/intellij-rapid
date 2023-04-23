@@ -1,6 +1,6 @@
 package com.bossymr.rapid.ide.structure;
 
-import com.bossymr.rapid.language.symbol.RapidAccessibleSymbol;
+import com.bossymr.rapid.language.symbol.RapidVisibleSymbol;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.intellij.ide.structureView.impl.common.PsiTreeElementBase;
 import com.intellij.ide.structureView.impl.java.AccessLevelProvider;
@@ -9,7 +9,7 @@ import com.intellij.psi.util.PsiUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class RapidSymbolTreeElement<T extends PsiElement & RapidAccessibleSymbol> extends PsiTreeElementBase<T> implements AccessLevelProvider {
+public abstract class RapidSymbolTreeElement<T extends PsiElement & RapidVisibleSymbol> extends PsiTreeElementBase<T> implements AccessLevelProvider {
 
     protected RapidSymbolTreeElement(@Nullable T element) {
         super(element);

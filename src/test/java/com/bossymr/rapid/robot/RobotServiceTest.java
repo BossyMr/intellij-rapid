@@ -14,12 +14,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @EnabledIf("com.bossymr.rapid.robot.network.NetworkTestUtil#doNetworkTest")
 @TestApplication
-class RemoteRobotServiceTest {
+class RobotServiceTest {
 
     @DisplayName("Test Connect")
     @Test
     public void connect() throws IOException, InterruptedException {
-        RemoteRobotService remoteService = RemoteRobotService.getInstance();
+        RobotService remoteService = RobotService.getInstance();
         assertNull(remoteService.getRobotState());
         assertNull(remoteService.getRobot());
         RapidRobot robot = remoteService.connect(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);

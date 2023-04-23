@@ -1,12 +1,12 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
+import com.bossymr.rapid.language.psi.PhysicalElement;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidTryNextStatement;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 
-public class RapidTryNextStatementImpl extends RapidElementImpl implements RapidTryNextStatement {
+public class RapidTryNextStatementImpl extends PhysicalElement implements RapidTryNextStatement {
 
     public RapidTryNextStatementImpl(@NotNull ASTNode node) {
         super(node);

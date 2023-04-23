@@ -6,7 +6,7 @@ import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.*;
-import com.bossymr.rapid.language.symbol.resolve.ResolveUtil;
+import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
@@ -99,7 +99,7 @@ public class RapidValidator {
         String name = symbol.getName();
         PsiElement nameIdentifier = symbol.getNameIdentifier();
         if (name == null || nameIdentifier == null) return;
-        List<RapidSymbol> symbols = ResolveUtil.getSymbols(symbol, name);
+        List<RapidSymbol> symbols = ResolveService.getInstance(symbol.getProject()).findSymbols(symbol, name);
         if (symbols.size() > 1 && symbols.indexOf(symbol) != 0) {
             /*
              * Multiple symbols are declared with the same name as this symbol, in the same context.
@@ -124,17 +124,17 @@ public class RapidValidator {
         List<PsiElement> elements = new ArrayList<>();
         for (PsiElement element : PsiTreeUtil.getChildrenOfTypeAsList(attributeList, PsiElement.class)) {
             IElementType elementType = element.getNode().getElementType();
-            if (RapidModule.Attribute.TOKEN_SET.contains(elementType)) {
+            if (ModuleType.TOKEN_SET.contains(elementType)) {
                 elements.add(element);
             }
         }
-        List<RapidModule.Attribute> attributes = elements.stream()
-                .map(element -> RapidModule.Attribute.getAttribute(element.getNode().getElementType()))
+        List<ModuleType> moduleTypes = elements.stream()
+                .map(element -> ModuleType.getAttribute(element.getNode().getElementType()))
                 .toList();
         attributes:
         for (int i = 0; i < elements.size(); i++) {
             if (i > 0) {
-                if (attributes.indexOf(attributes.get(i)) < i) {
+                if (moduleTypes.indexOf(moduleTypes.get(i)) < i) {
                     annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.module.attribute.duplicate"))
                             .range(elements.get(i))
                             .withFix(new RemoveModuleAttributeFix(elements.get(i)))
@@ -142,20 +142,20 @@ public class RapidValidator {
                     continue;
                 }
             }
-            if (RapidModule.Attribute.MUTUALLY_EXCLUSIVE.containsKey(attributes.get(i))) {
-                for (RapidModule.Attribute attribute : RapidModule.Attribute.MUTUALLY_EXCLUSIVE.get(attributes.get(i))) {
-                    if (attributes.contains(attribute)) {
-                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.module.attribute.mutually.exclusive", attributes.get(i).getText(), attribute.getText()))
+            if (ModuleType.MUTUALLY_EXCLUSIVE.containsKey(moduleTypes.get(i))) {
+                for (ModuleType moduleType : ModuleType.MUTUALLY_EXCLUSIVE.get(moduleTypes.get(i))) {
+                    if (moduleTypes.contains(moduleType)) {
+                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.module.attribute.mutually.exclusive", moduleTypes.get(i).getText(), moduleType.getText()))
                                 .range(elements.get(i))
                                 .withFix(new RemoveModuleAttributeFix(elements.get(i)))
-                                .withFix(new RemoveModuleAttributeFix(elements.get(attributes.indexOf(attribute))))
+                                .withFix(new RemoveModuleAttributeFix(elements.get(moduleTypes.indexOf(moduleType))))
                                 .create();
                         continue attributes;
                     }
                 }
             }
             if (i > 0) {
-                if (attributes.get(i).ordinal() < attributes.get(i - 1).ordinal()) {
+                if (moduleTypes.get(i).ordinal() < moduleTypes.get(i - 1).ordinal()) {
                     annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.module.attribute.order"))
                             .range(elements.get(i))
                             .withFix(new ReorderModuleAttributeFix(attributeList))
@@ -170,7 +170,7 @@ public class RapidValidator {
         if (symbol == null) {
             PsiElement identifier = expression.getIdentifier();
             if (identifier != null) {
-                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.reference.cannot.resolve.symbol", expression.getCanonicalText()))
+                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.reference.cannot.resolve.symbol", expression.getText()))
                         .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
                         .range(identifier)
                         .create();
@@ -206,7 +206,7 @@ public class RapidValidator {
             if (left instanceof RapidReferenceExpression reference) {
                 RapidSymbol symbol = reference.getSymbol();
                 if (symbol instanceof RapidVariable variable) {
-                    if (variable.readOnly()) {
+                    if (!(variable.isModifiable())) {
                         annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.variable.read.only", variable.getName()))
                                 .range(reference)
                                 .create();
@@ -279,7 +279,7 @@ public class RapidValidator {
         RapidSymbol symbol = referenceExpression.getSymbol();
         if (symbol == null) return;
         if (symbol instanceof PhysicalField field) {
-            if (field.getAttribute() != RapidField.Attribute.VARIABLE) {
+            if (field.getFieldType() != FieldType.VARIABLE) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.connect.target.not.variable", field.getName()))
                         .range(expression)
                         .create();
@@ -293,8 +293,8 @@ public class RapidValidator {
             }
         }
         if (symbol instanceof PhysicalParameter parameter) {
-            if (parameter.getAttribute() != RapidParameter.Attribute.VARIABLE
-                    && parameter.getAttribute() != RapidParameter.Attribute.INOUT) {
+            if (parameter.getParameterType() != ParameterType.VARIABLE
+                    && parameter.getParameterType() != ParameterType.INOUT) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.connect.target.wrong.parameter", parameter.getName()))
                         .range(expression)
                         .create();
@@ -311,7 +311,7 @@ public class RapidValidator {
         }
         RapidSymbol symbol = referenceExpression.getSymbol();
         if (symbol == null) return;
-        if (!(symbol instanceof RapidRoutine routine) || routine.getAttribute() != RapidRoutine.Attribute.TRAP) {
+        if (!(symbol instanceof RapidRoutine routine) || routine.getRoutineType() != RoutineType.TRAP) {
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.reference.not.trap", symbol.getName()))
                     .range(expression)
                     .create();
@@ -321,7 +321,7 @@ public class RapidValidator {
     public void checkOutsideErrorHandler(@NotNull RapidStatement statement, @NotNull String message) {
         RapidStatementList statementList = PsiTreeUtil.getParentOfType(statement, RapidStatementList.class);
         if (statementList == null) return;
-        if (statementList.getAttribute() == RapidStatementList.Attribute.ERROR_CLAUSE) {
+        if (statementList.getAttribute() == StatementListType.ERROR_CLAUSE) {
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, message)
                     .range(statement)
                     .create();
@@ -331,7 +331,7 @@ public class RapidValidator {
     public void checkInsideErrorHandler(@NotNull RapidStatement statement, @NotNull String message) {
         RapidStatementList statementList = PsiTreeUtil.getParentOfType(statement, RapidStatementList.class);
         if (statementList == null) return;
-        if (statementList.getAttribute() != RapidStatementList.Attribute.ERROR_CLAUSE) {
+        if (statementList.getAttribute() != StatementListType.ERROR_CLAUSE) {
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, message)
                     .range(statement)
                     .create();
@@ -342,7 +342,7 @@ public class RapidValidator {
         RapidExpression initializer = field.findInitializer();
         if (initializer != null) {
             checkAssignmentType(field, initializer);
-            switch (field.getAttribute()) {
+            switch (field.getFieldType()) {
                 case VARIABLE, CONSTANT -> {
                     if (!(initializer.isConstant())) {
                         annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.expression.not.constant"))
@@ -359,7 +359,7 @@ public class RapidValidator {
                 }
             }
         } else {
-            switch (field.getAttribute()) {
+            switch (field.getFieldType()) {
                 case CONSTANT ->
                         annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.constant.not.initialized", field.getName()))
                                 .create();
@@ -378,7 +378,7 @@ public class RapidValidator {
         PhysicalRoutine routine = PsiTreeUtil.getParentOfType(statement, PhysicalRoutine.class);
         if (routine == null) return;
         if (statement.getExpression() != null) {
-            if (routine.getAttribute() == RapidRoutine.Attribute.FUNCTION) {
+            if (routine.getRoutineType() == RoutineType.FUNCTION) {
                 checkCompatibleType(routine.getType(), statement.getExpression());
             } else {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.return.invalid", routine.getName()))
@@ -386,7 +386,7 @@ public class RapidValidator {
                         .create();
             }
         } else {
-            if (routine.getAttribute() == RapidRoutine.Attribute.FUNCTION) {
+            if (routine.getRoutineType() == RoutineType.FUNCTION) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.return.missing"))
                         .range(statement)
                         .create();
@@ -570,7 +570,7 @@ public class RapidValidator {
     private void checkParameterArgument(@NotNull RapidParameter parameter, @NotNull RapidArgument argument) {
         RapidExpression expression = argument.getArgument();
         if (expression == null) return;
-        if (parameter.getAttribute() == RapidParameter.Attribute.INPUT) return;
+        if (parameter.getParameterType() == ParameterType.INPUT) return;
         RapidReferenceExpression referenceExpression = getReferenceExpression(expression);
         if (referenceExpression == null) {
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.expression.not.variable"))
@@ -587,31 +587,31 @@ public class RapidValidator {
             return;
         }
         if (variable instanceof RapidField field) {
-            if (variable.readOnly() && parameter.getAttribute() != RapidParameter.Attribute.REFERENCE) {
+            if (!(variable.isModifiable()) && parameter.getParameterType() != ParameterType.REFERENCE) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.variable.read.only", variable.getName()))
                         .range(referenceExpression)
                         .create();
                 return;
             }
-            if (field.getAttribute() == RapidField.Attribute.CONSTANT
-                    && parameter.getAttribute() != RapidParameter.Attribute.REFERENCE) {
+            if (field.getFieldType() == FieldType.CONSTANT
+                    && parameter.getParameterType() != ParameterType.REFERENCE) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.variable.constant", variable.getName()))
                         .range(referenceExpression)
                         .create();
                 return;
             }
-            if (field.getAttribute() == RapidField.Attribute.VARIABLE
-                    && parameter.getAttribute() == RapidParameter.Attribute.PERSISTENT) {
+            if (field.getFieldType() == FieldType.VARIABLE
+                    && parameter.getParameterType() == ParameterType.PERSISTENT) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.persistent", variable.getName()))
                         .range(referenceExpression)
                         .create();
                 return;
             }
         }
-        switch (parameter.getAttribute()) {
+        switch (parameter.getParameterType()) {
             case VARIABLE -> {
                 if (variable instanceof RapidParameter other) {
-                    if (other.getAttribute() == RapidParameter.Attribute.PERSISTENT) {
+                    if (other.getParameterType() == ParameterType.PERSISTENT) {
                         annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.persistent", variable.getName()))
                                 .range(referenceExpression)
                                 .create();
@@ -620,12 +620,12 @@ public class RapidValidator {
             }
             case PERSISTENT -> {
                 if (variable instanceof RapidParameter other) {
-                    if (other.getAttribute() == RapidParameter.Attribute.INPUT) {
+                    if (other.getParameterType() == ParameterType.INPUT) {
                         annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.input", variable.getName()))
                                 .range(referenceExpression)
                                 .create();
                     }
-                    if (other.getAttribute() == RapidParameter.Attribute.VARIABLE) {
+                    if (other.getParameterType() == ParameterType.VARIABLE) {
                         annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.variable", variable.getName()))
                                 .range(referenceExpression)
                                 .create();

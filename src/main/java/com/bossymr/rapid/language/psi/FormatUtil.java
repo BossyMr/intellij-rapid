@@ -26,16 +26,16 @@ public class FormatUtil {
     public static @NotNull String format(@NotNull RapidAtomic atomic, @NotNull EnumSet<Option> options) {
         StringBuilder buffer = new StringBuilder();
         if (options.contains(Option.SHOW_TYPE) && !(options.contains(Option.SHOW_TYPE_AFTER))) {
-            if (atomic.getType() != null) {
-                buffer.append(atomic.getType().getPresentableText()).append(" ");
+            if (atomic.getAssociatedType() != null) {
+                buffer.append(atomic.getAssociatedType().getPresentableText()).append(" ");
             }
         }
         if (options.contains(Option.SHOW_NAME)) {
             buffer.append(atomic.getName());
         }
         if (options.contains(Option.SHOW_TYPE) && options.contains(Option.SHOW_TYPE_AFTER)) {
-            if (atomic.getType() != null) {
-                buffer.append(":").append(atomic.getType().getPresentableText()).append(" ");
+            if (atomic.getAssociatedType() != null) {
+                buffer.append(":").append(atomic.getAssociatedType().getPresentableText()).append(" ");
             }
         }
         return buffer.toString();
@@ -139,7 +139,7 @@ public class FormatUtil {
             });
         }
         if (options.contains(Option.SHOW_MODE)) {
-            buffer.append(switch (field.getAttribute()) {
+            buffer.append(switch (field.getFieldType()) {
                 case VARIABLE -> "VAR ";
                 case CONSTANT -> "PERS ";
                 case PERSISTENT -> "CONST ";
@@ -222,7 +222,7 @@ public class FormatUtil {
             });
         }
         if (options.contains(Option.SHOW_MODE)) {
-            buffer.append(switch (routine.getAttribute()) {
+            buffer.append(switch (routine.getRoutineType()) {
                 case FUNCTION -> "FUNC ";
                 case PROCEDURE -> "PROC ";
                 case TRAP -> "TRAP ";
@@ -277,7 +277,7 @@ public class FormatUtil {
     public static @NotNull String format(@NotNull RapidParameter parameter, @NotNull EnumSet<Option> options) {
         StringBuilder buffer = new StringBuilder();
         if (options.contains(Option.SHOW_MODE)) {
-            buffer.append(switch (parameter.getAttribute()) {
+            buffer.append(switch (parameter.getParameterType()) {
                 case INPUT -> "";
                 case VARIABLE -> "VAR ";
                 case PERSISTENT -> "PERS ";

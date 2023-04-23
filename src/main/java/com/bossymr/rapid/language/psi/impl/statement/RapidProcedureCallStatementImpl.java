@@ -1,11 +1,10 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 
-public class RapidProcedureCallStatementImpl extends RapidElementImpl implements RapidProcedureCallStatement {
+public class RapidProcedureCallStatementImpl extends PhysicalElement implements RapidProcedureCallStatement {
 
     public RapidProcedureCallStatementImpl(@NotNull ASTNode node) {
         super(node);

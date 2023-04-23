@@ -2,7 +2,7 @@ package com.bossymr.rapid.robot.ui;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.robot.RemoteRobotService;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.codeInsight.intention.PriorityAction;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.project.DumbAware;
@@ -27,7 +27,7 @@ public class RobotNotificationProvider implements EditorNotificationProvider, Du
     @Override
     public @NotNull Function<? super @NotNull FileEditor, ? extends @Nullable JComponent> collectNotificationData(@NotNull Project project, @NotNull VirtualFile file) {
         return fileEditor -> {
-            RemoteRobotService service = RemoteRobotService.getInstance();
+            RobotService service = RobotService.getInstance();
             if (service.getRobot() == null) {
                 if (file.getFileType().equals(RapidFileType.getInstance())) {
                     return new ConnectRobotNotificationPanel(fileEditor);

@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.psi.impl.RapidElementImpl;
 import com.intellij.lang.ASTFactory;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
@@ -12,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class RapidIfStatementImpl extends RapidElementImpl implements RapidIfStatement {
+public class RapidIfStatementImpl extends PhysicalElement implements RapidIfStatement {
 
     public RapidIfStatementImpl(@NotNull ASTNode node) {
         super(node);

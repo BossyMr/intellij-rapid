@@ -4,10 +4,7 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidFieldStub;
-import com.bossymr.rapid.language.symbol.RapidField;
-import com.bossymr.rapid.language.symbol.RapidType;
-import com.bossymr.rapid.language.symbol.SymbolUtil;
-import com.bossymr.rapid.language.symbol.Visibility;
+import com.bossymr.rapid.language.symbol.*;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.CompositeElement;
@@ -19,7 +16,6 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalField extends RapidStubElement<RapidFieldStub> implements RapidField, PhysicalVariable {
@@ -33,11 +29,6 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     }
 
     @Override
-    public @Nullable Icon getIcon(int flags) {
-        return getIcon();
-    }
-
-    @Override
     public void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitField(this);
     }
@@ -48,12 +39,12 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     }
 
     @Override
-    public @NotNull Attribute getAttribute() {
+    public @NotNull FieldType getFieldType() {
         RapidFieldStub stub = getGreenStub();
         if (stub != null) {
             return stub.getAttribute();
         } else {
-            return Attribute.getAttribute(this);
+            return FieldType.getAttribute(this);
         }
     }
 
@@ -129,9 +120,8 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     }
 
     @Override
-    public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
-        RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
-        return this;
+    public @NotNull PhysicalPointer<PhysicalField> createPointer() {
+        return new PhysicalPointer<>(this);
     }
 
     @Override
@@ -145,8 +135,20 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
         super.deleteChildInternal(child);
     }
 
+
+    @Override
+    public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
+        RapidElementUtil.setName(Objects.requireNonNull(getNameIdentifier()), name);
+        return this;
+    }
+
     @Override
     public String toString() {
-        return "PhysicalField:" + this.getName();
+        return "PhysicalField{" +
+                "visibility=" + getVisibility() +
+                ", fieldType=" + getFieldType() +
+                ", type=" + getType() +
+                ", name='" + getName() + '\'' +
+                '}';
     }
 }

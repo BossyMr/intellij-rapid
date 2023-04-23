@@ -4,17 +4,13 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterStub;
-import com.bossymr.rapid.language.symbol.RapidParameter;
-import com.bossymr.rapid.language.symbol.RapidParameterGroup;
-import com.bossymr.rapid.language.symbol.RapidType;
-import com.bossymr.rapid.language.symbol.SymbolUtil;
+import com.bossymr.rapid.language.symbol.*;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.Objects;
 
 public class PhysicalParameter extends RapidStubElement<RapidParameterStub> implements RapidParameter, PhysicalVariable {
@@ -33,8 +29,8 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
     }
 
     @Override
-    public @Nullable Icon getIcon(int flags) {
-        return getIcon();
+    public @NotNull String getCanonicalName() {
+        return RapidParameter.super.getCanonicalName();
     }
 
     @Override
@@ -43,12 +39,12 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
     }
 
     @Override
-    public @NotNull Attribute getAttribute() {
+    public @NotNull ParameterType getParameterType() {
         RapidParameterStub stub = getGreenStub();
         if (stub != null) {
             return stub.getAttribute();
         } else {
-            return Attribute.getAttribute(this);
+            return ParameterType.getAttribute(this);
         }
     }
 
@@ -78,9 +74,17 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
         return this;
     }
 
+    @Override
+    public @NotNull PhysicalPointer<PhysicalParameter> createPointer() {
+        return new PhysicalPointer<>(this);
+    }
 
     @Override
     public String toString() {
-        return "PhysicalParameter:" + this.getName();
+        return "PhysicalParameter{" +
+                "parameterType=" + getParameterType() +
+                ", type=" + getType() +
+                ", name='" + getName() + '\'' +
+                '}';
     }
 }

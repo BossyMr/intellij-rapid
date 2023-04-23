@@ -1,17 +1,17 @@
 package com.bossymr.rapid.language.psi;
 
 import com.bossymr.rapid.language.symbol.RapidSymbol;
+import com.intellij.model.psi.PsiSymbolReference;
+import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiElementResolveResult;
 import com.intellij.psi.PsiPolyVariantReference;
-import com.intellij.psi.ResolveResult;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
 import java.util.List;
 
-public interface RapidReferenceExpression extends RapidExpression, PsiPolyVariantReference {
+@SuppressWarnings("UnstableApiUsage")
+public interface RapidReferenceExpression extends RapidExpression, PsiSymbolReference, PsiPolyVariantReference {
 
     /**
      * Returns the qualifier of the reference (the content before the period).
@@ -27,23 +27,22 @@ public interface RapidReferenceExpression extends RapidExpression, PsiPolyVarian
      */
     @Nullable PsiElement getIdentifier();
 
+    @Override
+    default @NotNull PsiElement getElement() {
+        return this;
+    }
+
+    @Override
+    default @NotNull TextRange getAbsoluteRange() {
+        return PsiSymbolReference.super.getAbsoluteRange();
+    }
+
+    @Override
+    default @NotNull List<RapidSymbol> resolveReference() {
+        return getSymbols();
+    }
+
     @NotNull List<RapidSymbol> getSymbols();
 
     @Nullable RapidSymbol getSymbol();
-
-    @Override
-    default ResolveResult @NotNull [] multiResolve(boolean incompleteCode) {
-        Collection<RapidSymbol> symbols = getSymbols();
-        return symbols.stream()
-                .filter(symbol -> symbol instanceof PsiElement)
-                .map(symbol -> new PsiElementResolveResult((PsiElement) symbol))
-                .toArray(ResolveResult[]::new);
-    }
-
-    @Override
-    @Nullable
-    default PsiElement resolve() {
-        RapidSymbol symbol = getSymbol();
-        return symbol instanceof PsiElement ? (PsiElement) symbol : null;
-    }
 }
