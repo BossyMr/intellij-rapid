@@ -15,24 +15,11 @@ import org.jetbrains.annotations.Nullable;
 public class RapidSymbolNavigationContributor implements ChooseByNameContributorEx {
     @Override
     public void processNames(@NotNull Processor<? super String> processor, @NotNull GlobalSearchScope scope, @Nullable IdFilter filter) {
-        StubIndex.getInstance().processAllKeys(
-                RapidSymbolIndex.KEY,
-                processor,
-                scope,
-                filter
-        );
+        StubIndex.getInstance().processAllKeys(RapidSymbolIndex.KEY, processor, scope, filter);
     }
 
     @Override
     public void processElementsWithName(@NotNull String name, @NotNull Processor<? super NavigationItem> processor, @NotNull FindSymbolParameters parameters) {
-        StubIndex.getInstance().processElements(
-                RapidSymbolIndex.KEY,
-                name,
-                parameters.getProject(),
-                parameters.getSearchScope(),
-                parameters.getIdFilter(),
-                PhysicalSymbol.class,
-                processor
-        );
+        StubIndex.getInstance().processElements(RapidSymbolIndex.KEY, name, parameters.getProject(), parameters.getSearchScope(), parameters.getIdFilter(), PhysicalSymbol.class, processor);
     }
 }

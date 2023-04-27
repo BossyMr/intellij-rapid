@@ -1,4 +1,4 @@
-package com.bossymr.rapid.ide.refactor;
+package com.bossymr.rapid.ide.refactoring;
 
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.lang.refactoring.RefactoringSupportProvider;

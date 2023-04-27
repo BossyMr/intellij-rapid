@@ -5,14 +5,13 @@ import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.*;
 import com.intellij.codeInsight.daemon.impl.HighlightInfoType;
-import com.intellij.codeInsight.documentation.DocumentationManagerProtocol;
+import com.intellij.codeInsight.documentation.DocumentationManagerUtil;
 import com.intellij.lang.documentation.DocumentationMarkup;
 import com.intellij.model.Pointer;
 import com.intellij.navigation.TargetPresentation;
 import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.editor.richcopy.HtmlSyntaxInfoUtil;
-import com.intellij.openapi.util.text.HtmlBuilder;
-import com.intellij.openapi.util.text.HtmlChunk;
+import com.intellij.openapi.project.Project;
 import com.intellij.platform.backend.documentation.DocumentationResult;
 import com.intellij.platform.backend.documentation.DocumentationTarget;
 import org.jetbrains.annotations.NotNull;
@@ -21,12 +20,18 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 @SuppressWarnings("UnstableApiUsage")
-public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements DocumentationTarget, DocumentationLinkProvider {
+public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements DocumentationTarget {
 
+    private final @NotNull Project project;
     private final @NotNull T symbol;
 
-    protected RapidDocumentationTarget(@NotNull T symbol) {
+    protected RapidDocumentationTarget(@NotNull Project project, @NotNull T symbol) {
+        this.project = project;
         this.symbol = symbol;
+    }
+
+    public @NotNull Project getProject() {
+        return project;
     }
 
     public @NotNull T getSymbol() {
@@ -43,7 +48,7 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
 
     @Override
     public @Nullable String computeDocumentationHint() {
-        return getSignature().replaceAll("[\n\t]", "");
+        return getSignature().replaceAll("\n|( {4})", "");
     }
 
     protected @NotNull String getSignature() {
@@ -69,7 +74,7 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
         if (symbol instanceof RapidRoutine routine) {
             return getPresentableText(routine);
         }
-        throw new IllegalStateException();
+        throw new IllegalStateException("Unexpected symbol: " + symbol);
     }
 
     private @NotNull String getPresentableText(@NotNull RapidAtomic atomic) {
@@ -101,7 +106,7 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
         stringBuilder.append(" ");
         appendText(stringBuilder, RapidColor.RECORD, record.getPresentableName());
         for (RapidComponent component : record.getComponents()) {
-            stringBuilder.append("\n\t");
+            stringBuilder.append("\n").append(" ".repeat(4));
             stringBuilder.append(getPresentableText(component));
         }
         stringBuilder.append("\n");
@@ -131,7 +136,7 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
         RapidExpression initializer = field.getInitializer();
         if (initializer != null) {
             appendText(stringBuilder, RapidColor.OPERATOR_SIGN, " := ");
-            HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, initializer.getProject(), RapidLanguage.getInstance(), field.getInitializer().getText(), 1);
+            HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), field.getInitializer().getText(), 1);
         }
         appendText(stringBuilder, RapidColor.SEMICOLON, ";");
         return stringBuilder.toString();
@@ -155,7 +160,7 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
                 if (i > 0) {
                     appendText(stringBuilder, RapidColor.COMMA, ", ");
                 }
-                stringBuilder.append("\n\t");
+                stringBuilder.append("\n").append(" ".repeat(4));
                 RapidParameterGroup group = parameters.get(i);
                 stringBuilder.append(getPresentableText(group));
             }
@@ -216,27 +221,24 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
         }
         RapidStructure structure = type.getStructure();
         if (structure instanceof RapidAtomic) {
-            appendLink(stringBuilder, RapidColor.ATOMIC, structure);
+            appendLink(stringBuilder, structure);
         } else if (structure instanceof RapidAlias) {
-            appendLink(stringBuilder, RapidColor.ALIAS, structure);
+            appendLink(stringBuilder, structure);
         } else if (structure instanceof RapidRecord) {
-            appendLink(stringBuilder, RapidColor.RECORD, structure);
+            appendLink(stringBuilder, structure);
         } else {
             appendText(stringBuilder, HighlightInfoType.WRONG_REF.getAttributesKey(), type.getPresentableText());
         }
         stringBuilder.append(" ");
     }
 
-    private void appendLink(@NotNull StringBuilder stringBuilder, @NotNull RapidColor color, @NotNull RapidSymbol symbol) {
+    private void appendLink(@NotNull StringBuilder stringBuilder, @NotNull RapidSymbol symbol) {
         String name = symbol.getPresentableName();
-        HtmlChunk chunk = new HtmlBuilder()
-                .appendLink(DocumentationManagerProtocol.PSI_ELEMENT_PROTOCOL + name.toLowerCase(), name)
-                .toFragment();
-        appendText(stringBuilder, color, chunk.toString());
+        DocumentationManagerUtil.createHyperlink(stringBuilder, name.toLowerCase(), name, false, false);
     }
 
     @Override
     public @NotNull Pointer<? extends DocumentationTarget> createPointer() {
-        return Pointer.delegatingPointer(getSymbol().createPointer(), RapidSymbol::getDocumentationTarget);
+        return Pointer.delegatingPointer(getSymbol().createPointer(), symbol -> symbol.getDocumentationTarget(getProject()));
     }
 }

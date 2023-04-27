@@ -26,10 +26,10 @@ public class RapidFindUsagesProvider implements FindUsagesProvider {
 
     @Override
     public @Nullable WordsScanner getWordsScanner() {
-        return new DefaultWordsScanner(new RapidLexer(),
-                TokenSet.create(RapidTokenTypes.IDENTIFIER),
-                TokenSet.create(RapidTokenTypes.COMMENT),
-                TokenSet.create(RapidTokenTypes.INTEGER_LITERAL, RapidTokenTypes.STRING_LITERAL, RapidTokenTypes.TRUE_KEYWORD, RapidTokenTypes.FALSE_KEYWORD));
+        TokenSet identifierTokenSet = TokenSet.create(RapidTokenTypes.IDENTIFIER);
+        TokenSet commentTokenSet = TokenSet.create(RapidTokenTypes.COMMENT);
+        TokenSet literalTokenSet = TokenSet.create(RapidTokenTypes.INTEGER_LITERAL, RapidTokenTypes.STRING_LITERAL, RapidTokenTypes.TRUE_KEYWORD, RapidTokenTypes.FALSE_KEYWORD);
+        return new DefaultWordsScanner(new RapidLexer(), identifierTokenSet, commentTokenSet, literalTokenSet);
     }
 
     @Override
@@ -44,12 +44,24 @@ public class RapidFindUsagesProvider implements FindUsagesProvider {
 
     @Override
     public @Nls @NotNull String getType(@NotNull PsiElement element) {
-        if (element instanceof RapidFile) return RapidBundle.message("element.type.file");
-        if (element instanceof RapidModule) return RapidBundle.message("element.type.module");
-        if (element instanceof RapidAtomic) return RapidBundle.message("element.type.atomic");
-        if (element instanceof RapidAlias) return RapidBundle.message("element.type.alias");
-        if (element instanceof RapidRecord) return RapidBundle.message("element.type.alias");
-        if (element instanceof RapidComponent) return RapidBundle.message("element.type.alias");
+        if (element instanceof RapidFile) {
+            return RapidBundle.message("element.type.file");
+        }
+        if (element instanceof RapidModule) {
+            return RapidBundle.message("element.type.module");
+        }
+        if (element instanceof RapidAtomic) {
+            return RapidBundle.message("element.type.atomic");
+        }
+        if (element instanceof RapidAlias) {
+            return RapidBundle.message("element.type.alias");
+        }
+        if (element instanceof RapidRecord) {
+            return RapidBundle.message("element.type.alias");
+        }
+        if (element instanceof RapidComponent) {
+            return RapidBundle.message("element.type.component");
+        }
         if (element instanceof RapidRoutine routine) {
             return switch (routine.getRoutineType()) {
                 case FUNCTION -> RapidBundle.message("element.type.function");
@@ -64,9 +76,15 @@ public class RapidFindUsagesProvider implements FindUsagesProvider {
                 case PERSISTENT -> RapidBundle.message("element.type.persistent");
             };
         }
-        if (element instanceof RapidTargetVariable) return RapidBundle.message("element.type.variable");
-        if (element instanceof RapidLabelStatement) return RapidBundle.message("element.type.label");
-        if (element instanceof RapidParameter) return RapidBundle.message("element.type.parameter");
+        if (element instanceof RapidTargetVariable) {
+            return RapidBundle.message("element.type.variable");
+        }
+        if (element instanceof RapidLabelStatement) {
+            return RapidBundle.message("element.type.label");
+        }
+        if (element instanceof RapidParameter) {
+            return RapidBundle.message("element.type.parameter");
+        }
         return "";
     }
 

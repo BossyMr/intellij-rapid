@@ -147,7 +147,7 @@ public class ResolveService {
         return findChild(symbol.orElseThrow(), sections[5]);
     }
 
-    private @Nullable RapidSymbol findChild(@NotNull RapidSymbol symbol, @NotNull String child) {
+    public static @Nullable RapidSymbol findChild(@NotNull RapidSymbol symbol, @NotNull String name) {
         if (symbol instanceof RapidRoutine routine) {
             List<? extends RapidParameterGroup> parameters = routine.getParameters();
             if (parameters == null) {
@@ -155,7 +155,7 @@ public class ResolveService {
             }
             for (RapidParameterGroup group : parameters) {
                 for (RapidParameter parameter : group.getParameters()) {
-                    if (child.equalsIgnoreCase(parameter.getName())) {
+                    if (name.equalsIgnoreCase(parameter.getName())) {
                         return parameter;
                     }
                 }
@@ -164,7 +164,7 @@ public class ResolveService {
         if (symbol instanceof RapidRecord record) {
             List<? extends RapidComponent> components = record.getComponents();
             for (RapidComponent component : components) {
-                if (child.equalsIgnoreCase(component.getName())) {
+                if (name.equalsIgnoreCase(component.getName())) {
                     return component;
                 }
             }

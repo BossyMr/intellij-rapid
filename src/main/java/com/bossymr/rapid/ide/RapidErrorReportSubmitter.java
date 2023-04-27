@@ -53,6 +53,7 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
         return RapidBundle.message("error.report.notice");
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public boolean submit(IdeaLoggingEvent @NotNull [] events, @Nullable String additionalInfo, @NotNull Component parentComponent, @NotNull Consumer<? super SubmittedReportInfo> consumer) {
         DataManager dataManager = DataManager.getInstance();

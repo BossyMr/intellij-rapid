@@ -66,7 +66,7 @@ public class RapidTask implements RapidSymbol {
     }
 
     @Override
-    public @NotNull DocumentationTarget getDocumentationTarget() {
+    public @NotNull DocumentationTarget getDocumentationTarget(@NotNull Project project) {
         return new DocumentationTarget() {
             @Override
             public @NotNull Pointer<DocumentationTarget> createPointer() {

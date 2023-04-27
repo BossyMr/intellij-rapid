@@ -15,10 +15,6 @@ public class RapidBraceMatcher implements PairedBraceMatcher {
             new BracePair(RapidTokenTypes.LBRACE, RapidTokenTypes.RBRACE, false),
             new BracePair(RapidTokenTypes.LBRACKET, RapidTokenTypes.RPARENTH, false),
             new BracePair(RapidTokenTypes.LBRACKET, RapidTokenTypes.RBRACKET, false),
-            new BracePair(RapidTokenTypes.THEN_KEYWORD, RapidTokenTypes.ELSE_KEYWORD, true),
-            new BracePair(RapidTokenTypes.THEN_KEYWORD, RapidTokenTypes.ENDIF_KEYWORD, true),
-            new BracePair(RapidTokenTypes.DO_KEYWORD, RapidTokenTypes.ENDFOR_KEYWORD, true),
-            new BracePair(RapidTokenTypes.DO_KEYWORD, RapidTokenTypes.ENDWHILE_KEYWORD, true),
     };
 
     @Override

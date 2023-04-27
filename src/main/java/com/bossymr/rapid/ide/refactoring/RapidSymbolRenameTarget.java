@@ -1,17 +1,22 @@
-package com.bossymr.rapid.language.symbol.physical;
+package com.bossymr.rapid.ide.refactoring;
 
+import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.intellij.model.Pointer;
 import com.intellij.navigation.TargetPresentation;
 import com.intellij.refactoring.rename.api.RenameTarget;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("UnstableApiUsage")
-public class PhysicalRenameTarget implements RenameTarget {
+public class RapidSymbolRenameTarget implements RenameTarget {
 
     private final @NotNull PhysicalSymbol symbol;
 
-    public PhysicalRenameTarget(@NotNull PhysicalSymbol symbol) {
+    public RapidSymbolRenameTarget(@NotNull PhysicalSymbol symbol) {
         this.symbol = symbol;
+    }
+
+    public @NotNull PhysicalSymbol getSymbol() {
+        return symbol;
     }
 
     @Override
@@ -21,7 +26,7 @@ public class PhysicalRenameTarget implements RenameTarget {
 
     @Override
     public @NotNull Pointer<? extends RenameTarget> createPointer() {
-        return Pointer.delegatingPointer(symbol.createPointer(), PhysicalRenameTarget::new);
+        return Pointer.delegatingPointer(symbol.createPointer(), RapidSymbolRenameTarget::new);
     }
 
     @Override

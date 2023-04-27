@@ -1,15 +1,17 @@
 package com.bossymr.rapid.language.symbol;
 
+import com.bossymr.rapid.ide.search.RapidSymbolSearchTarget;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.intellij.find.usages.api.SearchTarget;
 import com.intellij.find.usages.symbol.SearchTargetSymbol;
+import com.intellij.model.Pointer;
 import com.intellij.model.Symbol;
 import com.intellij.navigation.NavigatableSymbol;
 import com.intellij.navigation.TargetPresentation;
-import com.intellij.platform.backend.documentation.DocumentationSymbol;
+import com.intellij.openapi.project.Project;
 import com.intellij.platform.backend.documentation.DocumentationTarget;
 import com.intellij.util.concurrency.annotations.RequiresBackgroundThread;
 import com.intellij.util.concurrency.annotations.RequiresReadLock;
@@ -29,7 +31,7 @@ import java.util.Objects;
  * symbol.
  */
 @SuppressWarnings("UnstableApiUsage")
-public interface RapidSymbol extends Symbol, NavigatableSymbol, DocumentationSymbol, SearchTargetSymbol {
+public interface RapidSymbol extends Symbol, NavigatableSymbol, SearchTargetSymbol {
 
     /**
      * Returns a pointer which can be used to restore this symbol between read-actions.
@@ -37,7 +39,7 @@ public interface RapidSymbol extends Symbol, NavigatableSymbol, DocumentationSym
      * @return a pointer which can be used to restore this symbol between read-actions.
      */
     @Override
-    @NotNull RapidPointer<? extends RapidSymbol> createPointer();
+    @NotNull Pointer<? extends RapidSymbol> createPointer();
 
     /**
      * Returns the canonical name of this symbol, used to identify a specific symbol.
@@ -75,8 +77,7 @@ public interface RapidSymbol extends Symbol, NavigatableSymbol, DocumentationSym
     @RequiresBackgroundThread
     @NotNull TargetPresentation getTargetPresentation();
 
-    @Override
-    @NotNull DocumentationTarget getDocumentationTarget();
+    @NotNull DocumentationTarget getDocumentationTarget(@NotNull Project project);
 
     @Override
     default @NotNull SearchTarget getSearchTarget() {

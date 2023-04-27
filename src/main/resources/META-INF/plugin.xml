@@ -17,6 +17,9 @@
 
         <!-- Language -->
 
+        <callHierarchyProvider language="RAPID"
+                               implementationClass="com.bossymr.rapid.ide.hierarchy.RapidCallHierarchyProvider"/>
+
         <lang.parserDefinition language="RAPID"
                                implementationClass="com.bossymr.rapid.language.parser.RapidParserDefinition"/>
 
@@ -39,9 +42,10 @@
         <!-- Refactoring -->
 
         <lang.refactoringSupport language="RAPID"
-                                 implementationClass="com.bossymr.rapid.ide.refactor.RapidRefactoringSupportProvider"/>
+                                 implementationClass="com.bossymr.rapid.ide.refactoring.RapidRefactoringSupportProvider"/>
 
-        <lang.namesValidator language="RAPID" implementationClass="com.bossymr.rapid.ide.refactor.RapidNamesValidator"/>
+        <lang.namesValidator language="RAPID"
+                             implementationClass="com.bossymr.rapid.ide.refactoring.RapidNamesValidator"/>
 
         <!-- PsiElement  -->
 
@@ -116,12 +120,28 @@
         <errorHandler implementation="com.bossymr.rapid.ide.RapidErrorReportSubmitter"/>
 
         <platform.backend.documentation.linkHandler
-                implementation="com.bossymr.rapid.ide.documentation.RapidDocumentationLinkHandler"/>
+                implementation="com.bossymr.rapid.ide.documentation.RapidDocumentationTargetProvider"/>
 
-        <lang.codeReferenceSearcher implementation="com.bossymr.rapid.language.symbol.RapidCodeReferenceSearcher"/>
+        <lang.codeReferenceSearcher implementation="com.bossymr.rapid.ide.search.RapidCodeReferenceSearcher"/>
+
+        <!--suppress PluginXmlValidity -->
+        <platform.backend.documentation.symbolTargetProvider
+                implementation="com.bossymr.rapid.ide.documentation.RapidDocumentationTargetProvider"/>
+
+        <!-- Search -->
+
+        <searcher forClass="com.intellij.find.usages.api.UsageSearchParameters"
+                  implementationClass="com.bossymr.rapid.ide.search.RapidSymbolUsageSearcher"/>
+        <searcher forClass="com.intellij.refactoring.rename.api.RenameUsageSearchParameters"
+                  implementationClass="com.bossymr.rapid.ide.refactoring.RapidRenameUsageSearcher"/>
     </extensions>
 
     <actions>
+        <group id="NewRapid">
+            <action id="NewRapidFile" class="com.bossymr.rapid.ide.actions.RapidCreateFileAction"/>
+            <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>
+        </group>
+
         <action id="com.bossymr.rapid.robot.actions.ConnectAction" icon="AllIcons.General.Add"
                 class="com.bossymr.rapid.robot.actions.ConnectAction" text="Connect..."/>
 

@@ -35,7 +35,7 @@ public interface VirtualSymbol extends RapidSymbol {
     @NotNull VirtualPointer<? extends VirtualSymbol> createPointer();
 
     @Override
-    default @NotNull DocumentationTarget getDocumentationTarget() {
-        return new VirtualDocumentationTarget(this);
+    default @NotNull DocumentationTarget getDocumentationTarget(@NotNull Project project) {
+        return new VirtualDocumentationTarget(project, this);
     }
 }

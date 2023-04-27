@@ -1,6 +1,6 @@
-package com.bossymr.rapid.language.symbol;
+package com.bossymr.rapid.ide.search;
 
-import com.bossymr.rapid.RapidBundle;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.find.usages.api.SearchTarget;
 import com.intellij.find.usages.api.UsageHandler;
 import com.intellij.model.Pointer;
@@ -16,13 +16,17 @@ public class RapidSymbolSearchTarget implements SearchTarget {
         this.symbol = symbol;
     }
 
-    @Override
-    public @NotNull UsageHandler getUsageHandler() {
-        return options -> RapidBundle.message("symbol.search.target.usage.handler", symbol.getPresentableName());
+    public @NotNull RapidSymbol getSymbol() {
+        return symbol;
     }
 
     @Override
-    public @NotNull Pointer<? extends SearchTarget> createPointer() {
+    public @NotNull UsageHandler getUsageHandler() {
+        return UsageHandler.createEmptyUsageHandler(symbol.getPresentableName());
+    }
+
+    @Override
+    public @NotNull Pointer<RapidSymbolSearchTarget> createPointer() {
         return Pointer.delegatingPointer(symbol.createPointer(), RapidSymbolSearchTarget::new);
     }
 

@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.symbol;
 
 import org.jetbrains.annotations.NotNull;
 
-public interface RapidAccessibleSymbol extends RapidSymbol {
+public interface RapidVisibleSymbol extends RapidSymbol {
 
     @NotNull Visibility getVisibility();
 

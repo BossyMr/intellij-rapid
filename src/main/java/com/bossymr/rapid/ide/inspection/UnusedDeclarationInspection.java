@@ -3,7 +3,6 @@ package com.bossymr.rapid.ide.inspection;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.insight.quickfix.SafeDeleteFix;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidTargetVariable;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
@@ -25,11 +24,11 @@ public class UnusedDeclarationInspection extends LocalInspectionTool {
         return new RapidElementVisitor() {
             @Override
             public void visitSymbol(@NotNull PhysicalSymbol symbol) {
-                if (symbol instanceof PhysicalModule || symbol instanceof RapidTargetVariable) return;
-                if (symbol instanceof PhysicalRoutine routine) {
-                    if (routine.getRoutineType().equals(RoutineType.PROCEDURE) && "Main".equals(routine.getName())) {
-                        return;
-                    }
+                if (symbol instanceof PhysicalModule) {
+                    return;
+                }
+                if (isEntryPoint(symbol)) {
+                    return;
                 }
                 String name = symbol.getName();
                 PsiElement nameIdentifier = symbol.getNameIdentifier();
@@ -37,8 +36,22 @@ public class UnusedDeclarationInspection extends LocalInspectionTool {
                 Query<PsiReference> query = ReferencesSearch.search(symbol);
                 if (query.findFirst() != null) return;
                 holder.registerProblem(symbol, RapidBundle.message("inspection.message.unused.declaration", name), ProblemHighlightType.LIKE_UNUSED_SYMBOL, nameIdentifier.getTextRangeInParent(), new SafeDeleteFix(symbol));
-                super.visitSymbol(symbol);
             }
         };
+    }
+
+    private boolean isEntryPoint(@NotNull PhysicalSymbol symbol) {
+        if (!(symbol instanceof PhysicalRoutine routine)) {
+            return false;
+        }
+        RoutineType routineType = routine.getRoutineType();
+        if (routineType != RoutineType.PROCEDURE) {
+            return false;
+        }
+        String name = routine.getName();
+        if (name == null) {
+            return false;
+        }
+        return name.equalsIgnoreCase("main");
     }
 }
