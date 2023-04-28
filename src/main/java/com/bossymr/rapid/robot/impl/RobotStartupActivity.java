@@ -30,8 +30,7 @@ public class RobotStartupActivity implements ProjectActivity {
             }
             try {
                 robot.reconnect();
-            } catch (IOException e) {
-                logger.error(e);
+            } catch (IOException ignored) {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

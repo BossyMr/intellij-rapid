@@ -17,16 +17,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class ResolveService {
+public class RapidResolveService {
 
     private final @NotNull Project project;
 
-    public ResolveService(@NotNull Project project) {
+    public RapidResolveService(@NotNull Project project) {
         this.project = project;
     }
 
-    public static @NotNull ResolveService getInstance(@NotNull Project project) {
-        return project.getService(ResolveService.class);
+    public static @NotNull RapidResolveService getInstance(@NotNull Project project) {
+        return project.getService(RapidResolveService.class);
     }
 
     public @NotNull List<RapidSymbol> findSymbols(@NotNull RapidReferenceExpression expression) {

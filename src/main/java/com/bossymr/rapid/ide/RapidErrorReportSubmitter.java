@@ -11,6 +11,7 @@ import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.application.ApplicationInfo;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.ErrorReportSubmitter;
+import com.intellij.openapi.diagnostic.ExceptionWithAttachments;
 import com.intellij.openapi.diagnostic.IdeaLoggingEvent;
 import com.intellij.openapi.diagnostic.SubmittedReportInfo;
 import com.intellij.openapi.progress.ProgressIndicator;
@@ -20,15 +21,14 @@ import com.intellij.openapi.ui.MessageDialogBuilder;
 import com.intellij.openapi.util.NlsActions;
 import com.intellij.openapi.util.SystemInfo;
 import com.intellij.util.Consumer;
-import io.sentry.Sentry;
-import io.sentry.SentryEvent;
-import io.sentry.SentryLevel;
-import io.sentry.UserFeedback;
+import io.sentry.*;
 import io.sentry.protocol.SentryId;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
+import java.util.Arrays;
+import java.util.List;
 
 public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
 
@@ -69,6 +69,16 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
                         SentryEvent sentryEvent = new SentryEvent(throwable);
                         sentryEvent.setLevel(SentryLevel.ERROR);
 
+                        List<Attachment> attachments;
+
+                        if (throwable instanceof ExceptionWithAttachments exception) {
+                            attachments = Arrays.stream(exception.getAttachments())
+                                    .map(attachment -> new Attachment(attachment.getBytes(), attachment.getName()))
+                                    .toList();
+                        } else {
+                            attachments = List.of();
+                        }
+
                         IdeaPluginDescriptor descriptor = reportingEvent.getPlugin();
                         if (descriptor != null) {
                             sentryEvent.setRelease(descriptor.getVersion());
@@ -77,7 +87,7 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
                         sentryEvent.setTag("IDE", ApplicationInfo.getInstance().getBuild().asString());
                         sentryEvent.setTag("OS", SystemInfo.getOsNameAndVersion());
 
-                        SentryId sentryId = Sentry.captureEvent(sentryEvent);
+                        SentryId sentryId = Sentry.captureEvent(sentryEvent, Hint.withAttachments(attachments));
 
                         if (!(sentryId.equals(SentryId.EMPTY_ID)) && additionalInfo != null && additionalInfo.length() > 0) {
                             UserFeedback userFeedback = new UserFeedback(sentryId);

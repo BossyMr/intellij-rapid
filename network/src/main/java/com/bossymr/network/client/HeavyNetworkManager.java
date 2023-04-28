@@ -28,17 +28,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class HeavyNetworkManager implements NetworkManager {
+public class HeavyNetworkManager implements NetworkManager, TrackableNetworkManager {
 
-    private static final @NotNull Logger logger = LoggerFactory.getLogger(LightNetworkManager.class);
-    private final @NotNull Set<ResponseConverterFactory> converters;
+    private static final @NotNull Logger logger = LoggerFactory.getLogger(NetworkAction.class);
     private final @NotNull NetworkClient networkClient;
-    private final @NotNull Set<LightNetworkManager> delegates = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<NetworkAction> delegates = ConcurrentHashMap.newKeySet();
     private volatile boolean closed;
 
     public HeavyNetworkManager(@NotNull URI defaultPath, @Nullable Credentials credentials) {
         this.networkClient = new NetworkClient(defaultPath, credentials);
-        this.converters = Set.of(StringConverter.FACTORY, ResponseModelConverter.FACTORY, EntityConverter.FACTORY);
     }
 
     public static <T> @NotNull T createLightEntity(@NotNull Class<T> entityType, @NotNull EntityModel model) throws IllegalArgumentException {
@@ -60,7 +58,7 @@ public class HeavyNetworkManager implements NetworkManager {
                 if (type.getType().equals(Void.class)) {
                     return null;
                 }
-                for (ResponseConverterFactory factory : manager.getConverters()) {
+                for (ResponseConverterFactory factory : Set.of(StringConverter.FACTORY, ResponseModelConverter.FACTORY, EntityConverter.FACTORY)) {
                     ResponseConverter<T> converter = factory.create(manager, type);
                     if (converter != null) {
                         return converter.convert(response);
@@ -134,18 +132,11 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @Override
-    public @NotNull Set<ResponseConverterFactory> getConverters() {
-        return converters;
-    }
-
-    @Override
-    public @NotNull NetworkManager createLight() {
+    public void track(@NotNull NetworkAction action) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
-        LightNetworkManager manager = new LightNetworkManager(this);
-        delegates.add(manager);
-        return manager;
+        delegates.add(action);
     }
 
     @Override
@@ -200,7 +191,7 @@ public class HeavyNetworkManager implements NetworkManager {
             return;
         }
         closed = true;
-        for (LightNetworkManager manager : delegates) {
+        for (NetworkAction manager : delegates) {
             manager.close();
         }
         networkClient.close();

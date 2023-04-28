@@ -35,6 +35,9 @@ public class RapidCallerTreeStructure extends HierarchyTreeStructure {
         if (element == null | symbol == null || symbol.getName() == null || baseDescriptor == null) {
             return new Object[0];
         }
+        if (nodeDescriptor.isRecursive(symbol)) {
+            return new Object[0];
+        }
         SearchScope searchScope = getSearchScope(scopeType, element);
         return SearchService.getInstance().searchPsiSymbolReferences(getProject(), symbol, searchScope)
                 .findAll().stream()

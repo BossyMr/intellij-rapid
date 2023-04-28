@@ -9,7 +9,6 @@ import com.bossymr.network.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.Set;
 
 /**
  * A {@code NetworkManager} is connected to a remote server, and can create and manage entities and services.
@@ -44,23 +43,6 @@ public interface NetworkManager extends AutoCloseable {
      * @return the {@code NetworkClient} used by this {@code NetworkManager}.
      */
     @NotNull NetworkClient getNetworkClient();
-
-    /**
-     * Returns the {@code ResponseConverterFactory} instances used by this {@code NetworkManager}.
-     *
-     * @return the {@code ResponseConverterFactory} instances used by this {@code NetworkManager}.
-     */
-    @NotNull Set<ResponseConverterFactory> getConverters();
-
-    /**
-     * Creates a new {@code NetworkManager} which will delegate all requests to this {@code NetworkManager}. The created
-     * {@code NetworkManager} can be closed independently of this {@code NetworkManager}, in which case only entities
-     * managed by the child {@code NetworkManager} are closed. If this {@code NetworkManager} is closed, all child
-     * {@code NetworkManager} are automatically closed.
-     *
-     * @return a new child {@code NetworkManager.}
-     */
-    @NotNull NetworkManager createLight();
 
     /**
      * Creates a new {@code NetworkQuery} which will send the specified request and convert the response into the

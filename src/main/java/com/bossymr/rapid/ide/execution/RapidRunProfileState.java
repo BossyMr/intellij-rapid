@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.execution;
 
+import com.bossymr.network.NetworkAction;
 import com.bossymr.network.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfigurationOptions;
@@ -128,7 +129,7 @@ public class RapidRunProfileState implements RunProfileState {
     }
 
     private void activate(@NotNull NetworkManager manager, @NotNull TaskState taskState, @NotNull String taskName) throws IOException, InterruptedException {
-        try (NetworkManager action = manager.createLight()) {
+        try (NetworkManager action = new NetworkAction(manager)) {
             Task task = action.createService(TaskService.class).getTask(taskName).get();
             switch (task.getActivityState()) {
                 case ENABLED -> {
@@ -158,7 +159,7 @@ public class RapidRunProfileState implements RunProfileState {
             consoleView.attachToProcess(processHandler);
             return new DefaultExecutionResult(consoleView, processHandler);
         } catch (IOException e) {
-            throw new ExecutionException(e);
+            throw new ExecutionException(RapidBundle.message("run.execution.exception"));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ExecutionException(e);

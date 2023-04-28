@@ -1,5 +1,6 @@
 package com.bossymr.network.client;
 
+import com.bossymr.network.NetworkAction;
 import com.bossymr.network.NetworkManager;
 import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.ResponseStatusException;
@@ -29,7 +30,7 @@ class HeavyNetworkManagerTest {
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             NetworkRequest request = new NetworkRequest()
                     .setPath(URI.create("/"));
-            try (NetworkManager action = manager.createLight()) {
+            try (NetworkManager action = new NetworkAction(manager)) {
                 NetworkQuery<String> query = action.createQuery(String.class, request);
                 assertEquals("Hello, World!", assertDoesNotThrow(query::get));
             }
@@ -51,7 +52,7 @@ class HeavyNetworkManagerTest {
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             NetworkRequest request = new NetworkRequest()
                     .setPath(URI.create("/"));
-            try (NetworkManager action = manager.createLight()) {
+            try (NetworkManager action = new NetworkAction(manager)) {
                 NetworkQuery<ResponseModel> modelQuery = action.createQuery(ResponseModel.class, request);
                 assertEquals(model, assertDoesNotThrow(modelQuery::get));
                 NetworkQuery<TestEntity> entityQuery = action.createQuery(TestEntity.class, request);
@@ -81,7 +82,7 @@ class HeavyNetworkManagerTest {
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             NetworkRequest request = new NetworkRequest()
                     .setPath(URI.create("/"));
-            try (NetworkManager action = manager.createLight()) {
+            try (NetworkManager action = new NetworkAction(manager)) {
                 NetworkQuery<ResponseModel> modelQuery = action.createQuery(ResponseModel.class, request);
                 assertEquals(model, assertDoesNotThrow(modelQuery::get));
                 assertInstanceOf(TestSubType.class, assertDoesNotThrow(() -> action.createQuery(TestEntity.class, request).get()));
@@ -117,7 +118,7 @@ class HeavyNetworkManagerTest {
                     .setPath(URI.create("/selfPath/request"))
                     .setArgument("argument", "value")
                     .setArgument("arguments", "values");
-            try (NetworkManager action = manager.createLight()) {
+            try (NetworkManager action = new NetworkAction(manager)) {
                 NetworkQuery<TestFetch> modelQuery = action.createQuery(TestFetch.class, request);
                 TestFetch testFetch = modelQuery.get();
                 assertNotNull(testFetch);
@@ -155,7 +156,7 @@ class HeavyNetworkManagerTest {
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", simpleModel.toText())));
         wireMock.register(get("/complete").willReturn(okForContentType("application/xhtml+xml", completeModel.toText())));
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
-            try (NetworkManager action = manager.createLight()) {
+            try (NetworkManager action = new NetworkAction(manager)) {
                 TestService service = action.createService(TestService.class);
                 TestEntity entity = service.getEntity().get();
                 EntityProxy proxy = assertInstanceOf(EntityProxy.class, entity);

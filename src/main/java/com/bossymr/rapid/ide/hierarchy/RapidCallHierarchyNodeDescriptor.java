@@ -31,6 +31,19 @@ public class RapidCallHierarchyNodeDescriptor extends HierarchyNodeDescriptor im
         super(project, parentDescriptor, element, isBase);
     }
 
+    public boolean isRecursive(@NotNull RapidSymbol routine) {
+        NodeDescriptor<?> parentDescriptor = this;
+        while ((parentDescriptor = parentDescriptor.getParentDescriptor()) != null) {
+            if (parentDescriptor instanceof RapidCallHierarchyNodeDescriptor nodeDescriptor) {
+                RapidSymbol contextElement = nodeDescriptor.getContextElement();
+                if (routine.equals(contextElement)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     @SuppressWarnings("UnstableApiUsage")
     @Override
     public boolean update() {

@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.execution;
 
+import com.bossymr.network.NetworkAction;
 import com.bossymr.network.NetworkManager;
 import com.bossymr.network.SubscriptionPriority;
 import com.bossymr.rapid.robot.CloseableMastership;
@@ -27,7 +28,7 @@ public class RapidProcessHandler extends ProcessHandler {
     private final @NotNull NetworkManager manager;
 
     public RapidProcessHandler(@NotNull NetworkManager manager) throws IOException, InterruptedException {
-        this.manager = manager.createLight();
+        this.manager = new NetworkAction(manager);
         subscribe();
     }
 

@@ -7,7 +7,7 @@ import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.*;
-import com.bossymr.rapid.language.symbol.resolve.ResolveService;
+import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
@@ -99,7 +99,7 @@ public class RapidStackFrame extends XStackFrame {
     public void computeChildren(@NotNull XCompositeNode node) {
         if (node.isObsolete()) return;
         CompletableFuture.runAsync(() -> ReadAction.run(() -> {
-            RapidSymbol symbol = ResolveService.getInstance(project).findSymbol(stackFrame.getRoutine());
+            RapidSymbol symbol = RapidResolveService.getInstance(project).findSymbol(stackFrame.getRoutine());
             XValueChildrenList childrenList = new XValueChildrenList();
             if (!(symbol instanceof PhysicalRoutine routine)) {
                 return;

@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
+import com.bossymr.network.NetworkAction;
 import com.bossymr.network.client.HeavyNetworkManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -20,7 +21,7 @@ class RobotServiceTest {
     @BeforeAll
     static void beforeAll() {
         manager = new HeavyNetworkManager(NetworkTestUtil.DEFAULT_PATH, NetworkTestUtil.DEFAULT_CREDENTIALS);
-        robotService = manager.createLight().createService(RootService.class);
+        robotService = new NetworkAction(manager).createService(RootService.class);
     }
 
     @AfterAll

@@ -34,6 +34,9 @@ public class RapidCalleeTreeStructure extends HierarchyTreeStructure {
         if (!(element instanceof PhysicalRoutine routine)) {
             return new Object[0];
         }
+        if (nodeDescriptor.isRecursive(routine)) {
+            return new Object[0];
+        }
         List<RapidRoutine> routines = new ArrayList<>();
         routine.accept(new RapidRecursiveElementWalkingVisitor() {
             @Override

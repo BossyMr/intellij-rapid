@@ -2,7 +2,7 @@ package com.bossymr.rapid.ide.documentation;
 
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
-import com.bossymr.rapid.language.symbol.resolve.ResolveService;
+import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
@@ -43,7 +43,7 @@ public class RapidDocumentationTargetProvider implements SymbolDocumentationTarg
         RapidSymbol symbol = documentationTarget.getSymbol();
         Project project = documentationTarget.getProject();
         if (symbol instanceof PhysicalSymbol physicalSymbol) {
-            List<RapidSymbol> symbols = ResolveService.getInstance(project).findSymbols(physicalSymbol, link);
+            List<RapidSymbol> symbols = RapidResolveService.getInstance(project).findSymbols(physicalSymbol, link);
             if (symbols.isEmpty()) {
                 return null;
             }
@@ -66,7 +66,7 @@ public class RapidDocumentationTargetProvider implements SymbolDocumentationTarg
                 if (sections.length == 1) {
                     return LinkResolveResult.resolvedTarget(result.getDocumentationTarget(project));
                 }
-                RapidSymbol child = ResolveService.findChild(result, sections[1]);
+                RapidSymbol child = RapidResolveService.findChild(result, sections[1]);
                 if (child == null) {
                     return null;
                 }

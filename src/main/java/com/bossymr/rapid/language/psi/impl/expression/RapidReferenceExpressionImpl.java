@@ -4,7 +4,7 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
-import com.bossymr.rapid.language.symbol.resolve.ResolveService;
+import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.util.NlsSafe;
 import com.intellij.openapi.util.TextRange;
@@ -158,7 +158,7 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
 
     @Override
     public @NotNull List<RapidSymbol> getSymbols() {
-        return CachedValuesManager.getProjectPsiDependentCache(this, (context) -> ResolveService.getInstance(context.getProject()).findSymbols(context));
+        return CachedValuesManager.getProjectPsiDependentCache(this, (context) -> RapidResolveService.getInstance(context.getProject()).findSymbols(context));
     }
 
 

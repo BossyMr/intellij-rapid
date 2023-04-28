@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.debugger;
 
+import com.bossymr.network.NetworkAction;
 import com.bossymr.network.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.RapidRunProfileState;
@@ -88,7 +89,6 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
             });
             return promise;
         } catch (IOException | InterruptedException e) {
-            logger.error(e);
             throw new ExecutionException(RapidBundle.message("run.execution.exception"));
         }
     }
@@ -115,7 +115,7 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
      * Resets the robot to allow for a new debugging session to be executed.
      */
     private void setupExecution(@NotNull NetworkManager manager) throws IOException, InterruptedException {
-        try (NetworkManager action = manager.createLight()) {
+        try (NetworkManager action = new NetworkAction(manager)) {
             ExecutionService executionService = action.createService(ExecutionService.class);
             try (CloseableMastership ignored = CloseableMastership.withMastership(action, MastershipType.RAPID)) {
                 executionService.resetProgramPointer().get();

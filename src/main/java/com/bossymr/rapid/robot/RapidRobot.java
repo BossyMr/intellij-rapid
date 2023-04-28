@@ -94,13 +94,11 @@ public class RapidRobot implements Disposable {
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         setCredentials(path, credentials);
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
-        State state;
-        try (NetworkManager action = manager.createLight()) {
-            state = getState(path, action);
-        }
+        RobotNetworkAction networkAction = new RobotNetworkAction(manager);
+        State state = getState(path, networkAction);
         RapidRobot robot = new RapidRobot(state);
         RobotEventListener.publish().onRefresh(robot, manager);
-        robot.setManager(manager);
+        robot.setManager(networkAction);
         robot.download();
         return robot;
     }
@@ -377,10 +375,8 @@ public class RapidRobot implements Disposable {
 
     private @NotNull NetworkManager reconnect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
-        State state;
-        try (NetworkManager action = manager.createLight()) {
-            state = getState(path, action);
-        }
+        RobotNetworkAction networkAction = new RobotNetworkAction(manager);
+        State state = getState(path, networkAction);
         Objects.requireNonNull(state.symbols);
         List<SymbolModel> models = state.symbols.stream()
                 .map(symbol -> symbol.convert(SymbolModel.class, manager))
@@ -388,9 +384,9 @@ public class RapidRobot implements Disposable {
         this.symbols = SymbolConverter.getSymbols(models);
         setState(state);
         this.tasks = getPersistedTasks();
-        RobotEventListener.publish().onRefresh(this, manager);
-        setManager(manager);
-        return manager;
+        RobotEventListener.publish().onRefresh(this, networkAction);
+        setManager(networkAction);
+        return networkAction;
     }
 
     private void setManager(@NotNull NetworkManager manager) {

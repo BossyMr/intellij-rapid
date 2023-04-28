@@ -6,7 +6,7 @@ import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.*;
-import com.bossymr.rapid.language.symbol.resolve.ResolveService;
+import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
 import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
@@ -99,7 +99,7 @@ public class RapidValidator {
         String name = symbol.getName();
         PsiElement nameIdentifier = symbol.getNameIdentifier();
         if (name == null || nameIdentifier == null) return;
-        List<RapidSymbol> symbols = ResolveService.getInstance(symbol.getProject()).findSymbols(symbol, name);
+        List<RapidSymbol> symbols = RapidResolveService.getInstance(symbol.getProject()).findSymbols(symbol, name);
         if (symbols.size() > 1 && symbols.indexOf(symbol) != 0) {
             /*
              * Multiple symbols are declared with the same name as this symbol, in the same context.

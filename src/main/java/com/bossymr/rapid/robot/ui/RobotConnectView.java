@@ -114,10 +114,7 @@ public class RobotConnectView extends DialogWrapper {
                         new Credentials(userField.getText(), passwordField.getPassword());
                 try {
                     service.connect(path, credentials);
-                } catch (InterruptedException ignored) {
-                } catch (IOException e) {
-                    logger.error(e);
-                }
+                } catch (InterruptedException | IOException ignored) {}
             }
         };
         ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));
