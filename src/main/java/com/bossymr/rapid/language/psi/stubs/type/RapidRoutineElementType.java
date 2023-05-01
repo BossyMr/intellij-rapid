@@ -5,8 +5,7 @@ import com.bossymr.rapid.language.psi.RapidStubElementType;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.stubs.RapidRoutineStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
-import com.bossymr.rapid.language.psi.stubs.index.RapidRoutineIndex;
-import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
+import com.bossymr.rapid.language.psi.stubs.index.*;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
@@ -15,10 +14,7 @@ import com.intellij.lang.LighterAST;
 import com.intellij.lang.LighterASTNode;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.stubs.IndexSink;
-import com.intellij.psi.stubs.StubElement;
-import com.intellij.psi.stubs.StubInputStream;
-import com.intellij.psi.stubs.StubOutputStream;
+import com.intellij.psi.stubs.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -51,7 +47,7 @@ public class RapidRoutineElementType extends RapidStubElementType<RapidRoutineSt
     @Override
     public void serialize(@NotNull RapidRoutineStub stub, @NotNull StubOutputStream dataStream) throws IOException {
         dataStream.writeName(stub.getVisibility().name());
-        dataStream.writeName(stub.getAttribute().name());
+        dataStream.writeName(stub.getRoutineType().name());
         dataStream.writeName(stub.getName());
         dataStream.writeName(stub.getType());
     }
@@ -68,9 +64,15 @@ public class RapidRoutineElementType extends RapidStubElementType<RapidRoutineSt
     @Override
     public void indexStub(@NotNull RapidRoutineStub stub, @NotNull IndexSink sink) {
         final String name = stub.getName();
-        if (name != null) {
+        if (name != null && stub.getVisibility() != Visibility.GLOBAL) {
             sink.occurrence(RapidSymbolIndex.KEY, StringUtil.toLowerCase(name));
             sink.occurrence(RapidRoutineIndex.KEY, StringUtil.toLowerCase(name));
+            StubIndexKey<String, PhysicalRoutine> indexKey = switch (stub.getRoutineType()) {
+                case FUNCTION -> RapidFunctionIndex.KEY;
+                case PROCEDURE -> RapidProcedureIndex.KEY;
+                case TRAP -> RapidTrapIndex.KEY;
+            };
+            sink.occurrence(indexKey, StringUtil.toLowerCase(name));
         }
     }
 }

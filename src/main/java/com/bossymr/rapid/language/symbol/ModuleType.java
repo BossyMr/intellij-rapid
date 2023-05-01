@@ -28,7 +28,6 @@ public enum ModuleType {
             READ_ONLY, List.of(NO_VIEW, VIEW_ONLY)
     );
 
-
     public static final TokenSet TOKEN_SET = TokenSet.create(RapidTokenTypes.SYSMODULE_KEYWORD, RapidTokenTypes.NOVIEW_KEYWORD, RapidTokenTypes.NOSTEPIN_KEYWORD, RapidTokenTypes.VIEWONLY_KEYWORD, RapidTokenTypes.READONLY_KEYWORD);
 
     private final IElementType elementType;

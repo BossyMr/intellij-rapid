@@ -41,9 +41,10 @@ public class NetworkAction implements NetworkManager, TrackableNetworkManager {
      * @param entity the entity.
      * @param <T> the entity type.
      * @return whether to elevate this response.
-     * @throws IOException if an I/O error has occured.
+     * @throws IOException if an I/O error has occurred.
+     * @throws InterruptedException if the current thread is interrupted.
      */
-    protected <T> boolean onSuccess(@NotNull NetworkRequest request, @Nullable T entity) throws IOException {
+    protected <T> boolean onSuccess(@NotNull NetworkRequest request, @Nullable T entity) throws IOException, InterruptedException {
         return true;
     }
 
@@ -53,7 +54,8 @@ public class NetworkAction implements NetworkManager, TrackableNetworkManager {
      * @param request the request.
      * @param throwable the exception.
      * @return whether to elevate this response.
-     * @throws IOException if an I/O error has occured.
+     * @throws IOException if an I/O error has occurred.
+     * @throws InterruptedException if the current thread is interrupted.
      */
     protected boolean onFailure(@NotNull NetworkRequest request, @NotNull Throwable throwable) throws IOException, InterruptedException {
         return true;

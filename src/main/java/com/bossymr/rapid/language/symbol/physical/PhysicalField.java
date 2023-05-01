@@ -145,10 +145,7 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     @Override
     public String toString() {
         return "PhysicalField{" +
-                "visibility=" + getVisibility() +
-                ", fieldType=" + getFieldType() +
-                ", type=" + getType() +
-                ", name='" + getName() + '\'' +
-                '}';
+               "name='" + getName() + '\'' +
+               '}';
     }
 }

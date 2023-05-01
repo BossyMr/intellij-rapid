@@ -1,0 +1,64 @@
+RapidFile:Routines.mod
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    PsiWhiteSpace('\n\n    ')
+    RapidAttributeList:
+      <empty list>
+    PhysicalRoutine{name='type'}
+      PsiElement(Rapid:PROC)('PROC')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('type')
+      PsiWhiteSpace(' ')
+      RapidStatementList
+        RapidProcedureCallStatement:name 
+          RapidReferenceExpressionImpl{text=name}
+            PsiElement(Rapid:IDENTIFIER)('name')
+          PsiWhiteSpace(' ')
+          RapidArgumentList:
+            <empty list>
+          PsiErrorElement:<empty expression>, Rapid::=, Rapid:;, Rapid:<ARG> or Rapid:\ expected, got 'ENDPROC'
+            <empty list>
+      PsiElement(Rapid:ENDPROC)('ENDPROC')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRoutine{name='null'}
+      PsiElement(Rapid:FUNC)('FUNC')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:name
+        RapidReferenceExpressionImpl{text=name}
+          PsiElement(Rapid:IDENTIFIER)('name')
+      PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got '('
+        <empty list>
+      RapidParameterList:(
+        PsiElement(Rapid:()('(')
+        PsiErrorElement:Rapid:) expected, got 'ENDPROC'
+          <empty list>
+      PsiWhiteSpace(' ')
+      RapidStatementList
+        <empty list>
+    PsiElement(Rapid:ENDPROC)('ENDPROC')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRoutine{name='name'}
+      PsiElement(Rapid:FUNC)('FUNC')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:name
+        RapidReferenceExpressionImpl{text=name}
+          PsiElement(Rapid:IDENTIFIER)('name')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name')
+      PsiWhiteSpace(' ')
+      RapidStatementList
+        RapidProcedureCallStatement:name
+          RapidReferenceExpressionImpl{text=name}
+            PsiElement(Rapid:IDENTIFIER)('name')
+          RapidArgumentList:
+            <empty list>
+          PsiErrorElement:<empty expression>, Rapid:;, Rapid:<ARG> or Rapid:\ expected, got ')'
+            <empty list>
+        PsiElement(Rapid:))(')')
+    PsiWhiteSpace(' ')
+    PsiErrorElement:<field>, Rapid:BACKWARD, Rapid:ENDFUNC, Rapid:ERROR or Rapid:UNDO expected, got 'ENDPROC'
+      PsiElement(Rapid:ENDPROC)('ENDPROC')
+    PsiWhiteSpace('\n\n')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')

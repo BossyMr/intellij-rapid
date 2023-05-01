@@ -5,7 +5,6 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.stubs.RapidModuleStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
 import com.bossymr.rapid.language.psi.stubs.index.RapidModuleIndex;
-import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
@@ -57,7 +56,6 @@ public class RapidModuleElementType extends RapidStubElementType<RapidModuleStub
     public void indexStub(@NotNull RapidModuleStub stub, @NotNull IndexSink sink) {
         final String name = stub.getName();
         if (name != null) {
-            sink.occurrence(RapidSymbolIndex.KEY, StringUtil.toLowerCase(name));
             sink.occurrence(RapidModuleIndex.KEY, StringUtil.toLowerCase(name));
         }
     }

@@ -161,7 +161,6 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
         return CachedValuesManager.getProjectPsiDependentCache(this, (context) -> RapidResolveService.getInstance(context.getProject()).findSymbols(context));
     }
 
-
     @Override
     public @Nullable RapidSymbol getSymbol() {
         List<RapidSymbol> symbols = getSymbols();
@@ -171,8 +170,7 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
     @Override
     public String toString() {
         return "RapidReferenceExpressionImpl{" +
-                "type=" + getType() +
-                ", symbols=" + getSymbols() +
-                '}';
+               "text=" + getCanonicalText() +
+               '}';
     }
 }

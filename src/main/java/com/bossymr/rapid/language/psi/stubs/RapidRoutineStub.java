@@ -30,7 +30,7 @@ public class RapidRoutineStub extends NamedStubBase<PhysicalRoutine> implements 
         return visibility;
     }
 
-    public RoutineType getAttribute() {
+    public RoutineType getRoutineType() {
         return attribute;
     }
 
@@ -44,12 +44,12 @@ public class RapidRoutineStub extends NamedStubBase<PhysicalRoutine> implements 
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RapidRoutineStub that = (RapidRoutineStub) o;
-        return getVisibility() == that.getVisibility() && getAttribute() == that.getAttribute() && Objects.equals(getName(), that.getName()) && Objects.equals(getType(), that.getType());
+        return getVisibility() == that.getVisibility() && getRoutineType() == that.getRoutineType() && Objects.equals(getName(), that.getName()) && Objects.equals(getType(), that.getType());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getVisibility(), getAttribute(), getName(), getType());
+        return Objects.hash(getVisibility(), getRoutineType(), getName(), getType());
     }
 
     @Override

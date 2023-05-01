@@ -1,0 +1,149 @@
+RapidFile:Structures.mod
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    PsiWhiteSpace('\n\n    ')
+    RapidAttributeList:
+      <empty list>
+    PhysicalAlias{name='name'}
+      PsiElement(Rapid:ALIAS)('ALIAS')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:type
+        RapidReferenceExpressionImpl{text=type}
+          PsiElement(Rapid:IDENTIFIER)('type')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name')
+      PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalAlias{name='typ2'}
+      PsiElement(Rapid:ALIAS)('ALIAS')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:type1
+        RapidReferenceExpressionImpl{text=type1}
+          PsiElement(Rapid:IDENTIFIER)('type1')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('typ2')
+      PsiErrorElement:Rapid:; expected, got 'name'
+        <empty list>
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('name')
+    PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalAlias{name='null'}
+      PsiElement(Rapid:ALIAS)('ALIAS')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:type
+        RapidReferenceExpressionImpl{text=type}
+          PsiElement(Rapid:IDENTIFIER)('type')
+      PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got 'ALIAS'
+        <empty list>
+    PsiWhiteSpace('\n\n    ')
+    PhysicalAlias{name='name'}
+      PsiElement(Rapid:ALIAS)('ALIAS')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:type
+        RapidReferenceExpressionImpl{text=type}
+          PsiElement(Rapid:IDENTIFIER)('type')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name')
+      PsiErrorElement:Rapid:; expected, got 'ALIAS'
+        <empty list>
+    PsiWhiteSpace('\n\n    ')
+    PhysicalAlias{name='null'}
+      PsiElement(Rapid:ALIAS)('ALIAS')
+      PsiWhiteSpace('\n\n    ')
+      RapidTypeElement:type
+        RapidReferenceExpressionImpl{text=type}
+          PsiElement(Rapid:IDENTIFIER)('type')
+      PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got ';'
+        <empty list>
+      PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRecord{name='name'}
+      PsiElement(Rapid:RECORD)('RECORD')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name')
+      PsiWhiteSpace('\n        ')
+      PhysicalComponent{name='name'}
+        RapidTypeElement:type
+          RapidReferenceExpressionImpl{text=type}
+            PsiElement(Rapid:IDENTIFIER)('type')
+        PsiWhiteSpace(' ')
+        PsiElement(Rapid:IDENTIFIER)('name')
+        PsiElement(Rapid:;)(';')
+      PsiWhiteSpace('\n        ')
+      PhysicalComponent{name='name'}
+        RapidTypeElement:type
+          RapidReferenceExpressionImpl{text=type}
+            PsiElement(Rapid:IDENTIFIER)('type')
+        PsiWhiteSpace(' ')
+        PsiElement(Rapid:IDENTIFIER)('name')
+        PsiElement(Rapid:;)(';')
+      PsiWhiteSpace('\n    ')
+      PsiElement(Rapid:ENDRECORD)('ENDRECORD')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRecord{name='name'}
+      PsiElement(Rapid:RECORD)('RECORD')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name')
+      PsiWhiteSpace('\n        ')
+      PhysicalComponent{name='null'}
+        RapidTypeElement:type
+          RapidReferenceExpressionImpl{text=type}
+            PsiElement(Rapid:IDENTIFIER)('type')
+        PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got ';'
+          <empty list>
+        PsiElement(Rapid:;)(';')
+      PsiWhiteSpace('\n        ')
+      PhysicalComponent{name='type'}
+        RapidTypeElement:type
+          RapidReferenceExpressionImpl{text=type}
+            PsiElement(Rapid:IDENTIFIER)('type')
+        PsiWhiteSpace(' ')
+        PsiElement(Rapid:IDENTIFIER)('type')
+        PsiErrorElement:Rapid:; expected, got 'name'
+          <empty list>
+      PsiWhiteSpace(' ')
+      PhysicalComponent{name='null'}
+        RapidTypeElement:name
+          RapidReferenceExpressionImpl{text=name}
+            PsiElement(Rapid:IDENTIFIER)('name')
+        PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got ';'
+          <empty list>
+        PsiElement(Rapid:;)(';')
+      PsiWhiteSpace('\n        ')
+      PhysicalComponent{name='null'}
+        RapidTypeElement:type
+          RapidReferenceExpressionImpl{text=type}
+            PsiElement(Rapid:IDENTIFIER)('type')
+        PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got 'RECORD'
+          <empty list>
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRecord{name='type'}
+      PsiElement(Rapid:RECORD)('RECORD')
+      PsiWhiteSpace('\n        ')
+      PsiElement(Rapid:IDENTIFIER)('type')
+      PsiWhiteSpace(' ')
+      PhysicalComponent{name='null'}
+        RapidTypeElement:name
+          RapidReferenceExpressionImpl{text=name}
+            PsiElement(Rapid:IDENTIFIER)('name')
+        PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got ';'
+          <empty list>
+        PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRecord{name='type'}
+      PsiElement(Rapid:RECORD)('RECORD')
+      PsiWhiteSpace('\n        ')
+      PsiElement(Rapid:IDENTIFIER)('type')
+      PsiErrorElement:Rapid:ENDRECORD expected, got ';'
+        <empty list>
+    PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n        ')
+    PsiElement(Rapid:IDENTIFIER)('type')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('name')
+    PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n\n')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')

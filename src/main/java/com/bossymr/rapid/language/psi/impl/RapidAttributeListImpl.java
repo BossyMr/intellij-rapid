@@ -8,7 +8,6 @@ import com.bossymr.rapid.language.psi.stubs.RapidAttributeListStub;
 import com.bossymr.rapid.language.symbol.ModuleType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.impl.source.tree.CompositeElement;
 import com.intellij.psi.impl.source.tree.Factory;
 import com.intellij.psi.impl.source.tree.LeafElement;
 import com.intellij.psi.impl.source.tree.TreeElement;
@@ -56,10 +55,10 @@ public class RapidAttributeListImpl extends RapidStubElement<RapidAttributeListS
 
     @Override
     public void setAttribute(@NotNull ModuleType moduleType, boolean value) throws UnsupportedOperationException {
-        CompositeElement node = (CompositeElement) getNode();
         if (value) {
+            // TODO: 2023-05-01 Insert attribute in the correct order.
             LeafElement element = Factory.createSingleLeafElement(moduleType.getElementType(), moduleType.getText(), null, getManager());
-            node.addInternal(element, element, null, null);
+            addInternal(element, element, null, null);
         } else {
             PsiElement child = findChildByType(moduleType.getElementType());
             if (child != null) {

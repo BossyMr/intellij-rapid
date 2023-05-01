@@ -5,13 +5,10 @@ import com.bossymr.rapid.language.psi.RapidStubElementType;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.stubs.RapidComponentStub;
 import com.bossymr.rapid.language.psi.stubs.StubUtil;
-import com.bossymr.rapid.language.psi.stubs.index.RapidComponentIndex;
-import com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex;
 import com.bossymr.rapid.language.symbol.physical.PhysicalComponent;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
 import com.intellij.lang.LighterASTNode;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.IndexSink;
 import com.intellij.psi.stubs.StubElement;
@@ -58,11 +55,5 @@ public class RapidComponentElementType extends RapidStubElementType<RapidCompone
     }
 
     @Override
-    public void indexStub(@NotNull RapidComponentStub stub, @NotNull IndexSink sink) {
-        final String name = stub.getName();
-        if (name != null) {
-            sink.occurrence(RapidSymbolIndex.KEY, StringUtil.toLowerCase(name));
-            sink.occurrence(RapidComponentIndex.KEY, StringUtil.toLowerCase(name));
-        }
-    }
+    public void indexStub(@NotNull RapidComponentStub stub, @NotNull IndexSink sink) {}
 }

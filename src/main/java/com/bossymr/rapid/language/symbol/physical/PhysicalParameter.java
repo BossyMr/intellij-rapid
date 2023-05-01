@@ -82,9 +82,7 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
     @Override
     public String toString() {
         return "PhysicalParameter{" +
-                "parameterType=" + getParameterType() +
-                ", type=" + getType() +
-                ", name='" + getName() + '\'' +
-                '}';
+               "name='" + getName() + '\'' +
+               '}';
     }
 }

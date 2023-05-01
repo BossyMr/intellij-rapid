@@ -64,6 +64,13 @@ public class RapidResolveService {
         return List.copyOf(symbols);
     }
 
+    public @NotNull List<RapidSymbol> findSymbols(@NotNull PsiElement context) {
+        ResolveScopeProcessor processor = new ResolveScopeProcessor(context, null);
+        ResolveScopeVisitor visitor = new ResolveScopeVisitor(context, processor);
+        visitor.process();
+        return processor.getSymbols();
+    }
+
     /**
      * Attempts to find a symbol with the specified name, which can be accessed from the specified context.
      *

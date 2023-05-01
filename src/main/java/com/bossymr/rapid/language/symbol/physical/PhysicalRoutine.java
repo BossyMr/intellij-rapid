@@ -44,7 +44,7 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     public @NotNull RoutineType getRoutineType() {
         RapidRoutineStub stub = getGreenStub();
         if (stub != null) {
-            return stub.getAttribute();
+            return stub.getRoutineType();
         } else {
             return RoutineType.getAttribute(this);
         }
@@ -120,10 +120,7 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     @Override
     public String toString() {
         return "PhysicalRoutine{" +
-                "visibility=" + getVisibility() +
-                ", routineType=" + getRoutineType() +
-                ", type=" + getType() +
-                ", name='" + getName() + '\'' +
-                '}';
+               "name='" + getName() + '\'' +
+               '}';
     }
 }

@@ -69,8 +69,6 @@ public class PhysicalAlias extends RapidStubElement<RapidAliasStub> implements R
     public String toString() {
         return "PhysicalAlias{" +
                 "name='" + getName() + '\'' +
-                ", type=" + getType() +
-                ", visibility=" + getVisibility() +
                 '}';
     }
 }

@@ -67,7 +67,6 @@ public class PhysicalTargetVariable extends PhysicalElement implements RapidTarg
     public String toString() {
         return "PhysicalTargetVariable{" +
                 "name='" + getName() + '\'' +
-                ", type=" + getType() +
                 '}';
     }
 }

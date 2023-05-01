@@ -73,8 +73,6 @@ public class PhysicalComponent extends RapidStubElement<RapidComponentStub> impl
     public String toString() {
         return "PhysicalComponent{" +
                 "name='" + getName() + '\'' +
-                ", type=" + getType() +
-                ", record=" + getRecord().getName() +
                 '}';
     }
 }

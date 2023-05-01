@@ -63,7 +63,7 @@
                                 implementationClass="com.bossymr.rapid.ide.completion.RapidKeywordCompletionContributor"/>
 
         <completion.contributor language="RAPID"
-                                implementationClass="com.bossymr.rapid.ide.completion.RapidSymbolCompletionContributor"/>
+                                implementationClass="com.bossymr.rapid.ide.completion.RapidCompletionContributor"/>
 
         <!-- Formatting -->
 
@@ -124,12 +124,16 @@
         <stubElementTypeHolder externalIdPrefix="rapid." class="com.bossymr.rapid.language.psi.RapidStubElementTypes"/>
 
         <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidAliasIndex"/>
-        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidComponentIndex"/>
         <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidFieldIndex"/>
-        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidModuleIndex"/>
         <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidRecordIndex"/>
         <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidRoutineIndex"/>
         <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidModuleIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidFunctionIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidTrapIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidProcedureIndex"/>
+
+        <patterns.patternClass className="com.bossymr.rapid.language.patterns.RapidPatterns" alias="rapid"/>
 
         <!-- Robot -->
 

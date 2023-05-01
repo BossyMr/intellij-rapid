@@ -15,10 +15,10 @@ import java.util.Objects;
 
 public class ResolveScopeProcessor implements Processor<RapidSymbol> {
 
-    private final List<RapidSymbol> symbols;
+    private final @NotNull List<RapidSymbol> symbols;
 
-    private final PsiElement context;
-    private final String name;
+    private final @NotNull PsiElement context;
+    private final @Nullable String name;
 
     public ResolveScopeProcessor(@NotNull PsiElement context, @Nullable String name) {
         this.symbols = new ArrayList<>();

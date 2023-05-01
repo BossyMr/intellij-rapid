@@ -89,8 +89,7 @@ public class PhysicalRecord extends RapidStubElement<RapidRecordStub> implements
     @Override
     public String toString() {
         return "PhysicalRecord{" +
-                "visibility=" + getVisibility() +
-                ", name='" + getName() + '\'' +
-                '}';
+               "name='" + getName() + '\'' +
+               '}';
     }
 }
