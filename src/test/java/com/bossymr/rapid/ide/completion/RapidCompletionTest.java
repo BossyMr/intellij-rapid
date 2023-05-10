@@ -1,16 +1,24 @@
 package com.bossymr.rapid.ide.completion;
 
 import com.bossymr.rapid.language.RapidFileType;
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase;
+import com.intellij.codeInsight.completion.CompletionType;
+import com.intellij.testFramework.fixtures.BasePlatformTestCase;
+import com.intellij.testFramework.junit5.TestApplication;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public class RapidCompletionTest extends LightJavaCodeInsightFixtureTestCase {
+@TestApplication
+public class RapidCompletionTest extends BasePlatformTestCase {
 
     private void doTest(@NotNull String text, @NotNull String... expected) {
+        doTest(CompletionType.BASIC, text, expected);
+    }
+
+
+    private void doTest(@NotNull CompletionType completionType, @NotNull String text, @NotNull String... expected) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
-        myFixture.completeBasic();
+        myFixture.complete(completionType);
         List<String> strings = myFixture.getLookupElementStrings();
         assertNotNull(strings);
         assertSameElements(strings, expected);

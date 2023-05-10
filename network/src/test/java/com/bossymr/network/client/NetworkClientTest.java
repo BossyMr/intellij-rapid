@@ -1,5 +1,6 @@
 package com.bossymr.network.client;
 
+import com.bossymr.network.GenericType;
 import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.client.security.Credentials;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -24,8 +25,7 @@ public class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(ok("Hello, World!")));
         NetworkClient networkClient = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
-        NetworkRequest request = new NetworkRequest()
-                .setPath(URI.create("/"));
+        NetworkRequest<?> request = new NetworkRequest<>(URI.create("/"), GenericType.of(ResponseModel.class));
         try (Response response = networkClient.send(request)) {
             assertEquals("Hello, World!", response.body().string());
         }
@@ -36,8 +36,7 @@ public class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(badRequest()));
         NetworkClient networkClient = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
-        NetworkRequest request = new NetworkRequest()
-                .setPath(URI.create("/"));
+        NetworkRequest<?> request = new NetworkRequest<>(URI.create("/"), GenericType.of(ResponseModel.class));
         assertThrows(ResponseStatusException.class, () -> networkClient.send(request).close());
     }
 }

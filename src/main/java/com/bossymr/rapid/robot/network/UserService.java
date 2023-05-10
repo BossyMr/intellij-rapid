@@ -2,9 +2,9 @@ package com.bossymr.rapid.robot.network;
 
 import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.annotations.Fetch;
-import com.bossymr.network.annotations.FetchMethod;
 import com.bossymr.network.annotations.Field;
 import com.bossymr.network.annotations.Service;
+import com.bossymr.network.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;

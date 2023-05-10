@@ -66,7 +66,7 @@ public class NetworkClient {
         return httpClient;
     }
 
-    public @NotNull Response send(@NotNull NetworkRequest request) throws IOException, InterruptedException {
+    public @NotNull Response send(@NotNull NetworkRequest<?> request) throws IOException, InterruptedException {
         return send(request.build(defaultPath));
     }
 

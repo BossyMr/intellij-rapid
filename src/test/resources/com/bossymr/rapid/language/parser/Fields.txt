@@ -4,8 +4,6 @@ RapidFile:Fields.mod
     PsiWhiteSpace(' ')
     PsiElement(Rapid:IDENTIFIER)('DUMMY')
     PsiWhiteSpace('\n\n    ')
-    RapidAttributeList:
-      <empty list>
     PhysicalField{name='DUMMY'}
       PsiElement(Rapid:LOCAL)('LOCAL')
       PsiWhiteSpace(' ')

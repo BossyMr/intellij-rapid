@@ -1,27 +1,118 @@
 package com.bossymr.network.client;
 
+import com.bossymr.network.GenericType;
 import com.bossymr.network.MultiMap;
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.stream.Collectors;
 
-public class NetworkRequest {
+/**
+ * A {@code NetworkRequest} represents a request.
+ *
+ * @param <T> the type of response.
+ */
+public class NetworkRequest<T> {
 
+    private final @NotNull FetchMethod method;
     private final @NotNull MultiMap<String, String> fields = new MultiMap<>();
-    private final @NotNull MultiMap<String, String> arguments = new MultiMap<>();
-    private @NotNull String method;
     private @NotNull URI path;
 
-    public NetworkRequest() {
-        this.method = "GET";
-        this.path = URI.create("/");
+    private final @NotNull GenericType<T> type;
+
+    /**
+     * Creates a new {@code NetworkRequest} which will send a {@code GET} request to the specified path and convert the
+     * response into the specified type.
+     *
+     * @param path the request path.
+     * @param type the respones type.
+     */
+    public NetworkRequest(@NotNull URI path, @NotNull GenericType<T> type) {
+        this(FetchMethod.GET, path, type);
+    }
+
+    /**
+     * Creates a new {@code NetworkRequest} which will send a request with the specified method and path, and convert
+     * the response into the specified type.
+     *
+     * @param method the request method.
+     * @param path the request path.
+     * @param type the response type.
+     */
+    public NetworkRequest(@NotNull FetchMethod method, @NotNull URI path, @NotNull GenericType<T> type) {
+        this.method = method;
+        this.path = path;
+        this.type = type;
+    }
+
+    public @NotNull URI getPath() {
+        return path;
+    }
+
+    public @NotNull GenericType<T> getType() {
+        return type;
+    }
+
+    @Contract(mutates = "this")
+    public @NotNull NetworkRequest<T> setField(@NotNull String name, @Nullable String value) {
+        fields.set(name, value);
+        return this;
+    }
+
+    @Contract(mutates = "this")
+    public @NotNull NetworkRequest<T> addField(@NotNull String name, @NotNull String value) {
+        fields.add(name, value);
+        return this;
+    }
+
+    @Contract(mutates = "this")
+    public @NotNull NetworkRequest<T> setArgument(@NotNull String name, @Nullable String value) {
+        MultiMap<String, String> arguments = getArguments();
+        arguments.set(name, value);
+        path = computePath(arguments);
+        return this;
+    }
+
+    @Contract(mutates = "this")
+    public @NotNull NetworkRequest<T> addArgument(@NotNull String name, @NotNull String value) {
+        MultiMap<String, String> arguments = getArguments();
+        arguments.add(name, value);
+        path = computePath(arguments);
+        return this;
+    }
+
+    public @NotNull NetworkRequest<T> putArguments(@NotNull MultiMap<String, String> map) {
+        MultiMap<String, String> arguments = getArguments();
+        arguments.putAll(map);
+        path = computePath(arguments);
+        return this;
+    }
+
+    private @NotNull URI computePath(@NotNull MultiMap<String, String> arguments) {
+        String query = arguments.stream()
+                .map(entry -> {
+                    if (entry.getValue() == null) {
+                        return entry.getKey();
+                    } else {
+                        return entry.getKey() + "=" + entry.getValue();
+                    }
+                })
+                .collect(Collectors.joining("&"));
+        try {
+            return new URI(path.getScheme(), path.getUserInfo(), path.getHost(), path.getPort(), path.getPath(), query, path.getFragment());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    public @NotNull FetchMethod getMethod() {
+        return method;
     }
 
     public @NotNull MultiMap<String, String> getFields() {
@@ -29,121 +120,41 @@ public class NetworkRequest {
     }
 
     public @NotNull MultiMap<String, String> getArguments() {
+        String query = path.getQuery();
+        MultiMap<String, String> arguments = new MultiMap<>();
+        if (query == null || query.isEmpty()) {
+            return arguments;
+        }
+        for (String argument : query.split("&")) {
+            String[] strings = argument.split("=");
+            if (strings.length != 2) {
+                throw new IllegalStateException("Malformed argument: " + argument);
+            }
+            arguments.add(strings[0], strings[1]);
+        }
         return arguments;
     }
 
-    public @NotNull String getMethod() {
-        return method;
-    }
-
-    public @NotNull NetworkRequest setMethod(@NotNull String method) {
-        this.method = method;
-        return this;
-    }
-
-    public @NotNull URI getPath() {
-        return path;
-    }
-
-    public @NotNull NetworkRequest setPath(@NotNull URI path) {
-        String query = path.getQuery();
-        if (query != null) {
-            String[] sections = query.split("&");
-            for (String argument : sections) {
-                String[] strings = argument.split("=");
-                if (strings.length != 2) {
-                    throw new IllegalArgumentException("Unexpected query " + argument);
-                }
-                arguments.putIfAbsent(strings[0], new ArrayList<>());
-                if (!(arguments.get(strings[0]).contains(strings[1]))) {
-                    arguments.get(strings[0]).add(strings[1]);
-                }
-            }
+    private @Nullable String computeBody(@NotNull MultiMap<String, String> fields) {
+        if (fields.isEmpty()) {
+            return null;
         }
-        try {
-            this.path = new URI(path.getScheme(), path.getUserInfo(), path.getHost(), path.getPort(), path.getPath(), null, path.getFragment());
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(e);
-        }
-        return this;
-    }
-
-    public @NotNull NetworkRequest addFields(@NotNull MultiMap<String, String> fields) {
-        this.fields.putAll(fields);
-        return this;
-    }
-
-    public @NotNull NetworkRequest addField(@NotNull String name, @NotNull String value) {
-        fields.add(name, value);
-        return this;
-    }
-
-    public @NotNull NetworkRequest setField(@NotNull String name, @NotNull String value) {
-        fields.set(name, value);
-        return this;
-    }
-
-    public @NotNull NetworkRequest addArguments(@NotNull MultiMap<String, String> arguments) {
-        this.arguments.putAll(arguments);
-        return this;
-    }
-
-    public @NotNull NetworkRequest addArgument(@NotNull String name, @NotNull String value) {
-        arguments.add(name, value);
-        return this;
-    }
-
-    public @NotNull NetworkRequest setArgument(@NotNull String name, @NotNull String value) {
-        arguments.set(name, value);
-        return this;
-    }
-
-    public @NotNull Request build(@NotNull URI defaultPath) {
-        path = defaultPath.resolve(path);
-        String body = getBody(fields);
-        Request.Builder builder = new Request.Builder()
-                .url(getResource(path, arguments).toString());
-        RequestBody bodyPublisher = body != null ? RequestBody.create(body.getBytes(), MediaType.get("application/x-www-form-urlencoded")) : null;
-        if (method.equals("POST") || method.equals("PUT")) {
-            if (bodyPublisher == null) {
-                bodyPublisher = RequestBody.create(new byte[0], MediaType.get("application/x-www-form-urlencoded"));
-            }
-        }
-        builder = builder.method(method, bodyPublisher);
-        return builder.build();
-    }
-
-    private @NotNull URI getResource(@NotNull URI resource, @NotNull MultiMap<String, String> arguments) {
-        if (arguments.isEmpty()) {
-            return resource;
-        }
-        String query = resource.getQuery();
-        if (query == null) {
-            query = "";
-        } else {
-            query += "&";
-        }
-        query += arguments.stream()
-                .map(entry -> {
-                    if (entry.getValue() != null) {
-                        return entry.getKey() + "=" + entry.getValue();
-                    } else {
-                        return entry.getKey();
-                    }
-                })
-                .collect(Collectors.joining("&"));
-        try {
-            return new URI(resource.getScheme(), resource.getUserInfo(), resource.getHost(), resource.getPort(), resource.getPath(), query, resource.getFragment());
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private @Nullable String getBody(@NotNull MultiMap<String, String> fields) {
-        if (fields.isEmpty()) return null;
         return fields.stream()
                 .map(entry -> entry.getKey() + "=" + entry.getValue())
                 .collect(Collectors.joining("&"));
     }
 
+    public @NotNull Request build(@NotNull URI defaultPath) {
+        URI temporary = defaultPath.resolve(path);
+        String body = computeBody(fields);
+        Request.Builder builder = new Request.Builder().url(temporary.toString());
+        RequestBody bodyPublisher = body != null ? RequestBody.create(body.getBytes(), MediaType.get("application/x-www-form-urlencoded")) : null;
+        if (method == FetchMethod.POST || method == FetchMethod.PUT) {
+            if (bodyPublisher == null) {
+                bodyPublisher = RequestBody.create(new byte[0], MediaType.get("application/x-www-form-urlencoded"));
+            }
+        }
+        builder = builder.method(method.name(), bodyPublisher);
+        return builder.build();
+    }
 }

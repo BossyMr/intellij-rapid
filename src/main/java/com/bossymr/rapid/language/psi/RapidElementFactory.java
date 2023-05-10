@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public final class RapidElementFactory {
@@ -69,7 +70,7 @@ public final class RapidElementFactory {
                 .map(ModuleType::getText)
                 .collect(Collectors.joining(","));
         RapidFile file = createDummyFile("MODULE DUMMY(" + text + ") ENDMODULE");
-        return file.getModules().get(0).getAttributeList();
+        return Objects.requireNonNull(file.getModules().get(0).getAttributeList());
     }
 
     /**

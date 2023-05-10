@@ -143,9 +143,9 @@ private module_recovery ::= !('MODULE')
 // Modules
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-module ::= 'MODULE' identifier attribute_list module_body 'ENDMODULE' {pin=1}
+module ::= 'MODULE' identifier attribute_list? module_body 'ENDMODULE' {pin=1}
 
-attribute_list ::= [!(<<eof>> | 'ENDMODULE') '(' attribute (attribute_list_tail)* ')'] {pin(".*")=2}
+attribute_list ::= !(<<eof>> | 'ENDMODULE') '(' attribute (attribute_list_tail)* ')' {pin(".*")=2}
 
 private attribute_list_tail ::= ',' attribute {pin=1}
 

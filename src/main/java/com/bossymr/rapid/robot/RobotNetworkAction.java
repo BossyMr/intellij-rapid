@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.network.GenericType;
 import com.bossymr.network.NetworkAction;
 import com.bossymr.network.NetworkManager;
 import com.bossymr.network.ResponseStatusException;
@@ -23,7 +24,7 @@ import java.util.Map;
 
 public class RobotNetworkAction extends NetworkAction {
 
-    private final Map<String, NetworkRequest> onClose = new HashMap<>();
+    private final Map<String, NetworkRequest<Void>> onClose = new HashMap<>();
     private volatile boolean showNotifications = true;
 
     public RobotNetworkAction(@NotNull NetworkManager manager) {
@@ -31,16 +32,16 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected <T> boolean onSuccess(@NotNull NetworkRequest request, @Nullable T response) {
+    protected <T> boolean onSuccess(@NotNull NetworkRequest<T> request, @Nullable T response) {
         URI previous = request.getPath();
         String path = previous.getPath();
         String query = previous.getQuery();
         if (path != null && path.startsWith("/rw/mastership")) {
             if ("action=request".equals(query)) {
                 try {
-                    NetworkRequest networkRequest = new NetworkRequest()
-                            .addFields(request.getFields())
-                            .setPath(new URI(previous.getScheme(), previous.getUserInfo(), previous.getHost(), previous.getPort(), previous.getPath(), "action=release", previous.getFragment()));
+                    URI queryPath = new URI(previous.getScheme(), previous.getUserInfo(), previous.getHost(), previous.getPort(), previous.getPath(), "action=release", previous.getFragment());
+                    NetworkRequest<Void> networkRequest = new NetworkRequest<>(queryPath, GenericType.of(Void.class));
+                    networkRequest.getFields().putAll(request.getFields());
                     onClose.put(previous.getPath(), networkRequest);
                 } catch (URISyntaxException ignored) {}
             }
@@ -52,7 +53,7 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected boolean onFailure(@NotNull NetworkRequest request, @NotNull Throwable throwable) {
+    protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {
         if (throwable instanceof ResponseStatusException exception) {
             if (exception.getResponse().code() == 400) {
                 return true;
@@ -75,13 +76,13 @@ public class RobotNetworkAction extends NetworkAction {
 
     @Override
     public void close() throws IOException, InterruptedException {
-        for (NetworkRequest value : onClose.values()) {
+        for (NetworkRequest<Void> value : onClose.values()) {
             getNetworkClient().send(value).close();
         }
         super.close();
     }
 
-    private void showNotification(@NotNull NetworkRequest request, @NotNull Throwable throwable) {
+    private void showNotification(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {
         showNotifications = false;
         URI path = request.getPath();
         NotificationGroupManager.getInstance()

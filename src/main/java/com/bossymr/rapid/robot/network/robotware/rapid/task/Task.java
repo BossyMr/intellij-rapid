@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.network.robotware.rapid.task;
 import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.SubscribableNetworkQuery;
 import com.bossymr.network.annotations.*;
+import com.bossymr.network.client.FetchMethod;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
 import org.jetbrains.annotations.NotNull;

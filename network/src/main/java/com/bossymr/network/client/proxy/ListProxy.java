@@ -1,5 +1,6 @@
 package com.bossymr.network.client.proxy;
 
+import com.bossymr.network.GenericType;
 import com.bossymr.network.NetworkManager;
 import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.client.NetworkRequest;
@@ -13,28 +14,27 @@ import java.util.*;
 public class ListProxy<T> extends AbstractList<T> {
 
     private final @NotNull NetworkManager manager;
-    private final @NotNull Class<T> entityType;
-    private final @NotNull NetworkRequest request;
+    private final @NotNull Class<T> type;
+    private final @NotNull NetworkRequest<?> request;
 
     private List<List<T>> sections;
 
-    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkRequest request) {
+    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkRequest<?> request) {
         this.manager = manager;
-        this.entityType = entityType;
         this.request = request;
+        this.type = entityType;
     }
 
     private void build() {
-        ResponseModel model = getModel(request);
+        NetworkRequest<ResponseModel> modelCopy = new NetworkRequest<>(request.getMethod(), request.getPath(), GenericType.of(ResponseModel.class));
+        modelCopy.getFields().putAll(request.getFields());
+        ResponseModel model = getModel(modelCopy);
         this.sections = new ArrayList<>();
-
         this.sections.add(createElements(model));
         URI next;
         while ((next = model.model().reference("next")) != null) {
-            NetworkRequest copy = new NetworkRequest()
-                    .setMethod(request.getMethod())
-                    .addFields(request.getFields())
-                    .setPath(next);
+            NetworkRequest<ResponseModel> copy = new NetworkRequest<>(request.getMethod(), next, GenericType.of(ResponseModel.class));
+            copy.getFields().putAll(request.getFields());
             model = getModel(copy);
             this.sections.add(createElements(model));
         }
@@ -44,7 +44,7 @@ public class ListProxy<T> extends AbstractList<T> {
         return response.entities().stream()
                 .map(entity -> {
                     try {
-                        return manager.createEntity(entityType, entity);
+                        return manager.createEntity(type, entity);
                     } catch (IllegalArgumentException e) {
                         // Skip entities which could not converted.
                         return null;
@@ -54,8 +54,8 @@ public class ListProxy<T> extends AbstractList<T> {
                 .toList();
     }
 
-    private @NotNull ResponseModel getModel(@NotNull NetworkRequest request) {
-        NetworkQuery<ResponseModel> query = manager.createQuery(ResponseModel.class, request);
+    private @NotNull ResponseModel getModel(@NotNull NetworkRequest<ResponseModel> request) {
+        NetworkQuery<ResponseModel> query = manager.createQuery(request);
         try {
             ResponseModel model = query.get();
             if (model == null) {

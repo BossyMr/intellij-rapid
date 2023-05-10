@@ -4,8 +4,6 @@ RapidFile:Structures.mod
     PsiWhiteSpace(' ')
     PsiElement(Rapid:IDENTIFIER)('DUMMY')
     PsiWhiteSpace('\n\n    ')
-    RapidAttributeList:
-      <empty list>
     PhysicalAlias{name='name'}
       PsiElement(Rapid:ALIAS)('ALIAS')
       PsiWhiteSpace(' ')

@@ -14,6 +14,10 @@ public class RapidParserTest extends ParsingTestCase {
         return "src/test/resources";
     }
 
+    public void testComments() {
+        doTest(true);
+    }
+
     public void testModules() {
         doTest(true);
     }

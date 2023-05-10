@@ -37,19 +37,25 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
         visitor.visitModule(this);
     }
 
-    public @NotNull RapidAttributeList getAttributeList() {
-        return getRequiredStubOrPsiChild(RapidStubElementTypes.ATTRIBUTE_LIST);
+    public @Nullable RapidAttributeList getAttributeList() {
+        return getStubOrPsiChild(RapidStubElementTypes.ATTRIBUTE_LIST);
     }
 
     @Override
     public @NotNull List<ModuleType> getAttributes() {
         RapidAttributeList attributeList = getAttributeList();
+        if (attributeList == null) {
+            return List.of();
+        }
         return attributeList.getAttributes();
     }
 
     @Override
     public boolean hasAttribute(@NotNull ModuleType moduleType) {
         RapidAttributeList attributeList = getAttributeList();
+        if (attributeList == null) {
+            return false;
+        }
         return attributeList.hasAttribute(moduleType);
     }
 

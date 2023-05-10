@@ -4,8 +4,6 @@ RapidFile:Routines.mod
     PsiWhiteSpace(' ')
     PsiElement(Rapid:IDENTIFIER)('DUMMY')
     PsiWhiteSpace('\n\n    ')
-    RapidAttributeList:
-      <empty list>
     PhysicalRoutine{name='type'}
       PsiElement(Rapid:PROC)('PROC')
       PsiWhiteSpace(' ')

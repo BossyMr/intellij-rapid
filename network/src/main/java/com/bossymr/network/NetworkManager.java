@@ -46,27 +46,13 @@ public interface NetworkManager extends AutoCloseable {
 
     /**
      * Creates a new {@code NetworkQuery} which will send the specified request and convert the response into the
-     * specified type.
-     *
-     * @param responseType the response type.
-     * @param request the request.
-     * @param <T> the response type.
-     * @return the query.
-     */
-    default <T> @NotNull NetworkQuery<T> createQuery(@NotNull Class<T> responseType, @NotNull NetworkRequest request) {
-        return createQuery(GenericType.of(responseType), request);
-    }
-
-    /**
-     * Creates a new {@code NetworkQuery} which will send the specified request and convert the response into the
      * specified generic type.
      *
-     * @param responseType the response type.
      * @param request the request.
      * @param <T> the response type.
      * @return the query.
      */
-    <T> @NotNull NetworkQuery<T> createQuery(@NotNull GenericType<T> responseType, @NotNull NetworkRequest request);
+    <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkRequest<T> request);
 
     /**
      * Creates a new {@code SubscribableNetworkQuery} which will subscribe to the specified event.
@@ -107,4 +93,11 @@ public interface NetworkManager extends AutoCloseable {
      */
     @Override
     void close() throws IOException, InterruptedException;
+
+    /**
+     * Register the specified {@code NetworkAction} as a dependent of this {@code NetworkManager}.
+     *
+     * @param action the {@code NetworkAction}.
+     */
+    void track(@NotNull NetworkAction action);
 }

@@ -84,7 +84,7 @@ public class RapidRunConfigurationEditor extends SettingsEditor<RapidRunConfigur
             public void customize(@NotNull JList<? extends RapidRobot> list, @Nullable RapidRobot value, int index, boolean selected, boolean hasFocus) {
                 if (value != null) {
                     setText(value.getName());
-                    setIcon(RapidIcons.ROBOT_ICON);
+                    setIcon(RapidIcons.ROBOT);
                 }
             }
         });

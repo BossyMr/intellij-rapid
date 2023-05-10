@@ -29,7 +29,7 @@ public class RobotViewRobotNode extends RobotViewNode<RapidRobot> {
         for (RapidTask task : getValue().getTasks()) {
             nodes.add(new RobotViewTaskNode(getProject(), task));
         }
-        RobotViewDirectoryNode<String> directoryNode = new RobotViewDirectoryNode<>(getProject(), "Symbols", RapidIcons.ROBOT_DIRECTORY, symbols) {
+        RobotViewDirectoryNode<String> directoryNode = new RobotViewDirectoryNode<>(getProject(), "Symbols", RapidIcons.DIRECTORY, symbols) {
             @Override
             public @NotNull AbstractTreeNode<?> getChild(@NotNull String value) {
                 RapidRobot robot = RobotService.getInstance().getRobot();
@@ -52,7 +52,7 @@ public class RobotViewRobotNode extends RobotViewNode<RapidRobot> {
                     default -> throw new IllegalStateException();
                 };
 
-                return new RobotViewDirectoryNode<>(getProject(), title, RapidIcons.ROBOT_DIRECTORY, symbols) {
+                return new RobotViewDirectoryNode<>(getProject(), title, RapidIcons.DIRECTORY, symbols) {
                     @Override
                     public @NotNull AbstractTreeNode<?> getChild(@NotNull RapidSymbol value) {
                         return new RobotViewSymbolNode(getProject(), value);
@@ -69,7 +69,7 @@ public class RobotViewRobotNode extends RobotViewNode<RapidRobot> {
     protected void update(@NotNull PresentationData presentation) {
         RapidRobot value = getValue();
         if (value != null) {
-            presentation.setIcon(RapidIcons.ROBOT_ICON);
+            presentation.setIcon(RapidIcons.ROBOT);
             presentation.setPresentableText(value.getName());
         }
     }

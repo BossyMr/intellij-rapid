@@ -58,7 +58,9 @@ public class RapidCompletionContributor extends CompletionContributor {
                 }
             }
         }
+        // TODO: 2023-05-01 Add support for smart completion type by checking symbol type against expected type
         variants.stream()
+                .distinct()
                 .filter(symbol -> symbol.getName() != null)
                 .map(this::createLookupElement)
                 .forEach(lookupElement -> result.caseInsensitive().addElement(lookupElement));

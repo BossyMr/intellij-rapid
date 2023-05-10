@@ -4,8 +4,6 @@ RapidFile:Modules.mod
     PsiWhiteSpace(' ')
     PsiElement(Rapid:IDENTIFIER)('DUMMY')
     PsiWhiteSpace(' ')
-    RapidAttributeList:
-      <empty list>
     PsiElement(Rapid:ENDMODULE)('ENDMODULE')
   PsiWhiteSpace('\n\n')
   PhysicalModule{name='DUMMY'}
@@ -79,25 +77,17 @@ RapidFile:Modules.mod
     PsiElement(Rapid:MODULE)('MODULE')
     PsiWhiteSpace(' ')
     PsiElement(Rapid:IDENTIFIER)('DUMMY')
-    PsiWhiteSpace('\n\n')
-    RapidAttributeList:
-      <empty list>
     PsiErrorElement:<alias>, <field>, <record>, <routine>, Rapid:(, Rapid:<DDN>, Rapid:<RDN> or Rapid:<TDN> expected, got 'MODULE'
       <empty list>
+  PsiWhiteSpace('\n\n')
   PhysicalModule{name='null'}
     PsiElement(Rapid:MODULE)('MODULE')
     PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got 'MODULE'
       <empty list>
-    PsiWhiteSpace(' ')
-    RapidAttributeList:
-      <empty list>
-    PsiErrorElement:<alias>, <field>, <record>, <routine>, Rapid:(, Rapid:<DDN>, Rapid:<ID>, Rapid:<RDN>, Rapid:<TDN> or Rapid:IDENTIFIER expected, got 'MODULE'
-      <empty list>
+  PsiWhiteSpace(' ')
   PhysicalModule{name='null'}
     PsiElement(Rapid:MODULE)('MODULE')
     PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got 'ENDMODULE'
       <empty list>
     PsiWhiteSpace(' ')
-    RapidAttributeList:
-      <empty list>
     PsiElement(Rapid:ENDMODULE)('ENDMODULE')

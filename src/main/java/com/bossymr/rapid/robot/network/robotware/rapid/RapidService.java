@@ -1,7 +1,11 @@
 package com.bossymr.rapid.robot.network.robotware.rapid;
 
-import com.bossymr.network.annotations.*;
 import com.bossymr.network.NetworkQuery;
+import com.bossymr.network.annotations.Fetch;
+import com.bossymr.network.annotations.Field;
+import com.bossymr.network.annotations.Path;
+import com.bossymr.network.annotations.Service;
+import com.bossymr.network.client.FetchMethod;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;

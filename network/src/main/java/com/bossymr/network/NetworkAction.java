@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class NetworkAction implements NetworkManager, TrackableNetworkManager {
+public class NetworkAction implements NetworkManager {
 
     private final @NotNull Set<SubscriptionEntity> entities = ConcurrentHashMap.newKeySet();
     private final @NotNull NetworkManager manager;
@@ -27,10 +27,7 @@ public class NetworkAction implements NetworkManager, TrackableNetworkManager {
      */
     public NetworkAction(@NotNull NetworkManager manager) {
         this.manager = manager;
-        if (!(manager instanceof TrackableNetworkManager trackable)) {
-            throw new IllegalArgumentException("Cannot create NetworkAction with: " + manager);
-        }
-        trackable.track(this);
+        manager.track(this);
     }
 
 
@@ -44,7 +41,7 @@ public class NetworkAction implements NetworkManager, TrackableNetworkManager {
      * @throws IOException if an I/O error has occurred.
      * @throws InterruptedException if the current thread is interrupted.
      */
-    protected <T> boolean onSuccess(@NotNull NetworkRequest request, @Nullable T entity) throws IOException, InterruptedException {
+    protected <T> boolean onSuccess(@NotNull NetworkRequest<T> request, @Nullable T entity) throws IOException, InterruptedException {
         return true;
     }
 
@@ -57,7 +54,7 @@ public class NetworkAction implements NetworkManager, TrackableNetworkManager {
      * @throws IOException if an I/O error has occurred.
      * @throws InterruptedException if the current thread is interrupted.
      */
-    protected boolean onFailure(@NotNull NetworkRequest request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+    protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
         return true;
     }
 
@@ -75,11 +72,11 @@ public class NetworkAction implements NetworkManager, TrackableNetworkManager {
     }
 
     @Override
-    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull GenericType<T> type, @NotNull NetworkRequest request) {
+    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull NetworkRequest<T> request) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
-        NetworkQuery<T> query = HeavyNetworkManager.createQuery(this, type, request);
+        NetworkQuery<T> query = HeavyNetworkManager.createQuery(this, request);
         return () -> {
             try {
                 T response = query.get();
@@ -157,20 +154,5 @@ public class NetworkAction implements NetworkManager, TrackableNetworkManager {
             manager.close();
         }
         SubscriptionEntity.unsubscribe(entities);
-    }
-
-    public static class ShutdownOnFailure extends NetworkAction {
-
-        public ShutdownOnFailure(@NotNull NetworkManager manager) {
-            super(manager);
-        }
-
-        @Override
-        protected boolean onFailure(@NotNull NetworkRequest request, @NotNull Throwable throwable) throws IOException, InterruptedException {
-            close();
-            // The exception message might be refined by another NetworkAction
-            // Alternatively, a UI-notification might be displayed
-            return true;
-        }
     }
 }

@@ -1,0 +1,68 @@
+RapidFile:Comments.mod
+  PhysicalModule{name='name'}
+    PsiComment(Rapid:COMMENT)('! COMMENT')
+    PsiWhiteSpace('\n')
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('name')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalAlias{name='name1'}
+      PsiComment(Rapid:COMMENT)('! COMMENT')
+      PsiWhiteSpace('\n    ')
+      PsiElement(Rapid:ALIAS)('ALIAS')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:type1
+        RapidReferenceExpressionImpl{text=type1}
+          PsiElement(Rapid:IDENTIFIER)('type1')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name1')
+      PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRecord{name='name2'}
+      PsiComment(Rapid:COMMENT)('! COMMENT')
+      PsiWhiteSpace('\n    ')
+      PsiElement(Rapid:RECORD)('RECORD')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name2')
+      PsiWhiteSpace('\n        ')
+      PhysicalComponent{name='name1'}
+        PsiComment(Rapid:COMMENT)('! COMMENT')
+        PsiWhiteSpace('\n        ')
+        RapidTypeElement:type1
+          RapidReferenceExpressionImpl{text=type1}
+            PsiElement(Rapid:IDENTIFIER)('type1')
+        PsiWhiteSpace(' ')
+        PsiElement(Rapid:IDENTIFIER)('name1')
+        PsiElement(Rapid:;)(';')
+      PsiWhiteSpace('\n    ')
+      PsiElement(Rapid:ENDRECORD)('ENDRECORD')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalField{name='name2'}
+      PsiComment(Rapid:COMMENT)('! COMMENT')
+      PsiWhiteSpace('\n    ')
+      PsiElement(Rapid:VAR)('VAR')
+      PsiWhiteSpace(' ')
+      RapidTypeElement:type1
+        RapidReferenceExpressionImpl{text=type1}
+          PsiElement(Rapid:IDENTIFIER)('type1')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name2')
+      PsiElement(Rapid:;)(';')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRoutine{name='name2'}
+      PsiComment(Rapid:COMMENT)('! COMMENT')
+      PsiWhiteSpace('\n    ')
+      PsiElement(Rapid:PROC)('PROC')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name2')
+      RapidParameterList:()
+        PsiElement(Rapid:()('(')
+        PsiElement(Rapid:))(')')
+      PsiWhiteSpace('\n        ')
+      PsiComment(Rapid:COMMENT)('! COMMENT')
+      PsiWhiteSpace('\n    ')
+      RapidStatementList
+        <empty list>
+      PsiElement(Rapid:ENDPROC)('ENDPROC')
+    PsiWhiteSpace('\n\n')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')

@@ -9,6 +9,8 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.8.0"
     // Gradle IntelliJ Plugin
     id("org.jetbrains.intellij") version "1.13.3"
+    // Gradle GrammarKit Plugin
+    id("org.jetbrains.grammarkit") version "2022.3.1"
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
@@ -67,6 +69,25 @@ tasks {
         version.set(properties("pluginVersion"))
         sinceBuild.set(properties("pluginSinceBuild"))
         untilBuild.set(properties("pluginUntilBuild"))
+    }
+
+    // Configure GrammarKit plugin
+    // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-grammar-kit-plugin.html
+    generateLexer {
+        sourceFile.set(file("src/main/grammar/Rapid.flex"))
+        targetDir.set("src/main/gen/com/bossymr/rapid/language/lexer")
+        targetClass.set("_RapidLexer")
+        purgeOldFiles.set(true)
+    }
+
+    // Configure GrammarKit plugin
+    // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-grammar-kit-plugin.html
+    generateParser {
+        sourceFile.set(file("src/main/grammar/Rapid.bnf"))
+        targetRoot.set("src/main/gen")
+        pathToParser.set("/com/bossymr/rapid/language/parser/RapidParser.java")
+        pathToPsiRoot.set("/com/bossymr/rapid/language/psi")
+        purgeOldFiles.set(true)
     }
 
     // Configure UI tests plugin

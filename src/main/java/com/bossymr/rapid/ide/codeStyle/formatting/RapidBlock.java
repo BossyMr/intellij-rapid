@@ -160,9 +160,9 @@ public class RapidBlock extends AbstractBlock {
         if (parentType == STATEMENT_LIST) {
             ASTNode treeParent = getNode().getTreeParent();
             if (commonSettings.KEEP_SIMPLE_METHODS_IN_ONE_LINE
-                    && treeParent != null
-                    && treeParent.getElementType() == ROUTINE
-                    && !(getNode().textContains('\n'))) {
+                && treeParent != null
+                && treeParent.getElementType() == ROUTINE
+                && !(getNode().textContains('\n'))) {
                 return null;
             }
             return Wrap.createWrap(WrapType.NORMAL, false);
@@ -191,6 +191,16 @@ public class RapidBlock extends AbstractBlock {
         if (RapidTokenSets.KEYWORDS.contains(elementType)) {
             return Indent.getNoneIndent();
         }
+        if (elementType == COMMENT) {
+            ASTNode keyword = child.getTreeParent().findChildByType(RapidTokenSets.KEYWORDS);
+            if (keyword != null) {
+                if (child.getStartOffsetInParent() < keyword.getStartOffsetInParent()) {
+                    return Indent.getNoneIndent();
+                } else {
+                    return Indent.getNormalIndent();
+                }
+            }
+        }
         if (parentType == MODULE) {
             if (RapidTokenSets.SYMBOLS.contains(elementType)) {
                 return commonSettings.DO_NOT_INDENT_TOP_LEVEL_CLASS_MEMBERS ? Indent.getNoneIndent() : Indent.getNormalIndent();
@@ -201,6 +211,12 @@ public class RapidBlock extends AbstractBlock {
                 return customSettings.INDENT_CASE_FROM_TEST_STATEMENT ? Indent.getNormalIndent() : Indent.getNoneIndent();
             }
         }
+        if (elementType == STATEMENT_LIST) {
+            RapidStatementList statementList = child.getPsi(RapidStatementList.class);
+            if (statementList.getAttribute() != StatementListType.STATEMENT_LIST) {
+                return customSettings.INDENT_ROUTINE_STATEMENT_LIST ? Indent.getNormalIndent() : Indent.getNoneIndent();
+            }
+        }
         if (TokenSet.create(IF_STATEMENT, FOR_STATEMENT, WHILE_STATEMENT, TEST_CASE_STATEMENT, ROUTINE, ALIAS).contains(parentType)) {
             return Indent.getNoneIndent();
         }
@@ -209,12 +225,6 @@ public class RapidBlock extends AbstractBlock {
         }
         if (parentType == STATEMENT_LIST) {
             return Indent.getNormalIndent();
-        }
-        if (elementType == STATEMENT_LIST) {
-            RapidStatementList statementList = child.getPsi(RapidStatementList.class);
-            if (statementList.getAttribute() != StatementListType.STATEMENT_LIST) {
-                return customSettings.INDENT_ROUTINE_STATEMENT_LIST ? Indent.getNormalIndent() : Indent.getNoneIndent();
-            }
         }
         if (parentType == FIELD) {
             return Indent.getContinuationWithoutFirstIndent(indentOptions.USE_RELATIVE_INDENTS);

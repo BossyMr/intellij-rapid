@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class HeavyNetworkManager implements NetworkManager, TrackableNetworkManager {
+public class HeavyNetworkManager implements NetworkManager {
 
     private static final @NotNull Logger logger = LoggerFactory.getLogger(NetworkAction.class);
     private final @NotNull NetworkClient networkClient;
@@ -44,8 +44,9 @@ public class HeavyNetworkManager implements NetworkManager, TrackableNetworkMana
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull GenericType<T> type, @NotNull NetworkRequest request) {
+    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull NetworkRequest<T> request) {
         return () -> {
+            GenericType<T> type = request.getType();
             if (type.getRawType().equals(List.class)) {
                 ParameterizedType parameterizedType = (ParameterizedType) type.getType();
                 Type typeArgument = parameterizedType.getActualTypeArguments()[0];
@@ -140,11 +141,11 @@ public class HeavyNetworkManager implements NetworkManager, TrackableNetworkMana
     }
 
     @Override
-    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull GenericType<T> responseType, @NotNull NetworkRequest request) {
+    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull NetworkRequest<T> request) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
-        return createQuery(this, responseType, request);
+        return createQuery(this, request);
     }
 
     @Override

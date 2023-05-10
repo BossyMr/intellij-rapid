@@ -1,5 +1,6 @@
 package com.bossymr.network.client;
 
+import com.bossymr.network.GenericType;
 import com.bossymr.network.MultiMap;
 import com.bossymr.network.SubscriptionEntity;
 import okhttp3.Request;
@@ -81,10 +82,8 @@ public class SubscriptionGroup {
                 start();
             } else {
                 logger.atDebug().log("Updating SubscriptionGroup '{}'", getEntities());
-                NetworkRequest request = new NetworkRequest()
-                        .setMethod("PUT")
-                        .setPath(path)
-                        .addFields(getBody(getEntities()));
+                NetworkRequest<Void> request = new NetworkRequest<>(FetchMethod.PUT, path, GenericType.of(Void.class));
+                request.getFields().putAll(getBody(getEntities()));
                 networkClient.send(request).close();
             }
         } finally {
@@ -94,10 +93,8 @@ public class SubscriptionGroup {
 
     private void start() throws IOException, InterruptedException {
         logger.atDebug().log("Starting SubscriptionGroup '{}'", getEntities());
-        NetworkRequest request = new NetworkRequest()
-                .setMethod("POST")
-                .setPath(URI.create("/subscription"))
-                .addFields(getBody(entities));
+        NetworkRequest<Void> request = new NetworkRequest<>(FetchMethod.POST, URI.create("/subscription"), GenericType.of(Void.class));
+        request.getFields().putAll(getBody(entities));
         ResponseModel model;
         try (Response response = networkClient.send(request)) {
             model = ResponseModel.convert(response.body().bytes());
@@ -147,9 +144,7 @@ public class SubscriptionGroup {
         if (path == null || webSocket == null) {
             return;
         }
-        NetworkRequest request = new NetworkRequest()
-                .setMethod("DELETE")
-                .setPath(path);
+        NetworkRequest<Void> request = new NetworkRequest<>(FetchMethod.DELETE, path, GenericType.of(Void.class));
         this.path = null;
         try {
             networkClient.send(request).close();

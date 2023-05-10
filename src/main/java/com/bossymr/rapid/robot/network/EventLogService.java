@@ -3,8 +3,8 @@ package com.bossymr.rapid.robot.network;
 import com.bossymr.network.NetworkQuery;
 import com.bossymr.network.annotations.Argument;
 import com.bossymr.network.annotations.Fetch;
-import com.bossymr.network.annotations.FetchMethod;
 import com.bossymr.network.annotations.Service;
+import com.bossymr.network.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

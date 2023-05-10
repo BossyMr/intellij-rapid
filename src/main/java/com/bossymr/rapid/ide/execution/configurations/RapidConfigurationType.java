@@ -33,7 +33,7 @@ public class RapidConfigurationType implements ConfigurationType {
 
     @Override
     public @NotNull Icon getIcon() {
-        return RapidIcons.ROBOT_ICON;
+        return RapidIcons.ROBOT;
     }
 
     @Override

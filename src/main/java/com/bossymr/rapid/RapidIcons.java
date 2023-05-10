@@ -4,11 +4,11 @@ import com.intellij.icons.AllIcons;
 
 import javax.swing.*;
 
-public class RapidIcons {
+public final class RapidIcons {
 
     public static final Icon ROBOT_TOOL_WINDOW = AllIcons.Toolwindows.ToolWindowServices;
-    public static final Icon ROBOT_ICON = AllIcons.Nodes.Project;
-    public static final Icon ROBOT_DIRECTORY = AllIcons.Nodes.Package;
+    public static final Icon ROBOT = AllIcons.Nodes.Project;
+    public static final Icon DIRECTORY = AllIcons.Nodes.Package;
     public static final Icon RAPID = AllIcons.FileTypes.Java;
     public static final Icon TASK = AllIcons.Nodes.Package;
     public static final Icon MODULE = AllIcons.Nodes.Class;

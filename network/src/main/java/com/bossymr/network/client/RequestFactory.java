@@ -42,7 +42,7 @@ public class RequestFactory {
         for (Annotation annotation : method.getAnnotations()) {
             if (annotation instanceof Fetch request) {
                 if (method.getReturnType().isAssignableFrom(NetworkQuery.class)) {
-                    return createNetworkCall(request.method().name(), path + request.value(), request.arguments(), proxy, method, args);
+                    return createNetworkCall(request.method(), path + request.value(), request.arguments(), proxy, method, args);
                 }
                 throw new ProxyException("Method '" + method + "' is annotated as '@NetworkQuery' but returns '" + method.getReturnType() + "', it should return '" + NetworkQuery.class.getName() + "'");
             }
@@ -59,7 +59,7 @@ public class RequestFactory {
         throw new ProxyException("Cannot handle method '" + method.getName() + "' in '" + type.getName() + "'");
     }
 
-    private @NotNull NetworkQuery<?> createNetworkCall(@NotNull String command, @NotNull String path, @NotNull String[] arguments, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
+    private @NotNull NetworkQuery<?> createNetworkCall(@NotNull FetchMethod command, @NotNull String path, @NotNull String @NotNull [] arguments, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         MultiMap<String, String> collected = collect(method, args, annotation -> annotation instanceof Argument argument ? argument.value() : null);
         for (String argument : arguments) {
             String key = argument.split("=")[0];
@@ -71,13 +71,11 @@ public class RequestFactory {
             }
             collected.add(key, value);
         }
-        NetworkRequest request = new NetworkRequest()
-                .setMethod(command)
-                .setPath(URI.create(interpolate(path, proxy, method, args)))
-                .addFields(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
-                .addArguments(collected);
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        return manager.createQuery(GenericType.of(returnType), request);
+        NetworkRequest<?> request = new NetworkRequest<>(command, URI.create(interpolate(path, proxy, method, args)), GenericType.of(returnType));
+        request.putArguments(collected);
+        request.getFields().putAll(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null));
+        return manager.createQuery(request);
     }
 
     private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkQuery(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {

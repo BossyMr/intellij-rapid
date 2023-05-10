@@ -72,7 +72,7 @@ public class RapidCreateFileAction extends CreateFileFromTemplateAction implemen
         if (modules.size() != 1) return null;
         PhysicalModule module = modules.get(0);
         RapidAttributeList attributeList = module.getAttributeList();
-        if (attributeList.getLastChild() != null) {
+        if (attributeList != null) {
             return attributeList.getLastChild();
         } else {
             return module.getNameIdentifier();

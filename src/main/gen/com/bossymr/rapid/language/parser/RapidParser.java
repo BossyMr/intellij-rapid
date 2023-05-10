@@ -254,43 +254,34 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // [!(<<eof>> | 'ENDMODULE') '(' attribute (attribute_list_tail)* ')']
+  // !(<<eof>> | 'ENDMODULE') '(' attribute (attribute_list_tail)* ')'
   public static boolean attribute_list(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "attribute_list")) return false;
-    Marker marker_ = enter_section_(builder_, level_, _NONE_, ATTRIBUTE_LIST, "<attribute list>");
-    attribute_list_0(builder_, level_ + 1);
-    exit_section_(builder_, level_, marker_, true, false, null);
-    return true;
-  }
-
-  // !(<<eof>> | 'ENDMODULE') '(' attribute (attribute_list_tail)* ')'
-  private static boolean attribute_list_0(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "attribute_list_0")) return false;
     boolean result_, pinned_;
-    Marker marker_ = enter_section_(builder_, level_, _NONE_);
-    result_ = attribute_list_0_0(builder_, level_ + 1);
+    Marker marker_ = enter_section_(builder_, level_, _NONE_, ATTRIBUTE_LIST, "<attribute list>");
+    result_ = attribute_list_0(builder_, level_ + 1);
     result_ = result_ && consumeToken(builder_, LPARENTH);
     pinned_ = result_; // pin = 2
     result_ = result_ && report_error_(builder_, attribute(builder_, level_ + 1));
-    result_ = pinned_ && report_error_(builder_, attribute_list_0_3(builder_, level_ + 1)) && result_;
+    result_ = pinned_ && report_error_(builder_, attribute_list_3(builder_, level_ + 1)) && result_;
     result_ = pinned_ && consumeToken(builder_, RPARENTH) && result_;
     exit_section_(builder_, level_, marker_, result_, pinned_, null);
     return result_ || pinned_;
   }
 
   // !(<<eof>> | 'ENDMODULE')
-  private static boolean attribute_list_0_0(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "attribute_list_0_0")) return false;
+  private static boolean attribute_list_0(PsiBuilder builder_, int level_) {
+    if (!recursion_guard_(builder_, level_, "attribute_list_0")) return false;
     boolean result_;
     Marker marker_ = enter_section_(builder_, level_, _NOT_);
-    result_ = !attribute_list_0_0_0(builder_, level_ + 1);
+    result_ = !attribute_list_0_0(builder_, level_ + 1);
     exit_section_(builder_, level_, marker_, result_, false, null);
     return result_;
   }
 
   // <<eof>> | 'ENDMODULE'
-  private static boolean attribute_list_0_0_0(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "attribute_list_0_0_0")) return false;
+  private static boolean attribute_list_0_0(PsiBuilder builder_, int level_) {
+    if (!recursion_guard_(builder_, level_, "attribute_list_0_0")) return false;
     boolean result_;
     Marker marker_ = enter_section_(builder_);
     result_ = eof(builder_, level_ + 1);
@@ -300,19 +291,19 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   // (attribute_list_tail)*
-  private static boolean attribute_list_0_3(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "attribute_list_0_3")) return false;
+  private static boolean attribute_list_3(PsiBuilder builder_, int level_) {
+    if (!recursion_guard_(builder_, level_, "attribute_list_3")) return false;
     while (true) {
       int pos_ = current_position_(builder_);
-      if (!attribute_list_0_3_0(builder_, level_ + 1)) break;
-      if (!empty_element_parsed_guard_(builder_, "attribute_list_0_3", pos_)) break;
+      if (!attribute_list_3_0(builder_, level_ + 1)) break;
+      if (!empty_element_parsed_guard_(builder_, "attribute_list_3", pos_)) break;
     }
     return true;
   }
 
   // (attribute_list_tail)
-  private static boolean attribute_list_0_3_0(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "attribute_list_0_3_0")) return false;
+  private static boolean attribute_list_3_0(PsiBuilder builder_, int level_) {
+    if (!recursion_guard_(builder_, level_, "attribute_list_3_0")) return false;
     boolean result_;
     Marker marker_ = enter_section_(builder_);
     result_ = attribute_list_tail(builder_, level_ + 1);
@@ -1301,7 +1292,7 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // 'MODULE' identifier attribute_list module_body 'ENDMODULE'
+  // 'MODULE' identifier attribute_list? module_body 'ENDMODULE'
   public static boolean module(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "module")) return false;
     if (!nextTokenIs(builder_, MODULE_KEYWORD)) return false;
@@ -1310,12 +1301,19 @@ public class RapidParser implements PsiParser, LightPsiParser {
     result_ = consumeToken(builder_, MODULE_KEYWORD);
     pinned_ = result_; // pin = 1
     result_ = result_ && report_error_(builder_, identifier(builder_, level_ + 1));
-    result_ = pinned_ && report_error_(builder_, attribute_list(builder_, level_ + 1)) && result_;
+    result_ = pinned_ && report_error_(builder_, module_2(builder_, level_ + 1)) && result_;
     result_ = pinned_ && report_error_(builder_, module_body(builder_, level_ + 1)) && result_;
     result_ = pinned_ && consumeToken(builder_, ENDMODULE_KEYWORD) && result_;
     register_hook_(builder_, LEFT_BINDER, ADJACENT_LINE_COMMENTS);
     exit_section_(builder_, level_, marker_, result_, pinned_, null);
     return result_ || pinned_;
+  }
+
+  // attribute_list?
+  private static boolean module_2(PsiBuilder builder_, int level_) {
+    if (!recursion_guard_(builder_, level_, "module_2")) return false;
+    attribute_list(builder_, level_ + 1);
+    return true;
   }
 
   /* ********************************************************** */
@@ -2129,14 +2127,26 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // inner_statement_list
+  // (COMMENT)* inner_statement_list
   public static boolean statement_list(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "statement_list")) return false;
     boolean result_;
     Marker marker_ = enter_section_(builder_, level_, _NONE_, STATEMENT_LIST, "<statement list>");
-    result_ = inner_statement_list(builder_, level_ + 1);
+    result_ = statement_list_0(builder_, level_ + 1);
+    result_ = result_ && inner_statement_list(builder_, level_ + 1);
     exit_section_(builder_, level_, marker_, result_, false, null);
     return result_;
+  }
+
+  // (COMMENT)*
+  private static boolean statement_list_0(PsiBuilder builder_, int level_) {
+    if (!recursion_guard_(builder_, level_, "statement_list_0")) return false;
+    while (true) {
+      int pos_ = current_position_(builder_);
+      if (!consumeToken(builder_, COMMENT)) break;
+      if (!empty_element_parsed_guard_(builder_, "statement_list_0", pos_)) break;
+    }
+    return true;
   }
 
   /* ********************************************************** */
