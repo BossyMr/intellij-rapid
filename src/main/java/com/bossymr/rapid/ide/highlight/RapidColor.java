@@ -48,9 +48,6 @@ public enum RapidColor {
     LOCAL_VARIABLE(RapidBundle.messagePointer("settings.rapid.attribute.descriptor.local.variable"), DefaultLanguageHighlighterColors.LOCAL_VARIABLE),
     REASSIGNED_LOCAL_VARIABLE(RapidBundle.messagePointer("settings.rapid.attribute.descriptor.reassigned.local.variable"), DefaultLanguageHighlighterColors.REASSIGNED_LOCAL_VARIABLE),
 
-    FUNCTION_CALL(RapidBundle.messagePointer("settings.rapid.attribute.descriptor.function.call"), DefaultLanguageHighlighterColors.FUNCTION_CALL),
-    PROCEDURE_CALL(RapidBundle.messagePointer("settings.rapid.attribute.descriptor.procedure.call"), DefaultLanguageHighlighterColors.FUNCTION_CALL),
-    TRAP_CALL(RapidBundle.messagePointer("settings.rapid.attribute.descriptor.trap.call"), DefaultLanguageHighlighterColors.FUNCTION_CALL),
 
     PARAMETER(RapidBundle.messagePointer("settings.rapid.attribute.descriptor.parameter"), DefaultLanguageHighlighterColors.PARAMETER),
     OPTIONAL_PARAMETER(RapidBundle.messagePointer("settings.rapid.attribute.descriptor.optional.parameter"), PARAMETER.textAttributesKey),

@@ -1,4 +1,4 @@
-package com.bossymr.rapid;
+package com.bossymr.rapid.ide;
 
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.codeInsight.editorActions.SimpleTokenSetQuoteHandler;

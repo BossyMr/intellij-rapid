@@ -46,20 +46,20 @@ public class RapidBlock extends AbstractBlock {
         this.spacingBuilder = spacingBuilder;
     }
 
-    public static @NotNull WrapType getWrapType(int wrapType) {
+    private @NotNull RapidBlock createBlock(@NotNull ASTNode node,
+                                            @Nullable Indent indent,
+                                            @Nullable Wrap wrap,
+                                            @Nullable Alignment alignment) {
+        return new RapidBlock(node, indent, wrap, alignment, customSettings, commonSettings, spacingBuilder);
+    }
+
+    private @NotNull WrapType getWrapType(int wrapType) {
         return switch (wrapType) {
             case CommonCodeStyleSettings.WRAP_ALWAYS -> WrapType.ALWAYS;
             case CommonCodeStyleSettings.WRAP_AS_NEEDED -> WrapType.NORMAL;
             case CommonCodeStyleSettings.DO_NOT_WRAP -> WrapType.NONE;
             default -> WrapType.CHOP_DOWN_IF_LONG;
         };
-    }
-
-    private @NotNull RapidBlock createBlock(@NotNull ASTNode node,
-                                            @Nullable Indent indent,
-                                            @Nullable Wrap wrap,
-                                            @Nullable Alignment alignment) {
-        return new RapidBlock(node, indent, wrap, alignment, customSettings, commonSettings, spacingBuilder);
     }
 
     @Override
@@ -74,7 +74,7 @@ public class RapidBlock extends AbstractBlock {
 
     @Override
     public @Nullable String getDebugName() {
-        return getClass().getSimpleName() + ":" + getNode().getElementType();
+        return "RapidBlock:" + getNode().getElementType();
     }
 
     @Override
@@ -96,40 +96,50 @@ public class RapidBlock extends AbstractBlock {
             return buildParenthesisedBlock(WrapType.NONE, LBRACKET, RBRACKET, commonSettings.ALIGN_MULTILINE_PARENTHESIZED_EXPRESSION);
         }
         List<Block> blocks = new ArrayList<>();
-        Alignment childAlignment = null;
-        if (parentType == BINARY_EXPRESSION) {
-            if (commonSettings.ALIGN_MULTILINE_BINARY_OPERATION) {
-                childAlignment = Alignment.createAlignment();
-            }
-        }
+        // Each child has the same alignment, so it must be created outside the for-loop.
+        Alignment childAlignment = getChildAlignment();
         for (ASTNode child : getNode().getChildren(TokenSet.ANY)) {
-            if (FormatterUtil.isWhitespaceOrEmpty(child)) continue;
+            if (FormatterUtil.isWhitespaceOrEmpty(child)) {
+                continue;
+            }
             Indent childIndent = getChildIndent(child);
             Wrap childWrap = getChildWrap(child);
-
             Block block = createBlock(child, childIndent, childWrap, childAlignment);
             blocks.add(block);
         }
         return blocks;
     }
 
-    private @NotNull List<Block> buildParenthesisedBlock(WrapType wrapType, @NotNull IElementType left,
-                                                         @NotNull IElementType right, boolean align) {
+    private @NotNull List<Block> buildParenthesisedBlock(@NotNull WrapType wrapType, @NotNull IElementType left, @NotNull IElementType right, boolean shouldAlign) {
         List<Block> blocks = new ArrayList<>();
         Wrap wrap = Wrap.createWrap(wrapType, false);
-        Alignment alignment = align ? Alignment.createAlignment() : null;
+        Alignment alignment = shouldAlign ? Alignment.createAlignment() : null;
         for (ASTNode child : getNode().getChildren(TokenSet.ANY)) {
             IElementType elementType = child.getElementType();
-            if (FormatterUtil.isWhitespaceOrEmpty(child)) continue;
+            if (FormatterUtil.isWhitespaceOrEmpty(child)) {
+                continue;
+            }
             if (TokenSet.create(left, right).contains(elementType)) {
+                // Parentheses should not be aligned, wrapped or indented.
                 blocks.add(createBlock(child, Indent.getNoneIndent(), null, null));
             } else if (TokenSet.create(COMMA, COMMENT).contains(elementType)) {
+                // Commas should not be aligned or wrapped, but should be indented.
                 blocks.add(createBlock(child, Indent.getContinuationWithoutFirstIndent(), null, null));
             } else {
+                // Everything else should be aligned, wrapped and indented, unless it's the first element.
                 blocks.add(createBlock(child, Indent.getContinuationWithoutFirstIndent(), wrap, alignment));
             }
         }
         return blocks;
+    }
+
+    private @Nullable Alignment getChildAlignment() {
+        if (getNode().getElementType() == BINARY_EXPRESSION) {
+            if (commonSettings.ALIGN_MULTILINE_BINARY_OPERATION) {
+                return Alignment.createAlignment();
+            }
+        }
+        return null;
     }
 
     private @Nullable Wrap getChildWrap(@NotNull ASTNode child) {
@@ -187,17 +197,19 @@ public class RapidBlock extends AbstractBlock {
         final IElementType parentType = getNode().getElementType();
         final IElementType elementType = child.getElementType();
         CommonCodeStyleSettings.IndentOptions indentOptions = commonSettings.getIndentOptions();
-        if (indentOptions == null) return null;
+        if (indentOptions == null) {
+            return null;
+        }
         if (RapidTokenSets.KEYWORDS.contains(elementType)) {
+            // Do not indent the keyword, as the keyword might create a new symbol, which itself would be indented.
             return Indent.getNoneIndent();
         }
         if (elementType == COMMENT) {
+            // If the comment is at the start of the element, it should not be indented.
             ASTNode keyword = child.getTreeParent().findChildByType(RapidTokenSets.KEYWORDS);
             if (keyword != null) {
                 if (child.getStartOffsetInParent() < keyword.getStartOffsetInParent()) {
                     return Indent.getNoneIndent();
-                } else {
-                    return Indent.getNormalIndent();
                 }
             }
         }
@@ -217,7 +229,8 @@ public class RapidBlock extends AbstractBlock {
                 return customSettings.INDENT_ROUTINE_STATEMENT_LIST ? Indent.getNormalIndent() : Indent.getNoneIndent();
             }
         }
-        if (TokenSet.create(IF_STATEMENT, FOR_STATEMENT, WHILE_STATEMENT, TEST_CASE_STATEMENT, ROUTINE, ALIAS).contains(parentType)) {
+        if (TokenSet.create(IF_STATEMENT, FOR_STATEMENT, WHILE_STATEMENT, TEST_CASE_STATEMENT, ROUTINE).contains(parentType)) {
+            // These elements contain a statement list (or a test-case), which will indent its children.
             return Indent.getNoneIndent();
         }
         if (parentType == RECORD) {
@@ -226,15 +239,12 @@ public class RapidBlock extends AbstractBlock {
         if (parentType == STATEMENT_LIST) {
             return Indent.getNormalIndent();
         }
-        if (parentType == FIELD) {
+        if (parentType == FIELD || parentType == ALIAS) {
+            // VAR string field :=
+            //     "Hello, World!";
             return Indent.getContinuationWithoutFirstIndent(indentOptions.USE_RELATIVE_INDENTS);
         }
         return null;
-    }
-
-    @Override
-    public @Nullable Indent getIndent() {
-        return indent;
     }
 
     @Override
@@ -248,9 +258,14 @@ public class RapidBlock extends AbstractBlock {
         if (TokenSet.create(MODULE, IF_STATEMENT, FOR_STATEMENT, WHILE_STATEMENT, TEST_STATEMENT, ROUTINE, STATEMENT_LIST).contains(parentType)) {
             return Indent.getNormalIndent();
         }
-        if (parentType == FIELD) {
+        if (parentType == FIELD || parentType == ALIAS) {
             return Indent.getContinuationWithoutFirstIndent(indentOptions.USE_RELATIVE_INDENTS);
         }
         return null;
+    }
+
+    @Override
+    public @Nullable Indent getIndent() {
+        return indent;
     }
 }

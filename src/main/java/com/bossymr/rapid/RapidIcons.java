@@ -4,6 +4,12 @@ import com.intellij.icons.AllIcons;
 
 import javax.swing.*;
 
+/**
+ * {@code RapidIcons} contains all icons used by this plugin.
+ *
+ * @implNote Preferably, this class should be an enum, however, it must be a class in order for icons to be used in
+ * {@code plugin.xml}.
+ */
 public final class RapidIcons {
 
     public static final Icon ROBOT_TOOL_WINDOW = AllIcons.Toolwindows.ToolWindowServices;
@@ -29,5 +35,4 @@ public final class RapidIcons {
     private RapidIcons() {
         throw new AssertionError();
     }
-
 }

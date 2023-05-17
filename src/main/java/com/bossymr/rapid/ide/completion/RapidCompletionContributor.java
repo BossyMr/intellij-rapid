@@ -59,6 +59,7 @@ public class RapidCompletionContributor extends CompletionContributor {
             }
         }
         // TODO: 2023-05-01 Add support for smart completion type by checking symbol type against expected type
+        // TODO: 2023-05-17 Add support for inserting new parameters by their parameter name - this might need an option on whether to keep parameter name for required parameters
         variants.stream()
                 .distinct()
                 .filter(symbol -> symbol.getName() != null)

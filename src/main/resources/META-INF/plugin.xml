@@ -22,6 +22,8 @@
 
         <!-- Syntax Highlighting -->
 
+        <annotator language="RAPID" implementationClass="com.bossymr.rapid.ide.highlight.RapidHighlighterAnnotator"/>
+
         <colorSettingsPage implementation="com.bossymr.rapid.ide.highlight.RapidColorSettingsPage"/>
 
         <lang.syntaxHighlighterFactory language="RAPID"
@@ -79,7 +81,7 @@
 
         <lang.braceMatcher language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidBraceMatcher"/>
 
-        <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.RapidQuoteHandler"/>
+        <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidQuoteHandler"/>
 
         <!-- Execution -->
 

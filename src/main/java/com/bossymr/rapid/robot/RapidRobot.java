@@ -48,7 +48,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class RapidRobot implements Disposable {
@@ -63,9 +62,7 @@ public class RapidRobot implements Disposable {
 
     private RapidRobot(@NotNull State state) {
         if (state.name == null || state.path == null || state.symbols == null || state.cache == null) {
-            String symbols = "(symbols: " + (state.symbols != null ? state.symbols.size() : "null") + ")";
-            String cache = "(cache: " + (state.cache != null ? state.cache.size() : "null") + ")";
-            throw new IllegalArgumentException("State '" + state + "'" + symbols + " " + cache + " is invalid");
+            throw new IllegalArgumentException("State '" + state + " is invalid");
         }
         setState(state);
         this.symbols = SymbolConverter.getSymbols(state.symbols.stream()
@@ -79,6 +76,7 @@ public class RapidRobot implements Disposable {
      * Create a new robot with the specified state.
      *
      * @return the robot.
+     * @throws IllegalArgumentException if the specified state is invalid.
      */
     public static @NotNull RapidRobot create(@NotNull State state) throws IllegalArgumentException {
         return new RapidRobot(state);
@@ -90,6 +88,8 @@ public class RapidRobot implements Disposable {
      * @param path the path to the robot.
      * @param credentials the credentials to authenticate with.
      * @return the robot.
+     * @throws IOException if an I/O error occurs.
+     * @throws InterruptedException if the current thread is interrupted.
      */
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         setCredentials(path, credentials);
@@ -288,7 +288,7 @@ public class RapidRobot implements Disposable {
             finalDirectory = PathManager.getSystemDir().toFile();
             List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
             for (Task task : tasks) {
-                File temporaryTask = directory.getFile().toPath().resolve(task.getName()).toFile();
+                File temporaryTask = directory.getDirectory().toPath().resolve(task.getName()).toFile();
                 File finalTask = Path.of(finalDirectory.getPath(), "robot").resolve(task.getName()).toFile();
                 if (!(WriteAction.computeAndWait(() -> FileUtil.createDirectory(temporaryTask)))) {
                     throw new IllegalStateException();
@@ -310,7 +310,7 @@ public class RapidRobot implements Disposable {
                 if (directoryChild.exists()) {
                     FileUtil.delete(directoryChild);
                 }
-                FileUtil.copyDirContent(directory.getFile(), Path.of(finalDirectory.getPath(), "robot").toFile());
+                FileUtil.copyDirContent(directory.getDirectory(), Path.of(finalDirectory.getPath(), "robot").toFile());
                 for (RapidTask task : updated) {
                     for (File taskFile : task.getFiles()) {
                         VirtualFile virtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(taskFile.toPath());
@@ -339,14 +339,14 @@ public class RapidRobot implements Disposable {
         try (CloseableDirectory temporaryDirectory = new CloseableDirectory("upload")) {
             Task remote = manager.createService(TaskService.class).getTask(task.getName()).get();
             Program program = remote.getProgram().get();
-            File file = temporaryDirectory.getFile().toPath().resolve(program.getName() + ".pgf").toFile();
+            File file = temporaryDirectory.getDirectory().toPath().resolve(program.getName() + ".pgf").toFile();
             WriteAction.runAndWait(() -> {
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                     writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
                     writer.write("<Program>\r\n");
                     for (File module : modules) {
                         writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
-                        FileUtil.copy(module, temporaryDirectory.getFile().toPath().resolve(module.getName()).toFile());
+                        FileUtil.copy(module, temporaryDirectory.getDirectory().toPath().resolve(module.getName()).toFile());
                     }
                     writer.write("</Program>");
                 }
@@ -358,6 +358,14 @@ public class RapidRobot implements Disposable {
         }
     }
 
+    /**
+     * Reconnect to this robot with persisted credentials.
+     *
+     * @return the connection to the robot.
+     * @throws IllegalStateException if no credentials are persisted for this robot.
+     * @throws IOException if an I/O error occurs.
+     * @throws InterruptedException if the current thread is interrupted.
+     */
     public @NotNull NetworkManager reconnect() throws IllegalStateException, IOException, InterruptedException {
         URI path = getPath();
         Credentials credentials = getCredentials(path);
@@ -367,6 +375,14 @@ public class RapidRobot implements Disposable {
         return reconnect(path, credentials);
     }
 
+    /**
+     * Reconnect to this robot with the specified credentials.
+     *
+     * @param credentials the new credentials.
+     * @return the connection to the robot.
+     * @throws IOException if an I/O error occurs.
+     * @throws InterruptedException if the current thread is interrupted.
+     */
     public @NotNull NetworkManager reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException {
         URI path = getPath();
         setCredentials(path, credentials);
@@ -416,17 +432,28 @@ public class RapidRobot implements Disposable {
         return tasks;
     }
 
-    public @NotNull URI getPath() throws IllegalArgumentException {
+    /**
+     * Returns the path to this robot.
+     *
+     * @return the path to this robot.
+     */
+    public @NotNull URI getPath() {
         if (state.path == null) {
             throw new IllegalStateException("State '" + state + "' is invalid");
         }
         try {
             return new URI(state.path);
         } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("State '" + state.path + "' is invalid", e);
+            throw new IllegalStateException("State '" + state.path + "' is invalid", e);
         }
     }
 
+    /**
+     * Disconnects from this robot. If this robot is not connected, this method will return.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws InterruptedException if the current thread is interrupted.
+     */
     public void disconnect() throws IOException, InterruptedException {
         if (manager == null) {
             return;
@@ -446,7 +473,9 @@ public class RapidRobot implements Disposable {
     }
 
     /**
-     * A model which represents the persisted state of a {@code RapidRobot2}.
+     * A model which represents the persisted state of a {@code RapidRobot}.
+     * <p>
+     * Each field might be represented by {@code null} if the field is not given a value when initialized.
      */
     public static class State {
 
@@ -466,9 +495,9 @@ public class RapidRobot implements Disposable {
         public @Nullable Set<Entity> symbols;
 
         /**
-         * Unfortunately, all symbols cannot be automatically retrieved. As such, each queried symbol which has not
-         * already been persisted is queried manually. To avoid duplicate queries, if a symbol is not found it is added
-         * a cache, and should not be queried again.
+         * Due to a potential bug on the remote robot, all symbols are not returned when querying for all symbols. As
+         * such, all symbols which are not resolved are queried individually, which appears to be working accurately. To
+         * avoid repeatedly querying the same symbol, a symbols name is added to this list if it was not found.
          */
         public @Nullable Set<String> cache;
 
@@ -488,9 +517,9 @@ public class RapidRobot implements Disposable {
         @Override
         public String toString() {
             return "State{" +
-                    "name='" + name + '\'' +
-                    ", path='" + path + '\'' +
-                    '}';
+                   "name='" + name + '\'' +
+                   ", path='" + path + '\'' +
+                   '}';
         }
     }
 
@@ -519,6 +548,9 @@ public class RapidRobot implements Disposable {
          */
         public @Nullable Map<String, String> links;
 
+        /**
+         * This constructor is used for reflection to be able to create a new empty object and should not be used.
+         */
         public Entity() {}
 
         private Entity(@NotNull String title, @NotNull String type, @NotNull Map<String, String> fields, @NotNull Map<String, String> links) {
@@ -544,11 +576,9 @@ public class RapidRobot implements Disposable {
         }
 
         private static @NotNull Entity convert(EntityModel model) {
-            return new Entity(model.title(), model.type(), model.properties(), convert(model.references(), k -> k, URI::toString));
-        }
-
-        private static <OK, OV, IK, IV> @NotNull Map<OK, OV> convert(@NotNull Map<IK, IV> map, @NotNull Function<IK, OK> key, @NotNull Function<IV, OV> value) {
-            return map.entrySet().stream().collect(Collectors.toMap(entry -> key.apply(entry.getKey()), entry -> value.apply(entry.getValue())));
+            Map<String, String> references = new HashMap<>();
+            model.references().forEach((name, value) -> references.put(name, value.toString()));
+            return new Entity(model.title(), model.type(), model.properties(), Map.copyOf(references));
         }
 
         /**
@@ -567,7 +597,9 @@ public class RapidRobot implements Disposable {
                  */
                 return null;
             }
-            EntityModel model = new EntityModel(title, type, convert(links, k -> k, URI::create), fields);
+            Map<String, URI> references = new HashMap<>();
+            links.forEach((name, value) -> references.put(name, URI.create(value)));
+            EntityModel model = new EntityModel(title, type, Map.copyOf(references), Map.copyOf(fields));
             if (manager == null) {
                 return NetworkManager.createLightEntity(entityType, model);
             } else {
@@ -591,11 +623,11 @@ public class RapidRobot implements Disposable {
         @Override
         public String toString() {
             return "Entity{" +
-                    "title='" + title + '\'' +
-                    ", type='" + type + '\'' +
-                    ", fields=" + fields +
-                    ", links=" + links +
-                    '}';
+                   "title='" + title + '\'' +
+                   ", type='" + type + '\'' +
+                   ", fields=" + fields +
+                   ", links=" + links +
+                   '}';
         }
 
         @Override
