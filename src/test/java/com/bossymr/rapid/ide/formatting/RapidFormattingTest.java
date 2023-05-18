@@ -1,6 +1,6 @@
 package com.bossymr.rapid.ide.formatting;
 
-import com.bossymr.rapid.ide.codeStyle.RapidCodeStyleSettings;
+import com.bossymr.rapid.ide.editor.formatting.RapidCodeStyleSettings;
 import com.bossymr.rapid.language.RapidFileType;
 import com.intellij.application.options.CodeStyle;
 import com.intellij.openapi.command.WriteCommandAction;

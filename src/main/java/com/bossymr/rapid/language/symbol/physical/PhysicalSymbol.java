@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.ide.documentation.PhysicalDocumentationTarget;
-import com.bossymr.rapid.ide.refactoring.RapidSymbolRenameTarget;
+import com.bossymr.rapid.ide.editor.documentation.PhysicalDocumentationTarget;
+import com.bossymr.rapid.ide.editor.refactoring.RapidSymbolRenameTarget;
 import com.bossymr.rapid.language.psi.RapidElement;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.model.Pointer;

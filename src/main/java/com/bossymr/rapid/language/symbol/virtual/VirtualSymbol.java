@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.symbol.virtual;
 
-import com.bossymr.rapid.ide.documentation.VirtualDocumentationTarget;
+import com.bossymr.rapid.ide.editor.documentation.VirtualDocumentationTarget;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.navigation.NavigationTarget;
 import com.intellij.openapi.project.Project;

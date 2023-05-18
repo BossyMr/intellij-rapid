@@ -22,16 +22,17 @@
 
         <!-- Syntax Highlighting -->
 
-        <annotator language="RAPID" implementationClass="com.bossymr.rapid.ide.highlight.RapidHighlighterAnnotator"/>
+        <annotator language="RAPID"
+                   implementationClass="com.bossymr.rapid.ide.editor.highlight.RapidHighlighterAnnotator"/>
 
-        <colorSettingsPage implementation="com.bossymr.rapid.ide.highlight.RapidColorSettingsPage"/>
+        <colorSettingsPage implementation="com.bossymr.rapid.ide.editor.highlight.RapidColorSettingsPage"/>
 
         <lang.syntaxHighlighterFactory language="RAPID"
-                                       implementationClass="com.bossymr.rapid.ide.highlight.RapidHighlighterFactory"/>
+                                       implementationClass="com.bossymr.rapid.ide.editor.highlight.RapidHighlighterFactory"/>
 
         <!-- Inspection -->
 
-        <annotator language="RAPID" implementationClass="com.bossymr.rapid.ide.insight.RapidAnnotator"/>
+        <annotator language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.insight.RapidAnnotator"/>
 
         <!-- Navigation -->
 
@@ -54,34 +55,34 @@
         <!-- Refactoring -->
 
         <lang.refactoringSupport language="RAPID"
-                                 implementationClass="com.bossymr.rapid.ide.refactoring.RapidRefactoringSupportProvider"/>
+                                 implementationClass="com.bossymr.rapid.ide.editor.refactoring.RapidRefactoringSupportProvider"/>
 
         <lang.namesValidator language="RAPID"
-                             implementationClass="com.bossymr.rapid.ide.refactoring.RapidNamesValidator"/>
+                             implementationClass="com.bossymr.rapid.ide.editor.refactoring.RapidNamesValidator"/>
 
         <!-- Completion  -->
 
         <completion.contributor language="RAPID"
-                                implementationClass="com.bossymr.rapid.ide.completion.RapidKeywordCompletionContributor"/>
+                                implementationClass="com.bossymr.rapid.ide.editor.completion.RapidKeywordCompletionContributor"/>
 
         <completion.contributor language="RAPID"
-                                implementationClass="com.bossymr.rapid.ide.completion.RapidCompletionContributor"/>
+                                implementationClass="com.bossymr.rapid.ide.editor.completion.RapidCompletionContributor"/>
 
         <!-- Formatting -->
 
         <langCodeStyleSettingsProvider
-                implementation="com.bossymr.rapid.ide.codeStyle.RapidLanguageCodeStyleSettingsProvider"/>
+                implementation="com.bossymr.rapid.ide.editor.formatting.RapidLanguageCodeStyleSettingsProvider"/>
 
         <lang.formatter language="RAPID"
-                        implementationClass="com.bossymr.rapid.ide.codeStyle.RapidFormattingModelBuilder"/>
+                        implementationClass="com.bossymr.rapid.ide.editor.formatting.RapidFormattingModelBuilder"/>
 
         <!-- Miscellaneous -->
 
-        <lang.commenter language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidCommenter"/>
+        <lang.commenter language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.RapidCommenter"/>
 
-        <lang.braceMatcher language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidBraceMatcher"/>
+        <lang.braceMatcher language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.RapidBraceMatcher"/>
 
-        <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidQuoteHandler"/>
+        <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.RapidQuoteHandler"/>
 
         <!-- Execution -->
 
@@ -89,11 +90,12 @@
 
         <!-- Debugging -->
 
-        <programRunner implementation="com.bossymr.rapid.ide.debugger.RapidDebugRunner"/>
+        <programRunner implementation="com.bossymr.rapid.ide.execution.debugger.RapidDebugRunner"/>
 
-        <xdebugger.settings implementation="com.bossymr.rapid.ide.debugger.settings.RapidDebuggerSettings"/>
+        <xdebugger.settings implementation="com.bossymr.rapid.ide.execution.debugger.settings.RapidDebuggerSettings"/>
 
-        <xdebugger.breakpointType implementation="com.bossymr.rapid.ide.debugger.breakpoints.RapidLineBreakpointType"/>
+        <xdebugger.breakpointType
+                implementation="com.bossymr.rapid.ide.execution.debugger.breakpoints.RapidLineBreakpointType"/>
 
         <!-- Error Handling -->
 
@@ -102,18 +104,18 @@
         <!-- Documentation -->
 
         <platform.backend.documentation.linkHandler
-                implementation="com.bossymr.rapid.ide.documentation.RapidDocumentationTargetProvider"/>
+                implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
 
         <!--suppress PluginXmlValidity -->
         <platform.backend.documentation.symbolTargetProvider
-                implementation="com.bossymr.rapid.ide.documentation.RapidDocumentationTargetProvider"/>
+                implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
 
         <!-- Search -->
 
         <searcher forClass="com.intellij.find.usages.api.UsageSearchParameters"
                   implementationClass="com.bossymr.rapid.ide.search.RapidSymbolUsageSearcher"/>
         <searcher forClass="com.intellij.refactoring.rename.api.RenameUsageSearchParameters"
-                  implementationClass="com.bossymr.rapid.ide.refactoring.RapidRenameUsageSearcher"/>
+                  implementationClass="com.bossymr.rapid.ide.editor.refactoring.RapidRenameUsageSearcher"/>
 
         <!-- PsiElement  -->
 
@@ -162,7 +164,7 @@
         <localInspection language="RAPID" enabledByDefault="true" level="WARNING"
                          groupPath="Rapid" groupKey="inspection.group.declaration.redundancy"
                          bundle="messages.RapidBundle" key="inspection.name.unused.declaration"
-                         implementationClass="com.bossymr.rapid.ide.inspection.UnusedDeclarationInspection"/>
+                         implementationClass="com.bossymr.rapid.ide.editor.insight.inspection.UnusedDeclarationInspection"/>
     </extensions>
 
     <actions>
