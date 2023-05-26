@@ -17,13 +17,13 @@ public interface RapidModule extends RapidSymbol {
         throw new UnsupportedOperationException();
     }
 
-    @NotNull List<RapidVisibleSymbol> getSymbols();
+    @NotNull List<? extends RapidVisibleSymbol> getSymbols();
 
-    @NotNull List<RapidStructure> getStructures();
+    @NotNull List<? extends RapidStructure> getStructures();
 
-    @NotNull List<RapidField> getFields();
+    @NotNull List<? extends RapidField> getFields();
 
-    @NotNull List<RapidRoutine> getRoutines();
+    @NotNull List<? extends RapidRoutine> getRoutines();
 
     @Override
     default @NotNull TargetPresentation getTargetPresentation() {

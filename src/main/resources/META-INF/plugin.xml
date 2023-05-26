@@ -168,6 +168,12 @@
     </extensions>
 
     <actions>
+        <group id="RapidInternal">
+            <action id="ViewFlow" class="com.bossymr.rapid.language.flow.debug.ViewFlowAction"
+                    text="View Flow"/>
+            <add-to-group group-id="Internal"/>
+        </group>
+
         <group id="NewRapid">
             <action id="NewRapidFile" class="com.bossymr.rapid.ide.actions.RapidCreateFileAction"/>
             <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>

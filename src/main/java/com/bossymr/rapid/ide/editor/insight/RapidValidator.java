@@ -321,7 +321,7 @@ public class RapidValidator {
     public void checkOutsideErrorHandler(@NotNull RapidStatement statement, @NotNull String message) {
         RapidStatementList statementList = PsiTreeUtil.getParentOfType(statement, RapidStatementList.class);
         if (statementList == null) return;
-        if (statementList.getAttribute() == StatementListType.ERROR_CLAUSE) {
+        if (statementList.getStatementListType() == StatementListType.ERROR_CLAUSE) {
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, message)
                     .range(statement)
                     .create();
@@ -331,7 +331,7 @@ public class RapidValidator {
     public void checkInsideErrorHandler(@NotNull RapidStatement statement, @NotNull String message) {
         RapidStatementList statementList = PsiTreeUtil.getParentOfType(statement, RapidStatementList.class);
         if (statementList == null) return;
-        if (statementList.getAttribute() != StatementListType.ERROR_CLAUSE) {
+        if (statementList.getStatementListType() != StatementListType.ERROR_CLAUSE) {
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, message)
                     .range(statement)
                     .create();

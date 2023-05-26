@@ -19,7 +19,7 @@ public class RapidStatementListImpl extends PhysicalElement implements RapidStat
     }
 
     @Override
-    public StatementListType getAttribute() {
+    public StatementListType getStatementListType() {
         if (findChildByType(RapidTokenTypes.BACKWARD_KEYWORD) != null) {
             return StatementListType.BACKWARD_CLAUSE;
         } else if (findChildByType(RapidTokenTypes.ERROR_KEYWORD) != null) {

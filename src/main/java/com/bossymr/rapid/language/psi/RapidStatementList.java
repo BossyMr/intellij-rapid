@@ -14,7 +14,7 @@ public interface RapidStatementList extends RapidElement {
      *
      * @return the attribute of this statement list.
      */
-    StatementListType getAttribute();
+    StatementListType getStatementListType();
 
     /**
      * Returns the expression list containing the errors which are handled by this error clause.

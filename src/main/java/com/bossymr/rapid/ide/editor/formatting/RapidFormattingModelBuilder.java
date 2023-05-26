@@ -1,6 +1,5 @@
 package com.bossymr.rapid.ide.editor.formatting;
 
-import com.bossymr.rapid.ide.editor.formatting.formatting.RapidBlock;
 import com.bossymr.rapid.language.RapidLanguage;
 import com.intellij.formatting.*;
 import com.intellij.psi.codeStyle.CodeStyleSettings;

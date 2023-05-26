@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Objects;
 
-public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implements RapidRoutine, PhysicalSymbol {
+public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implements RapidRoutine, PhysicalSymbol, PhysicalVisibleSymbol {
 
     public PhysicalRoutine(@NotNull RapidRoutineStub stub) {
         super(stub, RapidStubElementTypes.ROUTINE);
@@ -80,6 +80,10 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
         return Objects.requireNonNull(statementList);
     }
 
+    public @NotNull List<RapidStatementList> getStatementLists() {
+        return findChildrenByType(RapidElementTypes.STATEMENT_LIST);
+    }
+
     @Override
     public @Nullable List<RapidStatement> getStatements(@NotNull StatementListType statementListType) {
         RapidStatementList statementList = getStatementList(statementListType);
@@ -89,7 +93,7 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     public @Nullable RapidStatementList getStatementList(@NotNull StatementListType statementListType) {
         List<RapidStatementList> statementLists = findChildrenByType(RapidElementTypes.STATEMENT_LIST);
         for (RapidStatementList statementList : statementLists) {
-            if (statementListType == statementList.getAttribute()) {
+            if (statementListType == statementList.getStatementListType()) {
                 return statementList;
             }
         }

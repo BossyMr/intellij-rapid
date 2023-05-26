@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class PhysicalField extends RapidStubElement<RapidFieldStub> implements RapidField, PhysicalVariable {
+public class PhysicalField extends RapidStubElement<RapidFieldStub> implements RapidField, PhysicalVariable, PhysicalVisibleSymbol {
 
     public PhysicalField(@NotNull RapidFieldStub stub) {
         super(stub, RapidStubElementTypes.FIELD);

@@ -1,6 +1,5 @@
-package com.bossymr.rapid.ide.editor.formatting.formatting;
+package com.bossymr.rapid.ide.editor.formatting;
 
-import com.bossymr.rapid.ide.editor.formatting.RapidCodeStyleSettings;
 import com.bossymr.rapid.language.psi.RapidBinaryExpression;
 import com.bossymr.rapid.language.psi.RapidStatementList;
 import com.bossymr.rapid.language.psi.RapidTokenSets;
@@ -225,7 +224,7 @@ public class RapidBlock extends AbstractBlock {
         }
         if (elementType == STATEMENT_LIST) {
             RapidStatementList statementList = child.getPsi(RapidStatementList.class);
-            if (statementList.getAttribute() != StatementListType.STATEMENT_LIST) {
+            if (statementList.getStatementListType() != StatementListType.STATEMENT_LIST) {
                 return customSettings.INDENT_ROUTINE_STATEMENT_LIST ? Indent.getNormalIndent() : Indent.getNoneIndent();
             }
         }

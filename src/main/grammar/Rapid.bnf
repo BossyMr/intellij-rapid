@@ -392,9 +392,13 @@ if_statement ::= 'IF' empty_expression (simple_if_statement_list | compound_if_s
 
 simple_if_statement_list ::= simple_statement | '<SMT>' {elementType=statement_list}
 
-private compound_if_statement ::= 'THEN' statement_list (else_if_statement)* else_statement? 'ENDIF' {pin=1}
+private compound_if_statement ::= 'THEN' statement_list (outer_else_if_statement|else_statement)? 'ENDIF' {pin=1}
 
-else_if_statement ::= 'ELSEIF' empty_expression 'THEN' (statement_list) {pin=1 elementType=if_statement}
+private outer_else_if_statement ::= 'ELSEIF' else_if_statement_list {pin=1}
+
+else_if_statement_list ::= else_if_statement {elementType=statement_list}
+
+else_if_statement ::= () empty_expression compound_if_statement {pin=1 elementType=if_statement}
 
 private else_statement ::= 'ELSE' statement_list {pin=1}
 

@@ -439,7 +439,7 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // 'THEN' statement_list (else_if_statement)* else_statement? 'ENDIF'
+  // 'THEN' statement_list (outer_else_if_statement|else_statement)? 'ENDIF'
   static boolean compound_if_statement(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "compound_if_statement")) return false;
     if (!nextTokenIs(builder_, THEN_KEYWORD)) return false;
@@ -449,38 +449,25 @@ public class RapidParser implements PsiParser, LightPsiParser {
     pinned_ = result_; // pin = 1
     result_ = result_ && report_error_(builder_, statement_list(builder_, level_ + 1));
     result_ = pinned_ && report_error_(builder_, compound_if_statement_2(builder_, level_ + 1)) && result_;
-    result_ = pinned_ && report_error_(builder_, compound_if_statement_3(builder_, level_ + 1)) && result_;
     result_ = pinned_ && consumeToken(builder_, ENDIF_KEYWORD) && result_;
     exit_section_(builder_, level_, marker_, result_, pinned_, null);
     return result_ || pinned_;
   }
 
-  // (else_if_statement)*
+  // (outer_else_if_statement|else_statement)?
   private static boolean compound_if_statement_2(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "compound_if_statement_2")) return false;
-    while (true) {
-      int pos_ = current_position_(builder_);
-      if (!compound_if_statement_2_0(builder_, level_ + 1)) break;
-      if (!empty_element_parsed_guard_(builder_, "compound_if_statement_2", pos_)) break;
-    }
+    compound_if_statement_2_0(builder_, level_ + 1);
     return true;
   }
 
-  // (else_if_statement)
+  // outer_else_if_statement|else_statement
   private static boolean compound_if_statement_2_0(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "compound_if_statement_2_0")) return false;
     boolean result_;
-    Marker marker_ = enter_section_(builder_);
-    result_ = else_if_statement(builder_, level_ + 1);
-    exit_section_(builder_, marker_, null, result_);
+    result_ = outer_else_if_statement(builder_, level_ + 1);
+    if (!result_) result_ = else_statement(builder_, level_ + 1);
     return result_;
-  }
-
-  // else_statement?
-  private static boolean compound_if_statement_3(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "compound_if_statement_3")) return false;
-    else_statement(builder_, level_ + 1);
-    return true;
   }
 
   /* ********************************************************** */
@@ -626,28 +613,32 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // 'ELSEIF' empty_expression 'THEN' (statement_list)
+  // () empty_expression compound_if_statement
   public static boolean else_if_statement(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "else_if_statement")) return false;
-    if (!nextTokenIs(builder_, ELSEIF_KEYWORD)) return false;
     boolean result_, pinned_;
-    Marker marker_ = enter_section_(builder_, level_, _NONE_, IF_STATEMENT, null);
-    result_ = consumeToken(builder_, ELSEIF_KEYWORD);
+    Marker marker_ = enter_section_(builder_, level_, _NONE_, IF_STATEMENT, "<else if statement>");
+    result_ = else_if_statement_0(builder_, level_ + 1);
     pinned_ = result_; // pin = 1
     result_ = result_ && report_error_(builder_, empty_expression(builder_, level_ + 1, -1));
-    result_ = pinned_ && report_error_(builder_, consumeToken(builder_, THEN_KEYWORD)) && result_;
-    result_ = pinned_ && else_if_statement_3(builder_, level_ + 1) && result_;
+    result_ = pinned_ && compound_if_statement(builder_, level_ + 1) && result_;
     exit_section_(builder_, level_, marker_, result_, pinned_, null);
     return result_ || pinned_;
   }
 
-  // (statement_list)
-  private static boolean else_if_statement_3(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "else_if_statement_3")) return false;
+  // ()
+  private static boolean else_if_statement_0(PsiBuilder builder_, int level_) {
+    return true;
+  }
+
+  /* ********************************************************** */
+  // else_if_statement
+  public static boolean else_if_statement_list(PsiBuilder builder_, int level_) {
+    if (!recursion_guard_(builder_, level_, "else_if_statement_list")) return false;
     boolean result_;
-    Marker marker_ = enter_section_(builder_);
-    result_ = statement_list(builder_, level_ + 1);
-    exit_section_(builder_, marker_, null, result_);
+    Marker marker_ = enter_section_(builder_, level_, _NONE_, STATEMENT_LIST, "<else if statement list>");
+    result_ = else_if_statement(builder_, level_ + 1);
+    exit_section_(builder_, level_, marker_, result_, false, null);
     return result_;
   }
 
@@ -1523,6 +1514,20 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
+  // 'ELSEIF' else_if_statement_list
+  static boolean outer_else_if_statement(PsiBuilder builder_, int level_) {
+    if (!recursion_guard_(builder_, level_, "outer_else_if_statement")) return false;
+    if (!nextTokenIs(builder_, ELSEIF_KEYWORD)) return false;
+    boolean result_, pinned_;
+    Marker marker_ = enter_section_(builder_, level_, _NONE_);
+    result_ = consumeToken(builder_, ELSEIF_KEYWORD);
+    pinned_ = result_; // pin = 1
+    result_ = result_ && else_if_statement_list(builder_, level_ + 1);
+    exit_section_(builder_, level_, marker_, result_, pinned_, null);
+    return result_ || pinned_;
+  }
+
+  /* ********************************************************** */
   // ['VAR' | 'PERS' | 'INOUT'] type_element identifier parameter_array?
   public static boolean parameter(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "parameter")) return false;
@@ -2127,26 +2132,14 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // (COMMENT)* inner_statement_list
+  // inner_statement_list
   public static boolean statement_list(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "statement_list")) return false;
     boolean result_;
     Marker marker_ = enter_section_(builder_, level_, _NONE_, STATEMENT_LIST, "<statement list>");
-    result_ = statement_list_0(builder_, level_ + 1);
-    result_ = result_ && inner_statement_list(builder_, level_ + 1);
+    result_ = inner_statement_list(builder_, level_ + 1);
     exit_section_(builder_, level_, marker_, result_, false, null);
     return result_;
-  }
-
-  // (COMMENT)*
-  private static boolean statement_list_0(PsiBuilder builder_, int level_) {
-    if (!recursion_guard_(builder_, level_, "statement_list_0")) return false;
-    while (true) {
-      int pos_ = current_position_(builder_);
-      if (!consumeToken(builder_, COMMENT)) break;
-      if (!empty_element_parsed_guard_(builder_, "statement_list_0", pos_)) break;
-    }
-    return true;
   }
 
   /* ********************************************************** */

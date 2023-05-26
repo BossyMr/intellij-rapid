@@ -4,7 +4,9 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidModuleStub;
-import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.symbol.ModuleType;
+import com.bossymr.rapid.language.symbol.RapidModule;
+import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
@@ -60,30 +62,31 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
     }
 
     @Override
-    public @NotNull List<RapidVisibleSymbol> getSymbols() {
+    public @NotNull List<PhysicalVisibleSymbol> getSymbols() {
         return Stream.of(getStructures(), getFields(), getRoutines())
                 .flatMap(Collection::stream)
-                .map(symbol -> (RapidVisibleSymbol) symbol)
+                .map(symbol -> (PhysicalVisibleSymbol) symbol)
                 .toList();
     }
 
     @Override
-    public @NotNull List<RapidStructure> getStructures() {
-        RapidRecord[] records = getStubOrPsiChildren(RapidStubElementTypes.RECORD, new PhysicalRecord[0]);
-        RapidAlias[] aliases = getStubOrPsiChildren(RapidStubElementTypes.ALIAS, new PhysicalAlias[0]);
+    public @NotNull List<PhysicalStructure> getStructures() {
+        PhysicalRecord[] records = getStubOrPsiChildren(RapidStubElementTypes.RECORD, new PhysicalRecord[0]);
+        PhysicalAlias[] aliases = getStubOrPsiChildren(RapidStubElementTypes.ALIAS, new PhysicalAlias[0]);
         return Stream.of(records, aliases)
                 .flatMap(Arrays::stream)
+                .map(symbol -> (PhysicalStructure) symbol)
                 .toList();
 
     }
 
     @Override
-    public @NotNull List<RapidField> getFields() {
+    public @NotNull List<PhysicalField> getFields() {
         return List.of(getStubOrPsiChildren(RapidStubElementTypes.FIELD, new PhysicalField[0]));
     }
 
     @Override
-    public @NotNull List<RapidRoutine> getRoutines() {
+    public @NotNull List<PhysicalRoutine> getRoutines() {
         return List.of(getStubOrPsiChildren(RapidStubElementTypes.ROUTINE, new PhysicalRoutine[0]));
     }
 

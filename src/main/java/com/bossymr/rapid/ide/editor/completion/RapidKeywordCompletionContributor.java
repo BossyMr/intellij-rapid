@@ -82,7 +82,7 @@ public class RapidKeywordCompletionContributor extends CompletionContributor {
                 if (statementList == null) {
                     return;
                 }
-                if (statementList.getAttribute() == StatementListType.ERROR_CLAUSE) {
+                if (statementList.getStatementListType() == StatementListType.ERROR_CLAUSE) {
                     result.caseInsensitive().addElement(RapidKeywordCompletionProvider.getLookupElement(TailType.SEMICOLON, "RETRY", null));
                     result.caseInsensitive().addElement(RapidKeywordCompletionProvider.getLookupElement(TailType.SEMICOLON, "TRYNEXT", null));
                 }

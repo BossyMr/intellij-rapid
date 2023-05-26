@@ -5,11 +5,10 @@ import com.intellij.lang.ASTFactory;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.SourceTreeToPsiMap;
+import com.intellij.psi.tree.TokenSet;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
 
 public class RapidIfStatementImpl extends PhysicalElement implements RapidIfStatement {
 
@@ -45,16 +44,11 @@ public class RapidIfStatementImpl extends PhysicalElement implements RapidIfStat
 
     @Override
     public @Nullable RapidStatementList getElseBranch() {
-        PsiElement keyword = findChildByType(RapidTokenTypes.ELSE_KEYWORD);
+        PsiElement keyword = findChildByType(TokenSet.create(RapidTokenTypes.ELSE_KEYWORD, RapidTokenTypes.ELSEIF_KEYWORD));
         if (keyword != null) {
             return PsiTreeUtil.getNextSiblingOfType(keyword, RapidStatementList.class);
         }
         return null;
-    }
-
-    @Override
-    public @NotNull List<RapidIfStatement> getStatements() {
-        return PsiTreeUtil.getChildrenOfTypeAsList(this, RapidIfStatement.class);
     }
 
     @Override
