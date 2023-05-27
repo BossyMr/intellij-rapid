@@ -71,11 +71,10 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
 
     @Override
     public @NotNull List<PhysicalStructure> getStructures() {
-        PhysicalRecord[] records = getStubOrPsiChildren(RapidStubElementTypes.RECORD, new PhysicalRecord[0]);
-        PhysicalAlias[] aliases = getStubOrPsiChildren(RapidStubElementTypes.ALIAS, new PhysicalAlias[0]);
+        PhysicalStructure[] records = getStubOrPsiChildren(RapidStubElementTypes.RECORD, new PhysicalRecord[0]);
+        PhysicalStructure[] aliases = getStubOrPsiChildren(RapidStubElementTypes.ALIAS, new PhysicalAlias[0]);
         return Stream.of(records, aliases)
                 .flatMap(Arrays::stream)
-                .map(symbol -> (PhysicalStructure) symbol)
                 .toList();
 
     }

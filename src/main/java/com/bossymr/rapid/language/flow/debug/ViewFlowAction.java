@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.flow.conditon.Value;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
+import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -23,27 +24,23 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ViewFlowAction extends AnAction {
-    @Override
-    public void actionPerformed(@NotNull AnActionEvent e) {
-        Project project = e.getProject();
-        if (project == null) {
-            return;
-        }
-        PsiElement element = e.getRequiredData(CommonDataKeys.PSI_ELEMENT);
-        PsiFile containingFile = element.getContainingFile();
-        Module module = ModuleUtil.findModuleForFile(containingFile);
-        Objects.requireNonNull(module);
-        ControlFlow controlFlow = ControlFlowVisitor.createControlFlow(module);
+    public static @NotNull String getControlFlowText(@NotNull ControlFlow controlFlow) {
         StringBuilder stringBuilder = new StringBuilder();
-        for (Block block : controlFlow.getBlocks()) {
+        List<Block> blocks = new ArrayList<>(controlFlow.getBlocks());
+        for (int k = 0; k < blocks.size(); k++) {
+            if (k > 0) stringBuilder.append("\n");
+            Block block = blocks.get(k);
             if (block instanceof Block.FunctionBlock functionBlock) {
                 stringBuilder.append(functionBlock.routineType()).append(" ");
             } else if (block instanceof Block.FieldBlock fieldBlock) {
                 stringBuilder.append(fieldBlock.fieldType()).append(" ");
+            }
+            RapidType type = block.returnType();
+            if (type != null) {
+                stringBuilder.append(type.getPresentableText()).append(" ");
             }
             stringBuilder.append(block.moduleName()).append("::").append(block.name());
             if (block instanceof Block.FunctionBlock functionBlock) {
@@ -67,21 +64,27 @@ public class ViewFlowAction extends AnAction {
                 if (variable.fieldType() != null) {
                     stringBuilder.append(variable.fieldType().getText()).append(" ");
                 }
-                stringBuilder.append(variable.type().getPresentableText()).append(" ").append(variable.name()).append(" (").append(variable.index()).append(")");
+                stringBuilder.append(variable.type().getPresentableText()).append(" ").append("_").append(variable.index());
+                if (variable.name() != null) {
+                    stringBuilder.append(" [").append(variable.name()).append("]");
+                }
                 if (variable.value() != null) {
                     stringBuilder.append(" := ").append(variable.value());
                 }
                 stringBuilder.append(";").append("\n");
             }
-            if (block.variables().values().size() > 0) {
-                stringBuilder.append(" ");
+            if (block.scopes().size() > 0) {
+                stringBuilder.append("\n");
             }
-            for (Scope scope : block.scopes()) {
+            List<Scope> scopes = block.scopes();
+            for (int j = 0; j < scopes.size(); j++) {
+                if (j > 0) stringBuilder.append("\n");
+                Scope scope = scopes.get(j);
                 stringBuilder.append("\t");
                 stringBuilder.append("scope").append(" ").append(scope.index());
                 ScopeType scopeType = scope.scopeType();
                 if (scopeType != null) {
-                    stringBuilder.append("(").append(scopeType.name().toLowerCase()).append(")");
+                    stringBuilder.append(" [").append(scopeType.name().toLowerCase()).append("]");
                 }
                 stringBuilder.append(" ");
                 stringBuilder.append("{");
@@ -108,7 +111,7 @@ public class ViewFlowAction extends AnAction {
                         stringBuilder.append("false:").append(conditionalBranchingInstruction.onFailure().index());
                         stringBuilder.append("]");
                     } else if (instruction instanceof BranchingInstruction.UnconditionalBranchingInstruction unconditionalBranchingInstruction) {
-                        stringBuilder.append("goto ->");
+                        stringBuilder.append("goto -> ");
                         stringBuilder.append(unconditionalBranchingInstruction.next().index());
                         stringBuilder.append(";");
                     } else if (instruction instanceof BranchingInstruction.RetryInstruction) {
@@ -151,15 +154,14 @@ public class ViewFlowAction extends AnAction {
                     }
                     stringBuilder.append("\n");
                 }
-                stringBuilder.append("}").append("\n").append("\n");
+                stringBuilder.append("\t").append("}").append("\n");
             }
-            stringBuilder.append("}").append("\n").append("\n");
+            stringBuilder.append("}").append("\n");
         }
-        LightVirtualFile virtualFile = new LightVirtualFile("ControlFlow.txt", stringBuilder);
-        FileEditorManager.getInstance(project).openTextEditor(new OpenFileDescriptor(project, virtualFile), true);
+        return stringBuilder.toString();
     }
 
-    private void writeExpression(@NotNull StringBuilder stringBuilder, @NotNull Expression expression) {
+    private static void writeExpression(@NotNull StringBuilder stringBuilder, @NotNull Expression expression) {
         if (expression instanceof Expression.Variable variable) {
             writeValue(stringBuilder, variable.value());
         } else if (expression instanceof Expression.Index index) {
@@ -206,11 +208,12 @@ public class ViewFlowAction extends AnAction {
                 stringBuilder.append(" ");
             }
             writeValue(stringBuilder, unary.value());
+        } else {
+            throw new IllegalStateException();
         }
-        throw new IllegalStateException();
     }
 
-    private void writeValue(@NotNull StringBuilder stringBuilder, @NotNull Value value) {
+    private static void writeValue(@NotNull StringBuilder stringBuilder, @NotNull Value value) {
         if (value instanceof Value.Constant constant) {
             stringBuilder.append(constant.value());
         } else if (value instanceof Value.Variable.Local local) {
@@ -222,24 +225,34 @@ public class ViewFlowAction extends AnAction {
             stringBuilder.append("[");
             writeValue(stringBuilder, index.index());
             stringBuilder.append("]");
+        } else {
+            throw new IllegalStateException();
         }
-        throw new IllegalStateException();
+    }
+
+    @Override
+    public void actionPerformed(@NotNull AnActionEvent e) {
+        Project project = e.getProject();
+        if (project == null) {
+            return;
+        }
+        PsiElement element = e.getData(CommonDataKeys.PSI_FILE);
+        if (element == null) {
+            return;
+        }
+        PsiFile containingFile = element.getContainingFile();
+        Module module = ModuleUtil.findModuleForFile(containingFile);
+        if (module == null) {
+            return;
+        }
+        ControlFlow controlFlow = ControlFlowVisitor.createControlFlow(module);
+        String stringBuilder = getControlFlowText(controlFlow);
+        LightVirtualFile virtualFile = new LightVirtualFile("ControlFlow.txt", stringBuilder);
+        FileEditorManager.getInstance(project).openTextEditor(new OpenFileDescriptor(project, virtualFile), true);
     }
 
     @Override
     public @NotNull ActionUpdateThread getActionUpdateThread() {
         return ActionUpdateThread.BGT;
-    }
-
-    @Override
-    public void update(@NotNull AnActionEvent e) {
-        PsiElement element = e.getData(CommonDataKeys.PSI_ELEMENT);
-        if (element == null) {
-            e.getPresentation().setEnabled(false);
-            return;
-        }
-        PsiFile containingFile = element.getContainingFile();
-        Module module = ModuleUtil.findModuleForFile(containingFile);
-        e.getPresentation().setEnabled(module != null);
     }
 }

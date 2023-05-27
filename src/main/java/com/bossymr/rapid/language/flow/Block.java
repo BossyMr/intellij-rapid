@@ -87,7 +87,7 @@ public sealed interface Block {
 
     private int getNextVariableIndex() {
         List<ArgumentGroup> arguments = arguments();
-        return 1 + variables().size() + (arguments != null ? arguments.size() : 0);
+        return variables().size() + (arguments != null ? arguments.size() : 0);
     }
 
     record FunctionBlock(

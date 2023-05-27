@@ -168,10 +168,10 @@
     </extensions>
 
     <actions>
-        <group id="RapidInternal">
-            <action id="ViewFlow" class="com.bossymr.rapid.language.flow.debug.ViewFlowAction"
-                    text="View Flow"/>
+        <group id="Internal.Rapid" text="Rapid" popup="true" internal="true">
             <add-to-group group-id="Internal"/>
+            <action id="ViewFlow" class="com.bossymr.rapid.language.flow.debug.ViewFlowAction"
+                    text="View Control Flow" internal="true"/>
         </group>
 
         <group id="NewRapid">

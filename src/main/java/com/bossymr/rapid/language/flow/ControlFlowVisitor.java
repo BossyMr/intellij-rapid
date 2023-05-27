@@ -133,18 +133,31 @@ public class ControlFlowVisitor extends RapidElementVisitor {
         }
         currentScope = currentBlock.entry().get(ScopeType.REGULAR);
         currentLabels = new HashMap<>();
+        variableStack = new ArrayDeque<>();
         List<PhysicalParameterGroup> parameters = routine.getParameters();
         if (parameters != null) {
             parameters.forEach(element -> element.accept(this));
         }
         routine.getFields().forEach(element -> element.accept(this));
-        routine.getStatementLists().forEach(element -> element.accept(this));
+        routine.getStatementLists().forEach(element -> {
+            currentScope = currentBlock.entry().get(switch (element.getStatementListType()) {
+                case STATEMENT_LIST -> ScopeType.REGULAR;
+                case ERROR_CLAUSE -> ScopeType.ERROR;
+                case UNDO_CLAUSE -> ScopeType.UNDO;
+                case BACKWARD_CLAUSE -> ScopeType.BACKWARD;
+            });
+            element.accept(this);
+            if (currentScope != null) {
+                currentScope.instructions().add(new BranchingInstruction.ReturnInstruction(null));
+            }
+        });
         for (Scope value : currentBlock.entry().values()) {
             if (currentScope != null) {
                 value.instructions().add(new BranchingInstruction.ReturnInstruction(null));
             }
         }
         controlFlow.insertBlock(currentBlock);
+        variableStack = null;
         currentBlock = null;
         currentLabels = null;
         currentScope = null;
@@ -239,6 +252,7 @@ public class ControlFlowVisitor extends RapidElementVisitor {
         Scope conditionScope = currentBlock.newScope();
         Scope nextScope = currentBlock.newScope();
         Scope loopScope = currentBlock.newScope();
+        currentScope.instructions().add(new BranchingInstruction.UnconditionalBranchingInstruction(conditionScope));
         currentScope = conditionScope;
         Value conditionValue = getValue(condition);
         currentScope.instructions().add(new BranchingInstruction.ConditionalBranchingInstruction(conditionValue, loopScope, nextScope));
@@ -253,21 +267,40 @@ public class ControlFlowVisitor extends RapidElementVisitor {
 
     @Override
     public void visitIfStatement(@NotNull RapidIfStatement statement) {
+        Scope nextScope = currentBlock.newScope();
+        visitIfStatement(statement, nextScope);
+        currentScope = nextScope;
+        super.visitIfStatement(statement);
+    }
+
+    public void visitIfStatement(@NotNull RapidIfStatement statement, @NotNull Scope nextScope) {
         RapidStatementList thenBranch = Objects.requireNonNull(statement.getThenBranch());
         RapidStatementList elseBranch = statement.getElseBranch();
         Scope thenScope = currentBlock.newScope();
-        Scope elseScope = currentBlock.newScope();
+        // If the scope has no else branch, go to the next scope instead.
+        Scope elseScope = elseBranch != null ? currentBlock.newScope() : nextScope;
         RapidExpression condition = Objects.requireNonNull(statement.getCondition());
         Value value = getValue(condition);
         currentScope.instructions().add(new BranchingInstruction.ConditionalBranchingInstruction(value, thenScope, elseScope));
         currentScope = thenScope;
         thenBranch.accept(this);
-        currentScope = elseScope;
-        if (elseBranch != null) {
-            elseBranch.accept(this);
-            currentScope = currentBlock.newScope();
+        if (currentScope != null) {
+            currentScope.instructions().add(new BranchingInstruction.UnconditionalBranchingInstruction(nextScope));
         }
-        super.visitIfStatement(statement);
+        if (elseBranch != null) {
+            currentScope = elseScope;
+            if (elseBranch.getStatements().size() == 1) {
+                if (elseBranch.getStatements().get(0) instanceof RapidIfStatement ifStatement) {
+                    visitIfStatement(ifStatement, nextScope);
+                    return;
+                }
+            }
+            elseBranch.accept(this);
+            if (currentScope != null) {
+                currentScope.instructions().add(new BranchingInstruction.UnconditionalBranchingInstruction(nextScope));
+            }
+        }
+        currentScope = nextScope;
     }
 
     @Override
@@ -312,8 +345,8 @@ public class ControlFlowVisitor extends RapidElementVisitor {
 
     @Override
     public void visitReturnStatement(@NotNull RapidReturnStatement statement) {
-        RapidExpression expression = Objects.requireNonNull(statement.getExpression());
-        Value value = getValue(expression);
+        RapidExpression expression = statement.getExpression();
+        Value value = expression != null ? getValue(expression) : null;
         currentScope.instructions().add(new BranchingInstruction.ReturnInstruction(value));
         currentScope = null;
         super.visitReturnStatement(statement);
@@ -411,11 +444,21 @@ public class ControlFlowVisitor extends RapidElementVisitor {
         } else {
             String moduleName = getModuleName(field);
             currentBlock = new Block.FieldBlock(moduleName, name, type, new ArrayList<>(), new HashMap<>(), new HashMap<>(), field.getFieldType());
+            variableStack = new ArrayDeque<>();
+            currentScope = currentBlock.newScope();
+            currentBlock.entry().put(ScopeType.REGULAR, currentScope);
             if (initializer != null) {
                 computeExpressionInVariable(initializer, 0);
+            } else {
+                Variable variable = new Variable(0, null, null, type, null);
+                currentBlock.variables().put(0, variable);
+            }
+            if (currentScope != null) {
+                currentScope.instructions().add(new BranchingInstruction.ReturnInstruction(new Value.Variable.Local(0)));
             }
             controlFlow.insertBlock(currentBlock);
             currentBlock = null;
+            variableStack = null;
         }
         super.visitField(field);
     }
@@ -509,7 +552,7 @@ public class ControlFlowVisitor extends RapidElementVisitor {
             throw new IllegalStateException();
         }
         if (symbol instanceof PhysicalField field) {
-            PhysicalRoutine routine = PsiTreeUtil.findChildOfType(field, PhysicalRoutine.class);
+            PhysicalRoutine routine = PsiTreeUtil.getParentOfType(field, PhysicalRoutine.class);
             if (routine == null) {
                 String moduleName = getModuleName(field);
                 return new Value.Variable.Field(moduleName, Objects.requireNonNull(field.getName()));
