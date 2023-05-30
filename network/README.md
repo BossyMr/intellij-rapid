@@ -30,14 +30,14 @@ public interface ShopService {
     @POST("/shelf")
     NetworkCall<ShelfEntity> newShelf(
             // The value of a parameter annotated with '@Field' is added as a field to the request body.
-            // If the argument is null, it is ignored.
+            // If the parameter is null, it is ignored.
             @Field("name") String name
     );
 } 
 ```
 
 An entity is also an interface, but represents an entity. A unique property for entities is that paths can not only be
-replaced by an argument, but also by a link of the response of which the entity represents.
+replaced by an parameter, but also by a link of the response of which the entity represents.
 
 Additionally, if a compact version of an entity is returned (for example, in a list) with a link to the complete entity,
 the complete entity will automatically be retrieved if you try to retrieve a property or link which does not exist.

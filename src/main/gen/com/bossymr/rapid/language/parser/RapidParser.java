@@ -912,13 +912,13 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // '<ARG>' | optional_argument | conditional_argument | required_argument
+  // '<ARG>' | conditional_argument | optional_argument | required_argument
   static boolean first_argument(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "first_argument")) return false;
     boolean result_;
     result_ = consumeToken(builder_, ARG_PLACEHOLDER);
-    if (!result_) result_ = optional_argument(builder_, level_ + 1);
     if (!result_) result_ = conditional_argument(builder_, level_ + 1);
+    if (!result_) result_ = optional_argument(builder_, level_ + 1);
     if (!result_) result_ = required_argument(builder_, level_ + 1);
     return result_;
   }
@@ -1379,7 +1379,7 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // (optional_argument | conditional_argument) | (',' ('<ARG>' | optional_argument | conditional_argument | required_argument))
+  // (conditional_argument | optional_argument) | (',' ('<ARG>' | conditional_argument | optional_argument | required_argument))
   static boolean next_argument(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "next_argument")) return false;
     if (!nextTokenIs(builder_, "", BACKSLASH, COMMA)) return false;
@@ -1391,16 +1391,16 @@ public class RapidParser implements PsiParser, LightPsiParser {
     return result_;
   }
 
-  // optional_argument | conditional_argument
+  // conditional_argument | optional_argument
   private static boolean next_argument_0(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "next_argument_0")) return false;
     boolean result_;
-    result_ = optional_argument(builder_, level_ + 1);
-    if (!result_) result_ = conditional_argument(builder_, level_ + 1);
+    result_ = conditional_argument(builder_, level_ + 1);
+    if (!result_) result_ = optional_argument(builder_, level_ + 1);
     return result_;
   }
 
-  // ',' ('<ARG>' | optional_argument | conditional_argument | required_argument)
+  // ',' ('<ARG>' | conditional_argument | optional_argument | required_argument)
   private static boolean next_argument_1(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "next_argument_1")) return false;
     boolean result_;
@@ -1411,13 +1411,13 @@ public class RapidParser implements PsiParser, LightPsiParser {
     return result_;
   }
 
-  // '<ARG>' | optional_argument | conditional_argument | required_argument
+  // '<ARG>' | conditional_argument | optional_argument | required_argument
   private static boolean next_argument_1_1(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "next_argument_1_1")) return false;
     boolean result_;
     result_ = consumeToken(builder_, ARG_PLACEHOLDER);
-    if (!result_) result_ = optional_argument(builder_, level_ + 1);
     if (!result_) result_ = conditional_argument(builder_, level_ + 1);
+    if (!result_) result_ = optional_argument(builder_, level_ + 1);
     if (!result_) result_ = required_argument(builder_, level_ + 1);
     return result_;
   }

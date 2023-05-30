@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 public interface RapidFunctionCallExpression extends RapidExpression {
 
     /**
-     * Returns the argument list containing arguments to be passed to the function call.
+     * Returns the argument list containing parameters to be passed to the function call.
      *
      * @return the argument list of this function call.
      */

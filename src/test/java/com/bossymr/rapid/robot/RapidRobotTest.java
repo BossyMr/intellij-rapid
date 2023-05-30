@@ -10,6 +10,7 @@ public class RapidRobotTest extends BasePlatformTestCase {
 
     public void testConnect() throws IOException, InterruptedException {
         RobotService service = RobotService.getInstance();
+        service.disconnect();
         assertNull(service.getRobotState());
         assertNull(service.getRobot());
         assertFalse(RobotService.isConnected());

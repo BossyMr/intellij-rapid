@@ -36,10 +36,10 @@ public interface RapidService {
     @NotNull TaskService getTaskService();
 
     /**
-     * Searches for symbols on this robot, according to the specified arguments. SymbolQueryBuilder To build a correctly
+     * Searches for symbols on this robot, according to the specified parameters. SymbolQueryBuilder To build a correctly
      * formatted argument map, use {@link SymbolQuery}.
      *
-     * @param fields the NetworkCall arguments.
+     * @param fields the NetworkCall parameters.
      * @return the symbols on this robot.
      */
         @Fetch(method = FetchMethod.POST, value = "/symbols", arguments = "action=search-symbols")

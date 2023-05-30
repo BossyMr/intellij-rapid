@@ -44,7 +44,7 @@ public interface RapidSymbol extends Symbol, NavigatableSymbol, SearchTargetSymb
     /**
      * Returns the canonical name of this symbol, used to identify a specific symbol.
      * <p>
-     * The structure of a conical name is {@code RAPID/[Task]/[Module]/[Symbol]/[Parameter|Record]}. However, the
+     * The structure of a conical name is {@code RAPID/[Task]/[Module]/[Symbol]/[Argument|Record]}. However, the
      * {@code RAPID/[Task]} section is not included, as the task depends on where the program is uploaded.
      *
      * @return the canonical name of this symbol, or {@code null} if this symbol is incomplete.

@@ -1,14 +1,15 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.conditon.Value;
+import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.FieldType;
-import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public sealed interface Block {
 
@@ -20,72 +21,13 @@ public sealed interface Block {
 
     @NotNull List<Scope> scopes();
 
-    @NotNull Map<ScopeType, Scope> entry();
+    @NotNull Map<StatementListType, Scope> entry();
 
     @NotNull Map<Integer, Variable> variables();
 
     @Nullable List<ArgumentGroup> arguments();
 
-    default @Nullable Argument findArgument(@NotNull String name) {
-        List<ArgumentGroup> arguments = arguments();
-        if (arguments == null) {
-            return null;
-        }
-        for (ArgumentGroup group : arguments) {
-            for (Argument argument : group.arguments()) {
-                if (argument.name().equalsIgnoreCase(name)) {
-                    return argument;
-                }
-            }
-        }
-        return null;
-    }
-
-    default @Nullable Variable findVariable(@NotNull String name) {
-        Collection<Variable> arguments = variables().values();
-        for (Variable argument : arguments) {
-            if (name.equalsIgnoreCase(argument.name())) {
-                return argument;
-            }
-        }
-        return null;
-    }
-
-    default @NotNull Scope newScope() {
-        Scope scope = new Scope.IntermediateScope(scopes().size(), new ArrayList<>());
-        scopes().add(scope);
-        return scope;
-    }
-
-    default @NotNull Scope newErrorScope(@Nullable List<Value> exceptions) {
-        Scope scope = new Scope.ErrorScope(scopes().size(), exceptions, new ArrayList<>());
-        scopes().add(scope);
-        return scope;
-    }
-
-    default @NotNull Scope newEntryScope(@NotNull ScopeType scopeType) {
-        Scope scope = new Scope.EntryScope(scopeType, scopes().size(), new ArrayList<>());
-        scopes().add(scope);
-        return scope;
-    }
-
-    default @NotNull Variable newVariable(@NotNull String name, @Nullable Object value, @NotNull RapidType type, @Nullable FieldType fieldType) {
-        Variable variable = new Variable(getNextVariableIndex(), value, fieldType, type, name);
-        variables().put(variable.index(), variable);
-        return variable;
-    }
-
-    default @NotNull Variable newVariable(@Nullable Object value, @NotNull RapidType type) {
-        Variable variable = new Variable(getNextVariableIndex(), value, null, type, null);
-        variables().put(variable.index(), variable);
-        return variable;
-    }
-
-    default @NotNull Argument newArgument(@NotNull String name, @NotNull RapidType type, @NotNull ParameterType parameterType) {
-        return new Argument(getNextVariableIndex(), parameterType, type, name);
-    }
-
-    private int getNextVariableIndex() {
+    default int getNextIndex() {
         List<ArgumentGroup> arguments = arguments();
         return variables().size() + (arguments != null ? arguments.size() : 0);
     }
@@ -95,7 +37,7 @@ public sealed interface Block {
             @NotNull String name,
             @Nullable RapidType returnType,
             @NotNull List<Scope> scopes,
-            @NotNull Map<ScopeType, Scope> entry,
+            @NotNull Map<StatementListType, Scope> entry,
             @NotNull Map<Integer, Variable> variables,
             @Nullable List<ArgumentGroup> arguments,
             @NotNull RoutineType routineType
@@ -120,7 +62,7 @@ public sealed interface Block {
             @NotNull String name,
             @NotNull RapidType returnType,
             @NotNull List<Scope> scopes,
-            @NotNull Map<ScopeType, Scope> entry,
+            @NotNull Map<StatementListType, Scope> entry,
             @NotNull Map<Integer, Variable> variables,
             @NotNull FieldType fieldType
     ) implements Block {

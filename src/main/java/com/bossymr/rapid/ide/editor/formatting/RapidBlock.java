@@ -169,9 +169,9 @@ public class RapidBlock extends AbstractBlock {
         if (parentType == STATEMENT_LIST) {
             ASTNode treeParent = getNode().getTreeParent();
             if (commonSettings.KEEP_SIMPLE_METHODS_IN_ONE_LINE
-                && treeParent != null
-                && treeParent.getElementType() == ROUTINE
-                && !(getNode().textContains('\n'))) {
+                    && treeParent != null
+                    && treeParent.getElementType() == ROUTINE
+                    && !(getNode().textContains('\n'))) {
                 return null;
             }
             return Wrap.createWrap(WrapType.NORMAL, false);
@@ -194,7 +194,7 @@ public class RapidBlock extends AbstractBlock {
 
     private @Nullable Indent getChildIndent(@NotNull ASTNode child) {
         final IElementType parentType = getNode().getElementType();
-        final IElementType elementType = child.getElementType();
+        IElementType elementType = child.getElementType();
         CommonCodeStyleSettings.IndentOptions indentOptions = commonSettings.getIndentOptions();
         if (indentOptions == null) {
             return null;
@@ -209,6 +209,8 @@ public class RapidBlock extends AbstractBlock {
             if (keyword != null) {
                 if (child.getStartOffsetInParent() < keyword.getStartOffsetInParent()) {
                     return Indent.getNoneIndent();
+                } else {
+                    return Indent.getNormalIndent();
                 }
             }
         }

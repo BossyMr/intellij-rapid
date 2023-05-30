@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.flow.conditon.Value;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
+import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -24,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ViewFlowAction extends AnAction {
@@ -56,7 +58,11 @@ public class ViewFlowAction extends AnAction {
                                 .collect(Collectors.joining(", ")));
                     }
                     stringBuilder.append(")").append(" ");
+                } else {
+                    stringBuilder.append(" ");
                 }
+            } else {
+                stringBuilder.append(" ");
             }
             stringBuilder.append("{").append("\n");
             for (Variable variable : block.variables().values()) {
@@ -82,7 +88,7 @@ public class ViewFlowAction extends AnAction {
                 Scope scope = scopes.get(j);
                 stringBuilder.append("\t");
                 stringBuilder.append("scope").append(" ").append(scope.index());
-                ScopeType scopeType = scope.scopeType();
+                StatementListType scopeType = scope.scopeType();
                 if (scopeType != null) {
                     stringBuilder.append(" [").append(scopeType.name().toLowerCase()).append("]");
                 }
@@ -136,21 +142,28 @@ public class ViewFlowAction extends AnAction {
                         stringBuilder.append(";");
                     } else if (instruction instanceof BranchingInstruction.CallInstruction callInstruction) {
                         if (callInstruction.returnValue() != null) {
-                            writeValue(stringBuilder, callInstruction.routine());
+                            writeValue(stringBuilder, callInstruction.returnValue());
                             stringBuilder.append(" := ");
                         }
                         writeValue(stringBuilder, callInstruction.routine());
                         stringBuilder.append("(");
-                        List<Value> values = new ArrayList<>(callInstruction.arguments().values());
-                        for (int i = 0; i < values.size(); i++) {
+                        List<Map.Entry<Integer, Value>> arguments = new ArrayList<>(callInstruction.arguments().entrySet());
+                        for (int i = 0; i < arguments.size(); i++) {
+                            Map.Entry<Integer, Value> argument = arguments.get(i);
                             if (i > 0) stringBuilder.append(", ");
-                            Value value = values.get(i);
-                            writeValue(stringBuilder, value);
+                            stringBuilder.append("_").append(argument.getKey());
+                            Value value = argument.getValue();
+                            if (value != null) {
+                                stringBuilder.append(" := ");
+                                writeValue(stringBuilder, value);
+                            }
                         }
                         stringBuilder.append(")");
                         stringBuilder.append(" -> ");
-                        stringBuilder.append(scope.index());
+                        stringBuilder.append(callInstruction.nextScope().index());
                         stringBuilder.append(";");
+                    } else if (instruction instanceof BranchingInstruction.ErrorInstruction) {
+                        stringBuilder.append("error;");
                     }
                     stringBuilder.append("\n");
                 }
@@ -215,11 +228,19 @@ public class ViewFlowAction extends AnAction {
 
     private static void writeValue(@NotNull StringBuilder stringBuilder, @NotNull Value value) {
         if (value instanceof Value.Constant constant) {
-            stringBuilder.append(constant.value());
+            Object literal = constant.value();
+            if (literal instanceof String) {
+                stringBuilder.append("\"").append(literal).append("\"");
+            } else {
+                stringBuilder.append(literal);
+            }
         } else if (value instanceof Value.Variable.Local local) {
             stringBuilder.append("_").append(local.index());
         } else if (value instanceof Value.Variable.Field field) {
-            stringBuilder.append(field.moduleName()).append("::").append(field.name());
+            if (field.moduleName() != null) {
+                stringBuilder.append(field.moduleName()).append("::");
+            }
+            stringBuilder.append(field.name());
         } else if (value instanceof Value.Variable.Index index) {
             writeValue(stringBuilder, index.variable());
             stringBuilder.append("[");
@@ -245,7 +266,7 @@ public class ViewFlowAction extends AnAction {
         if (module == null) {
             return;
         }
-        ControlFlow controlFlow = ControlFlowVisitor.createControlFlow(module);
+        ControlFlow controlFlow = ControlFlowService.createControlFlow(module);
         String stringBuilder = getControlFlowText(controlFlow);
         LightVirtualFile virtualFile = new LightVirtualFile("ControlFlow.txt", stringBuilder);
         FileEditorManager.getInstance(project).openTextEditor(new OpenFileDescriptor(project, virtualFile), true);

@@ -17,11 +17,13 @@ public sealed interface BranchingInstruction extends Instruction {
      * A {@code ConditionalBranchingInstruction} is an instruction which can move the program pointer to one of two
      * instructions, depending on the specified value.
      *
-     * @param value the value (must be a boolean).
+     * @param value     the value (must be a boolean).
      * @param onSuccess the instruction to go to if the specified value is {@code true}.
      * @param onFailure the instruction to go to if the specified value is {@code false}.
      */
-    record ConditionalBranchingInstruction(@NotNull Value value, @NotNull Scope onSuccess, @NotNull Scope onFailure) implements BranchingInstruction {}
+    record ConditionalBranchingInstruction(@NotNull Value value, @NotNull Scope onSuccess,
+                                           @NotNull Scope onFailure) implements BranchingInstruction {
+    }
 
     /**
      * An {@code UnconditionalBranchingInstruction} is an instruction which always points to a specific instruction.
@@ -51,14 +53,25 @@ public sealed interface BranchingInstruction extends Instruction {
     /**
      * An {@code ExitInstruction} will exit the program.
      */
-    record ExitInstruction() implements BranchingInstruction {}
+    record ExitInstruction() implements BranchingInstruction {
+    }
 
     /**
      * A {@code ThrowInstruction} will propagate an exception.
      *
      * @param exception the exception.
      */
-    record ThrowInstruction(@Nullable Value exception) implements BranchingInstruction {}
+    record ThrowInstruction(@Nullable Value exception) implements BranchingInstruction {
+    }
+
+    /**
+     * An {@code ErrorInstruction} indicates that a syntax or semantic error has occurred and the remainder of the
+     * control flow graph might be invalid.
+     *
+     * @param nextScope
+     */
+    record ErrorInstruction(@NotNull Scope nextScope) implements BranchingInstruction {
+    }
 
     /**
      * A {@code CallInstruction} will call the routine with the specified name. If the specified routine returns
@@ -67,11 +80,14 @@ public sealed interface BranchingInstruction extends Instruction {
      * will go to that instruction, otherwise, it will find the instruction which called the function, and go to the
      * parameter {@code onFailure} if specified, and so on.
      *
-     * @param routine the name of the routine to invoke, in the format "moduleName:routineName".
-     * @param arguments the arguments to call this routine with, a value in the map might be {@code null} if the
-     * argument is only present.
+     * @param routine     the name of the routine to invoke, in the format "moduleName:routineName".
+     * @param arguments   the parameters to call this routine with, a value in the map might be {@code null} if the
+     *                    argument is only present.
      * @param returnValue the field to store the return value of this routine.
      */
-    record CallInstruction(@NotNull Value routine, @NotNull Map<Integer, Value> arguments, @Nullable Value.Variable returnValue, @NotNull Scope onSuccess) implements BranchingInstruction {}
+    record CallInstruction(@NotNull Value routine, @NotNull Map<Integer, Value> arguments,
+                           @Nullable Value.Variable returnValue,
+                           @NotNull Scope nextScope) implements BranchingInstruction {
+    }
 
 }

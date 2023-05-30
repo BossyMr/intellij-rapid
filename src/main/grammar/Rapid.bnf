@@ -428,9 +428,9 @@ fake argument_list ::= argument_list_body
 
 private argument_list_body ::= [first_argument (next_argument)*]
 
-private first_argument ::= '<ARG>' | optional_argument | conditional_argument | required_argument
+private first_argument ::= '<ARG>' | conditional_argument | optional_argument | required_argument
 
-private next_argument ::= (optional_argument | conditional_argument) | (',' ('<ARG>' | optional_argument | conditional_argument | required_argument))
+private next_argument ::= (conditional_argument | optional_argument) | (',' ('<ARG>' | conditional_argument | optional_argument | required_argument))
 
 required_argument ::= [unqualified_reference_expression ':='] empty_expression
 

@@ -24,7 +24,7 @@ public interface RapidProcedureCallStatement extends RapidStatement {
     @NotNull RapidExpression getReferenceExpression();
 
     /**
-     * Returns the argument list with the arguments of the procedure call.
+     * Returns the argument list with the parameters of the procedure call.
      *
      * @return the argument list of this procedure call.
      */

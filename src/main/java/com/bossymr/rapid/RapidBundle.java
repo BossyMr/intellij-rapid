@@ -1,7 +1,6 @@
 package com.bossymr.rapid;
 
 import com.intellij.DynamicBundle;
-import com.intellij.notification.NotificationType;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.PropertyKey;
@@ -21,10 +20,10 @@ public class RapidBundle extends DynamicBundle {
     }
 
     /**
-     * Returns the message associated with the specified key and arguments.
+     * Returns the message associated with the specified key and parameters.
      *
-     * @param key the message key.
-     * @param parameters the message arguments.
+     * @param key        the message key.
+     * @param parameters the message parameters.
      * @return the message.
      */
     public static String message(@NotNull @PropertyKey(resourceBundle = BUNDLE) String key, Object @NotNull ... parameters) {
@@ -33,10 +32,10 @@ public class RapidBundle extends DynamicBundle {
 
     /**
      * Returns a lazy message, which can be used to retrieve the message associated with the specified key and
-     * arguments.
+     * parameters.
      *
-     * @param key the message key.
-     * @param parameters the message arguments.
+     * @param key        the message key.
+     * @param parameters the message parameters.
      * @return the lazy message.
      */
     public static @NotNull Supplier<@Nls String> messagePointer(@NotNull @PropertyKey(resourceBundle = BUNDLE) String key, Object @NotNull ... parameters) {
