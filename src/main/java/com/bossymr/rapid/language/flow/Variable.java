@@ -24,6 +24,10 @@ public record Variable(
         @Nullable String name
 ) {
 
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitVariable(this);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.conditon;
 
+import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -9,11 +10,28 @@ import java.util.List;
  */
 public sealed interface Expression {
 
-    record Variable(@NotNull Value value) implements Expression {}
+    void accept(@NotNull ControlFlowVisitor visitor);
 
-    record Index(@NotNull Value.Variable variable, @NotNull Value index) implements Expression {}
+    record Variable(@NotNull Value value) implements Expression {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitVariableExpression(this);
+        }
+    }
 
-    record Aggregate(@NotNull List<Value> values) implements Expression {}
+    record Index(@NotNull Value.Variable variable, @NotNull Value index) implements Expression {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitIndexExpression(this);
+        }
+    }
+
+    record Aggregate(@NotNull List<Value> values) implements Expression {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitAggregateExpression(this);
+        }
+    }
 
     /**
      * A {@code Binary} expression performs the specified operation on the specified values.
@@ -22,7 +40,12 @@ public sealed interface Expression {
      * @param left the first value.
      * @param right the second value.
      */
-    record Binary(@NotNull Operator.BinaryOperator operator, @NotNull Value left, @NotNull Value right) implements Expression {}
+    record Binary(@NotNull Operator.BinaryOperator operator, @NotNull Value left, @NotNull Value right) implements Expression {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitBinaryExpression(this);
+        }
+    }
 
     /**
      * A {@code Unary} expression performs the specified operation on the specified value.
@@ -30,6 +53,11 @@ public sealed interface Expression {
      * @param operator the operator.
      * @param value the value.
      */
-    record Unary(@NotNull Operator.UnaryOperator operator, @NotNull Value value) implements Expression {}
+    record Unary(@NotNull Operator.UnaryOperator operator, @NotNull Value value) implements Expression {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitUnaryExpression(this);
+        }
+    }
 
 }

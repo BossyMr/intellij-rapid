@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.instruction;
 
+import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.conditon.Expression;
 import com.bossymr.rapid.language.flow.conditon.Value;
 import org.jetbrains.annotations.NotNull;
@@ -15,7 +16,12 @@ public sealed interface LinearInstruction extends Instruction {
      * @param variable the field.
      * @param value the value.
      */
-    record AssignmentInstruction(@NotNull Value.Variable variable, @NotNull Expression value) implements LinearInstruction {}
+    record AssignmentInstruction(@NotNull Value.Variable variable, @NotNull Expression value) implements LinearInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitAssignmentInstruction(this);
+        }
+    }
 
     /**
      * Connects the specified interrupt with a trap with the specified value.
@@ -23,5 +29,10 @@ public sealed interface LinearInstruction extends Instruction {
      * @param variable the interrupt.
      * @param routine the routine.
      */
-    record ConnectInstruction(@NotNull Value.Variable variable, @NotNull Value routine) implements LinearInstruction {}
+    record ConnectInstruction(@NotNull Value.Variable variable, @NotNull Value routine) implements LinearInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitConnectInstruction(this);
+        }
+    }
 }

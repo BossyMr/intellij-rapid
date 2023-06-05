@@ -31,6 +31,13 @@ public class RapidType {
             .withComponent("rot", ORIENTATION)
             .asType();
 
+    public static final RapidType ANYTYPE = new RapidType(null, "anytype") {
+        @Override
+        public boolean isAssignable(@NotNull RapidType type) {
+            return true;
+        }
+    };
+
     private final RapidStructure structure;
     private final String name;
     private final int dimensions;

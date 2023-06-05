@@ -21,6 +21,10 @@ public record Argument(
         @NotNull String name
 ) {
 
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitArgument(this);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

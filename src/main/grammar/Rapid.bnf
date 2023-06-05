@@ -335,7 +335,7 @@ private parameter_statement_recovery ::= !('LOCAL' | 'TASK' | 'CONST' | '<SMT>' 
 
 private statement_recovery ::= !(IDENTIFIER) parameter_statement_recovery
 
-private statement ::= '<SMT>' | simple_statement | compound_statement | label_statement {recoverWhile=statement_recovery}
+private statement ::= '<SMT>' | label_statement | simple_statement | compound_statement {recoverWhile=statement_recovery}
 
 private simple_statement ::= assignment_statement |
                              procedure_call_statement |

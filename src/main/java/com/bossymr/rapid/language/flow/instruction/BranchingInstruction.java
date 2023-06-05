@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.instruction;
 
-import com.bossymr.rapid.language.flow.Scope;
+import com.bossymr.rapid.language.flow.BasicBlock;
+import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.conditon.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,12 +18,16 @@ public sealed interface BranchingInstruction extends Instruction {
      * A {@code ConditionalBranchingInstruction} is an instruction which can move the program pointer to one of two
      * instructions, depending on the specified value.
      *
-     * @param value     the value (must be a boolean).
+     * @param value the value (must be a boolean).
      * @param onSuccess the instruction to go to if the specified value is {@code true}.
      * @param onFailure the instruction to go to if the specified value is {@code false}.
      */
-    record ConditionalBranchingInstruction(@NotNull Value value, @NotNull Scope onSuccess,
-                                           @NotNull Scope onFailure) implements BranchingInstruction {
+    record ConditionalBranchingInstruction(@NotNull Value value, @NotNull BasicBlock onSuccess,
+                                           @NotNull BasicBlock onFailure) implements BranchingInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitConditionalBranchingInstruction(this);
+        }
     }
 
     /**
@@ -30,30 +35,54 @@ public sealed interface BranchingInstruction extends Instruction {
      *
      * @param next the instruction to go to.
      */
-    record UnconditionalBranchingInstruction(@NotNull Scope next) implements BranchingInstruction {}
+    record UnconditionalBranchingInstruction(@NotNull BasicBlock next) implements BranchingInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitUnconditionalBranchingInstruction(this);
+        }
+    }
 
     /**
      * A {@code RetryInstruction} will move the program pointer back to the instruction that failed and caused the
      * program pointer to go to this instruction.
      */
-    record RetryInstruction() implements BranchingInstruction {}
+    record RetryInstruction() implements BranchingInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitRetryInstruction(this);
+        }
+    }
 
     /**
      * A {@code TryNextInstruction} will move the program pointer to the instruction after the instruction which failed
      * and caused the program pointer to go to this instruction.
      */
-    record TryNextInstruction() implements BranchingInstruction {}
+    record TryNextInstruction() implements BranchingInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitTryNextInstruction(this);
+        }
+    }
 
     /**
      * A {@code ReturnInstruction} will move the program pointer to the {@link CallInstruction CallInstruction} which
      * called this routine, or exit the program if the current routine is the entry point.
      */
-    record ReturnInstruction(@Nullable Value value) implements BranchingInstruction {}
+    record ReturnInstruction(@Nullable Value value) implements BranchingInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitReturnInstruction(this);
+        }
+    }
 
     /**
      * An {@code ExitInstruction} will exit the program.
      */
     record ExitInstruction() implements BranchingInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitExitInstruction(this);
+        }
     }
 
     /**
@@ -62,15 +91,23 @@ public sealed interface BranchingInstruction extends Instruction {
      * @param exception the exception.
      */
     record ThrowInstruction(@Nullable Value exception) implements BranchingInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitThrowInstruction(this);
+        }
     }
 
     /**
      * An {@code ErrorInstruction} indicates that a syntax or semantic error has occurred and the remainder of the
      * control flow graph might be invalid.
      *
-     * @param nextScope
+     * @param next
      */
-    record ErrorInstruction(@NotNull Scope nextScope) implements BranchingInstruction {
+    record ErrorInstruction(@NotNull BasicBlock next) implements BranchingInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitErrorInstruction(this);
+        }
     }
 
     /**
@@ -87,7 +124,11 @@ public sealed interface BranchingInstruction extends Instruction {
      */
     record CallInstruction(@NotNull Value routine, @NotNull Map<Integer, Value> arguments,
                            @Nullable Value.Variable returnValue,
-                           @NotNull Scope nextScope) implements BranchingInstruction {
+                           @NotNull BasicBlock nextBasicBlock) implements BranchingInstruction {
+        @Override
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitCallInstruction(this);
+        }
     }
 
 }

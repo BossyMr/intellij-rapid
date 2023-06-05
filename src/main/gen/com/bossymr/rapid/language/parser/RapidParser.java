@@ -2118,15 +2118,15 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // '<SMT>' | simple_statement | compound_statement | label_statement
+  // '<SMT>' | label_statement | simple_statement | compound_statement
   static boolean statement(PsiBuilder builder_, int level_) {
     if (!recursion_guard_(builder_, level_, "statement")) return false;
     boolean result_;
     Marker marker_ = enter_section_(builder_, level_, _NONE_);
     result_ = consumeToken(builder_, SMT_PLACEHOLDER);
+    if (!result_) result_ = label_statement(builder_, level_ + 1);
     if (!result_) result_ = simple_statement(builder_, level_ + 1);
     if (!result_) result_ = compound_statement(builder_, level_ + 1);
-    if (!result_) result_ = label_statement(builder_, level_ + 1);
     exit_section_(builder_, level_, marker_, result_, false, RapidParser::statement_recovery);
     return result_;
   }

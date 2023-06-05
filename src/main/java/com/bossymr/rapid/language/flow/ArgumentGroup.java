@@ -13,4 +13,10 @@ import java.util.List;
 public record ArgumentGroup(
         boolean isOptional,
         @NotNull List<Argument> arguments
-) {}
+) {
+
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitArgumentGroup(this);
+    }
+
+}

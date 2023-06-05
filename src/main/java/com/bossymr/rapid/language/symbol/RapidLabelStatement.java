@@ -13,7 +13,7 @@ public interface RapidLabelStatement extends RapidStatement, RapidSymbol {
 
     @Override
     default @NotNull TargetPresentation getTargetPresentation() {
-        return TargetPresentation.builder(this.getName())
+        return TargetPresentation.builder(getPresentableName())
                 .icon(RapidIcons.LABEL)
                 .presentation();
     }

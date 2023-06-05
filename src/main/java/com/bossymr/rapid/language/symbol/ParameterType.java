@@ -12,7 +12,35 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public enum ParameterType {
-    INPUT, VARIABLE, PERSISTENT, INOUT, REFERENCE;
+    INPUT("INPUT"),
+
+    VARIABLE(RapidTokenTypes.VAR_KEYWORD, "VAR"),
+
+    PERSISTENT(RapidTokenTypes.PERS_KEYWORD, "PERS"),
+
+    INOUT(RapidTokenTypes.INOUT_KEYWORD, "INOUT"),
+
+    REFERENCE("REF");
+
+    private final @Nullable IElementType elementType;
+    private final @NotNull String text;
+
+    ParameterType(@NotNull String text) {
+        this(null, text);
+    }
+
+    ParameterType(@Nullable IElementType elementType, @NotNull String text) {
+        this.elementType = elementType;
+        this.text = text;
+    }
+
+    public @Nullable IElementType getElementType() {
+        return elementType;
+    }
+
+    public @NotNull String getText() {
+        return text;
+    }
 
     public static @NotNull ParameterType getAttribute(@NotNull PsiElement element) {
         TokenSet tokenSet = TokenSet.create(RapidTokenTypes.VAR_KEYWORD, RapidTokenTypes.PERS_KEYWORD, RapidTokenTypes.INOUT_KEYWORD);
