@@ -13,6 +13,7 @@ import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalVisibleSymbol;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
@@ -142,7 +143,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         Value.Variable result = variableKey.retrieve();
         if (result == null) {
             Value.Variable variable = builder.createVariable(variableKey, RapidType.ANYTYPE, null);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(variable, new Expression.Variable(new Value.Error())));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new Expression.Variable(new Value.Error())));
             return variable;
         }
         return result;
@@ -152,19 +153,19 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         return type != null ? type : RapidType.ANYTYPE;
     }
 
-    public static void buildFunctionCall(@NotNull ControlFlowBuilder builder, @Nullable RapidRoutine routine, @NotNull List<RapidArgument> arguments, @NotNull Value routineValue, @Nullable Value.Variable returnVariable, @NotNull BasicBlock nextBlock) {
+    public static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @Nullable RapidRoutine routine, @NotNull List<RapidArgument> arguments, @NotNull Value routineValue, @Nullable Value.Variable returnVariable, @NotNull BasicBlock nextBlock) {
         Map<Integer, RapidArgument> map = calculateArguments(routine, arguments);
-        buildFunctionCall(builder, routineValue, nextBlock, returnVariable, map);
+        buildFunctionCall(element, builder, routineValue, nextBlock, returnVariable, map);
     }
 
-    private static void buildFunctionCall(@NotNull ControlFlowBuilder builder, @NotNull Value routine, @NotNull BasicBlock nextBlock, @Nullable Value.Variable returnVariable, @NotNull Map<Integer, RapidArgument> arguments) {
+    private static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @NotNull Value routine, @NotNull BasicBlock nextBlock, @Nullable Value.Variable returnVariable, @NotNull Map<Integer, RapidArgument> arguments) {
         Optional<Integer> index = arguments.entrySet().stream()
                 .filter(entry -> entry.getValue() instanceof RapidConditionalArgument)
                 .map(Map.Entry::getKey)
                 .findFirst();
         Map<Integer, Value> values = buildArguments(builder, arguments);
         if (index.isEmpty()) {
-            builder.exitBasicBlock(new BranchingInstruction.CallInstruction(routine, values, returnVariable, nextBlock));
+            builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, routine, values, returnVariable, nextBlock));
         } else {
             int value = index.get();
             VariableKey variableKey = VariableKey.createVariable();
@@ -172,29 +173,29 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             BasicBlock ifBlock = builder.createBasicBlock();
             RapidType type = values.get(value).type();
             if (type == null) {
-                builder.failScope();
+                builder.failScope(element);
                 return;
             }
             Value.Constant presentRoutine = new Value.Constant(RapidType.ANYTYPE, "Present");
             Map<Integer, Value> presentArguments = Map.of(0, new Value.Variable.Local(type, value));
-            builder.exitBasicBlock(new BranchingInstruction.CallInstruction(presentRoutine, presentArguments, presentReturnVariable, ifBlock));
+            builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, presentRoutine, presentArguments, presentReturnVariable, ifBlock));
             builder.enterBasicBlock(ifBlock);
             BasicBlock presentBlock = builder.createBasicBlock();
             BasicBlock missingBlock = builder.createBasicBlock();
-            builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(presentReturnVariable, presentBlock, missingBlock));
+            builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(element, presentReturnVariable, presentBlock, missingBlock));
             builder.enterBasicBlock(presentBlock);
             RapidOptionalArgument optionalArgument = createOptionalArgument((RapidConditionalArgument) arguments.get(value));
             if (optionalArgument == null) {
-                builder.failScope();
+                builder.failScope(element);
             } else {
                 Map<Integer, RapidArgument> copy = new HashMap<>(arguments);
                 copy.put(value, optionalArgument);
-                buildFunctionCall(builder, routine, nextBlock, returnVariable, copy);
+                buildFunctionCall(element, builder, routine, nextBlock, returnVariable, copy);
             }
             builder.enterBasicBlock(missingBlock);
             Map<Integer, RapidArgument> copy = new HashMap<>(arguments);
             copy.remove(value);
-            buildFunctionCall(builder, routine, nextBlock, returnVariable, copy);
+            buildFunctionCall(element, builder, routine, nextBlock, returnVariable, copy);
         }
     }
 
@@ -314,7 +315,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         }
         Value.Variable variable = popVariable(type, null);
         Expression.Aggregate aggregate = new Expression.Aggregate(values);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(variable, aggregate));
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, aggregate));
     }
 
     @Override
@@ -329,7 +330,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         Value.Variable variable = popVariable(type, null);
         Operator.UnaryOperator operator = getUnaryOperator(expression.getSign().getNode().getElementType());
         Expression computation = operator != null ? new Expression.Unary(operator, value) : new Expression.Variable(value);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(variable, computation));
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, computation));
     }
 
     @Override
@@ -341,7 +342,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         Value.Variable variable = popVariable(type, null);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(variable, new Expression.Variable(value)));
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new Expression.Variable(value)));
     }
 
     @Override
@@ -357,7 +358,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         Value.Variable variable = popVariable(type, null);
         Operator.BinaryOperator operator = getBinaryOperator(expression.getSign().getNode().getElementType());
         Expression.Binary binary = new Expression.Binary(operator, leftValue, rightValue);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(variable, binary));
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, binary));
     }
 
     private @Nullable Operator.UnaryOperator getUnaryOperator(@NotNull IElementType elementType) {
@@ -422,7 +423,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         Value.Constant routineValue = new Value.Constant(RapidType.ANYTYPE, name);
         List<RapidArgument> arguments = expression.getArgumentList().getArguments();
         Value.Variable returnVariable = popVariable(type, null);
-        buildFunctionCall(builder, routine, arguments, routineValue, returnVariable, nextBlock);
+        buildFunctionCall(expression, builder, routine, arguments, routineValue, returnVariable, nextBlock);
         builder.enterBasicBlock(nextBlock);
     }
 
@@ -444,7 +445,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             Value value = computeValue(builder, dimension);
             Value.Variable latest = popVariable(type.createArrayType(type.getDimensions() - (i + 1)), null);
             Expression.Index index = new Expression.Index(variable, value);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(latest, index));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, latest, index));
             variable = latest;
         }
     }

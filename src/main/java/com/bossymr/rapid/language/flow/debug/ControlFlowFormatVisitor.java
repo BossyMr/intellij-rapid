@@ -37,6 +37,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             Block block = blocks.get(i);
             block.accept(this);
         }
+        super.visitControlFlow(controlFlow);
     }
 
     @Override
@@ -63,6 +64,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             stringBuilder.append(")");
         }
         formatBlock(functionBlock);
+        super.visitFunctionBlock(functionBlock);
     }
 
     @Override
@@ -76,6 +78,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         stringBuilder.append(":");
         stringBuilder.append(fieldBlock.getName());
         formatBlock(fieldBlock);
+        super.visitFieldBlock(fieldBlock);
     }
 
     private void formatBlock(@NotNull Block block) {
@@ -130,6 +133,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         basicBlock.getTerminator().accept(this);
         stringBuilder.append("\n");
         stringBuilder.append("\t}");
+        super.visitBasicBlock(basicBlock);
     }
 
     @Override
@@ -145,6 +149,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             Argument argument = arguments.get(i);
             argument.accept(this);
         }
+        super.visitArgumentGroup(argumentGroup);
     }
 
     @Override
@@ -155,6 +160,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         stringBuilder.append(" ");
         stringBuilder.append("_").append(argument.index());
         stringBuilder.append(" [").append(argument.name()).append("]");
+        super.visitArgument(argument);
     }
 
     @Override
@@ -177,6 +183,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             }
         }
         stringBuilder.append(";");
+        super.visitVariable(variable);
     }
 
     @Override
@@ -185,6 +192,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         stringBuilder.append(" := ");
         instruction.value().accept(this);
         stringBuilder.append(";");
+        super.visitAssignmentInstruction(instruction);
     }
 
     @Override
@@ -194,6 +202,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         stringBuilder.append(" with ");
         instruction.routine().accept(this);
         stringBuilder.append(";");
+        super.visitConnectInstruction(instruction);
     }
 
     @Override
@@ -203,21 +212,25 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         stringBuilder.append(") -> ");
         stringBuilder.append("[true: ").append(instruction.onSuccess().getIndex());
         stringBuilder.append(", false: ").append(instruction.onFailure().getIndex()).append("]");
+        super.visitConditionalBranchingInstruction(instruction);
     }
 
     @Override
     public void visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
         stringBuilder.append("goto -> ").append(instruction.next().getIndex()).append(";");
+        super.visitUnconditionalBranchingInstruction(instruction);
     }
 
     @Override
     public void visitRetryInstruction(@NotNull BranchingInstruction.RetryInstruction instruction) {
         stringBuilder.append("retry;");
+        super.visitRetryInstruction(instruction);
     }
 
     @Override
     public void visitTryNextInstruction(@NotNull BranchingInstruction.TryNextInstruction instruction) {
         stringBuilder.append("trynext;");
+        super.visitTryNextInstruction(instruction);
     }
 
     @Override
@@ -228,11 +241,13 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             instruction.value().accept(this);
         }
         stringBuilder.append(";");
+        super.visitReturnInstruction(instruction);
     }
 
     @Override
     public void visitExitInstruction(@NotNull BranchingInstruction.ExitInstruction instruction) {
         stringBuilder.append("exit;");
+        super.visitExitInstruction(instruction);
     }
 
     @Override
@@ -243,11 +258,18 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             instruction.exception().accept(this);
         }
         stringBuilder.append(";");
+        super.visitThrowInstruction(instruction);
     }
 
     @Override
     public void visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
-        stringBuilder.append("error -> ").append(instruction.next().getIndex()).append(";");
+        stringBuilder.append("error");
+        if (instruction.next() != null) {
+            stringBuilder.append(" -> ");
+            stringBuilder.append(instruction.next().getIndex());
+        }
+        stringBuilder.append(";");
+        super.visitErrorInstruction(instruction);
     }
 
     @Override
@@ -277,11 +299,13 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         }
         stringBuilder.append(")");
         stringBuilder.append(" -> ").append(instruction.nextBasicBlock().getIndex()).append(";");
+        super.visitCallInstruction(instruction);
     }
 
     @Override
     public void visitLocalVariableValue(@NotNull Value.Variable.Local value) {
         stringBuilder.append("_").append(value.index());
+        super.visitLocalVariableValue(value);
     }
 
     @Override
@@ -290,6 +314,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             stringBuilder.append(value.moduleName()).append(":");
         }
         stringBuilder.append(value.name());
+        super.visitFieldVariableValue(value);
     }
 
     @Override
@@ -298,6 +323,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         stringBuilder.append("[");
         value.index().accept(this);
         stringBuilder.append("]");
+        super.visitIndexVariableValue(value);
     }
 
     @Override
@@ -305,6 +331,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         value.variable().accept(this);
         stringBuilder.append(".");
         stringBuilder.append(value.component());
+        super.visitComponentVariableValue(value);
     }
 
     @Override
@@ -314,16 +341,19 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         } else {
             stringBuilder.append(value.value());
         }
+        super.visitConstantValue(value);
     }
 
     @Override
     public void visitErrorValue(@NotNull Value.Error value) {
         stringBuilder.append("error");
+        super.visitErrorValue(value);
     }
 
     @Override
     public void visitVariableExpression(@NotNull Expression.Variable expression) {
         expression.value().accept(this);
+        super.visitVariableExpression(expression);
     }
 
     @Override
@@ -332,6 +362,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         stringBuilder.append("[");
         expression.index().accept(this);
         stringBuilder.append("]");
+        super.visitIndexExpression(expression);
     }
 
     @Override
@@ -344,6 +375,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             expression.values().get(i).accept(this);
         }
         stringBuilder.append("]");
+        super.visitAggregateExpression(expression);
     }
 
     @Override
@@ -369,6 +401,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         });
         stringBuilder.append(" ");
         expression.right().accept(this);
+        super.visitBinaryExpression(expression);
     }
 
     @Override
@@ -381,5 +414,6 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             stringBuilder.append(" ");
         }
         expression.value().accept(this);
+        super.visitUnaryExpression(expression);
     }
 }

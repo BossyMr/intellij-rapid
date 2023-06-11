@@ -9,6 +9,7 @@ import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
+import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -108,12 +109,12 @@ public class ControlFlowBuilder {
         currentBasicBlock = null;
     }
 
-    public void failScope() {
+    public void failScope(@Nullable PsiElement element) {
         if (currentBasicBlock == null) {
             throw new IllegalStateException("Cannot exit basicBlock as no basicBlock is currently active");
         }
-        BasicBlock basicBlock = createBasicBlock();
-        currentBasicBlock.setTerminator(new BranchingInstruction.ErrorInstruction(basicBlock));
+        BasicBlock basicBlock = element != null ? createBasicBlock() : null;
+        currentBasicBlock.setTerminator(new BranchingInstruction.ErrorInstruction(element, basicBlock));
         currentBasicBlock = basicBlock;
     }
 
@@ -153,20 +154,20 @@ public class ControlFlowBuilder {
         return currentBlock.createBasicBlock();
     }
 
-    public void enterLabel(@NotNull String name) {
+    public void enterLabel(@NotNull PsiElement element, @NotNull String name) {
         if (currentLabels == null) {
             throw new IllegalStateException("Could not retrieve label as no block is currently active");
         }
         if (currentLabels.containsKey(name)) {
             BasicBlock basicBlock = currentLabels.get(name);
-            exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(basicBlock));
+            exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(element, basicBlock));
             if (basicBlock.getInstructions().isEmpty()) {
                 enterBasicBlock(basicBlock);
             }
         } else {
             BasicBlock basicBlock = createBasicBlock();
             currentLabels.put(name, basicBlock);
-            exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(basicBlock));
+            exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(element, basicBlock));
             enterBasicBlock(basicBlock);
         }
     }

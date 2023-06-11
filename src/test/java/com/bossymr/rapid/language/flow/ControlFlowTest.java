@@ -249,6 +249,85 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """);
     }
 
+    public void testTestStatement() {
+        check("""
+                MODULE foo
+                    FUNC num bar()
+                        VAR num value := 0;
+                        TEST value
+                            CASE 0:
+                                RETURN 0;
+                            CASE 1, 3:
+                                RETURN 1;
+                            CASE 4, 5, 6:
+                                RETURN 3;
+                            DEFAULT:
+                                RETURN -1;
+                            CASE 2:
+                                RETURN 2;
+                        ENDTEST
+                    ENDPROC
+                ENDMODULE
+                """, """
+                func num foo:bar() {
+                	var num _0 [value] := 0.0;
+                	bool _1 := false;
+                	bool _2 := false;
+                	bool _3 := false;
+                	bool _4 := false;
+                	bool _5 := false;
+                	bool _6 := false;
+                	bool _7 := false;
+                	bool _8 := false;
+                	bool _9 := false;
+                                
+                	entry 0 {
+                		_1 := _0 = 0.0;
+                		if(_1) -> [true: 1, false: 2]
+                	}
+                                
+                	block 1 {
+                		return 0.0;
+                	}
+                                
+                	block 2 {
+                		_2 := _0 = 1.0;
+                		_3 := _0 = 3.0;
+                		_4 := _2 OR _3;
+                		_2 := _4;
+                		if(_2) -> [true: 3, false: 4]
+                	}
+                                
+                	block 3 {
+                		return 1.0;
+                	}
+                                
+                	block 4 {
+                		_5 := _0 = 4.0;
+                		_6 := _0 = 5.0;
+                		_7 := _5 OR _6;
+                		_5 := _7;
+                		_8 := _0 = 6.0;
+                		_9 := _5 OR _8;
+                		_5 := _9;
+                		if(_5) -> [true: 5, false: 6]
+                	}
+                                
+                	block 5 {
+                		return 3.0;
+                	}
+                                
+                	block 6 {
+                		goto -> 7;
+                	}
+                                
+                	block 7 {
+                		return -1.0;
+                	}
+                }
+                """);
+    }
+
     public void testFunctionCallExpression() {
         check("""
                 MODULE foo

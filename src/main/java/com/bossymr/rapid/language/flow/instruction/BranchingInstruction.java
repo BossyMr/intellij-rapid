@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.instruction;
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.conditon.Value;
+import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,7 +23,7 @@ public sealed interface BranchingInstruction extends Instruction {
      * @param onSuccess the instruction to go to if the specified value is {@code true}.
      * @param onFailure the instruction to go to if the specified value is {@code false}.
      */
-    record ConditionalBranchingInstruction(@NotNull Value value, @NotNull BasicBlock onSuccess,
+    record ConditionalBranchingInstruction(@NotNull PsiElement element, @NotNull Value value, @NotNull BasicBlock onSuccess,
                                            @NotNull BasicBlock onFailure) implements BranchingInstruction {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
@@ -35,7 +36,7 @@ public sealed interface BranchingInstruction extends Instruction {
      *
      * @param next the instruction to go to.
      */
-    record UnconditionalBranchingInstruction(@NotNull BasicBlock next) implements BranchingInstruction {
+    record UnconditionalBranchingInstruction(@Nullable PsiElement element, @NotNull BasicBlock next) implements BranchingInstruction {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitUnconditionalBranchingInstruction(this);
@@ -46,7 +47,7 @@ public sealed interface BranchingInstruction extends Instruction {
      * A {@code RetryInstruction} will move the program pointer back to the instruction that failed and caused the
      * program pointer to go to this instruction.
      */
-    record RetryInstruction() implements BranchingInstruction {
+    record RetryInstruction(@NotNull PsiElement element) implements BranchingInstruction {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitRetryInstruction(this);
@@ -57,7 +58,7 @@ public sealed interface BranchingInstruction extends Instruction {
      * A {@code TryNextInstruction} will move the program pointer to the instruction after the instruction which failed
      * and caused the program pointer to go to this instruction.
      */
-    record TryNextInstruction() implements BranchingInstruction {
+    record TryNextInstruction(@NotNull PsiElement element) implements BranchingInstruction {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitTryNextInstruction(this);
@@ -68,7 +69,12 @@ public sealed interface BranchingInstruction extends Instruction {
      * A {@code ReturnInstruction} will move the program pointer to the {@link CallInstruction CallInstruction} which
      * called this routine, or exit the program if the current routine is the entry point.
      */
-    record ReturnInstruction(@Nullable Value value) implements BranchingInstruction {
+    record ReturnInstruction(@Nullable PsiElement element, @Nullable Value value) implements BranchingInstruction {
+
+        public ReturnInstruction {
+            assert (element == null || value != null) && (element != null || value == null);
+        }
+
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitReturnInstruction(this);
@@ -78,7 +84,7 @@ public sealed interface BranchingInstruction extends Instruction {
     /**
      * An {@code ExitInstruction} will exit the program.
      */
-    record ExitInstruction() implements BranchingInstruction {
+    record ExitInstruction(@NotNull PsiElement element) implements BranchingInstruction {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitExitInstruction(this);
@@ -90,7 +96,7 @@ public sealed interface BranchingInstruction extends Instruction {
      *
      * @param exception the exception.
      */
-    record ThrowInstruction(@Nullable Value exception) implements BranchingInstruction {
+    record ThrowInstruction(@NotNull PsiElement element, @Nullable Value exception) implements BranchingInstruction {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitThrowInstruction(this);
@@ -100,10 +106,8 @@ public sealed interface BranchingInstruction extends Instruction {
     /**
      * An {@code ErrorInstruction} indicates that a syntax or semantic error has occurred and the remainder of the
      * control flow graph might be invalid.
-     *
-     * @param next
      */
-    record ErrorInstruction(@NotNull BasicBlock next) implements BranchingInstruction {
+    record ErrorInstruction(@Nullable PsiElement element, @Nullable BasicBlock next) implements BranchingInstruction {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitErrorInstruction(this);
@@ -117,14 +121,13 @@ public sealed interface BranchingInstruction extends Instruction {
      * will go to that instruction, otherwise, it will find the instruction which called the function, and go to the
      * parameter {@code onFailure} if specified, and so on.
      *
-     * @param routine     the name of the routine to invoke, in the format "moduleName:routineName".
-     * @param arguments   the parameters to call this routine with, a value in the map might be {@code null} if the
-     *                    argument is only present.
+     * @param routine the name of the routine to invoke, in the format "moduleName:routineName".
+     * @param arguments the parameters to call this routine with, a value in the map might be {@code null} if the
+     * argument is only present.
      * @param returnValue the field to store the return value of this routine.
      */
-    record CallInstruction(@NotNull Value routine, @NotNull Map<Integer, Value> arguments,
-                           @Nullable Value.Variable returnValue,
-                           @NotNull BasicBlock nextBasicBlock) implements BranchingInstruction {
+    record CallInstruction(@NotNull PsiElement element, @NotNull Value routine, @NotNull Map<Integer, Value> arguments,
+                           @Nullable Value.Variable returnValue, @NotNull BasicBlock nextBasicBlock) implements BranchingInstruction {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitCallInstruction(this);
