@@ -22,7 +22,7 @@ public record Variable(
         @Nullable FieldType fieldType,
         @NotNull RapidType type,
         @Nullable String name
-) {
+) implements Field {
 
     public void accept(@NotNull ControlFlowVisitor visitor) {
         visitor.visitVariable(this);

@@ -52,17 +52,15 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         stringBuilder.append(":");
         stringBuilder.append(functionBlock.getName());
         List<ArgumentGroup> argumentGroups = functionBlock.getArgumentGroups();
-        if (argumentGroups != null) {
-            stringBuilder.append("(");
-            for (int i = 0; i < argumentGroups.size(); i++) {
-                if (i > 0) {
-                    stringBuilder.append(", ");
-                }
-                ArgumentGroup argumentGroup = argumentGroups.get(i);
-                argumentGroup.accept(this);
+        stringBuilder.append("(");
+        for (int i = 0; i < argumentGroups.size(); i++) {
+            if (i > 0) {
+                stringBuilder.append(", ");
             }
-            stringBuilder.append(")");
+            ArgumentGroup argumentGroup = argumentGroups.get(i);
+            argumentGroup.accept(this);
         }
+        stringBuilder.append(")");
         formatBlock(functionBlock);
         super.visitFunctionBlock(functionBlock);
     }
@@ -357,15 +355,6 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitIndexExpression(@NotNull Expression.Index expression) {
-        expression.variable().accept(this);
-        stringBuilder.append("[");
-        expression.index().accept(this);
-        stringBuilder.append("]");
-        super.visitIndexExpression(expression);
-    }
-
-    @Override
     public void visitAggregateExpression(@NotNull Expression.Aggregate expression) {
         stringBuilder.append("[");
         for (int i = 0; i < expression.values().size(); i++) {
@@ -389,15 +378,11 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             case DIVIDE -> "/";
             case MODULO -> "%";
             case LESS_THAN -> "<";
-            case LESS_THAN_OR_EQUAL_TO -> "<=";
             case EQUAL_TO -> "=";
-            case GREATER_THAN_OR_EQUAL_TO -> ">=";
             case GREATER_THAN -> ">";
-            case NOT_EQUAL_TO -> "!=";
             case AND -> "AND";
-            case EXLUSIVE_OR -> "XOR";
+            case XOR -> "XOR";
             case OR -> "OR";
-            case NOT -> "NOT";
         });
         stringBuilder.append(" ");
         expression.right().accept(this);

@@ -15,6 +15,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalVisibleSymbol;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
+import com.intellij.psi.tree.TokenSet;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -23,6 +24,9 @@ import java.util.*;
 
 public class ControlFlowExpressionVisitor extends RapidElementVisitor {
 
+    public static final @NotNull TokenSet NUMBER_TOKEN_SET = TokenSet.create(RapidTokenTypes.PLUS, RapidTokenTypes.MINUS, RapidTokenTypes.ASTERISK, RapidTokenTypes.DIV, RapidTokenTypes.DIV_KEYWORD, RapidTokenTypes.MOD_KEYWORD);
+    public static final @NotNull TokenSet BOOLEAN_TOKEN_SET = TokenSet.create(RapidTokenTypes.LT, RapidTokenTypes.LE, RapidTokenTypes.EQ, RapidTokenTypes.LTGT, RapidTokenTypes.GT, RapidTokenTypes.GE, RapidTokenTypes.AND_KEYWORD, RapidTokenTypes.OR_KEYWORD);
+    public static final @NotNull TokenSet STRING_TOKEN_SET = TokenSet.create(RapidTokenTypes.PLUS);
     private final @NotNull ControlFlowBuilder builder;
     private final @NotNull Deque<VariableKey> targetVariable = new ArrayDeque<>();
 
@@ -354,11 +358,47 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             targetVariable.removeLast();
             return;
         }
+        IElementType elementType = expression.getSign().getNode().getElementType();
+        if (NUMBER_TOKEN_SET.contains(elementType) && !(type.isAssignable(RapidType.NUMBER))) {
+            if (STRING_TOKEN_SET.contains(elementType) && !(type.isAssignable(RapidType.STRING))) {
+                targetVariable.removeLast();
+                return;
+            }
+        }
+        if (BOOLEAN_TOKEN_SET.contains(elementType) && !(type.isAssignable(RapidType.BOOLEAN))) {
+            targetVariable.removeLast();
+            return;
+        }
         Value rightValue = computeValue(builder, right);
-        Value.Variable variable = popVariable(type, null);
-        Operator.BinaryOperator operator = getBinaryOperator(expression.getSign().getNode().getElementType());
-        Expression.Binary binary = new Expression.Binary(operator, leftValue, rightValue);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, binary));
+        if (elementType == RapidTokenTypes.LE) {
+            buildSyntheticExpression(expression, Operator.BinaryOperator.LESS_THAN, type, leftValue, rightValue);
+        } else if (elementType == RapidTokenTypes.GE) {
+            buildSyntheticExpression(expression, Operator.BinaryOperator.GREATER_THAN, type, leftValue, rightValue);
+        } else if (elementType == RapidTokenTypes.LTGT) {
+            Value.Variable extraVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN, false);
+            Expression.Binary binary = new Expression.Binary(Operator.BinaryOperator.EQUAL_TO, leftValue, rightValue);
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, extraVariable, binary));
+            Expression.Unary unary = new Expression.Unary(Operator.UnaryOperator.NOT, extraVariable);
+            Value.Variable variable = popVariable(type, false);
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, unary));
+        } else {
+            Value.Variable variable = popVariable(type, null);
+            Operator.BinaryOperator operator = getBinaryOperator(elementType);
+            Expression.Binary binary = new Expression.Binary(operator, leftValue, rightValue);
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, binary));
+        }
+    }
+
+    private void buildSyntheticExpression(@NotNull RapidExpression expression, @NotNull Operator.BinaryOperator operator, @NotNull RapidType type, @NotNull Value leftValue, @NotNull Value rightValue) {
+        Value.Variable lessThanVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN, false);
+        Expression.Binary lessThanExpression = new Expression.Binary(operator, leftValue, rightValue);
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, lessThanVariable, lessThanExpression));
+        Value.Variable equalVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN, false);
+        Expression.Binary equalExpression = new Expression.Binary(Operator.BinaryOperator.EQUAL_TO, leftValue, rightValue);
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, equalVariable, equalExpression));
+        Expression.Binary orExpression = new Expression.Binary(Operator.BinaryOperator.OR, lessThanVariable, equalVariable);
+        Value.Variable variable = popVariable(type, false);
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, orExpression));
     }
 
     private @Nullable Operator.UnaryOperator getUnaryOperator(@NotNull IElementType elementType) {
@@ -386,24 +426,16 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return Operator.BinaryOperator.MODULO;
         } else if (elementType == RapidTokenTypes.LT) {
             return Operator.BinaryOperator.LESS_THAN;
-        } else if (elementType == RapidTokenTypes.LE) {
-            return Operator.BinaryOperator.LESS_THAN_OR_EQUAL_TO;
         } else if (elementType == RapidTokenTypes.EQ) {
             return Operator.BinaryOperator.EQUAL_TO;
-        } else if (elementType == RapidTokenTypes.GE) {
-            return Operator.BinaryOperator.GREATER_THAN_OR_EQUAL_TO;
         } else if (elementType == RapidTokenTypes.GT) {
             return Operator.BinaryOperator.GREATER_THAN;
-        } else if (elementType == RapidTokenTypes.LTGT) {
-            return Operator.BinaryOperator.NOT_EQUAL_TO;
         } else if (elementType == RapidTokenTypes.AND_KEYWORD) {
             return Operator.BinaryOperator.AND;
         } else if (elementType == RapidTokenTypes.XOR_KEYWORD) {
-            return Operator.BinaryOperator.EXLUSIVE_OR;
+            return Operator.BinaryOperator.XOR;
         } else if (elementType == RapidTokenTypes.OR_KEYWORD) {
             return Operator.BinaryOperator.OR;
-        } else if (elementType == RapidTokenTypes.NOT_KEYWORD) {
-            return Operator.BinaryOperator.NOT;
         } else {
             throw new IllegalStateException();
         }
@@ -437,15 +469,25 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         Value.Variable variable = computeExpression(builder, referenceExpression);
         RapidArray array = expression.getArray();
         List<RapidExpression> dimensions = array.getDimensions();
+        List<Value> values = dimensions.stream()
+                .map(dimension -> computeValue(builder, dimension))
+                .toList();
+        if (values.stream().anyMatch(value -> !(value instanceof Value.Constant))) {
+            targetVariable.removeLast();
+            return;
+        }
+        List<Value.Constant> constants = values.stream()
+                .map(value -> (Value.Constant) value)
+                .toList();
         for (int i = 1; i < dimensions.size(); i++) {
             targetVariable.addLast(VariableKey.createVariable());
         }
-        for (int i = 0; i < dimensions.size(); i++) {
-            RapidExpression dimension = dimensions.get(i);
-            Value value = computeValue(builder, dimension);
-            Value.Variable latest = popVariable(type.createArrayType(type.getDimensions() - (i + 1)), null);
-            Expression.Index index = new Expression.Index(variable, value);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, latest, index));
+        for (int i = 0; i < constants.size(); i++) {
+            Value.Constant constant = constants.get(i);
+            RapidType arrayType = type.createArrayType(type.getDimensions() - (i + 1));
+            Value.Variable latest = popVariable(arrayType, null);
+            Value.Variable indexVariable = new Value.Variable.Index(arrayType, variable, constant);
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, latest, new Expression.Variable(indexVariable)));
             variable = latest;
         }
     }

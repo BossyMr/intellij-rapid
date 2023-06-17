@@ -1,28 +1,17 @@
 package com.bossymr.rapid.language.flow.constraint;
 
 import com.bossymr.rapid.language.symbol.RapidType;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * A {@code Constraint} represents the possible value of a variable.
  */
-public sealed interface Constraint
-        permits ClosedConstraint, IntersectConstraint, InverseValueConstraint, OpenConstraint, RangeConstraint, UnionConstraint, ValueConstraint {
+public interface Constraint {
 
-    static @NotNull Constraint and(@NotNull List<Constraint> constraints) {
-        if (constraints.isEmpty()) {
-            throw new IllegalArgumentException();
-        }
-        Constraint constraint = constraints.get(0);
-        for (int i = 1; i < constraints.size(); i++) {
-            constraint = constraint.and(constraints.get(i));
-        }
-        return constraint;
-    }
-
+    @Contract(pure = true)
     static @NotNull Constraint or(@NotNull List<Constraint> constraints) {
         if (constraints.isEmpty()) {
             throw new IllegalArgumentException();
@@ -39,18 +28,7 @@ public sealed interface Constraint
      *
      * @return the type of the value.
      */
-    @NotNull RapidType type();
-
-    /**
-     * Creates a new constraint which represents the intersection of this constraint and the specified constraint.
-     *
-     * @param constraint the constraint.
-     * @return the intersection of this constraint and the specified constraint.
-     */
-    @NotNull
-    default Constraint and(@NotNull Constraint constraint) {
-        return new IntersectConstraint(type(), new ArrayList<>(List.of(this, constraint)));
-    }
+    @NotNull RapidType getType();
 
     /**
      * Creates a new constraint which represents the union of this constraint and the specified constraint.
@@ -58,13 +36,9 @@ public sealed interface Constraint
      * @param constraint the constraint.
      * @return the union of this constraint and the specified constraint.
      */
+    @Contract(pure = true)
     @NotNull
-    default Constraint or(@NotNull Constraint constraint) {
-        if (contains(constraint)) {
-            return this;
-        }
-        return new UnionConstraint(type(), new ArrayList<>(List.of(this, constraint)));
-    }
+    Constraint or(@NotNull Constraint constraint);
 
     /**
      * Creates a new constraint which represents the opposite of this constraint.

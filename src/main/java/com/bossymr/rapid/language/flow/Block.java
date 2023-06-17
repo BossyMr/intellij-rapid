@@ -136,11 +136,11 @@ public sealed abstract class Block {
     public static final class FunctionBlock extends Block {
 
         private final @NotNull RoutineType routineType;
-        private final @Nullable List<ArgumentGroup> argumentGroups;
+        private final @NotNull List<ArgumentGroup> argumentGroups;
 
         public FunctionBlock(@NotNull String moduleName, @NotNull String name, @Nullable RapidType returnType, @NotNull RoutineType routineType, boolean hasArguments) {
             super(moduleName, name, returnType);
-            this.argumentGroups = hasArguments ? new ArrayList<>() : null;
+            this.argumentGroups = hasArguments ? new ArrayList<>() : List.of();
             this.routineType = routineType;
         }
 
@@ -148,14 +148,11 @@ public sealed abstract class Block {
             return routineType;
         }
 
-        public @Nullable List<ArgumentGroup> getArgumentGroups() {
+        public @NotNull List<ArgumentGroup> getArgumentGroups() {
             return argumentGroups;
         }
 
         public @Nullable Argument findArgument(@NotNull String name) {
-            if (argumentGroups == null) {
-                return null;
-            }
             for (ArgumentGroup argumentGroup : argumentGroups) {
                 for (Argument argument : argumentGroup.arguments()) {
                     if (name.equals(argument.name())) {
@@ -169,15 +166,27 @@ public sealed abstract class Block {
         @Override
         protected int getNextVariableIndex() {
             int size = getVariables().size();
-            if (getArgumentGroups() != null) {
-                size += getArgumentGroups().size();
-            }
+            size += getArgumentGroups().size();
             return size;
         }
 
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitFunctionBlock(this);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            if (!super.equals(o)) return false;
+            FunctionBlock that = (FunctionBlock) o;
+            return routineType == that.routineType && Objects.equals(argumentGroups, that.argumentGroups);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(super.hashCode(), routineType, argumentGroups);
         }
     }
 
@@ -202,6 +211,20 @@ public sealed abstract class Block {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitFieldBlock(this);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            if (!super.equals(o)) return false;
+            FieldBlock that = (FieldBlock) o;
+            return fieldType == that.fieldType;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(super.hashCode(), fieldType);
         }
     }
 }

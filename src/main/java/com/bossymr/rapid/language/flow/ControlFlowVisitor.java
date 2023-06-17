@@ -117,10 +117,6 @@ public class ControlFlowVisitor {
         visitExpression(expression);
     }
 
-    public void visitIndexExpression(@NotNull Expression.Index expression) {
-        visitExpression(expression);
-    }
-
     public void visitAggregateExpression(@NotNull Expression.Aggregate expression) {
         visitExpression(expression);
     }

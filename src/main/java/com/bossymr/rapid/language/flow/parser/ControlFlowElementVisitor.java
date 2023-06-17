@@ -1,6 +1,5 @@
 package com.bossymr.rapid.language.flow.parser;
 
-import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.conditon.Expression;
 import com.bossymr.rapid.language.flow.conditon.Operator;
@@ -10,14 +9,7 @@ import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.*;
-import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
-import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleUtil;
-import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiManager;
-import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.util.CachedValueProvider;
 import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.psi.util.PsiModificationTracker;
@@ -32,39 +24,6 @@ import java.util.function.Supplier;
 public class ControlFlowElementVisitor extends RapidElementVisitor {
 
     private final @NotNull ControlFlowBuilder builder = new ControlFlowBuilder();
-
-    public static @NotNull ControlFlow createControlFlow(@NotNull PsiElement element) {
-        PsiFile file = element.getContainingFile();
-        Module module = ModuleUtil.findModuleForFile(file);
-        if (module == null) {
-            if (element instanceof PhysicalRoutine || element instanceof VirtualRoutine) {
-                ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor();
-                element.accept(analyzer);
-                return analyzer.getControlFlow();
-            } else {
-                return new ControlFlow();
-            }
-        }
-        return createControlFlow(module);
-    }
-
-    public static @NotNull ControlFlow createControlFlow(@NotNull Module module) {
-        ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor();
-        PsiManager manager = PsiManager.getInstance(module.getProject());
-        for (VirtualFile virtualFile : FileTypeIndex.getFiles(RapidFileType.getInstance(), module.getModuleContentScope())) {
-            PsiFile file = manager.findFile(virtualFile);
-            if (file != null) {
-                file.accept(analyzer);
-            }
-        }
-        return analyzer.getControlFlow();
-    }
-
-    public static @NotNull ControlFlow createFunctionBlock(@NotNull PhysicalRoutine routine) {
-        ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor();
-        routine.accept(analyzer);
-        return analyzer.getControlFlow();
-    }
 
     public static @Nullable String getModuleName(@NotNull PhysicalVisibleSymbol symbol) {
         PhysicalModule module = PsiTreeUtil.getParentOfType(symbol, PhysicalModule.class);

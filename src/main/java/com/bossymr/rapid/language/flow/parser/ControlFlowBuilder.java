@@ -55,7 +55,7 @@ public class ControlFlowBuilder {
         if (currentBasicBlock != null) {
             throw new IllegalStateException("Cannot exit block as current scope: " + currentBasicBlock + " is still active");
         }
-        controlFlow.insertBlock(currentBlock);
+        controlFlow.setBlock(currentBlock);
         this.currentBlock = null;
         this.currentLabels = null;
     }
@@ -134,9 +134,6 @@ public class ControlFlowBuilder {
             throw new IllegalStateException("Cannot add argument: " + argumentGroup + " to: " + currentBlock);
         }
         List<ArgumentGroup> arguments = functionBlock.getArgumentGroups();
-        if (arguments == null) {
-            throw new IllegalStateException("Cannot add argument: " + argumentGroup + " to: " + currentBlock);
-        }
         arguments.add(argumentGroup);
     }
 

@@ -28,11 +28,11 @@ public class ControlFlow {
         visitor.visitControlFlow(this);
     }
 
-    public void insertBlock(@NotNull Block block) {
-        map.put(block.getModuleName() + ":" + block.getName(), block);
-    }
-
     public @Nullable Block getBlock(@NotNull String moduleName, @NotNull String name) {
         return map.get(moduleName + ":" + name);
+    }
+
+    public void setBlock(@NotNull Block block) {
+        map.put(block.getModuleName() + ":" + block.getName(), block);
     }
 }

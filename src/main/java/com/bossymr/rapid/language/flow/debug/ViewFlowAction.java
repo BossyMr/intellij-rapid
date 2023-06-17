@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.language.flow.ControlFlow;
-import com.bossymr.rapid.language.flow.parser.ControlFlowElementVisitor;
+import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -33,7 +33,7 @@ public class ViewFlowAction extends AnAction {
         if (module == null) {
             return;
         }
-        ControlFlow controlFlow = ControlFlowElementVisitor.createControlFlow(module);
+        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(module);
         String text = ControlFlowFormatVisitor.format(controlFlow);
         LightVirtualFile virtualFile = new LightVirtualFile("ControlFlow.txt", text);
         FileEditorManager.getInstance(project).openTextEditor(new OpenFileDescriptor(project, virtualFile), true);

@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
-import com.bossymr.rapid.language.flow.parser.ControlFlowElementVisitor;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,7 +9,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
 
     private void check(@NotNull String text, @NotNull String expected) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
-        ControlFlow controlFlow = ControlFlowElementVisitor.createControlFlow(myFixture.getModule());
+        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(myFixture.getModule());
         assertTextEquals(expected.replaceAll(" {4}", "\t"), ControlFlowFormatVisitor.format(controlFlow));
     }
 

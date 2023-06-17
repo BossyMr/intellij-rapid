@@ -19,13 +19,6 @@ public sealed interface Expression {
         }
     }
 
-    record Index(@NotNull Value.Variable variable, @NotNull Value index) implements Expression {
-        @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitIndexExpression(this);
-        }
-    }
-
     record Aggregate(@NotNull List<Value> values) implements Expression {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {

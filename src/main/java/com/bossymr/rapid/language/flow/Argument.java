@@ -19,7 +19,7 @@ public record Argument(
         @NotNull ParameterType parameterType,
         @NotNull RapidType type,
         @NotNull String name
-) {
+) implements Field {
 
     public void accept(@NotNull ControlFlowVisitor visitor) {
         visitor.visitArgument(this);
