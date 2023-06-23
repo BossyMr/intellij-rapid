@@ -14,6 +14,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,6 +33,20 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
 
     public PhysicalModule(@NotNull ASTNode node) {
         super(node);
+    }
+
+    /**
+     * Returns the parent module of the specified element. If the element is a module, it is returned.
+     *
+     * @param element the element.
+     * @return the parent module of the element, or {@code null} if the element has no parent module.
+     * @see PhysicalRoutine#getRoutine(PsiElement)
+     */
+    public static @Nullable PhysicalModule getModule(@NotNull PsiElement element) {
+        if (element instanceof PhysicalModule module) {
+            return module;
+        }
+        return PsiTreeUtil.getParentOfType(element, PhysicalModule.class);
     }
 
     @Override

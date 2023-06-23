@@ -1,15 +1,38 @@
 package com.bossymr.rapid.language.flow.constraint;
 
+import com.bossymr.rapid.language.symbol.RapidComponent;
+import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * A {@code Constraint} represents the possible value of a variable.
  */
 public interface Constraint {
+
+    static @NotNull Constraint any(@NotNull RapidType type) {
+        if (RapidType.DOUBLE.isAssignable(type) || RapidType.NUMBER.isAssignable(type)) {
+            return new RangeConstraint(type, new RangeConstraint.Bound(true, Double.MIN_VALUE), new RangeConstraint.Bound(true, Double.MAX_VALUE));
+        }
+        if (RapidType.BOOLEAN.isAssignable(type)) {
+            return new ConstantConstraint(type, Set.of(true, false));
+        }
+        if (RapidType.STRING.isAssignable(type)) {
+            return new OpenConstraint(type);
+        }
+        if (type.getTargetStructure() instanceof RapidRecord record) {
+            Map<String, Constraint> constraints = new HashMap<>();
+            for (RapidComponent component : record.getComponents()) {
+                RapidType componentType = Objects.requireNonNull(component.getType());
+                constraints.put(component.getName(), Constraint.any(componentType));
+            }
+            return new RecordConstraint(type, constraints);
+        }
+        return new OpenConstraint(type);
+    }
 
     @Contract(pure = true)
     static @NotNull Constraint or(@NotNull List<Constraint> constraints) {

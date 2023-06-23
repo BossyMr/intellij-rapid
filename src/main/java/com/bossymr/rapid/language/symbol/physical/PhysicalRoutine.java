@@ -25,6 +25,20 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
         super(node);
     }
 
+    /**
+     * Returns the parent routine of the specified element. If the element is a routine, it is returned.
+     *
+     * @param element the element.
+     * @return the parent routine of the element, or {@code null} if the element has no parent routine.
+     * @see PhysicalModule#getModule(PsiElement)
+     */
+    public static @Nullable PhysicalRoutine getRoutine(@NotNull PsiElement element) {
+        if (element instanceof PhysicalRoutine routine) {
+            return routine;
+        }
+        return PsiTreeUtil.getParentOfType(element, PhysicalRoutine.class);
+    }
+
     @Override
     public void accept(@NotNull RapidElementVisitor visitor) {
         visitor.visitRoutine(this);
@@ -124,7 +138,7 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     @Override
     public String toString() {
         return "PhysicalRoutine{" +
-               "name='" + getName() + '\'' +
-               '}';
+                "name='" + getName() + '\'' +
+                '}';
     }
 }

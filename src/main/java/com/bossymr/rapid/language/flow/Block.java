@@ -54,6 +54,10 @@ public sealed abstract class Block {
         return entryBlocks.get(scopeType);
     }
 
+    public @NotNull List<ArgumentGroup> getArgumentGroups() {
+        return List.of();
+    }
+
     public @NotNull List<Variable> getVariables() {
         return variables;
     }
@@ -148,6 +152,7 @@ public sealed abstract class Block {
             return routineType;
         }
 
+        @Override
         public @NotNull List<ArgumentGroup> getArgumentGroups() {
             return argumentGroups;
         }

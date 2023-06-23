@@ -23,7 +23,7 @@ public sealed interface BranchingInstruction extends Instruction {
      * @param onSuccess the instruction to go to if the specified value is {@code true}.
      * @param onFailure the instruction to go to if the specified value is {@code false}.
      */
-    record ConditionalBranchingInstruction(@NotNull PsiElement element, @NotNull Value value, @NotNull BasicBlock onSuccess,
+    record ConditionalBranchingInstruction(@NotNull PsiElement element, @NotNull Value.Variable value, @NotNull BasicBlock onSuccess,
                                            @NotNull BasicBlock onFailure) implements BranchingInstruction {
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {

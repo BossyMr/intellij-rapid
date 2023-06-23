@@ -312,7 +312,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         BasicBlock loopBasicBlock = builder.createBasicBlock();
         builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, conditionBasicBlock));
         builder.enterBasicBlock(conditionBasicBlock);
-        Value conditionValue = ControlFlowExpressionVisitor.computeValue(builder, condition);
+        Value.Variable conditionValue = ControlFlowExpressionVisitor.computeExpression(builder, condition);
         builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, conditionValue, loopBasicBlock, nextBasicBlock));
         builder.enterBasicBlock(loopBasicBlock);
         statementList.accept(this);
@@ -349,7 +349,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         // If the scope has no else branch, go to the next scope instead.
         // If the scope has an else branch, which doesn't fall through, don't create a fall through block by calling the supplier.
         BasicBlock elseBasicBlock = elseBranch != null ? builder.createBasicBlock() : nextBasicBlock.get();
-        Value value = ControlFlowExpressionVisitor.computeValue(builder, condition);
+        Value.Variable value = ControlFlowExpressionVisitor.computeExpression(builder, condition);
         builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, value, thenBasicBlock, elseBasicBlock));
         builder.enterBasicBlock(thenBasicBlock);
         thenBranch.accept(this);

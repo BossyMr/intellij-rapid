@@ -1,4 +1,4 @@
-package com.bossymr.rapid.language.flow.constraint;
+package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Block;
@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.conditon.Expression;
 import com.bossymr.rapid.language.flow.conditon.Operator;
 import com.bossymr.rapid.language.flow.conditon.Value;
+import com.bossymr.rapid.language.flow.constraint.*;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.RapidStructure;
@@ -30,9 +31,25 @@ import java.util.stream.Collectors;
  */
 public record DataFlowBlock(@NotNull Block block, @NotNull BasicBlock basicBlock, @NotNull Set<DataFlowBlock> predecessors, @NotNull Set<DataFlowBlock> successors, @NotNull Map<Value.Variable, Expression> expressions, @NotNull Map<Value.Variable, Constraint> constraints) {
 
+    /**
+     * Create a new {@code DataFlowBlock} which represents the specified block.
+     *
+     * @param block the block which contains the specified basic block.
+     * @param basicBlock the basic block.
+     */
     public DataFlowBlock(@NotNull Block block, @NotNull BasicBlock basicBlock) {
         this(block, basicBlock, new HashSet<>(), new HashSet<>(), new HashMap<>(), new HashMap<>());
     }
+
+    /**
+     * Create a copy of the specified block.
+     *
+     * @param block the block to copy.
+     */
+    public DataFlowBlock(@NotNull DataFlowBlock block) {
+        this(block.block(), block.basicBlock(), block.predecessors(), block.successors(), block.expressions(), block.constraints());
+    }
+
 
     public @NotNull Constraint getConstraint(@NotNull RapidType type, @NotNull Expression expression) {
         ExpressionVisitor visitor = new ExpressionVisitor(type);
