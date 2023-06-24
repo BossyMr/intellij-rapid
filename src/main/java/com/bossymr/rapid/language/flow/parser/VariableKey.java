@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.flow.parser;
 
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.Variable;
-import com.bossymr.rapid.language.flow.conditon.Value;
+import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;

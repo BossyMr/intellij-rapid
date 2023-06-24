@@ -1,6 +1,5 @@
 package com.bossymr.rapid.language.flow;
 
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,12 +15,7 @@ import java.util.Map;
  */
 public class ControlFlow {
 
-    /**
-     * A map which contains all objects in the control flow graph.
-     * <p>
-     * The key to each object refers to the "moduleName:routineName" of the object.
-     */
-    private final @NotNull Map<String, Block> map;
+    private final @NotNull Map<BlockKey, Block> map;
 
     public ControlFlow() {
         this.map = new HashMap<>();
@@ -49,11 +43,18 @@ public class ControlFlow {
      * @return the block, or {@code null} if a suitable block was not found.
      */
     public @Nullable Block getBlock(@NotNull String moduleName, @NotNull String name) {
-        return map.get(moduleName + ":" + name);
+        return map.get(new BlockKey(moduleName, name));
     }
 
-    @ApiStatus.Internal
     public void setBlock(@NotNull Block block) {
-        map.put(block.getModuleName() + ":" + block.getName(), block);
+        map.put(BlockKey.getBlockKey(block), block);
+    }
+
+    private record BlockKey(@NotNull String moduleName, @NotNull String name) {
+
+        public static @NotNull BlockKey getBlockKey(@NotNull Block block) {
+            return new BlockKey(block.getModuleName(), block.getName());
+        }
+
     }
 }

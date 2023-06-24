@@ -1,4 +1,4 @@
-package com.bossymr.rapid.language.flow.conditon;
+package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import org.jetbrains.annotations.NotNull;

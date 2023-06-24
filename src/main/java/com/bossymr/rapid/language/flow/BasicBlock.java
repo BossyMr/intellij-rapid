@@ -1,8 +1,8 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.conditon.Value;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
+import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.psi.StatementListType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

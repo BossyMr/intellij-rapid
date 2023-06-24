@@ -1,7 +1,7 @@
-package com.bossymr.rapid.language.flow.conditon;
+package com.bossymr.rapid.language.flow.value;
 
-import com.bossymr.rapid.language.flow.conditon.Expression.Binary;
-import com.bossymr.rapid.language.flow.conditon.Expression.Unary;
+import com.bossymr.rapid.language.flow.value.Expression.Binary;
+import com.bossymr.rapid.language.flow.value.Expression.Unary;
 
 /**
  * An {@code Operator} represents an operation which can be performed.

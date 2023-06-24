@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.flow.instruction;
 
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.conditon.Value;
+import com.bossymr.rapid.language.flow.value.Value;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
