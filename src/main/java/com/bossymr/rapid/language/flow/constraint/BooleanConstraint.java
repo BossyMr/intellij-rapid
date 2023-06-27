@@ -1,13 +1,14 @@
-package com.bossymr.rapid.language.flow.condition;
+package com.bossymr.rapid.language.flow.constraint;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class BooleanCondition implements Condition {
+public class BooleanConstraint implements Constraint {
 
     private final @NotNull Optionality optionality;
     private final @NotNull BooleanValue value;
 
-    public BooleanCondition(@NotNull Optionality optionality, @NotNull BooleanValue value) {
+    public BooleanConstraint(@NotNull Optionality optionality, @NotNull BooleanValue value) {
         this.optionality = optionality;
         this.value = value;
     }
@@ -17,30 +18,35 @@ public class BooleanCondition implements Condition {
         return optionality;
     }
 
-    @Override
-    public @NotNull BooleanCondition copy(@NotNull Optionality optionality) {
-        return new BooleanCondition(optionality(), value);
+
+    public @NotNull BooleanValue getValue() {
+        return value;
     }
 
     @Override
-    public @NotNull BooleanCondition negate() {
-        return new BooleanCondition(optionality(), value.negate());
+    public @NotNull BooleanConstraint copy(@NotNull Optionality optionality) {
+        return new BooleanConstraint(optionality(), value);
     }
 
     @Override
-    public @NotNull BooleanCondition and(@NotNull Condition condition) {
-        if (!(condition instanceof BooleanCondition booleanCondition)) {
+    public @NotNull BooleanConstraint negate() {
+        return new BooleanConstraint(optionality(), value.negate());
+    }
+
+    @Override
+    public @NotNull BooleanConstraint and(@NotNull Constraint constraint) {
+        if (!(constraint instanceof BooleanConstraint booleanCondition)) {
             throw new IllegalArgumentException();
         }
-        return new BooleanCondition(optionality(), value.and(booleanCondition.value));
+        return new BooleanConstraint(optionality(), value.and(booleanCondition.value));
     }
 
     @Override
-    public @NotNull BooleanCondition or(@NotNull Condition condition) {
-        if (!(condition instanceof BooleanCondition booleanCondition)) {
+    public @NotNull BooleanConstraint or(@NotNull Constraint constraint) {
+        if (!(constraint instanceof BooleanConstraint booleanCondition)) {
             throw new IllegalArgumentException();
         }
-        return new BooleanCondition(optionality(), value.or(booleanCondition.value));
+        return new BooleanConstraint(optionality(), value.or(booleanCondition.value));
     }
 
     public enum BooleanValue {
@@ -48,6 +54,18 @@ public class BooleanCondition implements Condition {
         ALWAYS_FALSE,
         ANY_VALUE,
         ALWAYS_TRUE;
+
+        public static @NotNull BooleanValue get(boolean value) {
+            return value ? ALWAYS_TRUE : ALWAYS_FALSE;
+        }
+
+        public @Nullable Boolean get() {
+            return switch (this) {
+                case NO_VALUE, ANY_VALUE -> null;
+                case ALWAYS_FALSE -> false;
+                case ALWAYS_TRUE -> true;
+            };
+        }
 
         public @NotNull BooleanValue negate() {
             return switch (this) {

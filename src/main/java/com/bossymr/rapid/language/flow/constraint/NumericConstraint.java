@@ -1,7 +1,8 @@
-package com.bossymr.rapid.language.flow.condition;
+package com.bossymr.rapid.language.flow.constraint;
 
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,24 +11,32 @@ import java.util.ListIterator;
 /**
  * A {@code RangeCondition} represents a condition where a variable might be equal to any value in the range.
  */
-public class NumericCondition implements Condition {
+public class NumericConstraint implements Constraint {
 
     private final @NotNull Optionality optionality;
     private final @NotNull List<Range> ranges;
 
-    public NumericCondition(@NotNull Optionality optionality, @NotNull Bound lower, @NotNull Bound upper) {
+    public NumericConstraint(@NotNull Optionality optionality, @NotNull Bound lower, @NotNull Bound upper) {
         this(optionality);
         ranges.add(new Range(lower, upper));
     }
 
-    public NumericCondition(@NotNull Optionality optionality, @NotNull List<Range> ranges) {
+    public NumericConstraint(@NotNull Optionality optionality, @NotNull List<Range> ranges) {
         this.optionality = optionality;
         this.ranges = ranges;
     }
 
-    public NumericCondition(@NotNull Optionality optionality) {
+    public NumericConstraint(@NotNull Optionality optionality) {
         this.optionality = optionality;
         this.ranges = new ArrayList<>();
+    }
+
+    public static @NotNull NumericConstraint any() {
+        return new NumericConstraint(Optionality.PRESENT, Bound.MIN_VALUE, Bound.MAX_VALUE);
+    }
+
+    public @NotNull List<Range> getRanges() {
+        return ranges;
     }
 
     @Override
@@ -35,9 +44,30 @@ public class NumericCondition implements Condition {
         return optionality;
     }
 
+    public @NotNull Bound getMinimum() {
+        return ranges.get(0).lower();
+    }
+
+    public @NotNull Bound getMaximum() {
+        return ranges.get(ranges.size() - 1).upper();
+    }
+
+    public @Nullable Double getPoint() {
+        if (ranges.size() != 1) {
+            return null;
+        }
+        Range range = ranges.get(0);
+        if (range.lower().isInclusive() && range.upper().isInclusive()) {
+            if (range.lower().value() == range.upper().value()) {
+                return range.lower().value();
+            }
+        }
+        return null;
+    }
+
     @Override
-    public @NotNull NumericCondition copy(@NotNull Optionality optionality) {
-        return new NumericCondition(optionality, new ArrayList<>(ranges));
+    public @NotNull NumericConstraint copy(@NotNull Optionality optionality) {
+        return new NumericConstraint(optionality, new ArrayList<>(ranges));
     }
 
     /**
@@ -85,8 +115,8 @@ public class NumericCondition implements Condition {
     }
 
     @Contract(pure = true)
-    private @NotNull NumericCondition negate(@NotNull Range range) {
-        NumericCondition condition = new NumericCondition(optionality());
+    private @NotNull NumericConstraint negate(@NotNull Range range) {
+        NumericConstraint condition = new NumericConstraint(optionality());
         if (!range.lower().equals(Bound.MIN_VALUE)) {
             Bound lower = range.lower();
             Range below = new Range(Bound.MIN_VALUE, new Bound(!lower.isInclusive(), lower.value()));
@@ -101,8 +131,8 @@ public class NumericCondition implements Condition {
     }
 
     @Override
-    public @NotNull NumericCondition negate() {
-        NumericCondition condition = new NumericCondition(optionality(), Bound.MIN_VALUE, Bound.MAX_VALUE);
+    public @NotNull NumericConstraint negate() {
+        NumericConstraint condition = new NumericConstraint(optionality(), Bound.MIN_VALUE, Bound.MAX_VALUE);
         for (Range range : ranges) {
             condition = condition.and(negate(range));
         }
@@ -110,21 +140,21 @@ public class NumericCondition implements Condition {
     }
 
     @Override
-    public @NotNull NumericCondition and(@NotNull Condition condition) {
-        if (!(condition instanceof NumericCondition numericCondition)) {
+    public @NotNull NumericConstraint and(@NotNull Constraint constraint) {
+        if (!(constraint instanceof NumericConstraint numericCondition)) {
             throw new IllegalArgumentException();
         }
-        NumericCondition copy = new NumericCondition(optionality(), new ArrayList<>(ranges));
+        NumericConstraint copy = new NumericConstraint(optionality(), new ArrayList<>(ranges));
         copy.intersect(numericCondition.ranges);
         return copy;
     }
 
     @Override
-    public @NotNull NumericCondition or(@NotNull Condition condition) {
-        if (!(condition instanceof NumericCondition numericCondition)) {
+    public @NotNull NumericConstraint or(@NotNull Constraint constraint) {
+        if (!(constraint instanceof NumericConstraint numericCondition)) {
             throw new IllegalArgumentException();
         }
-        NumericCondition copy = new NumericCondition(optionality(), new ArrayList<>(ranges));
+        NumericConstraint copy = new NumericConstraint(optionality(), new ArrayList<>(ranges));
         for (Range range : numericCondition.ranges) {
             copy.union(range);
         }

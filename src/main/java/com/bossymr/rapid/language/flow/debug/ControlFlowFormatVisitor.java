@@ -376,10 +376,14 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             case SUBTRACT -> "-";
             case MULTIPLY -> "*";
             case DIVIDE -> "/";
+            case INTEGER_DIVIDE -> "DIV";
             case MODULO -> "%";
             case LESS_THAN -> "<";
+            case LESS_THAN_OR_EQUAL -> "<=";
             case EQUAL_TO -> "=";
+            case NOT_EQUAL_TO -> "!=";
             case GREATER_THAN -> ">";
+            case GREATER_THAN_OR_EQUAL -> ">=";
             case AND -> "AND";
             case XOR -> "XOR";
             case OR -> "OR";

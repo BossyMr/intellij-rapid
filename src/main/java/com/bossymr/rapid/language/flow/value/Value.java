@@ -19,6 +19,19 @@ public sealed interface Value {
         @Override
         @NotNull RapidType type();
 
+        record Snapshot(@NotNull Value.Variable variable, int index) implements Variable {
+
+            @Override
+            public void accept(@NotNull ControlFlowVisitor visitor) {
+                variable.accept(visitor);
+            }
+
+            @Override
+            public @NotNull RapidType type() {
+                return variable.type();
+            }
+        }
+
         /**
          * A {@code Variable} represents the value of a local variable.
          *

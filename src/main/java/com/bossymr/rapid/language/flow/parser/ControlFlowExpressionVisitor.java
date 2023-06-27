@@ -370,35 +370,10 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         Value rightValue = computeValue(builder, right);
-        if (elementType == RapidTokenTypes.LE) {
-            buildSyntheticExpression(expression, Operator.BinaryOperator.LESS_THAN, type, leftValue, rightValue);
-        } else if (elementType == RapidTokenTypes.GE) {
-            buildSyntheticExpression(expression, Operator.BinaryOperator.GREATER_THAN, type, leftValue, rightValue);
-        } else if (elementType == RapidTokenTypes.LTGT) {
-            Value.Variable extraVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN, false);
-            Expression.Binary binary = new Expression.Binary(Operator.BinaryOperator.EQUAL_TO, leftValue, rightValue);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, extraVariable, binary));
-            Expression.Unary unary = new Expression.Unary(Operator.UnaryOperator.NOT, extraVariable);
-            Value.Variable variable = popVariable(type, false);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, unary));
-        } else {
-            Value.Variable variable = popVariable(type, null);
-            Operator.BinaryOperator operator = getBinaryOperator(elementType);
-            Expression.Binary binary = new Expression.Binary(operator, leftValue, rightValue);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, binary));
-        }
-    }
-
-    private void buildSyntheticExpression(@NotNull RapidExpression expression, @NotNull Operator.BinaryOperator operator, @NotNull RapidType type, @NotNull Value leftValue, @NotNull Value rightValue) {
-        Value.Variable lessThanVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN, false);
-        Expression.Binary lessThanExpression = new Expression.Binary(operator, leftValue, rightValue);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, lessThanVariable, lessThanExpression));
-        Value.Variable equalVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN, false);
-        Expression.Binary equalExpression = new Expression.Binary(Operator.BinaryOperator.EQUAL_TO, leftValue, rightValue);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, equalVariable, equalExpression));
-        Expression.Binary orExpression = new Expression.Binary(Operator.BinaryOperator.OR, lessThanVariable, equalVariable);
-        Value.Variable variable = popVariable(type, false);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, orExpression));
+        Value.Variable variable = popVariable(type, null);
+        Operator.BinaryOperator operator = getBinaryOperator(elementType);
+        Expression.Binary binary = new Expression.Binary(operator, leftValue, rightValue);
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, binary));
     }
 
     private @Nullable Operator.UnaryOperator getUnaryOperator(@NotNull IElementType elementType) {
@@ -421,7 +396,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         } else if (elementType == RapidTokenTypes.DIV) {
             return Operator.BinaryOperator.DIVIDE;
         } else if (elementType == RapidTokenTypes.DIV_KEYWORD) {
-            return Operator.BinaryOperator.DIVIDE;
+            return Operator.BinaryOperator.INTEGER_DIVIDE;
         } else if (elementType == RapidTokenTypes.MOD_KEYWORD) {
             return Operator.BinaryOperator.MODULO;
         } else if (elementType == RapidTokenTypes.LT) {
@@ -430,6 +405,12 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return Operator.BinaryOperator.EQUAL_TO;
         } else if (elementType == RapidTokenTypes.GT) {
             return Operator.BinaryOperator.GREATER_THAN;
+        } else if (elementType == RapidTokenTypes.LTGT) {
+            return Operator.BinaryOperator.NOT_EQUAL_TO;
+        } else if (elementType == RapidTokenTypes.LE) {
+            return Operator.BinaryOperator.LESS_THAN_OR_EQUAL;
+        } else if (elementType == RapidTokenTypes.GE) {
+            return Operator.BinaryOperator.GREATER_THAN_OR_EQUAL;
         } else if (elementType == RapidTokenTypes.AND_KEYWORD) {
             return Operator.BinaryOperator.AND;
         } else if (elementType == RapidTokenTypes.XOR_KEYWORD) {

@@ -1,4 +1,4 @@
-package com.bossymr.rapid.language.flow.condition;
+package com.bossymr.rapid.language.flow.constraint;
 
 /**
  * The {@code Optionality} of a variable represents whether it is safe to reference it.
