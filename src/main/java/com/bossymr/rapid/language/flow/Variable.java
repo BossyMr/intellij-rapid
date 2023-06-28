@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 
 /**
- * A {@code Variable} represents a variable.
+ * A {@code ReferenceValue} represents a variable.
  *
  * @param index the index of the variable.
  * @param value the value to which the variable is initialized.

@@ -389,6 +389,12 @@ public class ControlFlowTest extends BasePlatformTestCase {
                     PROC conditional(\\num a) ENDPROC
                 ENDMODULE
                 """, """
+                proc foo:conditional(\\input num _0 [a]) {
+                	entry 0 {
+                		return;
+                	}
+                }
+                                
                 proc foo:bar(\\input num _0 [a]) {
                 	bool _1;
                                 
@@ -412,12 +418,6 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 		foo:conditional() -> 1;
                 	}
                 }
-                                
-                proc foo:conditional(\\input num _0 [a]) {
-                	entry 0 {
-                		return;
-                	}
-                }
                 """);
     }
 
@@ -431,6 +431,12 @@ public class ControlFlowTest extends BasePlatformTestCase {
                     PROC conditional(\\num a, \\num b) ENDPROC
                 ENDMODULE
                 """, """
+                proc foo:conditional(\\input num _0 [a], \\input num _1 [b]) {
+                	entry 0 {
+                		return;
+                	}
+                }
+                                
                 proc foo:bar(\\input num _0 [a], \\input num _1 [b]) {
                 	bool _2;
                 	bool _3;
@@ -478,12 +484,6 @@ public class ControlFlowTest extends BasePlatformTestCase {
                                 
                 	block 10 {
                 		foo:conditional() -> 1;
-                	}
-                }
-                                
-                proc foo:conditional(\\input num _0 [a], \\input num _1 [b]) {
-                	entry 0 {
-                		return;
                 	}
                 }
                 """);

@@ -3,9 +3,7 @@ package com.bossymr.rapid.language.flow.debug;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.Operator;
-import com.bossymr.rapid.language.flow.value.Value;
+import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.StatementListType;
 import org.jetbrains.annotations.NotNull;
 
@@ -277,7 +275,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             stringBuilder.append(" := ");
         }
         Value routine = instruction.routine();
-        if (routine instanceof Value.Constant constant && constant.value() instanceof String) {
+        if (routine instanceof ConstantValue constant && constant.value() instanceof String) {
             stringBuilder.append(constant.value());
         } else {
             routine.accept(this);
@@ -301,13 +299,13 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitLocalVariableValue(@NotNull Value.Variable.Local value) {
-        stringBuilder.append("_").append(value.index());
+    public void visitLocalVariableValue(@NotNull VariableReference value) {
+        stringBuilder.append("_").append(value.field().index());
         super.visitLocalVariableValue(value);
     }
 
     @Override
-    public void visitFieldVariableValue(@NotNull Value.Variable.Field value) {
+    public void visitFieldVariableValue(@NotNull FieldReference value) {
         if (value.moduleName() != null) {
             stringBuilder.append(value.moduleName()).append(":");
         }
@@ -316,7 +314,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitIndexVariableValue(@NotNull Value.Variable.Index value) {
+    public void visitIndexVariableValue(@NotNull IndexReference value) {
         value.variable().accept(this);
         stringBuilder.append("[");
         value.index().accept(this);
@@ -325,7 +323,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitComponentVariableValue(@NotNull Value.Variable.Component value) {
+    public void visitComponentVariableValue(@NotNull ComponentReference value) {
         value.variable().accept(this);
         stringBuilder.append(".");
         stringBuilder.append(value.component());
@@ -333,7 +331,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitConstantValue(@NotNull Value.Constant value) {
+    public void visitConstantValue(@NotNull ConstantValue value) {
         if (value.value() instanceof String) {
             stringBuilder.append("\"").append(value.value()).append("\"");
         } else {
@@ -343,19 +341,19 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitErrorValue(@NotNull Value.Error value) {
+    public void visitErrorValue(@NotNull ErrorValue value) {
         stringBuilder.append("error");
         super.visitErrorValue(value);
     }
 
     @Override
-    public void visitVariableExpression(@NotNull Expression.Variable expression) {
+    public void visitVariableExpression(@NotNull VariableExpression expression) {
         expression.value().accept(this);
         super.visitVariableExpression(expression);
     }
 
     @Override
-    public void visitAggregateExpression(@NotNull Expression.Aggregate expression) {
+    public void visitAggregateExpression(@NotNull AggregateExpression expression) {
         stringBuilder.append("[");
         for (int i = 0; i < expression.values().size(); i++) {
             if (i > 0) {
@@ -368,7 +366,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitBinaryExpression(@NotNull Expression.Binary expression) {
+    public void visitBinaryExpression(@NotNull BinaryExpression expression) {
         expression.left().accept(this);
         stringBuilder.append(" ");
         stringBuilder.append(switch (expression.operator()) {
@@ -394,12 +392,12 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitUnaryExpression(@NotNull Expression.Unary expression) {
+    public void visitUnaryExpression(@NotNull UnaryExpression expression) {
         stringBuilder.append(switch (expression.operator()) {
             case NOT -> "NOT";
             case NEGATE -> "-";
         });
-        if (expression.operator() != Operator.UnaryOperator.NEGATE) {
+        if (expression.operator() != UnaryOperator.NEGATE) {
             stringBuilder.append(" ");
         }
         expression.value().accept(this);

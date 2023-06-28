@@ -2,9 +2,7 @@ package com.bossymr.rapid.language.flow.condition;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.Operator;
-import com.bossymr.rapid.language.flow.value.Value;
+import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -19,11 +17,11 @@ import java.util.function.Function;
  */
 public class Condition {
 
-    private final @NotNull Value.Variable variable;
+    private final @NotNull ReferenceValue variable;
     private final @NotNull ConditionType conditionType;
     private @NotNull Expression expression;
 
-    public Condition(@NotNull Value.Variable variable, @NotNull ConditionType conditionType, @NotNull Expression expression) {
+    public Condition(@NotNull ReferenceValue variable, @NotNull ConditionType conditionType, @NotNull Expression expression) {
         this.variable = variable;
         this.conditionType = conditionType;
         this.expression = expression;
@@ -51,7 +49,12 @@ public class Condition {
         return new Condition(variable, conditionType.flip(), expression);
     }
 
-    public @NotNull Value.Variable getVariable() {
+    @Contract(pure = true)
+    public @NotNull Condition copy() {
+        return new Condition(variable, conditionType, expression);
+    }
+
+    public @NotNull ReferenceValue getVariable() {
         return variable;
     }
 
@@ -67,7 +70,7 @@ public class Condition {
         this.expression = expression;
     }
 
-    public boolean contains(@NotNull Value.Variable variable) {
+    public boolean contains(@NotNull ReferenceValue variable) {
         AtomicBoolean atomicBoolean = new AtomicBoolean();
         expression.accept(new ExpressionVisitor(result -> {
             atomicBoolean.set(atomicBoolean.get() || result.equals(variable));
@@ -76,12 +79,12 @@ public class Condition {
         return atomicBoolean.get();
     }
 
-    public void replace(@NotNull Value.Variable target, @NotNull Value.Variable variable) {
+    public void replace(@NotNull ReferenceValue target, @NotNull ReferenceValue variable) {
         expression.accept(new ExpressionVisitor(result -> result.equals(target) ? variable : result));
     }
 
-    public @NotNull List<Value.Variable> collect() {
-        List<Value.Variable> variables = new ArrayList<>();
+    public @NotNull List<ReferenceValue> collect() {
+        List<ReferenceValue> variables = new ArrayList<>();
         expression.accept(new ExpressionVisitor(result -> {
             variables.add(result);
             return result;
@@ -98,53 +101,53 @@ public class Condition {
         }
 
         @Override
-        public void visitVariableExpression(@NotNull Expression.Variable expression) {
-            if (expression.value() instanceof Value.Variable value) {
-                conditions.add(new Condition(value, conditionType.flip(), new Expression.Variable(variable)));
+        public void visitVariableExpression(@NotNull VariableExpression expression) {
+            if (expression.value() instanceof ReferenceValue value) {
+                conditions.add(new Condition(value, conditionType.flip(), new VariableExpression(variable)));
             }
             super.visitVariableExpression(expression);
         }
 
         @Override
-        public void visitAggregateExpression(@NotNull Expression.Aggregate expression) {
+        public void visitAggregateExpression(@NotNull AggregateExpression expression) {
             List<Value> values = expression.values();
             for (int i = 0; i < values.size(); i++) {
-                if (values.get(i) instanceof Value.Variable value) {
-                    Value.Variable.Index index = new Value.Variable.Index(value.type(), variable, new Value.Constant(RapidType.NUMBER, i));
-                    conditions.add(new Condition(value, ConditionType.EQUALITY, new Expression.Variable(index)));
+                if (values.get(i) instanceof ReferenceValue value) {
+                    IndexReference index = new IndexReference(value.type(), variable, new ConstantValue(RapidType.NUMBER, i));
+                    conditions.add(new Condition(value, ConditionType.EQUALITY, new VariableExpression(index)));
                 }
             }
             super.visitAggregateExpression(expression);
         }
 
         @Override
-        public void visitBinaryExpression(@NotNull Expression.Binary expression) {
-            if (expression.left() instanceof Value.Variable value) {
+        public void visitBinaryExpression(@NotNull BinaryExpression expression) {
+            if (expression.left() instanceof ReferenceValue value) {
                 Condition condition = switch (expression.operator()) {
                     case ADD ->
-                            new Condition(value, conditionType.flip(), new Expression.Binary(Operator.BinaryOperator.SUBTRACT, variable, expression.right()));
+                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.SUBTRACT, variable, expression.right()));
                     case SUBTRACT ->
-                            new Condition(value, conditionType.flip(), new Expression.Binary(Operator.BinaryOperator.ADD, variable, expression.right()));
+                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.ADD, variable, expression.right()));
                     case MULTIPLY ->
-                            new Condition(value, conditionType.flip(), new Expression.Binary(Operator.BinaryOperator.DIVIDE, variable, expression.right()));
+                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.DIVIDE, variable, expression.right()));
                     case DIVIDE ->
-                            new Condition(value, conditionType.flip(), new Expression.Binary(Operator.BinaryOperator.MULTIPLY, variable, expression.right()));
+                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.MULTIPLY, variable, expression.right()));
                     default -> null;
                 };
                 if (condition != null) {
                     conditions.add(condition);
                 }
             }
-            if (expression.right() instanceof Value.Variable value) {
+            if (expression.right() instanceof ReferenceValue value) {
                 Condition condition = switch (expression.operator()) {
                     case ADD ->
-                            new Condition(value, conditionType.flip(), new Expression.Binary(Operator.BinaryOperator.SUBTRACT, variable, expression.left()));
+                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.SUBTRACT, variable, expression.left()));
                     case SUBTRACT ->
-                            new Condition(value, conditionType.flip(), new Expression.Binary(Operator.BinaryOperator.ADD, expression.left(), variable));
+                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.ADD, expression.left(), variable));
                     case MULTIPLY ->
-                            new Condition(value, conditionType.flip(), new Expression.Binary(Operator.BinaryOperator.DIVIDE, variable, expression.right()));
+                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.DIVIDE, variable, expression.right()));
                     case DIVIDE ->
-                            new Condition(value, conditionType.flip(), new Expression.Binary(Operator.BinaryOperator.DIVIDE, expression.left(), variable));
+                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.DIVIDE, expression.left(), variable));
                     default -> null;
                 };
                 if (condition != null) {
@@ -155,9 +158,9 @@ public class Condition {
         }
 
         @Override
-        public void visitUnaryExpression(@NotNull Expression.Unary expression) {
-            if (expression.value() instanceof Value.Variable value) {
-                conditions.add(new Condition(value, conditionType.flip(), new Expression.Variable(variable)));
+        public void visitUnaryExpression(@NotNull UnaryExpression expression) {
+            if (expression.value() instanceof ReferenceValue value) {
+                conditions.add(new Condition(value, conditionType.flip(), new VariableExpression(variable)));
             }
             super.visitUnaryExpression(expression);
         }
@@ -165,53 +168,53 @@ public class Condition {
 
     private class ExpressionVisitor extends ControlFlowVisitor {
 
-        private final @NotNull Function<Value.Variable, Value.Variable> function;
+        private final @NotNull Function<ReferenceValue, ReferenceValue> function;
 
-        public ExpressionVisitor(@NotNull Function<Value.Variable, Value.Variable> function) {
+        public ExpressionVisitor(@NotNull Function<ReferenceValue, ReferenceValue> function) {
             this.function = function;
         }
 
         @Override
-        public void visitVariableExpression(@NotNull Expression.Variable expression) {
+        public void visitVariableExpression(@NotNull VariableExpression expression) {
             Value value = computeValue(expression.value());
             if (!value.equals(variable)) {
-                setExpression(new Expression.Variable(value));
+                setExpression(new VariableExpression(value));
             }
             super.visitVariableExpression(expression);
         }
 
         @Override
-        public void visitAggregateExpression(@NotNull Expression.Aggregate expression) {
+        public void visitAggregateExpression(@NotNull AggregateExpression expression) {
             List<Value> values = expression.values().stream()
                     .map(this::computeValue).toList();
             if (!values.equals(expression.values())) {
-                setExpression(new Expression.Aggregate(values));
+                setExpression(new AggregateExpression(values));
             }
             super.visitAggregateExpression(expression);
         }
 
         private @NotNull Value computeValue(@NotNull Value value) {
-            if (!(value instanceof Value.Variable cast)) {
+            if (!(value instanceof ReferenceValue cast)) {
                 return value;
             }
             return function.apply(cast);
         }
 
         @Override
-        public void visitBinaryExpression(@NotNull Expression.Binary expression) {
+        public void visitBinaryExpression(@NotNull BinaryExpression expression) {
             Value left = computeValue(expression.left());
             Value right = computeValue(expression.right());
             if (!left.equals(expression.left()) || !right.equals(expression.right())) {
-                setExpression(new Expression.Binary(expression.operator(), left, right));
+                setExpression(new BinaryExpression(expression.operator(), left, right));
             }
             super.visitBinaryExpression(expression);
         }
 
         @Override
-        public void visitUnaryExpression(@NotNull Expression.Unary expression) {
+        public void visitUnaryExpression(@NotNull UnaryExpression expression) {
             Value value = computeValue(expression.value());
             if (!value.equals(expression.value())) {
-                setExpression(new Expression.Unary(expression.operator(), expression.value()));
+                setExpression(new UnaryExpression(expression.operator(), expression.value()));
             }
             super.visitUnaryExpression(expression);
         }

@@ -2,7 +2,8 @@ package com.bossymr.rapid.language.flow.parser;
 
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.Variable;
-import com.bossymr.rapid.language.flow.value.Value;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
+import com.bossymr.rapid.language.flow.value.VariableReference;
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -13,16 +14,16 @@ public interface VariableKey {
     static @NotNull VariableKey createField(@Nullable String name, @Nullable FieldType fieldType) {
         return new VariableKey() {
 
-            private Value.Variable value;
+            private ReferenceValue value;
 
             @Override
-            public @NotNull Value.Variable create(@NotNull Block currentBlock, @NotNull RapidType type, @Nullable Object initialValue) {
+            public @NotNull ReferenceValue create(@NotNull Block currentBlock, @NotNull RapidType type, @Nullable Object initialValue) {
                 Variable variable = currentBlock.createVariable(name, fieldType, type, initialValue);
-                return this.value = new Value.Variable.Local(type, variable.index());
+                return this.value = new VariableReference(type, variable);
             }
 
             @Override
-            public @Nullable Value.Variable retrieve() {
+            public @Nullable ReferenceValue retrieve() {
                 return value;
             }
         };
@@ -32,8 +33,8 @@ public interface VariableKey {
         return createField(null, null);
     }
 
-    @NotNull Value.Variable create(@NotNull Block currentBlock, @NotNull RapidType type, @Nullable Object initialValue);
+    @NotNull ReferenceValue create(@NotNull Block currentBlock, @NotNull RapidType type, @Nullable Object initialValue);
 
-    @Nullable Value.Variable retrieve();
+    @Nullable ReferenceValue retrieve();
 
 }

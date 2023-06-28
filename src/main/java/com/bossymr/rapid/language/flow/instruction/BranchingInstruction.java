@@ -2,7 +2,9 @@ package com.bossymr.rapid.language.flow.instruction;
 
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.flow.value.Value;
+import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -23,8 +25,13 @@ public sealed interface BranchingInstruction extends Instruction {
      * @param onSuccess the instruction to go to if the specified value is {@code true}.
      * @param onFailure the instruction to go to if the specified value is {@code false}.
      */
-    record ConditionalBranchingInstruction(@NotNull PsiElement element, @NotNull Value.Variable value, @NotNull BasicBlock onSuccess,
+    record ConditionalBranchingInstruction(@NotNull PsiElement element, @NotNull ReferenceValue value, @NotNull BasicBlock onSuccess,
                                            @NotNull BasicBlock onFailure) implements BranchingInstruction {
+
+        public ConditionalBranchingInstruction {
+            assert value.type().isAssignable(RapidType.BOOLEAN);
+        }
+
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitConditionalBranchingInstruction(this);
@@ -127,7 +134,12 @@ public sealed interface BranchingInstruction extends Instruction {
      * @param returnValue the field to store the return value of this routine.
      */
     record CallInstruction(@NotNull PsiElement element, @NotNull Value routine, @NotNull Map<Integer, Value> arguments,
-                           @Nullable Value.Variable returnValue, @NotNull BasicBlock nextBasicBlock) implements BranchingInstruction {
+                           @Nullable ReferenceValue returnValue, @NotNull BasicBlock nextBasicBlock) implements BranchingInstruction {
+
+        public CallInstruction {
+            assert routine.type().isAssignable(RapidType.STRING);
+        }
+
         @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitCallInstruction(this);

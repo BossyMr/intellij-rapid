@@ -5,9 +5,7 @@ import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.Operator;
-import com.bossymr.rapid.language.flow.value.Value;
+import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
@@ -40,33 +38,33 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         if (expression instanceof RapidLiteralExpression literalExpression) {
             Object value = literalExpression.getValue();
             if (value == null) {
-                return new Value.Error();
+                return new ErrorValue();
             }
-            return new Value.Constant(type, value);
+            return new ConstantValue(type, value);
         }
         if (expression instanceof RapidUnaryExpression unaryExpression) {
             if (unaryExpression.getExpression() instanceof RapidLiteralExpression literalExpression) {
                 Object object = literalExpression.getValue();
                 if (object == null) {
-                    return new Value.Error();
+                    return new ErrorValue();
                 }
                 IElementType elementType = unaryExpression.getSign().getNode().getElementType();
                 if (object instanceof Boolean value) {
                     if (elementType != RapidTokenTypes.NOT_KEYWORD) {
-                        return new Value.Error();
+                        return new ErrorValue();
                     }
-                    return new Value.Constant(type, !value);
+                    return new ConstantValue(type, !value);
                 }
                 if (elementType != RapidTokenTypes.MINUS) {
-                    return new Value.Error();
+                    return new ErrorValue();
                 }
                 if (object instanceof Long value) {
-                    return new Value.Constant(type, -value);
+                    return new ConstantValue(type, -value);
                 }
                 if (object instanceof Double value) {
-                    return new Value.Constant(type, -value);
+                    return new ConstantValue(type, -value);
                 }
-                return new Value.Error();
+                return new ErrorValue();
             }
         }
         if (expression instanceof RapidReferenceExpression referenceExpression) {
@@ -75,17 +73,17 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 String moduleName = routine instanceof PhysicalVisibleSymbol physicalSymbol ? ControlFlowElementVisitor.getModuleName(physicalSymbol) : null;
                 String name = routine.getName();
                 if (name == null) {
-                    return new Value.Error();
+                    return new ErrorValue();
                 }
-                return new Value.Variable.Constant(type, (moduleName != null ? moduleName + ":" : "") + name);
+                return new ConstantValue(type, (moduleName != null ? moduleName + ":" : "") + name);
             }
-            Value.Variable variable = computeVariable(builder, referenceExpression);
-            return variable != null ? variable : new Value.Error();
+            ReferenceValue variable = computeVariable(builder, referenceExpression);
+            return variable != null ? variable : new ErrorValue();
         }
         return computeExpression(builder, expression);
     }
 
-    public static @Nullable Value.Variable computeVariable(@NotNull ControlFlowBuilder builder, @NotNull RapidReferenceExpression expression) {
+    public static @Nullable ReferenceValue computeVariable(@NotNull ControlFlowBuilder builder, @NotNull RapidReferenceExpression expression) {
         RapidType type = getType(expression.getType());
         RapidSymbol symbol = expression.getSymbol();
         if (symbol == null) {
@@ -98,9 +96,9 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         RapidExpression qualifier = expression.getQualifier();
         if (qualifier != null) {
             if (qualifier instanceof RapidReferenceExpression referenceExpression) {
-                Value.Variable variable = computeVariable(builder, referenceExpression);
+                ReferenceValue variable = computeVariable(builder, referenceExpression);
                 if (variable != null && symbol instanceof RapidComponent component && component.getName() != null) {
-                    return new Value.Variable.Component(type, variable, component.getName());
+                    return new ComponentReference(type, variable, component.getName());
                 }
             }
             return null;
@@ -109,45 +107,45 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             PhysicalRoutine routine = PsiTreeUtil.getParentOfType(field, PhysicalRoutine.class);
             if (routine == null) {
                 String moduleName = ControlFlowElementVisitor.getModuleName(field);
-                return new Value.Variable.Field(type, moduleName, name);
+                return new FieldReference(type, moduleName, name);
             } else {
                 Variable variable = builder.findVariable(name);
                 if (variable == null) {
                     return null;
                 }
-                return new Value.Variable.Local(type, variable.index());
+                return new VariableReference(type, variable);
             }
         }
         if (symbol instanceof RapidField) {
-            return new Value.Variable.Field(type, null, name);
+            return new FieldReference(type, null, name);
         }
         if (symbol instanceof RapidParameter) {
             Argument argument = builder.findArgument(name);
             if (argument == null) {
                 return null;
             }
-            return new Value.Variable.Local(type, argument.index());
+            return new VariableReference(type, argument);
         }
         return null;
     }
 
-    public static Value.@NotNull Variable computeExpression(@NotNull ControlFlowBuilder builder, @NotNull RapidExpression expression) {
+    public static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, @NotNull RapidExpression expression) {
         VariableKey variableKey = VariableKey.createVariable();
         return computeExpression(builder, variableKey, expression);
     }
 
-    public static @NotNull Value.Variable computeExpression(@NotNull ControlFlowBuilder builder, @NotNull String name, @Nullable FieldType fieldType, @NotNull RapidExpression expression) {
+    public static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, @NotNull String name, @Nullable FieldType fieldType, @NotNull RapidExpression expression) {
         VariableKey variableKey = VariableKey.createField(name, fieldType);
         return computeExpression(builder, variableKey, expression);
     }
 
-    private static Value.@NotNull Variable computeExpression(@NotNull ControlFlowBuilder builder, VariableKey variableKey, @NotNull RapidExpression expression) {
+    private static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, VariableKey variableKey, @NotNull RapidExpression expression) {
         ControlFlowExpressionVisitor visitor = new ControlFlowExpressionVisitor(builder, variableKey);
         expression.accept(visitor);
-        Value.Variable result = variableKey.retrieve();
+        ReferenceValue result = variableKey.retrieve();
         if (result == null) {
-            Value.Variable variable = builder.createVariable(variableKey, RapidType.ANYTYPE, null);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new Expression.Variable(new Value.Error())));
+            ReferenceValue variable = builder.createVariable(variableKey, RapidType.ANYTYPE, null);
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new VariableExpression(new ErrorValue())));
             return variable;
         }
         return result;
@@ -157,12 +155,12 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         return type != null ? type : RapidType.ANYTYPE;
     }
 
-    public static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @Nullable RapidRoutine routine, @NotNull List<RapidArgument> arguments, @NotNull Value routineValue, @Nullable Value.Variable returnVariable, @NotNull BasicBlock nextBlock) {
+    public static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @Nullable RapidRoutine routine, @NotNull List<RapidArgument> arguments, @NotNull Value routineValue, @Nullable ReferenceValue returnVariable, @NotNull BasicBlock nextBlock) {
         Map<Integer, RapidArgument> map = calculateArguments(routine, arguments);
         buildFunctionCall(element, builder, routineValue, nextBlock, returnVariable, map);
     }
 
-    private static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @NotNull Value routine, @NotNull BasicBlock nextBlock, @Nullable Value.Variable returnVariable, @NotNull Map<Integer, RapidArgument> arguments) {
+    private static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @NotNull Value routine, @NotNull BasicBlock nextBlock, @Nullable ReferenceValue returnVariable, @NotNull Map<Integer, RapidArgument> arguments) {
         Optional<Integer> index = arguments.entrySet().stream()
                 .filter(entry -> entry.getValue() instanceof RapidConditionalArgument)
                 .map(Map.Entry::getKey)
@@ -173,15 +171,11 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         } else {
             int value = index.get();
             VariableKey variableKey = VariableKey.createVariable();
-            Value.Variable presentReturnVariable = builder.createVariable(variableKey, RapidType.BOOLEAN, null);
+            ReferenceValue presentReturnVariable = builder.createVariable(variableKey, RapidType.BOOLEAN, null);
             BasicBlock ifBlock = builder.createBasicBlock();
             RapidType type = values.get(value).type();
-            if (type == null) {
-                builder.failScope(element);
-                return;
-            }
-            Value.Constant presentRoutine = new Value.Constant(RapidType.ANYTYPE, "Present");
-            Map<Integer, Value> presentArguments = Map.of(0, new Value.Variable.Local(type, value));
+            ConstantValue presentRoutine = new ConstantValue(RapidType.ANYTYPE, "Present");
+            Map<Integer, Value> presentArguments = Map.of(0, new VariableReference(type, builder.findArgument(value)));
             builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, presentRoutine, presentArguments, presentReturnVariable, ifBlock));
             builder.enterBasicBlock(ifBlock);
             BasicBlock presentBlock = builder.createBasicBlock();
@@ -240,7 +234,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 if (variable == null) {
                     continue;
                 }
-                result.put(index, new Value.Variable.Local(variable.type(), variable.index()));
+                result.put(index, new VariableReference(variable.type(), variable));
             }
         }
         return result;
@@ -301,7 +295,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         return result;
     }
 
-    private @NotNull Value.Variable popVariable(@NotNull RapidType type, @Nullable Object initialValue) {
+    private @NotNull ReferenceValue popVariable(@NotNull RapidType type, @Nullable Object initialValue) {
         VariableKey variableKey = targetVariable.removeLast();
         return builder.createVariable(variableKey, type, initialValue);
     }
@@ -317,8 +311,8 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             targetVariable.removeLast();
             return;
         }
-        Value.Variable variable = popVariable(type, null);
-        Expression.Aggregate aggregate = new Expression.Aggregate(values);
+        ReferenceValue variable = popVariable(type, null);
+        AggregateExpression aggregate = new AggregateExpression(values);
         builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, aggregate));
     }
 
@@ -331,22 +325,22 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         Value value = computeValue(builder, internal);
-        Value.Variable variable = popVariable(type, null);
-        Operator.UnaryOperator operator = getUnaryOperator(expression.getSign().getNode().getElementType());
-        Expression computation = operator != null ? new Expression.Unary(operator, value) : new Expression.Variable(value);
+        ReferenceValue variable = popVariable(type, null);
+        UnaryOperator operator = getUnaryOperator(expression.getSign().getNode().getElementType());
+        Expression computation = operator != null ? new UnaryExpression(operator, value) : new VariableExpression(value);
         builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, computation));
     }
 
     @Override
     public void visitReferenceExpression(@NotNull RapidReferenceExpression expression) {
         RapidType type = getType(expression.getType());
-        Value.Variable value = computeVariable(builder, expression);
+        ReferenceValue value = computeVariable(builder, expression);
         if (value == null) {
             targetVariable.removeLast();
             return;
         }
-        Value.Variable variable = popVariable(type, null);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new Expression.Variable(value)));
+        ReferenceValue variable = popVariable(type, null);
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new VariableExpression(value)));
     }
 
     @Override
@@ -370,53 +364,53 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         Value rightValue = computeValue(builder, right);
-        Value.Variable variable = popVariable(type, null);
-        Operator.BinaryOperator operator = getBinaryOperator(elementType);
-        Expression.Binary binary = new Expression.Binary(operator, leftValue, rightValue);
+        ReferenceValue variable = popVariable(type, null);
+        BinaryOperator operator = getBinaryOperator(elementType);
+        BinaryExpression binary = new BinaryExpression(operator, leftValue, rightValue);
         builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, binary));
     }
 
-    private @Nullable Operator.UnaryOperator getUnaryOperator(@NotNull IElementType elementType) {
+    private @Nullable UnaryOperator getUnaryOperator(@NotNull IElementType elementType) {
         if (elementType == RapidTokenTypes.MINUS) {
-            return Operator.UnaryOperator.NEGATE;
+            return UnaryOperator.NEGATE;
         } else if (elementType == RapidTokenTypes.NOT_KEYWORD) {
-            return Operator.UnaryOperator.NOT;
+            return UnaryOperator.NOT;
         } else {
             return null;
         }
     }
 
-    private @NotNull Operator.BinaryOperator getBinaryOperator(@NotNull IElementType elementType) {
+    private @NotNull BinaryOperator getBinaryOperator(@NotNull IElementType elementType) {
         if (elementType == RapidTokenTypes.PLUS) {
-            return Operator.BinaryOperator.ADD;
+            return BinaryOperator.ADD;
         } else if (elementType == RapidTokenTypes.MINUS) {
-            return Operator.BinaryOperator.SUBTRACT;
+            return BinaryOperator.SUBTRACT;
         } else if (elementType == RapidTokenTypes.ASTERISK) {
-            return Operator.BinaryOperator.MULTIPLY;
+            return BinaryOperator.MULTIPLY;
         } else if (elementType == RapidTokenTypes.DIV) {
-            return Operator.BinaryOperator.DIVIDE;
+            return BinaryOperator.DIVIDE;
         } else if (elementType == RapidTokenTypes.DIV_KEYWORD) {
-            return Operator.BinaryOperator.INTEGER_DIVIDE;
+            return BinaryOperator.INTEGER_DIVIDE;
         } else if (elementType == RapidTokenTypes.MOD_KEYWORD) {
-            return Operator.BinaryOperator.MODULO;
+            return BinaryOperator.MODULO;
         } else if (elementType == RapidTokenTypes.LT) {
-            return Operator.BinaryOperator.LESS_THAN;
+            return BinaryOperator.LESS_THAN;
         } else if (elementType == RapidTokenTypes.EQ) {
-            return Operator.BinaryOperator.EQUAL_TO;
+            return BinaryOperator.EQUAL_TO;
         } else if (elementType == RapidTokenTypes.GT) {
-            return Operator.BinaryOperator.GREATER_THAN;
+            return BinaryOperator.GREATER_THAN;
         } else if (elementType == RapidTokenTypes.LTGT) {
-            return Operator.BinaryOperator.NOT_EQUAL_TO;
+            return BinaryOperator.NOT_EQUAL_TO;
         } else if (elementType == RapidTokenTypes.LE) {
-            return Operator.BinaryOperator.LESS_THAN_OR_EQUAL;
+            return BinaryOperator.LESS_THAN_OR_EQUAL;
         } else if (elementType == RapidTokenTypes.GE) {
-            return Operator.BinaryOperator.GREATER_THAN_OR_EQUAL;
+            return BinaryOperator.GREATER_THAN_OR_EQUAL;
         } else if (elementType == RapidTokenTypes.AND_KEYWORD) {
-            return Operator.BinaryOperator.AND;
+            return BinaryOperator.AND;
         } else if (elementType == RapidTokenTypes.XOR_KEYWORD) {
-            return Operator.BinaryOperator.XOR;
+            return BinaryOperator.XOR;
         } else if (elementType == RapidTokenTypes.OR_KEYWORD) {
-            return Operator.BinaryOperator.OR;
+            return BinaryOperator.OR;
         } else {
             throw new IllegalStateException();
         }
@@ -433,9 +427,9 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         String moduleName = routine instanceof PhysicalRoutine physicalRoutine ? ControlFlowElementVisitor.getModuleName(physicalRoutine) : null;
         String name = (moduleName != null ? moduleName + ":" : "") + routine.getName();
         BasicBlock nextBlock = builder.createBasicBlock();
-        Value.Constant routineValue = new Value.Constant(RapidType.ANYTYPE, name);
+        ConstantValue routineValue = new ConstantValue(RapidType.ANYTYPE, name);
         List<RapidArgument> arguments = expression.getArgumentList().getArguments();
-        Value.Variable returnVariable = popVariable(type, null);
+        ReferenceValue returnVariable = popVariable(type, null);
         buildFunctionCall(expression, builder, routine, arguments, routineValue, returnVariable, nextBlock);
         builder.enterBasicBlock(nextBlock);
     }
@@ -447,28 +441,28 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             targetVariable.removeLast();
             return;
         }
-        Value.Variable variable = computeExpression(builder, referenceExpression);
+        ReferenceValue variable = computeExpression(builder, referenceExpression);
         RapidArray array = expression.getArray();
         List<RapidExpression> dimensions = array.getDimensions();
         List<Value> values = dimensions.stream()
                 .map(dimension -> computeValue(builder, dimension))
                 .toList();
-        if (values.stream().anyMatch(value -> !(value instanceof Value.Constant))) {
+        if (values.stream().anyMatch(value -> !(value instanceof ConstantValue))) {
             targetVariable.removeLast();
             return;
         }
-        List<Value.Constant> constants = values.stream()
-                .map(value -> (Value.Constant) value)
+        List<ConstantValue> constants = values.stream()
+                .map(value -> (ConstantValue) value)
                 .toList();
         for (int i = 1; i < dimensions.size(); i++) {
             targetVariable.addLast(VariableKey.createVariable());
         }
         for (int i = 0; i < constants.size(); i++) {
-            Value.Constant constant = constants.get(i);
+            ConstantValue constant = constants.get(i);
             RapidType arrayType = type.createArrayType(type.getDimensions() - (i + 1));
-            Value.Variable latest = popVariable(arrayType, null);
-            Value.Variable indexVariable = new Value.Variable.Index(arrayType, variable, constant);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, latest, new Expression.Variable(indexVariable)));
+            ReferenceValue latest = popVariable(arrayType, null);
+            ReferenceValue indexVariable = new IndexReference(arrayType, variable, constant);
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, latest, new VariableExpression(indexVariable)));
             variable = latest;
         }
     }

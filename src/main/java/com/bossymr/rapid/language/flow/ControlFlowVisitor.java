@@ -3,8 +3,7 @@ package com.bossymr.rapid.language.flow;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.Value;
+import com.bossymr.rapid.language.flow.value.*;
 import org.jetbrains.annotations.NotNull;
 
 public class ControlFlowVisitor {
@@ -83,49 +82,49 @@ public class ControlFlowVisitor {
 
     public void visitInstruction(@NotNull Instruction instruction) {}
 
-    public void visitLocalVariableValue(@NotNull Value.Variable.Local value) {
+    public void visitLocalVariableValue(@NotNull VariableReference value) {
         visitVariableValue(value);
     }
 
-    public void visitFieldVariableValue(@NotNull Value.Variable.Field value) {
+    public void visitFieldVariableValue(@NotNull FieldReference value) {
         visitVariableValue(value);
     }
 
-    public void visitIndexVariableValue(@NotNull Value.Variable.Index value) {
+    public void visitIndexVariableValue(@NotNull IndexReference value) {
         visitVariableValue(value);
     }
 
-    public void visitComponentVariableValue(@NotNull Value.Variable.Component component) {
+    public void visitComponentVariableValue(@NotNull ComponentReference component) {
         visitVariableValue(component);
     }
 
-    public void visitVariableValue(@NotNull Value.Variable value) {
+    public void visitVariableValue(@NotNull ReferenceValue value) {
         visitValue(value);
     }
 
-    public void visitConstantValue(@NotNull Value.Constant value) {
+    public void visitConstantValue(@NotNull ConstantValue value) {
         visitValue(value);
     }
 
-    public void visitErrorValue(@NotNull Value.Error value) {
+    public void visitErrorValue(@NotNull ErrorValue value) {
         visitValue(value);
     }
 
     public void visitValue(@NotNull Value value) {}
 
-    public void visitVariableExpression(@NotNull Expression.Variable expression) {
+    public void visitVariableExpression(@NotNull VariableExpression expression) {
         visitExpression(expression);
     }
 
-    public void visitAggregateExpression(@NotNull Expression.Aggregate expression) {
+    public void visitAggregateExpression(@NotNull AggregateExpression expression) {
         visitExpression(expression);
     }
 
-    public void visitBinaryExpression(@NotNull Expression.Binary expression) {
+    public void visitBinaryExpression(@NotNull BinaryExpression expression) {
         visitExpression(expression);
     }
 
-    public void visitUnaryExpression(@NotNull Expression.Unary expression) {
+    public void visitUnaryExpression(@NotNull UnaryExpression expression) {
         visitExpression(expression);
     }
 

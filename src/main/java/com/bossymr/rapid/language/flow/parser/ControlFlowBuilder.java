@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.parser;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.FieldType;
@@ -80,7 +81,7 @@ public class ControlFlowBuilder {
         this.currentBasicBlock = currentBlock.setErrorClause(exceptions);
     }
 
-    public @NotNull Value.Variable createVariable(@NotNull VariableKey variableKey, @NotNull RapidType type, @Nullable Object initialValue) {
+    public @NotNull ReferenceValue createVariable(@NotNull VariableKey variableKey, @NotNull RapidType type, @Nullable Object initialValue) {
         if (currentBlock == null) {
             throw new IllegalStateException("Cannot create variable as no block is currently active");
         }
@@ -174,6 +175,15 @@ public class ControlFlowBuilder {
             throw new IllegalStateException("Could not find argument: " + name + " as no function block is currently active");
         }
         return functionBlock.findArgument(name);
+    }
+
+    public @NotNull Argument findArgument(int index) {
+        if (!(currentBlock instanceof Block.FunctionBlock functionBlock)) {
+            throw new IllegalStateException("Could not find argument with index: " + index + " as no function block is currently active");
+        }
+        return functionBlock.getArgumentGroups().stream()
+                .flatMap(argumentGroup -> argumentGroup.arguments().stream())
+                .toList().get(index);
     }
 
     public @Nullable Variable findVariable(@NotNull String name) {
