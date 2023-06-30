@@ -35,12 +35,32 @@ public class NumericConstraint implements Constraint {
         return new NumericConstraint(Optionality.PRESENT, Bound.MIN_VALUE, Bound.MAX_VALUE);
     }
 
+    public static @NotNull NumericConstraint equalTo(double value) {
+        return new NumericConstraint(Optionality.PRESENT, new Bound(true, value), new Bound(true, value));
+    }
+
+    public static @NotNull NumericConstraint greaterThan(double value) {
+        return new NumericConstraint(Optionality.PRESENT, new Bound(false, value), Bound.MAX_VALUE);
+    }
+
+    public static @NotNull NumericConstraint greaterThanOrEqual(double value) {
+        return new NumericConstraint(Optionality.PRESENT, new Bound(true, value), Bound.MAX_VALUE);
+    }
+
+    public static @NotNull NumericConstraint lessThan(double value) {
+        return new NumericConstraint(Optionality.PRESENT, Bound.MIN_VALUE, new Bound(false, value));
+    }
+
+    public static @NotNull NumericConstraint lessThanOrEqual(double value) {
+        return new NumericConstraint(Optionality.PRESENT, Bound.MIN_VALUE, new Bound(true, value));
+    }
+
     public @NotNull List<Range> getRanges() {
         return ranges;
     }
 
     @Override
-    public @NotNull Optionality optionality() {
+    public @NotNull Optionality getOptionality() {
         return optionality;
     }
 
@@ -116,7 +136,7 @@ public class NumericConstraint implements Constraint {
 
     @Contract(pure = true)
     private @NotNull NumericConstraint negate(@NotNull Range range) {
-        NumericConstraint condition = new NumericConstraint(optionality());
+        NumericConstraint condition = new NumericConstraint(getOptionality());
         if (!range.lower().equals(Bound.MIN_VALUE)) {
             Bound lower = range.lower();
             Range below = new Range(Bound.MIN_VALUE, new Bound(!lower.isInclusive(), lower.value()));
@@ -132,7 +152,7 @@ public class NumericConstraint implements Constraint {
 
     @Override
     public @NotNull NumericConstraint negate() {
-        NumericConstraint condition = new NumericConstraint(optionality(), Bound.MIN_VALUE, Bound.MAX_VALUE);
+        NumericConstraint condition = new NumericConstraint(getOptionality(), Bound.MIN_VALUE, Bound.MAX_VALUE);
         for (Range range : ranges) {
             condition = condition.and(negate(range));
         }
@@ -144,7 +164,7 @@ public class NumericConstraint implements Constraint {
         if (!(constraint instanceof NumericConstraint numericCondition)) {
             throw new IllegalArgumentException();
         }
-        NumericConstraint copy = new NumericConstraint(optionality(), new ArrayList<>(ranges));
+        NumericConstraint copy = new NumericConstraint(getOptionality().combine(constraint.getOptionality()), new ArrayList<>(ranges));
         copy.intersect(numericCondition.ranges);
         return copy;
     }
@@ -154,7 +174,7 @@ public class NumericConstraint implements Constraint {
         if (!(constraint instanceof NumericConstraint numericCondition)) {
             throw new IllegalArgumentException();
         }
-        NumericConstraint copy = new NumericConstraint(optionality(), new ArrayList<>(ranges));
+        NumericConstraint copy = new NumericConstraint(getOptionality().combine(constraint.getOptionality()), new ArrayList<>(ranges));
         for (Range range : numericCondition.ranges) {
             copy.union(range);
         }

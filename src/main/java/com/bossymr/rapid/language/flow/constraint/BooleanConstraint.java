@@ -13,11 +13,19 @@ public class BooleanConstraint implements Constraint {
         this.value = value;
     }
 
-    @Override
-    public @NotNull Optionality optionality() {
-        return optionality;
+    public BooleanConstraint(@NotNull BooleanValue value) {
+        this.optionality = Optionality.PRESENT;
+        this.value = value;
     }
 
+    public static @NotNull BooleanConstraint any() {
+        return new BooleanConstraint(BooleanValue.ANY_VALUE);
+    }
+
+    @Override
+    public @NotNull Optionality getOptionality() {
+        return optionality;
+    }
 
     public @NotNull BooleanValue getValue() {
         return value;
@@ -25,12 +33,12 @@ public class BooleanConstraint implements Constraint {
 
     @Override
     public @NotNull BooleanConstraint copy(@NotNull Optionality optionality) {
-        return new BooleanConstraint(optionality(), value);
+        return new BooleanConstraint(getOptionality(), value);
     }
 
     @Override
     public @NotNull BooleanConstraint negate() {
-        return new BooleanConstraint(optionality(), value.negate());
+        return new BooleanConstraint(getOptionality(), value.negate());
     }
 
     @Override
@@ -38,7 +46,7 @@ public class BooleanConstraint implements Constraint {
         if (!(constraint instanceof BooleanConstraint booleanCondition)) {
             throw new IllegalArgumentException();
         }
-        return new BooleanConstraint(optionality(), value.and(booleanCondition.value));
+        return new BooleanConstraint(getOptionality().combine(constraint.getOptionality()), value.and(booleanCondition.value));
     }
 
     @Override
@@ -46,7 +54,7 @@ public class BooleanConstraint implements Constraint {
         if (!(constraint instanceof BooleanConstraint booleanCondition)) {
             throw new IllegalArgumentException();
         }
-        return new BooleanConstraint(optionality(), value.or(booleanCondition.value));
+        return new BooleanConstraint(getOptionality().combine(constraint.getOptionality()), value.or(booleanCondition.value));
     }
 
     public enum BooleanValue {
@@ -61,9 +69,9 @@ public class BooleanConstraint implements Constraint {
 
         public @Nullable Boolean get() {
             return switch (this) {
-                case NO_VALUE, ANY_VALUE -> null;
                 case ALWAYS_FALSE -> false;
                 case ALWAYS_TRUE -> true;
+                default -> null;
             };
         }
 
@@ -89,7 +97,7 @@ public class BooleanConstraint implements Constraint {
             if (this == BooleanValue.ALWAYS_FALSE) {
                 return value == ALWAYS_FALSE ? ALWAYS_TRUE : ALWAYS_FALSE;
             }
-            throw new IllegalStateException("Unexpected value: " + this);
+            throw new AssertionError();
         }
 
         public @NotNull BooleanValue or(@NotNull BooleanValue value) {

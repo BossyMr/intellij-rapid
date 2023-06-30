@@ -10,7 +10,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 
@@ -42,21 +41,45 @@ import java.util.function.BiFunction;
  */
 public record DataFlowState(@NotNull List<Condition> conditions, @NotNull Map<ReferenceValue, ReferenceValue> snapshots) {
 
+    /**
+     * Returns the newest snapshot of the specified value.
+     * <p>
+     * The below example shows how snapshots are used. After a variable is modified, other variables can still reference
+     * the state of the variable before it was modified.
+     * <pre>{@code
+     * 0: x = y + 5     // x1 = y1 + 5
+     * 1: z = y + x     // z1 = y1 + x1
+     * 2: y = 2         // y2 = 2
+     * }</pre>
+     *
+     * @param value the variable.
+     * @return the newest snapshot variable of the specified variable.
+     */
     public @NotNull ReferenceValue getValue(@NotNull ReferenceValue value) {
         return snapshots.getOrDefault(value, value);
     }
 
+    /**
+     * Returns all conditions which apply to the specified variable.
+     *
+     * @param value the variable.
+     * @return all conditions which apply to the specified variable.
+     */
     public @NotNull List<Condition> getConditions(@NotNull ReferenceValue value) {
+        // If the variable is not a snapshot, fetch the latest snapshot for the variable.
         ReferenceValue referenceValue = getValue(value);
         return conditions().stream()
                 .filter(condition -> condition.getVariable().equals(referenceValue))
                 .toList();
     }
 
+    /**
+     * Calculates the constraint of the specified condition.
+     *
+     * @param condition the condition.
+     * @return the constraint.
+     */
     public @NotNull Constraint getConstraint(@NotNull Condition condition) {
-        if (!(conditions().contains(condition))) {
-            throw new IllegalArgumentException();
-        }
         Constraint expression = getConstraint(condition.getExpression());
         return switch (condition.getConditionType()) {
             case EQUALITY -> expression;
@@ -81,8 +104,8 @@ public record DataFlowState(@NotNull List<Condition> conditions, @NotNull Map<Re
                 if (expression instanceof InverseStringConstraint) {
                     yield new InverseStringConstraint(Optionality.PRESENT, Set.of());
                 }
-                if (expression instanceof TopConstraint) {
-                    yield new TopConstraint(Optionality.PRESENT);
+                if (expression instanceof OpenConstraint) {
+                    yield new OpenConstraint(Optionality.PRESENT);
                 }
                 throw new AssertionError();
             }
@@ -90,79 +113,87 @@ public record DataFlowState(@NotNull List<Condition> conditions, @NotNull Map<Re
                 if (!(expression instanceof NumericConstraint numericConstraint)) {
                     throw new IllegalStateException();
                 }
-                NumericConstraint.Bound maximum = numericConstraint.getMaximum();
-                yield new NumericConstraint(Optionality.PRESENT, NumericConstraint.Bound.MIN_VALUE, new NumericConstraint.Bound(false, maximum.value()));
+                yield NumericConstraint.lessThan(numericConstraint.getMaximum().value());
             }
             case LESS_THAN_OR_EQUAL -> {
                 if (!(expression instanceof NumericConstraint numericConstraint)) {
                     throw new IllegalStateException();
                 }
-                NumericConstraint.Bound maximum = numericConstraint.getMaximum();
-                yield new NumericConstraint(Optionality.PRESENT, NumericConstraint.Bound.MIN_VALUE, maximum);
+                yield NumericConstraint.lessThanOrEqual(numericConstraint.getMaximum().value());
             }
             case GREATER_THAN -> {
                 if (!(expression instanceof NumericConstraint numericConstraint)) {
                     throw new IllegalStateException();
                 }
-                NumericConstraint.Bound minimum = numericConstraint.getMinimum();
-                yield new NumericConstraint(Optionality.PRESENT, new NumericConstraint.Bound(false, minimum.value()), NumericConstraint.Bound.MAX_VALUE);
+                yield NumericConstraint.greaterThan(numericConstraint.getMinimum().value());
             }
             case GREATER_THAN_OR_EQUAL -> {
                 if (!(expression instanceof NumericConstraint numericConstraint)) {
                     throw new IllegalStateException();
                 }
-                NumericConstraint.Bound minimum = numericConstraint.getMinimum();
-                yield new NumericConstraint(Optionality.PRESENT, minimum, NumericConstraint.Bound.MAX_VALUE);
+                yield NumericConstraint.greaterThanOrEqual(numericConstraint.getMinimum().value());
             }
         };
     }
 
-    public @NotNull Constraint getConstraint(@NotNull ReferenceValue variable) {
-        List<Constraint> constraints = getConditions(variable).stream()
-                .map(this::getConstraint)
-                .toList();
-        Constraint constraint = null;
-        for (Constraint element : constraints) {
-            if (constraint == null) {
-                constraint = element;
-                continue;
-            }
-            constraint = constraint.or(element);
-        }
-        return Objects.requireNonNull(constraint);
+
+    /**
+     * Calculates the constraint of the value of the specified expression.
+     *
+     * @param expression the expression.
+     * @return the constraint.
+     */
+    public @NotNull Constraint getConstraint(@NotNull Expression expression) {
+        ExpressionVisitor visitor = new ExpressionVisitor();
+        expression.accept(visitor);
+        return visitor.getResult();
     }
 
+    /**
+     * Calculates the constraint of the specified value.
+     *
+     * @param value the value.
+     * @return the constraint.
+     */
     public @NotNull Constraint getConstraint(@NotNull Value value) {
         if (value instanceof ReferenceValue variable) {
             return getConstraint(variable);
         }
         if (value instanceof ErrorValue) {
-            // The constraint could be any valid value.
-            return new TopConstraint(Optionality.PRESENT);
+            return Constraint.getTopConstraint(value.type());
         }
         if (value instanceof ConstantValue constant) {
-            Object constantValue = constant.value();
-            if (value.type() == RapidType.STRING) {
-                String stringConstant = (String) constantValue;
-                return new StringConstraint(Optionality.PRESENT, Set.of(stringConstant));
+            Object object = constant.value();
+            if (value.type().isAssignable(RapidType.STRING)) {
+                return new StringConstraint(Optionality.PRESENT, Set.of(object.toString()));
             }
-            if (value.type() == RapidType.BOOLEAN) {
-                boolean booleanConstant = (boolean) constantValue;
-                BooleanConstraint.BooleanValue booleanValue = booleanConstant ? BooleanConstraint.BooleanValue.ALWAYS_TRUE : BooleanConstraint.BooleanValue.ALWAYS_FALSE;
+            if (value.type().isAssignable(RapidType.NUMBER)) {
+                return NumericConstraint.equalTo((double) object);
+            }
+            if (value.type().isAssignable(RapidType.BOOLEAN)) {
+                BooleanConstraint.BooleanValue booleanValue = BooleanConstraint.BooleanValue.get((boolean) object);
                 return new BooleanConstraint(Optionality.PRESENT, booleanValue);
-            }
-            if (value.type() == RapidType.NUMBER || value.type() == RapidType.DOUBLE) {
-                double doubleConstant = (double) constantValue;
-                return new NumericConstraint(Optionality.PRESENT, new NumericConstraint.Bound(true, doubleConstant), new NumericConstraint.Bound(true, doubleConstant));
             }
         }
         throw new AssertionError();
     }
 
-    public @NotNull Constraint getConstraint(@NotNull Expression expression) {
-        ExpressionVisitor visitor = new ExpressionVisitor();
-        expression.accept(visitor);
-        return visitor.getResult();
+    /**
+     * Calculates the constraint of the specified variable.
+     *
+     * @param variable the variable.
+     * @return the constraint.
+     */
+    public @NotNull Constraint getConstraint(@NotNull ReferenceValue variable) {
+        List<Condition> conditions = getConditions(variable);
+        if (conditions.isEmpty()) {
+            throw new IllegalArgumentException();
+        }
+        Constraint constraint = getConstraint(conditions.get(0));
+        for (int i = 1; i < conditions.size(); i++) {
+            constraint = constraint.or(getConstraint(conditions.get(i)));
+        }
+        return constraint;
     }
 
     private class ExpressionVisitor extends ControlFlowVisitor {
@@ -216,32 +247,32 @@ public record DataFlowState(@NotNull List<Condition> conditions, @NotNull Map<Re
                     boolean anyFalse = Boolean.FALSE.equals(leftValue) || Boolean.FALSE.equals(rightValue);
                     if (operator == BinaryOperator.OR) {
                         if (anyTrue) {
-                            yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ALWAYS_TRUE);
+                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_TRUE);
                         }
                         if (bothFalse) {
-                            yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ALWAYS_FALSE);
+                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
                         }
                     }
                     if (operator == BinaryOperator.AND) {
                         if (bothTrue) {
-                            yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ALWAYS_TRUE);
+                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_TRUE);
                         }
                         if (anyFalse) {
-                            yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ALWAYS_FALSE);
+                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
                         }
                     }
                     if (operator == BinaryOperator.XOR) {
                         if (bothTrue) {
-                            yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ALWAYS_FALSE);
+                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
                         }
                         if (bothFalse) {
-                            yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ALWAYS_FALSE);
+                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
                         }
                         if (anyTrue) {
-                            yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ALWAYS_FALSE);
+                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
                         }
                     }
-                    yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ANY_VALUE);
+                    yield BooleanConstraint.any();
                 }
             };
         }
@@ -283,52 +314,52 @@ public record DataFlowState(@NotNull List<Condition> conditions, @NotNull Map<Re
                     // is the largest value in left smaller than the smallest value in right
                     Boolean smaller = isSmaller(leftRange, rightRange);
                     if (smaller != null) {
-                        yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.get(smaller));
+                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(smaller));
                     }
-                    yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ANY_VALUE);
+                    yield BooleanConstraint.any();
                 }
                 case LESS_THAN_OR_EQUAL -> {
                     Boolean equal = isEqual(leftRange, rightRange);
                     if (equal != null) {
-                        yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.get(equal));
+                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(equal));
                     }
                     Boolean smaller = isSmaller(leftRange, rightRange);
                     if (smaller != null) {
-                        yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.get(smaller));
+                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(smaller));
                     }
-                    yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ANY_VALUE);
+                    yield BooleanConstraint.any();
                 }
                 case EQUAL_TO -> {
                     Boolean value = isEqual(leftRange, rightRange);
                     if (value != null) {
-                        yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.get(value));
+                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(value));
                     }
-                    yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ANY_VALUE);
+                    yield BooleanConstraint.any();
                 }
                 case NOT_EQUAL_TO -> {
                     Boolean value = isEqual(leftRange, rightRange);
                     if (value != null) {
-                        yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.get(!value));
+                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(!value));
                     }
-                    yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ANY_VALUE);
+                    yield BooleanConstraint.any();
                 }
                 case GREATER_THAN -> {
                     Boolean smaller = isSmaller(leftRange, rightRange);
                     if (smaller != null) {
-                        yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.get(!smaller));
+                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(!smaller));
                     }
-                    yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ANY_VALUE);
+                    yield BooleanConstraint.any();
                 }
                 case GREATER_THAN_OR_EQUAL -> {
                     Boolean equal = isEqual(leftRange, rightRange);
                     if (equal != null) {
-                        yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.get(equal));
+                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(equal));
                     }
                     Boolean smaller = isSmaller(leftRange, rightRange);
                     if (smaller != null) {
-                        yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.get(!smaller));
+                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(!smaller));
                     }
-                    yield new BooleanConstraint(Optionality.PRESENT, BooleanConstraint.BooleanValue.ANY_VALUE);
+                    yield BooleanConstraint.any();
                 }
                 default -> throw new IllegalStateException("Unexpected value: " + operator);
             };

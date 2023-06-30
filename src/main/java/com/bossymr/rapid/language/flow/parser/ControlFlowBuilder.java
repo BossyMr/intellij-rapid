@@ -181,9 +181,7 @@ public class ControlFlowBuilder {
         if (!(currentBlock instanceof Block.FunctionBlock functionBlock)) {
             throw new IllegalStateException("Could not find argument with index: " + index + " as no function block is currently active");
         }
-        return functionBlock.getArgumentGroups().stream()
-                .flatMap(argumentGroup -> argumentGroup.arguments().stream())
-                .toList().get(index);
+        return functionBlock.findArgument(index);
     }
 
     public @Nullable Variable findVariable(@NotNull String name) {

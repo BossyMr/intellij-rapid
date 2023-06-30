@@ -1,12 +1,34 @@
 package com.bossymr.rapid.language.flow.constraint;
 
+import com.bossymr.rapid.language.symbol.RapidAtomic;
+import com.bossymr.rapid.language.symbol.RapidStructure;
+import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.HashSet;
 
 /**
  * A {@code Constraint} represents a condition which a variable must fulfill.
  */
 public interface Constraint {
+
+    static @NotNull Constraint getTopConstraint(@NotNull RapidType type) {
+        if (type.isAssignable(RapidType.NUMBER)) {
+            return NumericConstraint.any();
+        }
+        if (type.isAssignable(RapidType.STRING)) {
+            return new InverseStringConstraint(Optionality.PRESENT, new HashSet<>());
+        }
+        if (type.isAssignable(RapidType.BOOLEAN)) {
+            return BooleanConstraint.any();
+        }
+        RapidStructure targetStructure = type.getTargetStructure();
+        if (targetStructure instanceof RapidAtomic) {
+            return new OpenConstraint(Optionality.PRESENT);
+        }
+        throw new IllegalArgumentException();
+    }
 
     /**
      * Returns if the variable represented by this condition might be missing. If a variable is missing, it cannot be
@@ -15,11 +37,11 @@ public interface Constraint {
      * @return if the variable represented by this condition might be missing.
      */
     @Contract(pure = true)
-    @NotNull Optionality optionality();
+    @NotNull Optionality getOptionality();
 
     @Contract(pure = true)
     default @NotNull Constraint copy() {
-        return copy(optionality());
+        return copy(getOptionality());
     }
 
     /**

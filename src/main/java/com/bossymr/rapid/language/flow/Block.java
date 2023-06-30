@@ -13,7 +13,7 @@ import java.util.*;
 
 public sealed abstract class Block {
 
-    private final @NotNull String moduleName;
+    private final @Nullable String moduleName;
     private final @NotNull String name;
     private final @Nullable RapidType returnType;
 
@@ -21,7 +21,7 @@ public sealed abstract class Block {
     private final @NotNull Map<StatementListType, BasicBlock> entryBlocks;
     private final @NotNull List<Variable> variables;
 
-    public Block(@NotNull String moduleName, @NotNull String name, @Nullable RapidType returnType) {
+    public Block(@Nullable String moduleName, @NotNull String name, @Nullable RapidType returnType) {
         this.moduleName = moduleName;
         this.name = name;
         this.returnType = returnType;
@@ -30,7 +30,7 @@ public sealed abstract class Block {
         this.variables = new ArrayList<>();
     }
 
-    public @NotNull String getModuleName() {
+    public @Nullable String getModuleName() {
         return moduleName;
     }
 
@@ -142,7 +142,7 @@ public sealed abstract class Block {
         private final @NotNull RoutineType routineType;
         private final @NotNull List<ArgumentGroup> argumentGroups;
 
-        public FunctionBlock(@NotNull String moduleName, @NotNull String name, @Nullable RapidType returnType, @NotNull RoutineType routineType, boolean hasArguments) {
+        public FunctionBlock(@Nullable String moduleName, @NotNull String name, @Nullable RapidType returnType, @NotNull RoutineType routineType, boolean hasArguments) {
             super(moduleName, name, returnType);
             this.argumentGroups = hasArguments ? new ArrayList<>() : List.of();
             this.routineType = routineType;
@@ -166,6 +166,12 @@ public sealed abstract class Block {
                 }
             }
             return null;
+        }
+
+        public @NotNull Argument findArgument(int index) {
+            return getArgumentGroups().stream()
+                    .flatMap(argumentGroup -> argumentGroup.arguments().stream())
+                    .toList().get(index);
         }
 
         @Override
