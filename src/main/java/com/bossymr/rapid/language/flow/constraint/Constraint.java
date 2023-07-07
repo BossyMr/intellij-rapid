@@ -7,13 +7,36 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
+import java.util.List;
 
 /**
  * A {@code Constraint} represents a condition which a variable must fulfill.
  */
 public interface Constraint {
 
-    static @NotNull Constraint getTopConstraint(@NotNull RapidType type) {
+    /**
+     * Creates a new {@code Constraint} which will match if any of the specified constraints match.
+     * @param constraints the constraints.
+     * @return the constraint.
+     */
+    static @NotNull Constraint or(@NotNull List<Constraint> constraints) {
+        if (constraints.isEmpty()) {
+            throw new IllegalStateException();
+        }
+        Constraint constraint = constraints.get(0);
+        for (int i = 1; i < constraints.size(); i++) {
+            constraint = constraint.or(constraints.get(i));
+        }
+        return constraint;
+    }
+
+    /**
+     * Creates a new {@code Constraint} which will match any valid value.
+     *
+     * @param type the type of the value.
+     * @return the constraint.
+     */
+    static @NotNull Constraint any(@NotNull RapidType type) {
         if (type.isAssignable(RapidType.NUMBER)) {
             return NumericConstraint.any();
         }
@@ -38,20 +61,6 @@ public interface Constraint {
      */
     @Contract(pure = true)
     @NotNull Optionality getOptionality();
-
-    @Contract(pure = true)
-    default @NotNull Constraint copy() {
-        return copy(getOptionality());
-    }
-
-    /**
-     * Creates a new copy of this condition with the specified optionality.
-     *
-     * @param optionality the optionality.
-     * @return a new copy of this condition with the specified optionality.
-     */
-    @Contract(pure = true)
-    @NotNull Constraint copy(@NotNull Optionality optionality);
 
     /**
      * Returns a new condition which is the opposite to this condition.
@@ -80,6 +89,24 @@ public interface Constraint {
     @NotNull Constraint or(@NotNull Constraint constraint);
 
     /**
+     * Checks whether this constraint will match every valid value.
+     *
+     * @return whether this constraint will match every valid value.
+     * @see #isEmpty()
+     */
+    @Contract(pure = true)
+    boolean isFull();
+
+    /**
+     * Checks whether this constraint will not match any valid value.
+     *
+     * @return whether this constraint will not match any valid value.
+     * @see #isFull()
+     */
+    @Contract(pure = true)
+    boolean isEmpty();
+
+    /**
      * Checks if this constraint contains the specified constraint. This constraint contains another constraint if every
      * value which matches the specified constraint also matches this constraint.
      *
@@ -90,5 +117,17 @@ public interface Constraint {
     default boolean contains(@NotNull Constraint constraint) {
         Constraint union = or(constraint);
         return union.equals(this);
+    }
+
+    /**
+     * Checks if this constraint intersects with the specified constraint.
+     *
+     * @param constraint the constraint.
+     * @return if this constraint intersects with the specified constraint.
+     */
+    @Contract(pure = true)
+    default boolean intersects(@NotNull Constraint constraint) {
+        Constraint intersection = and(constraint);
+        return !(intersection.isEmpty());
     }
 }

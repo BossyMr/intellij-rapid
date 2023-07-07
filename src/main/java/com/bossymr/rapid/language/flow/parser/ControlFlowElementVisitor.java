@@ -12,6 +12,7 @@ import com.intellij.psi.util.CachedValueProvider;
 import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.psi.util.PsiModificationTracker;
 import com.intellij.psi.util.PsiTreeUtil;
+import io.netty.util.Constant;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -376,16 +377,15 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
     @Override
     public void visitProcedureCallStatement(@NotNull RapidProcedureCallStatement statement) {
         RapidExpression expression = statement.getReferenceExpression();
-        RapidRoutine routine = null;
-        if (expression instanceof RapidReferenceExpression referenceExpression) {
-            if (referenceExpression.getSymbol() instanceof RapidRoutine) {
-                routine = ((RapidRoutine) referenceExpression.getSymbol());
-            }
-        }
         List<RapidArgument> arguments = statement.getArgumentList().getArguments();
         Value routineValue = ControlFlowExpressionVisitor.computeValue(builder, expression);
+        if(!(routineValue instanceof ConstantValue || routineValue instanceof VariableReference)) {
+            ReferenceValue variable = builder.createVariable(VariableKey.createVariable(), routineValue.type(), null);
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, variable, new VariableExpression(routineValue)));
+            routineValue = variable;
+        }
         BasicBlock nextBlock = builder.createBasicBlock();
-        ControlFlowExpressionVisitor.buildFunctionCall(statement, builder, routine, arguments, routineValue, null, nextBlock);
+        ControlFlowExpressionVisitor.buildFunctionCall(statement, builder, arguments, routineValue, null, nextBlock);
         builder.enterBasicBlock(nextBlock);
     }
 

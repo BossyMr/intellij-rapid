@@ -15,14 +15,14 @@ import java.util.Map;
  */
 public class ControlFlow {
 
-    private final @NotNull Map<BlockKey, Block> map;
+    private final @NotNull Map<BlockDescriptor, Block> map;
 
     public ControlFlow() {
         this.map = new HashMap<>();
     }
 
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitControlFlow(this);
+    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+        return visitor.visitControlFlow(this);
     }
 
     /**
@@ -43,18 +43,10 @@ public class ControlFlow {
      * @return the block, or {@code null} if a suitable block was not found.
      */
     public @Nullable Block getBlock(@NotNull String moduleName, @NotNull String name) {
-        return map.get(new BlockKey(moduleName, name));
+        return map.get(new BlockDescriptor(moduleName, name));
     }
 
     public void setBlock(@NotNull Block block) {
-        map.put(BlockKey.getBlockKey(block), block);
-    }
-
-    private record BlockKey(@NotNull String moduleName, @NotNull String name) {
-
-        public static @NotNull BlockKey getBlockKey(@NotNull Block block) {
-            return new BlockKey(block.getModuleName(), block.getName());
-        }
-
+        map.put(BlockDescriptor.getBlockKey(block), block);
     }
 }

@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.instruction;
 
-import com.bossymr.rapid.language.flow.BasicBlock;
-import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.symbol.RapidType;
@@ -33,8 +32,8 @@ public sealed interface BranchingInstruction extends Instruction {
         }
 
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitConditionalBranchingInstruction(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitConditionalBranchingInstruction(this);
         }
     }
 
@@ -45,8 +44,8 @@ public sealed interface BranchingInstruction extends Instruction {
      */
     record UnconditionalBranchingInstruction(@Nullable PsiElement element, @NotNull BasicBlock next) implements BranchingInstruction {
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitUnconditionalBranchingInstruction(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitUnconditionalBranchingInstruction(this);
         }
     }
 
@@ -56,8 +55,8 @@ public sealed interface BranchingInstruction extends Instruction {
      */
     record RetryInstruction(@NotNull PsiElement element) implements BranchingInstruction {
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitRetryInstruction(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitRetryInstruction(this);
         }
     }
 
@@ -67,8 +66,8 @@ public sealed interface BranchingInstruction extends Instruction {
      */
     record TryNextInstruction(@NotNull PsiElement element) implements BranchingInstruction {
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitTryNextInstruction(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitTryNextInstruction(this);
         }
     }
 
@@ -83,8 +82,8 @@ public sealed interface BranchingInstruction extends Instruction {
         }
 
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitReturnInstruction(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitReturnInstruction(this);
         }
     }
 
@@ -93,8 +92,8 @@ public sealed interface BranchingInstruction extends Instruction {
      */
     record ExitInstruction(@NotNull PsiElement element) implements BranchingInstruction {
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitExitInstruction(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitExitInstruction(this);
         }
     }
 
@@ -105,8 +104,8 @@ public sealed interface BranchingInstruction extends Instruction {
      */
     record ThrowInstruction(@NotNull PsiElement element, @Nullable Value exception) implements BranchingInstruction {
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitThrowInstruction(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitThrowInstruction(this);
         }
     }
 
@@ -116,8 +115,8 @@ public sealed interface BranchingInstruction extends Instruction {
      */
     record ErrorInstruction(@Nullable PsiElement element, @Nullable BasicBlock next) implements BranchingInstruction {
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitErrorInstruction(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitErrorInstruction(this);
         }
     }
 
@@ -133,16 +132,12 @@ public sealed interface BranchingInstruction extends Instruction {
      * argument is only present.
      * @param returnValue the field to store the return value of this routine.
      */
-    record CallInstruction(@NotNull PsiElement element, @NotNull Value routine, @NotNull Map<Integer, Value> arguments,
+    record CallInstruction(@NotNull PsiElement element, @NotNull Value routine, @NotNull Map<ArgumentDescriptor, Value> arguments,
                            @Nullable ReferenceValue returnValue, @NotNull BasicBlock nextBasicBlock) implements BranchingInstruction {
 
-        public CallInstruction {
-            assert routine.type().isAssignable(RapidType.STRING);
-        }
-
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitCallInstruction(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitCallInstruction(this);
         }
     }
 

@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.parser;
 
 import com.bossymr.rapid.language.flow.Argument;
+import com.bossymr.rapid.language.flow.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
@@ -155,27 +156,36 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         return type != null ? type : RapidType.ANYTYPE;
     }
 
-    public static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @Nullable RapidRoutine routine, @NotNull List<RapidArgument> arguments, @NotNull Value routineValue, @Nullable ReferenceValue returnVariable, @NotNull BasicBlock nextBlock) {
-        Map<Integer, RapidArgument> map = calculateArguments(routine, arguments);
-        buildFunctionCall(element, builder, routineValue, nextBlock, returnVariable, map);
+    public static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @NotNull List<RapidArgument> arguments, @NotNull Value routineValue, @Nullable ReferenceValue returnVariable, @NotNull BasicBlock nextBlock) {
+        assert routineValue instanceof VariableReference || routineValue instanceof ConstantValue;
+        buildFunctionCall(element, builder, routineValue, nextBlock, returnVariable, getArguments(arguments));
     }
 
-    private static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @NotNull Value routine, @NotNull BasicBlock nextBlock, @Nullable ReferenceValue returnVariable, @NotNull Map<Integer, RapidArgument> arguments) {
-        Optional<Integer> index = arguments.entrySet().stream()
+    private static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @NotNull Value routine, @NotNull BasicBlock nextBlock, @Nullable ReferenceValue returnVariable, @NotNull Map<ArgumentDescriptor, RapidArgument> arguments) {
+        Optional<ArgumentDescriptor> descriptor = arguments.entrySet().stream()
                 .filter(entry -> entry.getValue() instanceof RapidConditionalArgument)
                 .map(Map.Entry::getKey)
                 .findFirst();
-        Map<Integer, Value> values = buildArguments(builder, arguments);
-        if (index.isEmpty()) {
+        Map<ArgumentDescriptor, Value> values = getArguments(builder, arguments);
+        if (descriptor.isEmpty()) {
             builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, routine, values, returnVariable, nextBlock));
         } else {
-            int value = index.get();
+            ArgumentDescriptor value = descriptor.get();
             VariableKey variableKey = VariableKey.createVariable();
             ReferenceValue presentReturnVariable = builder.createVariable(variableKey, RapidType.BOOLEAN, null);
             BasicBlock ifBlock = builder.createBasicBlock();
             RapidType type = values.get(value).type();
             ConstantValue presentRoutine = new ConstantValue(RapidType.ANYTYPE, "Present");
-            Map<Integer, Value> presentArguments = Map.of(0, new VariableReference(type, builder.findArgument(value)));
+            Argument argument;
+            if(value instanceof ArgumentDescriptor.Required required) {
+                argument = builder.findArgument(required.index());
+            } else if(value instanceof ArgumentDescriptor.Optional optional) {
+                argument = builder.findArgument(optional.name());
+                Objects.requireNonNull(argument);
+            } else {
+                throw new IllegalStateException();
+            }
+            Map<ArgumentDescriptor, Value> presentArguments = Map.of(new ArgumentDescriptor.Required(0), new VariableReference(type, argument));
             builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, presentRoutine, presentArguments, presentReturnVariable, ifBlock));
             builder.enterBasicBlock(ifBlock);
             BasicBlock presentBlock = builder.createBasicBlock();
@@ -186,12 +196,12 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             if (optionalArgument == null) {
                 builder.failScope(element);
             } else {
-                Map<Integer, RapidArgument> copy = new HashMap<>(arguments);
+                Map<ArgumentDescriptor, RapidArgument> copy = new HashMap<>(arguments);
                 copy.put(value, optionalArgument);
                 buildFunctionCall(element, builder, routine, nextBlock, returnVariable, copy);
             }
             builder.enterBasicBlock(missingBlock);
-            Map<Integer, RapidArgument> copy = new HashMap<>(arguments);
+            Map<ArgumentDescriptor, RapidArgument> copy = new HashMap<>(arguments);
             copy.remove(value);
             buildFunctionCall(element, builder, routine, nextBlock, returnVariable, copy);
         }
@@ -208,88 +218,48 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         return (RapidOptionalArgument) functionCallExpression.getArgumentList().getArguments().get(0);
     }
 
-    private static @NotNull Map<Integer, Value> buildArguments(@NotNull ControlFlowBuilder builder, @NotNull Map<Integer, RapidArgument> arguments) {
-        Map<Integer, Value> result = new HashMap<>();
-        for (Map.Entry<Integer, RapidArgument> entry : arguments.entrySet()) {
-            int index = entry.getKey();
-            RapidArgument argument = entry.getValue();
+    private static @NotNull Map<ArgumentDescriptor, Value> getArguments(@NotNull ControlFlowBuilder builder, @NotNull Map<ArgumentDescriptor, RapidArgument> arguments) {
+        Map<ArgumentDescriptor, Value> result = new HashMap<>();
+        arguments.forEach((descriptor, argument) -> {
             if (argument instanceof RapidRequiredArgument requiredArgument) {
-                result.put(index, computeValue(builder, requiredArgument.getArgument()));
+                result.put(descriptor, computeValue(builder, requiredArgument.getArgument()));
             } else if (argument instanceof RapidOptionalArgument) {
-                result.put(index, null);
+                result.put(descriptor, null);
             } else if (argument instanceof RapidConditionalArgument conditionalArgument) {
                 RapidExpression expression = conditionalArgument.getArgument();
                 if (!(expression instanceof RapidReferenceExpression referenceExpression)) {
-                    continue;
+                    return;
                 }
                 RapidSymbol symbol = referenceExpression.getSymbol();
                 if (symbol == null) {
-                    continue;
+                    return;
                 }
                 String name = symbol.getName();
                 if (name == null) {
-                    continue;
+                    return;
                 }
                 Argument variable = builder.findArgument(name);
                 if (variable == null) {
-                    continue;
+                    return;
                 }
-                result.put(index, new VariableReference(variable.type(), variable));
+                result.put(descriptor, new VariableReference(variable.type(), variable));
             }
-        }
+        });
         return result;
     }
 
-    private static @NotNull Map<Integer, RapidArgument> calculateArguments(@Nullable RapidRoutine routine, @NotNull List<RapidArgument> arguments) {
-        Map<Integer, RapidArgument> result = new HashMap<>();
-        if (routine == null) {
-            for (int i = 0; i < arguments.size(); i++) {
-                result.put(i, arguments.get(i));
-            }
-            return result;
-        }
-        Map<RapidParameter, RapidArgument> map = calculateCorresponding(routine, arguments);
-        List<? extends RapidParameterGroup> parameterGroups = routine.getParameters();
-        if (parameterGroups == null) {
-            return result;
-        }
-        List<? extends RapidParameter> parameters = parameterGroups.stream()
-                .map(RapidParameterGroup::getParameters)
-                .flatMap(List::stream)
-                .toList();
-        for (int i = 0; i < parameters.size(); i++) {
-            RapidParameter parameter = parameters.get(i);
-            if (map.containsKey(parameter)) {
-                result.put(i, map.get(parameter));
-            }
-        }
-        return result;
-    }
-
-    private static @NotNull Map<RapidParameter, RapidArgument> calculateCorresponding(@NotNull RapidRoutine routine, @NotNull List<RapidArgument> arguments) {
-        Map<RapidParameter, RapidArgument> result = new HashMap<>();
-        List<? extends RapidParameterGroup> parameterGroups = routine.getParameters();
-        if (parameterGroups == null) {
-            return result;
-        }
-        int parameterIndex = 0;
+    private static @NotNull Map<ArgumentDescriptor, RapidArgument> getArguments(@NotNull List<RapidArgument> arguments) {
+        Map<ArgumentDescriptor, RapidArgument> result = new HashMap<>();
+        int index = 0;
         for (RapidArgument argument : arguments) {
-            RapidParameter parameter;
-            RapidReferenceExpression expression = argument.getParameter();
-            if (expression != null) {
-                if (!(expression.getSymbol() instanceof RapidParameter symbol)) {
-                    continue;
-                }
-                parameter = symbol;
+            if (argument instanceof RapidRequiredArgument) {
+                result.put(new ArgumentDescriptor.Required(index), argument);
+                index += 1;
             } else {
-                RapidParameterGroup parameterGroup = parameterGroups.stream()
-                        .filter(group -> !(group.isOptional()))
-                        .toList().get(parameterIndex);
-                parameter = parameterGroup.getParameters().get(0);
-            }
-            result.put(parameter, argument);
-            if (!(parameter.getParameterGroup().isOptional())) {
-                parameterIndex += 1;
+                RapidReferenceExpression referenceExpression = argument.getParameter();
+                Objects.requireNonNull(referenceExpression);
+                String canonicalText = referenceExpression.getCanonicalText();
+                result.put(new ArgumentDescriptor.Optional(canonicalText), argument);
             }
         }
         return result;
@@ -430,7 +400,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         ConstantValue routineValue = new ConstantValue(RapidType.ANYTYPE, name);
         List<RapidArgument> arguments = expression.getArgumentList().getArguments();
         ReferenceValue returnVariable = popVariable(type, null);
-        buildFunctionCall(expression, builder, routine, arguments, routineValue, returnVariable, nextBlock);
+        buildFunctionCall(expression, builder, arguments, routineValue, returnVariable, nextBlock);
         builder.enterBasicBlock(nextBlock);
     }
 

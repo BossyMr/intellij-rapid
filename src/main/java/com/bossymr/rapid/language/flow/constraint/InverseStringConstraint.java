@@ -12,11 +12,6 @@ public record InverseStringConstraint(@NotNull Optionality optionality, @NotNull
     }
 
     @Override
-    public @NotNull InverseStringConstraint copy(@NotNull Optionality optionality) {
-        return new InverseStringConstraint(optionality, sequences());
-    }
-
-    @Override
     public @NotNull StringConstraint negate() {
         return new StringConstraint(getOptionality(), sequences());
     }
@@ -29,5 +24,15 @@ public record InverseStringConstraint(@NotNull Optionality optionality, @NotNull
     @Override
     public @NotNull Constraint or(@NotNull Constraint constraint) {
         return constraint.or(this);
+    }
+
+    @Override
+    public boolean isFull() {
+        return sequences.isEmpty();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return false;
     }
 }

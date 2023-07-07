@@ -10,11 +10,6 @@ public record OpenConstraint(@NotNull Optionality optionality) implements Constr
     }
 
     @Override
-    public @NotNull Constraint copy(@NotNull Optionality optionality) {
-        return new OpenConstraint(optionality);
-    }
-
-    @Override
     public @NotNull Constraint negate() {
         return new ClosedConstraint(getOptionality());
     }
@@ -27,5 +22,15 @@ public record OpenConstraint(@NotNull Optionality optionality) implements Constr
     @Override
     public @NotNull Constraint or(@NotNull Constraint constraint) {
         return this;
+    }
+
+    @Override
+    public boolean isFull() {
+        return true;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return false;
     }
 }

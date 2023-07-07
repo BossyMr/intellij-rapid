@@ -8,6 +8,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public sealed interface Expression permits AggregateExpression, BinaryExpression, UnaryExpression, VariableExpression {
 
-    void accept(@NotNull ControlFlowVisitor visitor);
+    <T> T accept(@NotNull ControlFlowVisitor<T> visitor);
 
 }

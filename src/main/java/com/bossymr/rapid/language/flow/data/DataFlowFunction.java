@@ -2,73 +2,65 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
-import com.bossymr.rapid.language.flow.value.VariableReference;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+/**
+ * A {@code DataFlowFunction} represents a callable function.
+ */
 public interface DataFlowFunction {
 
+    /**
+     * Returns the block which represents this function, which can be used to find the return type and arguments of this
+     * function. If this function represents a virtual function, the specified block will not have any entry blocks.
+     *
+     * @return the block which represents this function.
+     */
     @NotNull Block.FunctionBlock getBlock();
 
-    @NotNull Result getOutput(@NotNull Map<Argument, Constraint> arguments);
+    /**
+     * Calculates the result of calling this function with the specified arguments.
+     *
+     * @param arguments the arguments with which this function is called with.
+     * @return the result of calling this function.
+     */
+    @NotNull Set<Result> getOutput(@NotNull Map<Argument, Constraint> arguments);
 
+    /**
+     * A {@code Result} object represents the possible output of calling a {@link DataFlowFunction}.
+     */
     sealed interface Result {
 
-        static @NotNull Result combine(@NotNull List<Result> results) {
-            return new GroupResult(results);
-        }
+        /**
+         * The function returned successfully.
+         *
+         * @param states the state of the variables in the function when it returned.
+         * @param returnValue the value which was returned, or {@code null} if a variable was not returned.
+         */
+        record Success(@NotNull Set<DataFlowState> states, @Nullable ReferenceValue returnValue) implements Result {
 
-        record GroupResult(@NotNull List<Result> results) implements Result {
-
-            public GroupResult {
-                assert results.size() > 0;
-            }
-
-            @Override
-            public @NotNull Constraint getConstraint(@NotNull DataFlowBlock block, @NotNull Map<Argument, Condition> arguments) {
-                List<Constraint> list = results.stream()
-                        .map(result -> result.getConstraint(block, arguments))
-                        .toList();
-                Constraint constraint = list.get(0);
-                for (int i = 1; i < list.size(); i++) {
-                    constraint = constraint.or(list.get(i));
-                }
-                return constraint;
+            public Success {
+                // The state which is returned is still mutable, but a caller should not be able to modify the actual state
+                states = states.stream()
+                        .map(state -> new DataFlowState(state.conditions(), state.snapshots()))
+                        .collect(Collectors.toSet());
             }
         }
 
-        @NotNull Constraint getConstraint(@NotNull DataFlowBlock block, @NotNull Map<Argument, Condition> arguments);
-
-        record WithConstraint(@NotNull Constraint constraint) implements Result {
-            @Override
-            public @NotNull Constraint getConstraint(@NotNull DataFlowBlock block, @NotNull Map<Argument, Condition> arguments) {
-                return constraint;
-            }
-        }
-
-        record WithCondition(@NotNull DataFlowState state, @NotNull Condition condition) implements Result {
-            @Override
-            public @NotNull Constraint getConstraint(@NotNull DataFlowBlock block, @NotNull Map<Argument, Condition> arguments) {
-                DataFlowState copy = new DataFlowState(state.conditions(), state.snapshots());
-                copy.conditions().add(condition);
-                for (Argument argument : arguments.keySet()) {
-                    copy.conditions().add(arguments.get(argument));
-                    copy.snapshots().put(new VariableReference(argument.type(), argument), arguments.get(argument).getVariable());
-                }
-                return copy.getConstraint(condition);
-            }
-        }
-
-        record WithException(@NotNull Constraint constraint) implements Result {
-            @Override
-            public @NotNull Constraint getConstraint(@NotNull DataFlowBlock block, @NotNull Map<Argument, Condition> arguments) {
-                return constraint;
-            }
-        }
+        /**
+         * The function returned unsuccessfully.
+         *
+         * @param states the state of the variables in this function when it failed.
+         * @param exceptionValue the exception which was thrown, or {@code null} if a specific exception was not
+         * thrown.
+         */
+        record Error(@NotNull Set<DataFlowState> states, @Nullable ReferenceValue exceptionValue) implements Result {}
     }
 
 }

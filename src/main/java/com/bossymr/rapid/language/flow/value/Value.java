@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public sealed interface Value permits ConstantValue, ErrorValue, ReferenceValue {
 
-    void accept(@NotNull ControlFlowVisitor visitor);
+    <T> T accept(@NotNull ControlFlowVisitor<T> visitor);
 
     @NotNull RapidType type();
 

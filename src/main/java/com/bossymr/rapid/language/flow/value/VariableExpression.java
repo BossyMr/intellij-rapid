@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 public record VariableExpression(@NotNull Value value) implements Expression {
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitVariableExpression(this);
+    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+        return visitor.visitVariableExpression(this);
     }
 }

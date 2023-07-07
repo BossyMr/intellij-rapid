@@ -30,16 +30,51 @@ import java.util.function.BiFunction;
  * 2: goto 3;
  *
  * Block 3:                         // State 1:         State 2:
- * 0: y = (x == 0);                 // y = (x == 0);    y = (x == 0);
+ * 0: y = (x == 0);                 // y1 = (x1 == 0);  y1 = (x1 == 0);
  * 1: if(y) -> (true: 4, false: 5)  // x1 = 0;          x1 = 1;
  *                                  // z1 = 0;          z1 = 1;
  *
  * Block 4:     // State:
+ *              // y1 = (x1 == 0);
  *              // x1 = 0;
  *              // z1 = 0;
  * }</pre>
  */
-public record DataFlowState(@NotNull List<Condition> conditions, @NotNull Map<ReferenceValue, ReferenceValue> snapshots) {
+public record DataFlowState(@NotNull Set<Condition> conditions, @NotNull Map<ReferenceValue, ReferenceValue> snapshots) {
+
+    public boolean intersects(@NotNull Condition condition) {
+        ReferenceValue referenceValue = getValue(condition.getVariable());
+        Constraint constraint = getConstraint(condition);
+        for (Condition value : conditions) {
+            ReferenceValue variable = getValue(value.getVariable());
+            if (variable.equals(referenceValue)) {
+                if(getConstraint(value).intersects(constraint)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Add the specified condition to this state.
+     * @param condition the condition.
+     */
+    public void setCondition(@NotNull Condition condition) {
+        Condition copy = new Condition(getValue(condition.getVariable()), condition.getConditionType(), condition.getExpression());
+        for (ReferenceValue referenceValue : copy.collect()) {
+            copy = copy.replace(referenceValue, getValue(referenceValue));
+        }
+        Constraint constraint = getConstraint(copy);
+        for (Condition other : getConditions(copy.getVariable())) {
+            Constraint otherConstraint = getConstraint(other);
+            if(!(otherConstraint.intersects(constraint))) {
+                // If this condition sets a = 2, a condition which sets a = 3 cannot exist, and should be removed.
+                conditions.remove(other);
+            }
+        }
+        conditions.add(copy);
+    }
 
     /**
      * Returns the newest snapshot of the specified value.
@@ -160,7 +195,7 @@ public record DataFlowState(@NotNull List<Condition> conditions, @NotNull Map<Re
             return getConstraint(variable);
         }
         if (value instanceof ErrorValue) {
-            return Constraint.getTopConstraint(value.type());
+            return Constraint.any(value.type());
         }
         if (value instanceof ConstantValue constant) {
             Object object = constant.value();

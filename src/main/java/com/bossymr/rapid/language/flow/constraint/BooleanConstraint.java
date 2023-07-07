@@ -5,6 +5,14 @@ import org.jetbrains.annotations.Nullable;
 
 public class BooleanConstraint implements Constraint {
 
+    private static @NotNull BooleanConstraint ANY_VALUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+
+    private static @NotNull BooleanConstraint ALWAYS_TRUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+
+    private static @NotNull BooleanConstraint ALWAYS_FALSE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+
+    private static @NotNull BooleanConstraint NO_VALUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+
     private final @NotNull Optionality optionality;
     private final @NotNull BooleanValue value;
 
@@ -19,7 +27,19 @@ public class BooleanConstraint implements Constraint {
     }
 
     public static @NotNull BooleanConstraint any() {
-        return new BooleanConstraint(BooleanValue.ANY_VALUE);
+        return ANY_VALUE;
+    }
+
+    public static @NotNull BooleanConstraint noValue() {
+        return NO_VALUE;
+    }
+
+    public static @NotNull BooleanConstraint alwaysTrue() {
+        return ALWAYS_TRUE;
+    }
+
+    public static @NotNull BooleanConstraint alwaysFalse() {
+        return ALWAYS_FALSE;
     }
 
     @Override
@@ -29,11 +49,6 @@ public class BooleanConstraint implements Constraint {
 
     public @NotNull BooleanValue getValue() {
         return value;
-    }
-
-    @Override
-    public @NotNull BooleanConstraint copy(@NotNull Optionality optionality) {
-        return new BooleanConstraint(getOptionality(), value);
     }
 
     @Override
@@ -55,6 +70,16 @@ public class BooleanConstraint implements Constraint {
             throw new IllegalArgumentException();
         }
         return new BooleanConstraint(getOptionality().combine(constraint.getOptionality()), value.or(booleanCondition.value));
+    }
+
+    @Override
+    public boolean isFull() {
+        return value == BooleanValue.ANY_VALUE;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return value == BooleanValue.NO_VALUE;
     }
 
     public enum BooleanValue {

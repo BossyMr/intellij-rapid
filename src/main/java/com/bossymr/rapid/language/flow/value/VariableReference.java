@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public record VariableReference(@NotNull RapidType type, @NotNull Field field) implements ReferenceValue {
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitLocalVariableValue(this);
+    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+        return visitor.visitLocalVariableValue(this);
     }
 }

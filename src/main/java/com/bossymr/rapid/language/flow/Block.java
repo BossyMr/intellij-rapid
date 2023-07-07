@@ -114,7 +114,7 @@ public sealed abstract class Block {
         return getVariables().size();
     }
 
-    public abstract void accept(@NotNull ControlFlowVisitor visitor);
+    public abstract <T> T accept(@NotNull ControlFlowVisitor<T> visitor);
 
     @Override
     public String toString() {
@@ -182,8 +182,8 @@ public sealed abstract class Block {
         }
 
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitFunctionBlock(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitFunctionBlock(this);
         }
 
         @Override
@@ -220,8 +220,8 @@ public sealed abstract class Block {
         }
 
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitFieldBlock(this);
+        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+            return visitor.visitFieldBlock(this);
         }
 
         @Override

@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -49,11 +50,6 @@ public class Condition {
         return new Condition(variable, conditionType.flip(), expression);
     }
 
-    @Contract(pure = true)
-    public @NotNull Condition copy() {
-        return new Condition(variable, conditionType, expression);
-    }
-
     public @NotNull ReferenceValue getVariable() {
         return variable;
     }
@@ -75,12 +71,15 @@ public class Condition {
         expression.accept(new ExpressionVisitor(result -> {
             atomicBoolean.set(atomicBoolean.get() || result.equals(variable));
             return result;
-        }));
+        }, result -> {throw new AssertionError();}));
         return atomicBoolean.get();
     }
 
-    public void replace(@NotNull ReferenceValue target, @NotNull ReferenceValue variable) {
-        expression.accept(new ExpressionVisitor(result -> result.equals(target) ? variable : result));
+    @Contract(pure = true)
+    public @NotNull Condition replace(@NotNull ReferenceValue target, @NotNull ReferenceValue variable) {
+        Condition condition = new Condition(variable, conditionType, expression);
+        expression.accept(new ExpressionVisitor(result -> result.equals(target) ? variable : result, this::setExpression));
+        return condition;
     }
 
     public @NotNull List<ReferenceValue> collect() {
@@ -88,7 +87,7 @@ public class Condition {
         expression.accept(new ExpressionVisitor(result -> {
             variables.add(result);
             return result;
-        }));
+        }, result -> {throw new AssertionError();}));
         return variables;
     }
 
@@ -166,19 +165,21 @@ public class Condition {
         }
     }
 
-    private class ExpressionVisitor extends ControlFlowVisitor {
+    private static class ExpressionVisitor extends ControlFlowVisitor {
 
         private final @NotNull Function<ReferenceValue, ReferenceValue> function;
+        private final @NotNull Consumer<Expression> consumer;
 
-        public ExpressionVisitor(@NotNull Function<ReferenceValue, ReferenceValue> function) {
+        public ExpressionVisitor(@NotNull Function<ReferenceValue, ReferenceValue> function, @NotNull Consumer<Expression> consumer) {
             this.function = function;
+            this.consumer = consumer;
         }
 
         @Override
         public void visitVariableExpression(@NotNull VariableExpression expression) {
             Value value = computeValue(expression.value());
-            if (!value.equals(variable)) {
-                setExpression(new VariableExpression(value));
+            if (!value.equals(expression.value())) {
+                consumer.accept(new VariableExpression(value));
             }
             super.visitVariableExpression(expression);
         }
@@ -188,7 +189,7 @@ public class Condition {
             List<Value> values = expression.values().stream()
                     .map(this::computeValue).toList();
             if (!values.equals(expression.values())) {
-                setExpression(new AggregateExpression(values));
+                consumer.accept(new AggregateExpression(values));
             }
             super.visitAggregateExpression(expression);
         }
@@ -205,7 +206,7 @@ public class Condition {
             Value left = computeValue(expression.left());
             Value right = computeValue(expression.right());
             if (!left.equals(expression.left()) || !right.equals(expression.right())) {
-                setExpression(new BinaryExpression(expression.operator(), left, right));
+                consumer.accept(new BinaryExpression(expression.operator(), left, right));
             }
             super.visitBinaryExpression(expression);
         }
@@ -214,7 +215,7 @@ public class Condition {
         public void visitUnaryExpression(@NotNull UnaryExpression expression) {
             Value value = computeValue(expression.value());
             if (!value.equals(expression.value())) {
-                setExpression(new UnaryExpression(expression.operator(), expression.value()));
+                consumer.accept(new UnaryExpression(expression.operator(), expression.value()));
             }
             super.visitUnaryExpression(expression);
         }

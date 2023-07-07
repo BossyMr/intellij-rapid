@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public record UnaryExpression(@NotNull UnaryOperator operator, @NotNull Value value) implements Expression {
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitUnaryExpression(this);
+    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+        return visitor.visitUnaryExpression(this);
     }
 }

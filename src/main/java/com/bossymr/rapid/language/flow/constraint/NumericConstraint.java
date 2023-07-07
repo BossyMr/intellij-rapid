@@ -85,11 +85,6 @@ public class NumericConstraint implements Constraint {
         return null;
     }
 
-    @Override
-    public @NotNull NumericConstraint copy(@NotNull Optionality optionality) {
-        return new NumericConstraint(optionality, new ArrayList<>(ranges));
-    }
-
     /**
      * Adds the specified range to this constraint, so that this constraint will be fulfilled if either this constraint
      * or the specified range is fulfilled.

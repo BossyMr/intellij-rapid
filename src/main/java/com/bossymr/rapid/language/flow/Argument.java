@@ -21,8 +21,8 @@ public record Argument(
         @NotNull String name
 ) implements Field {
 
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitArgument(this);
+    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
+        return visitor.visitArgument(this);
     }
 
     @Override
