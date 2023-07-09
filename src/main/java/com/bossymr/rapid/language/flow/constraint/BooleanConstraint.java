@@ -1,17 +1,23 @@
 package com.bossymr.rapid.language.flow.constraint;
 
+import com.bossymr.rapid.language.flow.condition.Condition;
+import com.bossymr.rapid.language.flow.condition.ConditionType;
+import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Set;
+
 public class BooleanConstraint implements Constraint {
 
-    private static @NotNull BooleanConstraint ANY_VALUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+    private static final @NotNull BooleanConstraint ANY_VALUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
 
-    private static @NotNull BooleanConstraint ALWAYS_TRUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+    private static final @NotNull BooleanConstraint ALWAYS_TRUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
 
-    private static @NotNull BooleanConstraint ALWAYS_FALSE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+    private static final @NotNull BooleanConstraint ALWAYS_FALSE = new BooleanConstraint(BooleanValue.ANY_VALUE);
 
-    private static @NotNull BooleanConstraint NO_VALUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+    private static final @NotNull BooleanConstraint NO_VALUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
 
     private final @NotNull Optionality optionality;
     private final @NotNull BooleanValue value;
@@ -40,6 +46,20 @@ public class BooleanConstraint implements Constraint {
 
     public static @NotNull BooleanConstraint alwaysFalse() {
         return ALWAYS_FALSE;
+    }
+
+    @Override
+    public @NotNull Set<Set<Condition>> toConditions(@NotNull ReferenceValue referenceValue) {
+        return switch (value) {
+            case NO_VALUE -> Set.of();
+            case ALWAYS_FALSE -> Set.of(getConditions(referenceValue, false));
+            case ANY_VALUE -> Set.of(getConditions(referenceValue, true), getConditions(referenceValue, false));
+            case ALWAYS_TRUE -> Set.of(getConditions(referenceValue, true));
+        };
+    }
+
+    private @NotNull Set<Condition> getConditions(@NotNull ReferenceValue referenceValue, boolean value) {
+        return Set.of(new Condition(referenceValue, ConditionType.EQUALITY, Expression.booleanConstant(value)), new Condition(referenceValue, ConditionType.INEQUALITY, Expression.booleanConstant(!value)));
     }
 
     @Override

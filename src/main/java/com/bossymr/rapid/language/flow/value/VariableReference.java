@@ -10,9 +10,14 @@ import org.jetbrains.annotations.NotNull;
  *
  * @param field the field.
  */
-public record VariableReference(@NotNull RapidType type, @NotNull Field field) implements ReferenceValue {
+public record VariableReference(@NotNull Field field) implements ReferenceValue {
     @Override
-    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
-        return visitor.visitLocalVariableValue(this);
+    public @NotNull RapidType type() {
+        return field.type();
+    }
+
+    @Override
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitLocalVariableValue(this);
     }
 }

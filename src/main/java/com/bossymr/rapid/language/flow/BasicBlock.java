@@ -17,17 +17,21 @@ import java.util.Objects;
  */
 public sealed abstract class BasicBlock {
 
-    private final int index;
+    private final @NotNull Block block;
     private final @NotNull List<LinearInstruction> instructions;
     private BranchingInstruction terminator;
 
-    protected BasicBlock(int index) {
-        this.index = index;
+    protected BasicBlock(@NotNull Block block) {
+        this.block = block;
         this.instructions = new ArrayList<>();
     }
 
+    public @NotNull Block getBlock() {
+        return block;
+    }
+
     public int getIndex() {
-        return index;
+        return getBlock().getBasicBlocks().indexOf(this);
     }
 
     public abstract @Nullable StatementListType getScopeType();
@@ -59,18 +63,18 @@ public sealed abstract class BasicBlock {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         BasicBlock basicBlock = (BasicBlock) o;
-        return index == basicBlock.index;
+        return getBlock() == basicBlock.getBlock() && getIndex() == basicBlock.getIndex();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index);
+        return Objects.hash(getIndex());
     }
 
     @Override
     public String toString() {
         return "BasicBlock{" +
-                "index=" + index +
+                "index=" + getIndex() +
                 '}';
     }
 
@@ -78,8 +82,8 @@ public sealed abstract class BasicBlock {
 
         private final @NotNull StatementListType scopeType;
 
-        public EntryBasicBlock(int index, @NotNull StatementListType scopeType) {
-            super(index);
+        public EntryBasicBlock(@NotNull Block block, @NotNull StatementListType scopeType) {
+            super(block);
             if (scopeType == StatementListType.ERROR_CLAUSE) {
                 throw new IllegalArgumentException();
             }
@@ -96,8 +100,8 @@ public sealed abstract class BasicBlock {
 
         private final @Nullable List<Value> exceptions;
 
-        public ErrorBasicBlock(int index, @Nullable List<Value> exceptions) {
-            super(index);
+        public ErrorBasicBlock(@NotNull Block block, @Nullable List<Value> exceptions) {
+            super(block);
             this.exceptions = exceptions;
         }
 
@@ -113,8 +117,8 @@ public sealed abstract class BasicBlock {
 
     public static final class IntermediateBasicBlock extends BasicBlock {
 
-        public IntermediateBasicBlock(int index) {
-            super(index);
+        public IntermediateBasicBlock(@NotNull Block block) {
+            super(block);
         }
 
         @Override

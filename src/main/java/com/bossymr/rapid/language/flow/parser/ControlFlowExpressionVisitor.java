@@ -114,7 +114,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 if (variable == null) {
                     return null;
                 }
-                return new VariableReference(type, variable);
+                return new VariableReference(variable);
             }
         }
         if (symbol instanceof RapidField) {
@@ -125,7 +125,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             if (argument == null) {
                 return null;
             }
-            return new VariableReference(type, argument);
+            return new VariableReference(argument);
         }
         return null;
     }
@@ -185,7 +185,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             } else {
                 throw new IllegalStateException();
             }
-            Map<ArgumentDescriptor, Value> presentArguments = Map.of(new ArgumentDescriptor.Required(0), new VariableReference(type, argument));
+            Map<ArgumentDescriptor, Value> presentArguments = Map.of(new ArgumentDescriptor.Required(0), new VariableReference(argument));
             builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, presentRoutine, presentArguments, presentReturnVariable, ifBlock));
             builder.enterBasicBlock(ifBlock);
             BasicBlock presentBlock = builder.createBasicBlock();
@@ -225,24 +225,8 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 result.put(descriptor, computeValue(builder, requiredArgument.getArgument()));
             } else if (argument instanceof RapidOptionalArgument) {
                 result.put(descriptor, null);
-            } else if (argument instanceof RapidConditionalArgument conditionalArgument) {
-                RapidExpression expression = conditionalArgument.getArgument();
-                if (!(expression instanceof RapidReferenceExpression referenceExpression)) {
-                    return;
-                }
-                RapidSymbol symbol = referenceExpression.getSymbol();
-                if (symbol == null) {
-                    return;
-                }
-                String name = symbol.getName();
-                if (name == null) {
-                    return;
-                }
-                Argument variable = builder.findArgument(name);
-                if (variable == null) {
-                    return;
-                }
-                result.put(descriptor, new VariableReference(variable.type(), variable));
+            } else if (argument instanceof RapidConditionalArgument) {
+                throw new IllegalArgumentException();
             }
         });
         return result;

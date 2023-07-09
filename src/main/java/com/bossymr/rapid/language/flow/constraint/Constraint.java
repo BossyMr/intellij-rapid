@@ -1,5 +1,7 @@
 package com.bossymr.rapid.language.flow.constraint;
 
+import com.bossymr.rapid.language.flow.condition.Condition;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.symbol.RapidAtomic;
 import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.RapidType;
@@ -8,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A {@code Constraint} represents a condition which a variable must fulfill.
@@ -52,6 +55,9 @@ public interface Constraint {
         }
         throw new IllegalArgumentException();
     }
+
+    @Contract(pure = true)
+    @NotNull Set<Set<Condition>> toConditions(@NotNull ReferenceValue referenceValue);
 
     /**
      * Returns if the variable represented by this condition might be missing. If a variable is missing, it cannot be

@@ -2,14 +2,18 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
+import com.bossymr.rapid.language.flow.value.VariableReference;
+import com.bossymr.rapid.language.flow.value.VariableSnapshot;
+import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A {@code DataFlowFunction} represents a callable function.
@@ -46,10 +50,41 @@ public interface DataFlowFunction {
         record Success(@NotNull Set<DataFlowState> states, @Nullable ReferenceValue returnValue) implements Result {
 
             public Success {
-                // The state which is returned is still mutable, but a caller should not be able to modify the actual state
                 states = states.stream()
                         .map(state -> new DataFlowState(state.conditions(), state.snapshots()))
                         .collect(Collectors.toSet());
+            }
+
+            public static @NotNull Success create(@NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint constraint) {
+                Set<DataFlowState> states = new HashSet<>();
+                states.add(new DataFlowState(new HashSet<>(), new HashMap<>()));
+                for (Argument argument : constraints.keySet()) {
+                    Set<Set<Condition>> situations = constraints.get(argument).toConditions(new VariableReference(argument));
+                    states = getStates(states, situations);
+                }
+                ReferenceValue returnValue = null;
+                if (constraint != null) {
+                    Objects.requireNonNull(returnType);
+                    returnValue = new VariableSnapshot(returnType);
+                    Set<Set<Condition>> situations = constraint.toConditions(returnValue);
+                    states = getStates(states, situations);
+                }
+                return new Success(states, returnValue);
+            }
+
+            private static @NotNull Set<DataFlowState> getStates(@NotNull Set<DataFlowState> states, @NotNull Set<Set<Condition>> situations) {
+                return states.stream()
+                        .flatMap(state -> {
+                            Stream.Builder<DataFlowState> builder = Stream.builder();
+                            for (Set<Condition> situation : situations) {
+                                DataFlowState copy = new DataFlowState(state.conditions(), state.snapshots());
+                                for (Condition condition : situation) {
+                                    copy.setCondition(condition);
+                                }
+                                builder.add(copy);
+                            }
+                            return builder.build();
+                        }).collect(Collectors.toSet());
             }
         }
 
@@ -61,6 +96,11 @@ public interface DataFlowFunction {
          * thrown.
          */
         record Error(@NotNull Set<DataFlowState> states, @Nullable ReferenceValue exceptionValue) implements Result {}
+
+        /**
+         * This function terminated the program.
+         */
+        record Exit() implements Result {}
     }
 
 }

@@ -7,7 +7,7 @@ import java.util.List;
 
 public record AggregateExpression(@NotNull List<Value> values) implements Expression {
     @Override
-    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
-        return visitor.visitAggregateExpression(this);
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitAggregateExpression(this);
     }
 }

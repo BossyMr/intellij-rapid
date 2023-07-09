@@ -19,7 +19,7 @@ public interface VariableKey {
             @Override
             public @NotNull ReferenceValue create(@NotNull Block currentBlock, @NotNull RapidType type, @Nullable Object initialValue) {
                 Variable variable = currentBlock.createVariable(name, fieldType, type, initialValue);
-                return this.value = new VariableReference(type, variable);
+                return this.value = new VariableReference(variable);
             }
 
             @Override

@@ -1,12 +1,14 @@
 package com.bossymr.rapid.language.flow.constraint;
 
+import com.bossymr.rapid.language.flow.condition.Condition;
+import com.bossymr.rapid.language.flow.condition.ConditionType;
+import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 
 /**
  * A {@code RangeCondition} represents a condition where a variable might be equal to any value in the range.
@@ -57,6 +59,23 @@ public class NumericConstraint implements Constraint {
 
     public @NotNull List<Range> getRanges() {
         return ranges;
+    }
+
+    @Override
+    public @NotNull Set<Set<Condition>> toConditions(@NotNull ReferenceValue referenceValue) {
+        Set<Set<Condition>> sets = new HashSet<>(ranges.size(), 1);
+        for (Range range : ranges) {
+            if (range.lower().value() == range.upper().value()) {
+                if(range.lower().isInclusive() && range.upper().isInclusive()) {
+                    sets.add(Set.of(new Condition(referenceValue, ConditionType.EQUALITY, Expression.numericConstant(range.lower().value()))));
+                }
+            } else {
+                Condition lowerBound = new Condition(referenceValue, range.lower().isInclusive() ? ConditionType.GREATER_THAN_OR_EQUAL : ConditionType.GREATER_THAN, Expression.numericConstant(range.lower().value()));
+                Condition upperBound = new Condition(referenceValue, range.upper().isInclusive() ? ConditionType.LESS_THAN_OR_EQUAL : ConditionType.LESS_THAN, Expression.numericConstant(range.upper().value()));
+                sets.add(Set.of(lowerBound, upperBound));
+            }
+        }
+        return Set.copyOf(sets);
     }
 
     @Override
@@ -174,6 +193,16 @@ public class NumericConstraint implements Constraint {
             copy.union(range);
         }
         return copy;
+    }
+
+    @Override
+    public boolean isFull() {
+        return false;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return false;
     }
 
     public record Range(@NotNull Bound lower, @NotNull Bound upper) {

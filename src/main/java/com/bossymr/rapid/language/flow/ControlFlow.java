@@ -21,8 +21,8 @@ public class ControlFlow {
         this.map = new HashMap<>();
     }
 
-    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
-        return visitor.visitControlFlow(this);
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitControlFlow(this);
     }
 
     /**

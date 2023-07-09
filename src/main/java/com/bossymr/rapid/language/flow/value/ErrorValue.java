@@ -6,8 +6,8 @@ import org.jetbrains.annotations.NotNull;
 
 public record ErrorValue() implements Value {
     @Override
-    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
-        return visitor.visitErrorValue(this);
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitErrorValue(this);
     }
 
     @Override

@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public record ConstantValue(@NotNull RapidType type, @NotNull Object value) implements Value {
     @Override
-    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
-        return visitor.visitConstantValue(this);
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitConstantValue(this);
     }
 }

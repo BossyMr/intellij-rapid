@@ -1,7 +1,12 @@
 package com.bossymr.rapid.language.flow.constraint;
 
+import com.bossymr.rapid.language.flow.condition.Condition;
+import com.bossymr.rapid.language.flow.condition.ConditionType;
+import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public record StringConstraint(@NotNull Optionality optionality, @NotNull Set<String> sequences) implements Constraint {
@@ -9,6 +14,15 @@ public record StringConstraint(@NotNull Optionality optionality, @NotNull Set<St
     @Override
     public @NotNull Optionality getOptionality() {
         return optionality();
+    }
+
+    @Override
+    public @NotNull Set<Set<Condition>> toConditions(@NotNull ReferenceValue referenceValue) {
+        Set<Set<Condition>> conditions = new HashSet<>();
+        for (String sequence : sequences) {
+            conditions.add(Set.of(new Condition(referenceValue, ConditionType.EQUALITY, Expression.stringConstant(sequence))));
+        }
+        return conditions;
     }
 
     @Override

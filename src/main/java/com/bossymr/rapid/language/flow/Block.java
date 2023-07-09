@@ -78,7 +78,7 @@ public sealed abstract class Block {
         if (getEntryBlock(scopeType) != null) {
             throw new IllegalStateException();
         }
-        BasicBlock basicBlock = new BasicBlock.EntryBasicBlock(getBasicBlocks().size(), scopeType);
+        BasicBlock basicBlock = new BasicBlock.EntryBasicBlock(this, scopeType);
         basicBlocks.add(basicBlock);
         entryBlocks.put(scopeType, basicBlock);
         return basicBlock;
@@ -88,14 +88,14 @@ public sealed abstract class Block {
         if (getEntryBlock(StatementListType.ERROR_CLAUSE) != null) {
             throw new IllegalStateException();
         }
-        BasicBlock basicBlock = new BasicBlock.ErrorBasicBlock(getBasicBlocks().size(), exceptions);
+        BasicBlock basicBlock = new BasicBlock.ErrorBasicBlock(this, exceptions);
         basicBlocks.add(basicBlock);
         entryBlocks.put(StatementListType.ERROR_CLAUSE, basicBlock);
         return basicBlock;
     }
 
     public @NotNull BasicBlock createBasicBlock() {
-        BasicBlock basicBlock = new BasicBlock.IntermediateBasicBlock(getBasicBlocks().size());
+        BasicBlock basicBlock = new BasicBlock.IntermediateBasicBlock(this);
         basicBlocks.add(basicBlock);
         return basicBlock;
     }
@@ -114,7 +114,7 @@ public sealed abstract class Block {
         return getVariables().size();
     }
 
-    public abstract <T> T accept(@NotNull ControlFlowVisitor<T> visitor);
+    public abstract void accept(@NotNull ControlFlowVisitor visitor);
 
     @Override
     public String toString() {
@@ -182,8 +182,8 @@ public sealed abstract class Block {
         }
 
         @Override
-        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
-            return visitor.visitFunctionBlock(this);
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitFunctionBlock(this);
         }
 
         @Override
@@ -220,8 +220,8 @@ public sealed abstract class Block {
         }
 
         @Override
-        public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
-            return visitor.visitFieldBlock(this);
+        public void accept(@NotNull ControlFlowVisitor visitor) {
+            visitor.visitFieldBlock(this);
         }
 
         @Override

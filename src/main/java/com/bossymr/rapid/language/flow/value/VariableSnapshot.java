@@ -4,8 +4,6 @@ import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
-
 /**
  * A {@code VariableSnapshot} represents the previous state of a variable. The below example shows how snapshots can be
  * used, as each variable state is represented as a snapshot. This is useful, as although {@code x} is modified, if the
@@ -18,27 +16,20 @@ import java.util.Objects;
  * 3: x = 10                                // x2 = 10
  * }
  */
-@SuppressWarnings("ClassCanBeRecord")
 public final class VariableSnapshot implements ReferenceValue {
 
-    private final @NotNull ReferenceValue variable;
+    private final @NotNull RapidType type;
 
-    public VariableSnapshot(@NotNull ReferenceValue variable) {
-        this.variable = variable;
+    public VariableSnapshot(@NotNull RapidType variable) {
+        this.type = variable;
     }
 
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        variable.accept(visitor);
-    }
+    public void accept(@NotNull ControlFlowVisitor visitor) {}
 
     @Override
     public @NotNull RapidType type() {
-        return variable.type();
-    }
-
-    public @NotNull ReferenceValue getVariable() {
-        return variable;
+        return type;
     }
 
     @Override

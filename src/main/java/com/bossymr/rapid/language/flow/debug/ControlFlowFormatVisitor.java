@@ -11,29 +11,35 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
+public class ControlFlowFormatVisitor extends ControlFlowVisitor {
+
+    private final @NotNull StringBuilder stringBuilder;
+
+    public ControlFlowFormatVisitor(@NotNull StringBuilder stringBuilder) {
+        this.stringBuilder = stringBuilder;
+    }
 
     public static @NotNull String format(@NotNull ControlFlow controlFlow) {
-        return controlFlow.accept(new ControlFlowFormatVisitor());
+        StringBuilder stringBuilder = new StringBuilder();
+        controlFlow.accept(new ControlFlowFormatVisitor(stringBuilder));
+        return stringBuilder.toString();
     }
 
     @Override
-    public @NotNull String visitControlFlow(@NotNull ControlFlow controlFlow) {
+    public void visitControlFlow(@NotNull ControlFlow controlFlow) {
         List<Block> blocks = new ArrayList<>(controlFlow.getBlocks());
-        StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < blocks.size(); i++) {
             if (i > 0) {
                 stringBuilder.append("\n");
             }
             Block block = blocks.get(i);
-            stringBuilder.append(block.accept(this));
+            block.accept(this);
         }
-        return stringBuilder.toString();
+        super.visitControlFlow(controlFlow);
     }
 
     @Override
-    public @NotNull String visitFunctionBlock(@NotNull Block.FunctionBlock functionBlock) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitFunctionBlock(@NotNull Block.FunctionBlock functionBlock) {
         stringBuilder.append(functionBlock.getRoutineType().getText().toLowerCase());
         stringBuilder.append(" ");
         if (functionBlock.getReturnType() != null) {
@@ -50,16 +56,15 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
                 stringBuilder.append(", ");
             }
             ArgumentGroup argumentGroup = argumentGroups.get(i);
-            stringBuilder.append(argumentGroup.accept(this));
+            argumentGroup.accept(this);
         }
         stringBuilder.append(")");
-        formatBlock(stringBuilder, functionBlock);
-        return stringBuilder.toString();
+        formatBlock(functionBlock);
+        super.visitFunctionBlock(functionBlock);
     }
 
     @Override
-    public @NotNull String visitFieldBlock(@NotNull Block.FieldBlock fieldBlock) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitFieldBlock(@NotNull Block.FieldBlock fieldBlock) {
         stringBuilder.append(fieldBlock.getFieldType().getText().toLowerCase());
         stringBuilder.append(" ");
         fieldBlock.getReturnType();
@@ -68,11 +73,11 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
         stringBuilder.append(fieldBlock.getModuleName());
         stringBuilder.append(":");
         stringBuilder.append(fieldBlock.getName());
-        formatBlock(stringBuilder, fieldBlock);
-        return stringBuilder.toString();
+        formatBlock(fieldBlock);
+        super.visitFieldBlock(fieldBlock);
     }
 
-    private void formatBlock(@NotNull StringBuilder stringBuilder, @NotNull Block block) {
+    private void formatBlock(@NotNull Block block) {
         stringBuilder.append(" {");
         stringBuilder.append("\n");
         List<Variable> variables = block.getVariables();
@@ -99,8 +104,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     }
 
     @Override
-    public @NotNull String visitBasicBlock(@NotNull BasicBlock basicBlock) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitBasicBlock(@NotNull BasicBlock basicBlock) {
         StatementListType scopeType = basicBlock.getScopeType();
         if (scopeType != null) {
             stringBuilder.append(switch (scopeType) {
@@ -118,19 +122,18 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
         stringBuilder.append("\n");
         for (LinearInstruction instruction : basicBlock.getInstructions()) {
             stringBuilder.append("\t\t");
-            stringBuilder.append(instruction.accept(this));
+            instruction.accept(this);
             stringBuilder.append("\n");
         }
         stringBuilder.append("\t\t");
         basicBlock.getTerminator().accept(this);
         stringBuilder.append("\n");
         stringBuilder.append("\t}");
-        return stringBuilder.toString();
+        super.visitBasicBlock(basicBlock);
     }
 
     @Override
-    public @NotNull String visitArgumentGroup(@NotNull ArgumentGroup argumentGroup) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitArgumentGroup(@NotNull ArgumentGroup argumentGroup) {
         if (argumentGroup.isOptional()) {
             stringBuilder.append("\\");
         }
@@ -140,19 +143,24 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
                 stringBuilder.append(" | ");
             }
             Argument argument = arguments.get(i);
-            stringBuilder.append(argument.accept(this));
+            argument.accept(this);
         }
-        return stringBuilder.toString();
+        super.visitArgumentGroup(argumentGroup);
     }
 
     @Override
-    public @NotNull String visitArgument(@NotNull Argument argument) {
-        return argument.parameterType().getText().toLowerCase() + " " + argument.type().getPresentableText() + " " + "_" + argument.index() + " [" + argument.name() + "]";
+    public void visitArgument(@NotNull Argument argument) {
+        stringBuilder.append(argument.parameterType().getText().toLowerCase());
+        stringBuilder.append(" ");
+        stringBuilder.append(argument.type().getPresentableText());
+        stringBuilder.append(" ");
+        stringBuilder.append("_").append(argument.index());
+        stringBuilder.append(" [").append(argument.name()).append("]");
+        super.visitArgument(argument);
     }
 
     @Override
-    public @NotNull String visitVariable(@NotNull Variable variable) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitVariable(@NotNull Variable variable) {
         if (variable.fieldType() != null) {
             stringBuilder.append(variable.fieldType().getText().toLowerCase());
             stringBuilder.append(" ");
@@ -171,94 +179,106 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
             }
         }
         stringBuilder.append(";");
-        return stringBuilder.toString();
+        super.visitVariable(variable);
     }
 
     @Override
-    public @NotNull String visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
-        return instruction.variable().accept(this) + " := " + instruction.value().accept(this) + ";";
+    public void visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
+        instruction.variable().accept(this);
+        stringBuilder.append(" := ");
+        instruction.value().accept(this);
+        stringBuilder.append(";");
+        super.visitAssignmentInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitConnectInstruction(@NotNull LinearInstruction.ConnectInstruction instruction) {
-        return "connect " + instruction.variable().accept(this) + " with " + instruction.routine().accept(this) + ";";
+    public void visitConnectInstruction(@NotNull LinearInstruction.ConnectInstruction instruction) {
+        stringBuilder.append("connect ");
+        instruction.variable().accept(this);
+        stringBuilder.append(" with ");
+        instruction.routine().accept(this);
+        stringBuilder.append(";");
+        super.visitConnectInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
-        return "if(" + instruction.value().accept(this) + ") -> " +
-                "[true: " + instruction.onSuccess().getIndex() +
-                ", false: " + instruction.onFailure().getIndex() + "]";
+    public void visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
+        stringBuilder.append("if(");
+        instruction.value().accept(this);
+        stringBuilder.append(") -> ");
+        stringBuilder.append("[true: ").append(instruction.onSuccess().getIndex());
+        stringBuilder.append(", false: ").append(instruction.onFailure().getIndex()).append("]");
+        super.visitConditionalBranchingInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
-        return "goto -> " + instruction.next().getIndex() + ";";
+    public void visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
+        stringBuilder.append("goto -> ").append(instruction.next().getIndex()).append(";");
+        super.visitUnconditionalBranchingInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitRetryInstruction(@NotNull BranchingInstruction.RetryInstruction instruction) {
-        return "retry;";
+    public void visitRetryInstruction(@NotNull BranchingInstruction.RetryInstruction instruction) {
+        stringBuilder.append("retry;");
+        super.visitRetryInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitTryNextInstruction(@NotNull BranchingInstruction.TryNextInstruction instruction) {
-        return "trynext;";
+    public void visitTryNextInstruction(@NotNull BranchingInstruction.TryNextInstruction instruction) {
+        stringBuilder.append("trynext;");
+        super.visitTryNextInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
         stringBuilder.append("return");
         if (instruction.value() != null) {
             stringBuilder.append(" ");
-            stringBuilder.append(instruction.value().accept(this));
+            instruction.value().accept(this);
         }
         stringBuilder.append(";");
-        return stringBuilder.toString();
+        super.visitReturnInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitExitInstruction(@NotNull BranchingInstruction.ExitInstruction instruction) {
-        return "exit;";
+    public void visitExitInstruction(@NotNull BranchingInstruction.ExitInstruction instruction) {
+        stringBuilder.append("exit;");
+        super.visitExitInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
         stringBuilder.append("throw");
         if (instruction.exception() != null) {
             stringBuilder.append(" ");
-            stringBuilder.append(instruction.exception().accept(this));
+            instruction.exception().accept(this);
         }
         stringBuilder.append(";");
-        return stringBuilder.toString();
+        super.visitThrowInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
         stringBuilder.append("error");
         if (instruction.next() != null) {
             stringBuilder.append(" -> ");
             stringBuilder.append(instruction.next().getIndex());
         }
         stringBuilder.append(";");
-        return stringBuilder.toString();
+        super.visitErrorInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
         if (instruction.returnValue() != null) {
-            stringBuilder.append(instruction.returnValue().accept(this));
+            instruction.returnValue().accept(this);
             stringBuilder.append(" := ");
         }
         Value routine = instruction.routine();
         if (routine instanceof ConstantValue constant && constant.value() instanceof String) {
             stringBuilder.append(constant.value());
         } else {
-            stringBuilder.append(routine.accept(this));
+            routine.accept(this);
         }
         stringBuilder.append("(");
         List<Map.Entry<ArgumentDescriptor, Value>> arguments = new ArrayList<>(instruction.arguments().entrySet());
@@ -270,99 +290,109 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
             stringBuilder.append("_").append(entry.getKey());
             if (entry.getValue() != null) {
                 stringBuilder.append(" := ");
-                stringBuilder.append(entry.getValue().accept(this));
+                entry.getValue().accept(this);
             }
         }
         stringBuilder.append(")");
-        stringBuilder.append(" -> ").append(instruction.nextBasicBlock().getIndex()).append(";");
-        return stringBuilder.toString();
+        stringBuilder.append(" -> ").append(instruction.next().getIndex()).append(";");
+        super.visitCallInstruction(instruction);
     }
 
     @Override
-    public @NotNull String visitLocalVariableValue(@NotNull VariableReference value) {
-        return "_" + value.field().index();
+    public void visitLocalVariableValue(@NotNull VariableReference value) {
+        stringBuilder.append("_").append(value.field().index());
+        super.visitLocalVariableValue(value);
     }
 
     @Override
-    public @NotNull String visitFieldVariableValue(@NotNull FieldReference value) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitFieldVariableValue(@NotNull FieldReference value) {
         if (value.moduleName() != null) {
             stringBuilder.append(value.moduleName()).append(":");
         }
         stringBuilder.append(value.name());
-        return stringBuilder.toString();
+        super.visitFieldVariableValue(value);
     }
 
     @Override
-    public @NotNull String visitIndexVariableValue(@NotNull IndexReference value) {
-        return value.variable().accept(this) + "[" + value.index().accept(this) + "]";
+    public void visitIndexVariableValue(@NotNull IndexReference value) {
+        value.variable().accept(this);
+        stringBuilder.append("[");
+        value.index().accept(this);
+        stringBuilder.append("]");
+        super.visitIndexVariableValue(value);
     }
 
     @Override
-    public @NotNull String visitComponentVariableValue(@NotNull ComponentReference value) {
-        return value.variable().accept(this) + "." + value.component();
+    public void visitComponentVariableValue(@NotNull ComponentReference value) {
+        value.variable().accept(this);
+        stringBuilder.append(".");
+        stringBuilder.append(value.component());
+        super.visitComponentVariableValue(value);
     }
 
     @Override
-    public @NotNull String visitConstantValue(@NotNull ConstantValue value) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitConstantValue(@NotNull ConstantValue value) {
         if (value.value() instanceof String) {
             stringBuilder.append("\"").append(value.value()).append("\"");
         } else {
             stringBuilder.append(value.value());
         }
-        return stringBuilder.toString();
+        super.visitConstantValue(value);
     }
 
     @Override
-    public @NotNull String visitErrorValue(@NotNull ErrorValue value) {
-        return "error";
+    public void visitErrorValue(@NotNull ErrorValue value) {
+        stringBuilder.append("error");
+        super.visitErrorValue(value);
     }
 
     @Override
-    public @NotNull String visitVariableExpression(@NotNull VariableExpression expression) {
-        return expression.value().accept(this);
+    public void visitVariableExpression(@NotNull VariableExpression expression) {
+        expression.value().accept(this);
+        super.visitVariableExpression(expression);
     }
 
     @Override
-    public @NotNull String visitAggregateExpression(@NotNull AggregateExpression expression) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitAggregateExpression(@NotNull AggregateExpression expression) {
         stringBuilder.append("[");
         for (int i = 0; i < expression.values().size(); i++) {
             if (i > 0) {
                 stringBuilder.append(", ");
             }
-            stringBuilder.append(expression.values().get(i).accept(this));
+            expression.values().get(i).accept(this);
         }
         stringBuilder.append("]");
-        return stringBuilder.toString();
+        super.visitAggregateExpression(expression);
     }
 
     @Override
-    public @NotNull String visitBinaryExpression(@NotNull BinaryExpression expression) {
-        return expression.left().accept(this) + " " +
-                switch (expression.operator()) {
-                    case ADD -> "+";
-                    case SUBTRACT -> "-";
-                    case MULTIPLY -> "*";
-                    case DIVIDE -> "/";
-                    case INTEGER_DIVIDE -> "DIV";
-                    case MODULO -> "%";
-                    case LESS_THAN -> "<";
-                    case LESS_THAN_OR_EQUAL -> "<=";
-                    case EQUAL_TO -> "=";
-                    case NOT_EQUAL_TO -> "!=";
-                    case GREATER_THAN -> ">";
-                    case GREATER_THAN_OR_EQUAL -> ">=";
-                    case AND -> "AND";
-                    case XOR -> "XOR";
-                    case OR -> "OR";
-                } + " " + expression.right().accept(this);
+    public void visitBinaryExpression(@NotNull BinaryExpression expression) {
+        expression.left().accept(this);
+        stringBuilder.append(" ");
+        stringBuilder.append(switch (expression.operator()) {
+            case ADD -> "+";
+            case SUBTRACT -> "-";
+            case MULTIPLY -> "*";
+            case DIVIDE -> "/";
+            case INTEGER_DIVIDE -> "DIV";
+            case MODULO -> "%";
+            case LESS_THAN -> "<";
+            case LESS_THAN_OR_EQUAL -> "<=";
+            case EQUAL_TO -> "=";
+            case NOT_EQUAL_TO -> "!=";
+            case GREATER_THAN -> ">";
+            case GREATER_THAN_OR_EQUAL -> ">=";
+            case AND -> "AND";
+            case XOR -> "XOR";
+            case OR -> "OR";
+        });
+        stringBuilder.append(" ");
+        expression.right().accept(this);
+        super.visitBinaryExpression(expression);
     }
 
     @Override
-    public @NotNull String visitUnaryExpression(@NotNull UnaryExpression expression) {
-        StringBuilder stringBuilder = new StringBuilder();
+    public void visitUnaryExpression(@NotNull UnaryExpression expression) {
         stringBuilder.append(switch (expression.operator()) {
             case NOT -> "NOT";
             case NEGATE -> "-";
@@ -370,7 +400,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
         if (expression.operator() != UnaryOperator.NEGATE) {
             stringBuilder.append(" ");
         }
-        stringBuilder.append(expression.value().accept(this));
-        return stringBuilder.toString();
+        expression.value().accept(this);
+        super.visitUnaryExpression(expression);
     }
 }

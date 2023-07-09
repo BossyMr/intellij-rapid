@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 public record ComponentReference(@NotNull RapidType type, @NotNull ReferenceValue variable, @NotNull String component) implements ReferenceValue {
     @Override
-    public <T> T accept(@NotNull ControlFlowVisitor<T> visitor) {
-        return visitor.visitComponentVariableValue(this);
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitComponentVariableValue(this);
     }
 }

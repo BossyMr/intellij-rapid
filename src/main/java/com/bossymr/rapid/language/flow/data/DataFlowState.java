@@ -42,9 +42,7 @@ import java.util.function.BiFunction;
  */
 public record DataFlowState(@NotNull Set<Condition> conditions, @NotNull Map<ReferenceValue, ReferenceValue> snapshots) {
 
-    public boolean intersects(@NotNull Condition condition) {
-        ReferenceValue referenceValue = getValue(condition.getVariable());
-        Constraint constraint = getConstraint(condition);
+    public boolean intersects(@NotNull ReferenceValue referenceValue, @NotNull Constraint constraint) {
         for (Condition value : conditions) {
             ReferenceValue variable = getValue(value.getVariable());
             if (variable.equals(referenceValue)) {
