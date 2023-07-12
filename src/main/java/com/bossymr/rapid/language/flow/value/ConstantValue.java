@@ -14,4 +14,9 @@ public record ConstantValue(@NotNull RapidType type, @NotNull Object value) impl
     public void accept(@NotNull ControlFlowVisitor visitor) {
         visitor.visitConstantValue(this);
     }
+
+    @Override
+    public @NotNull RapidType getType() {
+        return type();
+    }
 }

@@ -1,17 +1,8 @@
 package com.bossymr.rapid.language.flow.constraint;
 
-import com.bossymr.rapid.language.flow.condition.Condition;
-import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Set;
-
 public record OpenConstraint(@NotNull Optionality optionality) implements Constraint {
-
-    @Override
-    public @NotNull Set<Set<Condition>> toConditions(@NotNull ReferenceValue referenceValue) {
-        return Set.of();
-    }
 
     @Override
     public @NotNull Optionality getOptionality() {

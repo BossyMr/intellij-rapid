@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.psi.StatementListType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -98,9 +97,9 @@ public sealed abstract class BasicBlock {
 
     public static final class ErrorBasicBlock extends BasicBlock {
 
-        private final @Nullable List<Value> exceptions;
+        private final @Nullable List<Integer> exceptions;
 
-        public ErrorBasicBlock(@NotNull Block block, @Nullable List<Value> exceptions) {
+        public ErrorBasicBlock(@NotNull Block block, @Nullable List<Integer> exceptions) {
             super(block);
             this.exceptions = exceptions;
         }
@@ -110,7 +109,7 @@ public sealed abstract class BasicBlock {
             return StatementListType.ERROR_CLAUSE;
         }
 
-        public @Nullable List<Value> getExceptions() {
+        public @Nullable List<Integer> getExceptions() {
             return exceptions;
         }
     }

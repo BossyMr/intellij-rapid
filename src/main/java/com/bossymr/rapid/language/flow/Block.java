@@ -1,6 +1,5 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.ParameterType;
@@ -84,7 +83,7 @@ public sealed abstract class Block {
         return basicBlock;
     }
 
-    public @NotNull BasicBlock setErrorClause(@Nullable List<Value> exceptions) {
+    public @NotNull BasicBlock setErrorClause(@Nullable List<Integer> exceptions) {
         if (getEntryBlock(StatementListType.ERROR_CLAUSE) != null) {
             throw new IllegalStateException();
         }
@@ -100,8 +99,8 @@ public sealed abstract class Block {
         return basicBlock;
     }
 
-    public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type, @Nullable Object initialValue) {
-        Variable variable = new Variable(getNextVariableIndex(), initialValue, fieldType, type, name);
+    public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
+        Variable variable = new Variable(getNextVariableIndex(), fieldType, type, name);
         variables.add(variable);
         return variable;
     }
@@ -142,9 +141,9 @@ public sealed abstract class Block {
         private final @NotNull RoutineType routineType;
         private final @NotNull List<ArgumentGroup> argumentGroups;
 
-        public FunctionBlock(@Nullable String moduleName, @NotNull String name, @Nullable RapidType returnType, @NotNull RoutineType routineType, boolean hasArguments) {
+        public FunctionBlock(@Nullable String moduleName, @NotNull String name, @Nullable RapidType returnType, @NotNull RoutineType routineType) {
             super(moduleName, name, returnType);
-            this.argumentGroups = hasArguments ? new ArrayList<>() : List.of();
+            this.argumentGroups = routineType != RoutineType.TRAP ? new ArrayList<>() : List.of();
             this.routineType = routineType;
         }
 

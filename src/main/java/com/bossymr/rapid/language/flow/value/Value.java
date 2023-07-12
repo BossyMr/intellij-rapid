@@ -11,6 +11,6 @@ public sealed interface Value permits ConstantValue, ErrorValue, ReferenceValue 
 
     void accept(@NotNull ControlFlowVisitor visitor);
 
-    @NotNull RapidType type();
+    @NotNull RapidType getType();
 
 }

@@ -1,17 +1,18 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.Argument;
+import com.bossymr.rapid.language.flow.ArgumentGroup;
+import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.Field;
 import com.bossymr.rapid.language.flow.condition.Condition;
+import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.constraint.*;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BiFunction;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A {@code DataFlowState} represents the state of the program at a specific point.
@@ -19,20 +20,21 @@ import java.util.function.BiFunction;
  * Block 0:
  * 0: if(value) -> (true: 1, false: 2)
  *
- * Block 1:     // State:
- * 0: x = 0;    // x1 = 0;
- * 1: z = 0;    // z1 = 0;
- * 2: goto 3;
+ * Block 1:         // State:
+ * 0: x = [0, 1];   // x[0]1 = 0;
+ * 1: z = 0;        // x[1]1 = 1
+ * 2: goto 3;       // z1 = 0;
  *
- * Block 2:     // State:
- * 0: x = 1;    // x1 = 0;
- * 1: z = 1;    // z1 = 1;
- * 2: goto 3;
+ * Block 2:         // State:
+ * 0: x = [1, 0];   // x[0]1 = 1;
+ * 1: z = 1;        // x[1]1 = 0;
+ * 2: goto 3;       // z1 = 1;
  *
- * Block 3:                         // State 1:         State 2:
- * 0: y = (x == 0);                 // y1 = (x1 == 0);  y1 = (x1 == 0);
- * 1: if(y) -> (true: 4, false: 5)  // x1 = 0;          x1 = 1;
- *                                  // z1 = 0;          z1 = 1;
+ * Block 3:                             // State 1:             State 2:
+ * 0: y = (x[0] == 0);                  // y1 = (x[0]1 == 0);   y1 = (x[0]1 == 0);
+ * 1: if(y) -> (true: 4, false: 5)      // x[0]1 = 0;           x[0]1 = 1;
+ *                                      // x[1]1 = 1;           z[1]1 = 0;
+ *                                      // z1 = 0;              z1 = 1;
  *
  * Block 4:     // State:
  *              // y1 = (x1 == 0);
@@ -40,70 +42,241 @@ import java.util.function.BiFunction;
  *              // z1 = 0;
  * }</pre>
  */
-public record DataFlowState(@NotNull Set<Condition> conditions, @NotNull Map<ReferenceValue, ReferenceValue> snapshots) {
+public class DataFlowState {
 
-    public boolean intersects(@NotNull ReferenceValue referenceValue, @NotNull Constraint constraint) {
-        for (Condition value : conditions) {
-            ReferenceValue variable = getValue(value.getVariable());
-            if (variable.equals(referenceValue)) {
-                if(getConstraint(value).intersects(constraint)) {
-                    return true;
+    private final @NotNull Block.FunctionBlock functionBlock;
+
+    /**
+     * The conditions that store how variables are related.
+     */
+    private final @NotNull Set<Condition> conditions;
+
+    /**
+     * The latest snapshot of each variable.
+     * The latest snapshot for a given variable also represents the variable.
+     * The variables which are stored are: {@link VariableValue}, {@link ComponentValue}, and {@link IndexValue}.
+     */
+    private final @NotNull Map<ReferenceValue, VariableSnapshot> snapshots;
+
+    /**
+     * The constraints for all variables.
+     */
+    private final @NotNull Map<VariableSnapshot, Constraint> constraints;
+
+    public DataFlowState(@NotNull Block.FunctionBlock functionBlock) {
+        this.functionBlock = functionBlock;
+        this.conditions = new HashSet<>();
+        this.snapshots = new HashMap<>();
+        this.constraints = new HashMap<>();
+    }
+
+    public DataFlowState(@NotNull DataFlowState state) {
+        this.functionBlock = state.functionBlock;
+        this.conditions = state.conditions;
+        this.snapshots = state.snapshots;
+        this.constraints = state.constraints;
+    }
+
+    public void assign(@NotNull ReferenceValue variable, @NotNull Expression expression) {
+        if (variable instanceof FieldValue) {
+            return;
+        }
+        // If you assign a value to an argument, it must be present if the program is to continue successfully.
+        if (getOptionality(variable) == Optionality.UNKNOWN) {
+            solveMutuallyExlusiveArguments(variable, Optionality.MISSING);
+        }
+        VariableSnapshot snapshot = getSnapshot(variable);
+        Condition condition = new Condition(snapshot, ConditionType.EQUALITY, expression);
+        prepareCondition(condition);
+        conditions.addAll(condition.getVariants());
+    }
+
+    public void assign(@NotNull ReferenceValue variable, @NotNull Constraint constraint) {
+        if (variable instanceof FieldValue) {
+            return;
+        }
+        if (getOptionality(variable) == Optionality.UNKNOWN) {
+            if (constraint.getOptionality() == Optionality.PRESENT) {
+                solveMutuallyExlusiveArguments(variable, Optionality.MISSING);
+            }
+            if (constraint.getOptionality() == Optionality.MISSING) {
+                solveMutuallyExlusiveArguments(variable, Optionality.PRESENT);
+            }
+        }
+        VariableSnapshot snapshot = getSnapshot(variable);
+        constraints.put(snapshot, constraint);
+    }
+
+    public void add(@NotNull Condition condition) {
+        ReferenceValue variable = condition.getVariable();
+        if (variable instanceof VariableValue reference) {
+            VariableSnapshot snapshot;
+            if (!(snapshots.containsKey(reference))) {
+                snapshot = new VariableSnapshot(reference.field());
+                snapshots.put(reference, snapshot);
+            } else {
+                snapshot = snapshots.get(reference);
+            }
+            condition = new Condition(snapshot, condition.getConditionType(), condition.getExpression());
+        }
+        prepareCondition(condition);
+        conditions.add(condition);
+    }
+
+    /**
+     * Simplifies this {@code DataFlowState} by removing all conditions and constraints which are the specified
+     * variables are not dependent upon.
+     * Snapshots are also remapped according to the specified map.
+     * For example, if an argument {@code x} has a snapshot {@code x1}, and the specified map contains {@code x} to
+     * {@code y}, the result will specify that the field {@code y} has a snapshot {@code x1}.
+     *
+     * @param references the snapshots.
+     * @param variables the variables to keep.
+     */
+    public void simplify(@NotNull Map<ReferenceValue, ReferenceValue> references, @NotNull Set<ReferenceValue> variables) {
+        conditions.removeIf(condition -> !(variables.contains(condition.getVariable())) && condition.getVariables().stream().noneMatch(variables::contains));
+        constraints.keySet().removeIf(snapshot -> !(variables.contains(snapshots.get(snapshot))));
+        Map<ReferenceValue, VariableSnapshot> updated = new HashMap<>();
+        for (ReferenceValue referenceValue : references.keySet()) {
+            updated.put(references.get(referenceValue), snapshots.get(referenceValue));
+        }
+        snapshots.clear();
+        snapshots.putAll(updated);
+    }
+
+    public void merge(@NotNull DataFlowState state) {
+        conditions.addAll(state.conditions);
+        snapshots.putAll(state.snapshots);
+        constraints.putAll(state.constraints);
+    }
+
+    private @NotNull Optionality getOptionality(@NotNull ReferenceValue referenceValue) {
+        VariableSnapshot snapshot = referenceValue instanceof VariableSnapshot variableSnapshot ? variableSnapshot : snapshots.get(referenceValue);
+        if (constraints.containsKey(snapshot)) {
+            return constraints.get(snapshot).getOptionality();
+        }
+        return Optionality.PRESENT;
+    }
+
+    private void solveMutuallyExlusiveArguments(@NotNull ReferenceValue referenceValue, @NotNull Optionality optionality) {
+        assert optionality != Optionality.UNKNOWN;
+        Optional<Argument> optionalArgument = getArgument(referenceValue);
+        if (optionalArgument.isEmpty()) {
+            return;
+        }
+        Argument argument = optionalArgument.orElseThrow();
+        Optional<ArgumentGroup> groupOptional = functionBlock.getArgumentGroups().stream()
+                .filter(argumentGroup -> argumentGroup.arguments().contains(argument))
+                .findFirst();
+        if (groupOptional.isEmpty()) {
+            throw new IllegalArgumentException();
+        }
+        ArgumentGroup group = groupOptional.orElseThrow();
+        assert group.isOptional();
+        if (optionality == Optionality.PRESENT) {
+            // If an argument group consists of A, B, and C. If A is missing, either B or C might present.
+            // However, if an argument group consists of A and B. If A is missing, B must be present.
+            long unknownCount = group.arguments().stream()
+                    .filter(value -> getOptionality(new VariableValue(value)) == Optionality.UNKNOWN)
+                    .count();
+            if (unknownCount > 2) {
+                return;
+            }
+        }
+        for (Argument sibling : group.arguments()) {
+            if (sibling.equals(argument)) {
+                continue;
+            }
+            VariableValue variableValue = new VariableValue(sibling);
+            VariableSnapshot snapshot = snapshots.get(variableValue);
+            constraints.put(snapshot, constraints.get(snapshot).and(Constraint.any(sibling.type(), optionality)));
+        }
+    }
+
+    private @NotNull Optional<Argument> getArgument(@NotNull ReferenceValue referenceValue) {
+        ReferenceValue rawValue = getRawValue(referenceValue);
+        if (!(rawValue instanceof VariableValue variableValue)) {
+            return Optional.empty();
+        }
+        Field field = variableValue.field();
+        if (!(field instanceof Argument argument)) {
+            return Optional.empty();
+        }
+        return Optional.of(argument);
+    }
+
+    private @NotNull ReferenceValue getRawValue(@NotNull ReferenceValue referenceValue) {
+        if (referenceValue instanceof VariableSnapshot snapshot) {
+            Optional<ReferenceValue> value = snapshots.entrySet().stream()
+                    .filter(entry -> entry.getValue().equals(snapshot))
+                    .map(Map.Entry::getKey)
+                    .findFirst();
+            if (value.isEmpty()) {
+                throw new IllegalArgumentException();
+            }
+            referenceValue = value.orElseThrow();
+        }
+        if (referenceValue instanceof IndexValue indexValue) {
+            return getRawValue(indexValue.variable());
+        }
+        if (referenceValue instanceof ComponentValue componentValue) {
+            return getRawValue(componentValue.variable());
+        }
+        return referenceValue;
+    }
+
+
+    private @NotNull VariableSnapshot getSnapshot(@NotNull ReferenceValue value) {
+        if (value instanceof VariableSnapshot snapshot) {
+            return createSnapshot(snapshot);
+        }
+        if (value instanceof VariableValue) {
+            return createSnapshot(value);
+        }
+        if (value instanceof FieldValue) {
+            throw new IllegalArgumentException();
+        }
+        if (value instanceof IndexValue indexValue) {
+            ReferenceValue variable = indexValue.variable();
+            Value index = indexValue.index();
+            if (index instanceof ReferenceValue referenceValue) {
+                if (!(referenceValue instanceof FieldValue)) {
+                    index = getSnapshot(referenceValue);
                 }
             }
+            indexValue = new IndexValue(variable, index);
+            return createSnapshot(indexValue);
         }
-        return false;
+        if (value instanceof ComponentValue) {
+            return createSnapshot(value);
+        }
+        throw new IllegalArgumentException();
     }
 
-    /**
-     * Add the specified condition to this state.
-     * @param condition the condition.
-     */
-    public void setCondition(@NotNull Condition condition) {
-        Condition copy = new Condition(getValue(condition.getVariable()), condition.getConditionType(), condition.getExpression());
-        for (ReferenceValue referenceValue : copy.collect()) {
-            copy = copy.replace(referenceValue, getValue(referenceValue));
-        }
-        Constraint constraint = getConstraint(copy);
-        for (Condition other : getConditions(copy.getVariable())) {
-            Constraint otherConstraint = getConstraint(other);
-            if(!(otherConstraint.intersects(constraint))) {
-                // If this condition sets a = 2, a condition which sets a = 3 cannot exist, and should be removed.
-                conditions.remove(other);
+    private @NotNull VariableSnapshot createSnapshot(@NotNull ReferenceValue value) {
+        VariableSnapshot snapshot = new VariableSnapshot(value.getType());
+        snapshots.put(value, snapshot);
+        return snapshot;
+    }
+
+    private void prepareCondition(@NotNull Condition condition) {
+        condition.iterate(value -> {
+            if (!(value instanceof VariableValue variable)) {
+                return value;
             }
+            if (!(snapshots.containsKey(variable))) {
+                throw new IllegalStateException("Condition: " + condition + " references an uninitialized variable: " + variable);
+            }
+            return snapshots.get(variable);
+        });
+    }
+
+    public boolean intersects(@NotNull ReferenceValue value, @NotNull Constraint constraint) {
+        if (!(snapshots.containsKey(value))) {
+            throw new IllegalArgumentException();
         }
-        conditions.add(copy);
-    }
-
-    /**
-     * Returns the newest snapshot of the specified value.
-     * <p>
-     * The below example shows how snapshots are used. After a variable is modified, other variables can still reference
-     * the state of the variable before it was modified.
-     * <pre>{@code
-     * 0: x = y + 5     // x1 = y1 + 5
-     * 1: z = y + x     // z1 = y1 + x1
-     * 2: y = 2         // y2 = 2
-     * }</pre>
-     *
-     * @param value the variable.
-     * @return the newest snapshot variable of the specified variable.
-     */
-    public @NotNull ReferenceValue getValue(@NotNull ReferenceValue value) {
-        return snapshots.getOrDefault(value, value);
-    }
-
-    /**
-     * Returns all conditions which apply to the specified variable.
-     *
-     * @param value the variable.
-     * @return all conditions which apply to the specified variable.
-     */
-    public @NotNull List<Condition> getConditions(@NotNull ReferenceValue value) {
-        // If the variable is not a snapshot, fetch the latest snapshot for the variable.
-        ReferenceValue referenceValue = getValue(value);
-        return conditions().stream()
-                .filter(condition -> condition.getVariable().equals(referenceValue))
-                .toList();
+        VariableSnapshot snapshot = snapshots.get(value);
+        return constraints.get(snapshot).intersects(constraint);
     }
 
     /**
@@ -114,61 +287,64 @@ public record DataFlowState(@NotNull Set<Condition> conditions, @NotNull Map<Ref
      */
     public @NotNull Constraint getConstraint(@NotNull Condition condition) {
         Constraint expression = getConstraint(condition.getExpression());
+        return calculateConstraint(condition, expression);
+    }
+
+    private @NotNull Constraint calculateConstraint(@NotNull Condition condition, @NotNull Constraint expressionConstraint) {
         return switch (condition.getConditionType()) {
-            case EQUALITY -> expression;
+            case EQUALITY -> expressionConstraint;
             case INEQUALITY -> {
-                if (expression instanceof NumericConstraint numericConstraint) {
+                if (expressionConstraint instanceof NumericConstraint numericConstraint) {
                     Double point = numericConstraint.getPoint();
                     if (point != null) {
                         yield numericConstraint.negate();
                     }
                     yield NumericConstraint.any();
                 }
-                if (expression instanceof BooleanConstraint booleanConstraint) {
+                if (expressionConstraint instanceof BooleanConstraint booleanConstraint) {
                     yield booleanConstraint.negate();
                 }
-                if (expression instanceof StringConstraint stringConstraint) {
+                if (expressionConstraint instanceof StringConstraint stringConstraint) {
                     if (stringConstraint.sequences().size() == 1) {
                         yield stringConstraint.negate();
                     } else {
                         yield new InverseStringConstraint(Optionality.PRESENT, Set.of());
                     }
                 }
-                if (expression instanceof InverseStringConstraint) {
+                if (expressionConstraint instanceof InverseStringConstraint) {
                     yield new InverseStringConstraint(Optionality.PRESENT, Set.of());
                 }
-                if (expression instanceof OpenConstraint) {
+                if (expressionConstraint instanceof OpenConstraint) {
                     yield new OpenConstraint(Optionality.PRESENT);
                 }
                 throw new AssertionError();
             }
             case LESS_THAN -> {
-                if (!(expression instanceof NumericConstraint numericConstraint)) {
+                if (!(expressionConstraint instanceof NumericConstraint numericConstraint)) {
                     throw new IllegalStateException();
                 }
                 yield NumericConstraint.lessThan(numericConstraint.getMaximum().value());
             }
             case LESS_THAN_OR_EQUAL -> {
-                if (!(expression instanceof NumericConstraint numericConstraint)) {
+                if (!(expressionConstraint instanceof NumericConstraint numericConstraint)) {
                     throw new IllegalStateException();
                 }
                 yield NumericConstraint.lessThanOrEqual(numericConstraint.getMaximum().value());
             }
             case GREATER_THAN -> {
-                if (!(expression instanceof NumericConstraint numericConstraint)) {
+                if (!(expressionConstraint instanceof NumericConstraint numericConstraint)) {
                     throw new IllegalStateException();
                 }
                 yield NumericConstraint.greaterThan(numericConstraint.getMinimum().value());
             }
             case GREATER_THAN_OR_EQUAL -> {
-                if (!(expression instanceof NumericConstraint numericConstraint)) {
+                if (!(expressionConstraint instanceof NumericConstraint numericConstraint)) {
                     throw new IllegalStateException();
                 }
                 yield NumericConstraint.greaterThanOrEqual(numericConstraint.getMinimum().value());
             }
         };
     }
-
 
     /**
      * Calculates the constraint of the value of the specified expression.
@@ -177,7 +353,7 @@ public record DataFlowState(@NotNull Set<Condition> conditions, @NotNull Map<Ref
      * @return the constraint.
      */
     public @NotNull Constraint getConstraint(@NotNull Expression expression) {
-        ExpressionVisitor visitor = new ExpressionVisitor();
+        ConstraintVisitor visitor = new ConstraintVisitor(this);
         expression.accept(visitor);
         return visitor.getResult();
     }
@@ -193,18 +369,18 @@ public record DataFlowState(@NotNull Set<Condition> conditions, @NotNull Map<Ref
             return getConstraint(variable);
         }
         if (value instanceof ErrorValue) {
-            return Constraint.any(value.type());
+            return Constraint.any(value.getType());
         }
         if (value instanceof ConstantValue constant) {
             Object object = constant.value();
-            if (value.type().isAssignable(RapidType.STRING)) {
+            if (value.getType().isAssignable(RapidType.STRING)) {
                 return new StringConstraint(Optionality.PRESENT, Set.of(object.toString()));
             }
-            if (value.type().isAssignable(RapidType.NUMBER)) {
-                return NumericConstraint.equalTo((double) object);
+            if (value.getType().isAssignable(RapidType.NUMBER)) {
+                return NumericConstraint.equalTo(((Number) object).doubleValue());
             }
-            if (value.type().isAssignable(RapidType.BOOLEAN)) {
-                BooleanConstraint.BooleanValue booleanValue = BooleanConstraint.BooleanValue.get((boolean) object);
+            if (value.getType().isAssignable(RapidType.BOOLEAN)) {
+                BooleanConstraint.BooleanValue booleanValue = BooleanConstraint.BooleanValue.withValue((boolean) object);
                 return new BooleanConstraint(Optionality.PRESENT, booleanValue);
             }
         }
@@ -218,246 +394,43 @@ public record DataFlowState(@NotNull Set<Condition> conditions, @NotNull Map<Ref
      * @return the constraint.
      */
     public @NotNull Constraint getConstraint(@NotNull ReferenceValue variable) {
-        List<Condition> conditions = getConditions(variable);
-        if (conditions.isEmpty()) {
+        Set<VariableSnapshot> variables;
+        if (variable instanceof VariableSnapshot snapshot) {
+            variables = Set.of(snapshots.getOrDefault(variable, snapshot));
+        } else if (variable instanceof VariableValue || variable instanceof ComponentValue) {
+            variables = Set.of(snapshots.get(variable));
+        } else if (variable instanceof FieldValue) {
+            return Constraint.any(variable.getType());
+        } else if (variable instanceof IndexValue indexValue) {
+            Constraint constraint = getConstraint(indexValue.index());
+            variables = snapshots.keySet().stream()
+                    .filter(value -> value instanceof IndexValue)
+                    .map(value -> (IndexValue) value)
+                    .filter(value -> {
+                        Constraint indexConstraint = getConstraint(value.index());
+                        return indexConstraint.intersects(constraint);
+                    }).map(snapshots::get)
+                    .collect(Collectors.toSet());
+        } else {
             throw new IllegalArgumentException();
         }
-        Constraint constraint = getConstraint(conditions.get(0));
-        for (int i = 1; i < conditions.size(); i++) {
-            constraint = constraint.or(getConstraint(conditions.get(i)));
+        Set<Constraint> constraints = this.conditions.stream()
+                .filter(condition -> {
+                    ReferenceValue referenceValue = condition.getVariable();
+                    return referenceValue instanceof VariableSnapshot && variables.contains(referenceValue);
+                }).map(this::getConstraint)
+                .collect(Collectors.toSet());
+        Set<Constraint> precomputed = variables.stream()
+                .filter(this.constraints::containsKey)
+                .map(this.constraints::get)
+                .collect(Collectors.toSet());
+        if (constraints.isEmpty()) {
+            return Constraint.and(precomputed);
         }
-        return constraint;
+        if (precomputed.isEmpty()) {
+            return Constraint.and(constraints);
+        }
+        return Constraint.and(precomputed).and(Constraint.and(constraints));
     }
 
-    private class ExpressionVisitor extends ControlFlowVisitor {
-
-        private Constraint constraint;
-
-        public Constraint getResult() {
-            return constraint;
-        }
-
-        @Override
-        public void visitVariableExpression(@NotNull VariableExpression expression) {
-            constraint = getConstraint(expression.value());
-        }
-
-        @Override
-        public void visitAggregateExpression(@NotNull AggregateExpression expression) {
-            throw new IllegalStateException();
-        }
-
-        @Override
-        public void visitBinaryExpression(@NotNull BinaryExpression expression) {
-            Constraint left = getConstraint(expression.left());
-            Constraint right = getConstraint(expression.right());
-            constraint = calculateConstraint(expression.operator(), left, right);
-        }
-
-        private @NotNull Constraint calculateConstraint(@NotNull BinaryOperator operator, @NotNull Constraint left, @NotNull Constraint right) {
-            return switch (operator) {
-                case ADD, SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> {
-                    if (!(left instanceof NumericConstraint leftRange) || !(right instanceof NumericConstraint rightRange)) {
-                        throw new AssertionError();
-                    }
-                    yield calculateNumberConstraint(operator, leftRange, rightRange);
-                }
-                case LESS_THAN, EQUAL_TO, GREATER_THAN, LESS_THAN_OR_EQUAL, NOT_EQUAL_TO, GREATER_THAN_OR_EQUAL -> {
-                    if (!(left instanceof NumericConstraint leftRange) || !(right instanceof NumericConstraint rightRange)) {
-                        throw new AssertionError();
-                    }
-                    yield calculateBooleanRangeConstraint(operator, leftRange, rightRange);
-                }
-                case AND, XOR, OR -> {
-                    if (!(left instanceof BooleanConstraint leftConstant) || !(right instanceof BooleanConstraint rightConstant)) {
-                        throw new AssertionError();
-                    }
-                    Boolean leftValue = leftConstant.getValue().get();
-                    Boolean rightValue = rightConstant.getValue().get();
-                    boolean bothTrue = Boolean.TRUE.equals(leftValue) && Boolean.TRUE.equals(rightValue);
-                    boolean bothFalse = Boolean.FALSE.equals(leftValue) && Boolean.FALSE.equals(rightValue);
-                    boolean anyTrue = Boolean.TRUE.equals(leftValue) || Boolean.TRUE.equals(rightValue);
-                    boolean anyFalse = Boolean.FALSE.equals(leftValue) || Boolean.FALSE.equals(rightValue);
-                    if (operator == BinaryOperator.OR) {
-                        if (anyTrue) {
-                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_TRUE);
-                        }
-                        if (bothFalse) {
-                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
-                        }
-                    }
-                    if (operator == BinaryOperator.AND) {
-                        if (bothTrue) {
-                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_TRUE);
-                        }
-                        if (anyFalse) {
-                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
-                        }
-                    }
-                    if (operator == BinaryOperator.XOR) {
-                        if (bothTrue) {
-                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
-                        }
-                        if (bothFalse) {
-                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
-                        }
-                        if (anyTrue) {
-                            yield new BooleanConstraint(BooleanConstraint.BooleanValue.ALWAYS_FALSE);
-                        }
-                    }
-                    yield BooleanConstraint.any();
-                }
-            };
-        }
-
-        private @NotNull NumericConstraint calculateNumberConstraint(@NotNull BinaryOperator operator, @NotNull NumericConstraint left, @NotNull NumericConstraint right) {
-            return switch (operator) {
-                case ADD -> calculateForOperator(left, right, Double::sum);
-                case SUBTRACT -> calculateForOperator(left, right, (a, b) -> a - b);
-                case MULTIPLY -> calculateForOperator(left, right, (a, b) -> a * b);
-                case DIVIDE -> calculateForOperator(left, right, (a, b) -> a / b);
-                case INTEGER_DIVIDE ->
-                        calculateForOperator(left, right, (a, b) -> ((double) (a.intValue() / b.intValue())));
-                case MODULO -> calculateForOperator(left, right, (a, b) -> a % b);
-                default -> throw new IllegalStateException("Unexpected value: " + operator);
-            };
-        }
-
-        private @NotNull NumericConstraint calculateForOperator(@NotNull NumericConstraint left, @NotNull NumericConstraint right, @NotNull BiFunction<Double, Double, Double> newValue) {
-            NumericConstraint rangeConstraint = new NumericConstraint(Optionality.PRESENT);
-            for (NumericConstraint.Range leftRange : left.getRanges()) {
-                for (NumericConstraint.Range rightRange : right.getRanges()) {
-                    NumericConstraint.Bound lower = new NumericConstraint.Bound(leftRange.lower().isInclusive() && rightRange.lower().isInclusive(), newValue.apply(leftRange.lower().value(), rightRange.lower().value()));
-                    NumericConstraint.Bound upper = new NumericConstraint.Bound(leftRange.upper().isInclusive() && rightRange.upper().isInclusive(), newValue.apply(leftRange.upper().value(), rightRange.upper().value()));
-                    rangeConstraint = rangeConstraint.or(new NumericConstraint(Optionality.PRESENT, lower, upper));
-                }
-            }
-            return rangeConstraint;
-        }
-
-        private @NotNull BooleanConstraint calculateBooleanRangeConstraint(@NotNull BinaryOperator operator, @NotNull NumericConstraint left, @NotNull NumericConstraint right) {
-            NumericConstraint.Bound leftLower = left.getRanges().get(0).lower();
-            NumericConstraint.Bound leftUpper = left.getRanges().get(left.getRanges().size() - 1).upper();
-            NumericConstraint.Bound rightLower = right.getRanges().get(0).lower();
-            NumericConstraint.Bound rightUpper = right.getRanges().get(right.getRanges().size() - 1).upper();
-            NumericConstraint.Range leftRange = new NumericConstraint.Range(leftLower, leftUpper);
-            NumericConstraint.Range rightRange = new NumericConstraint.Range(rightLower, rightUpper);
-            return switch (operator) {
-                case LESS_THAN -> {
-                    // is the largest value in left smaller than the smallest value in right
-                    Boolean smaller = isSmaller(leftRange, rightRange);
-                    if (smaller != null) {
-                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(smaller));
-                    }
-                    yield BooleanConstraint.any();
-                }
-                case LESS_THAN_OR_EQUAL -> {
-                    Boolean equal = isEqual(leftRange, rightRange);
-                    if (equal != null) {
-                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(equal));
-                    }
-                    Boolean smaller = isSmaller(leftRange, rightRange);
-                    if (smaller != null) {
-                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(smaller));
-                    }
-                    yield BooleanConstraint.any();
-                }
-                case EQUAL_TO -> {
-                    Boolean value = isEqual(leftRange, rightRange);
-                    if (value != null) {
-                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(value));
-                    }
-                    yield BooleanConstraint.any();
-                }
-                case NOT_EQUAL_TO -> {
-                    Boolean value = isEqual(leftRange, rightRange);
-                    if (value != null) {
-                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(!value));
-                    }
-                    yield BooleanConstraint.any();
-                }
-                case GREATER_THAN -> {
-                    Boolean smaller = isSmaller(leftRange, rightRange);
-                    if (smaller != null) {
-                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(!smaller));
-                    }
-                    yield BooleanConstraint.any();
-                }
-                case GREATER_THAN_OR_EQUAL -> {
-                    Boolean equal = isEqual(leftRange, rightRange);
-                    if (equal != null) {
-                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(equal));
-                    }
-                    Boolean smaller = isSmaller(leftRange, rightRange);
-                    if (smaller != null) {
-                        yield new BooleanConstraint(BooleanConstraint.BooleanValue.get(!smaller));
-                    }
-                    yield BooleanConstraint.any();
-                }
-                default -> throw new IllegalStateException("Unexpected value: " + operator);
-            };
-        }
-
-        private @Nullable Boolean isSmaller(@NotNull NumericConstraint.Range left, @NotNull NumericConstraint.Range right) {
-            if (left.upper().value() < right.lower().value()) {
-                return true;
-            }
-            if (left.upper().value() == right.lower().value()) {
-                if (left.upper().isInclusive() && right.lower().isInclusive()) {
-                    return null;
-                }
-                return left.upper().isInclusive() || right.lower().isInclusive();
-            }
-            if (left.lower().value() > right.upper().value()) {
-                return false;
-            }
-            if (left.lower().value() == right.upper().value()) {
-                if (left.lower().isInclusive() && right.upper().isInclusive()) {
-                    return null;
-                }
-                return left.upper().isInclusive() || right.lower().isInclusive();
-            }
-            return null;
-        }
-
-        private @Nullable Boolean isEqual(@NotNull NumericConstraint.Range left, @NotNull NumericConstraint.Range right) {
-            Double leftValue = null, rightValue = null;
-            if (left.lower().value() == left.upper().value() && left.lower().isInclusive() && left.upper().isInclusive()) {
-                leftValue = left.lower().value();
-            }
-            if (right.lower().value() == right.upper().value() && right.lower().isInclusive() && right.upper().isInclusive()) {
-                rightValue = right.lower().value();
-            }
-            if (leftValue != null && rightValue != null) {
-                return leftValue.equals(rightValue);
-            } else {
-                return null;
-            }
-        }
-
-        @Override
-        public void visitUnaryExpression(@NotNull UnaryExpression expression) {
-            Constraint value = getConstraint(expression.value());
-            switch (expression.operator()) {
-                case NOT -> {
-                    if (!(value instanceof BooleanConstraint booleanConstraint)) {
-                        throw new AssertionError();
-                    }
-                    constraint = booleanConstraint.negate();
-                }
-                case NEGATE -> {
-                    if (!(value instanceof NumericConstraint numericConstraint)) {
-                        throw new AssertionError();
-                    }
-                    NumericConstraint copy = new NumericConstraint(Optionality.PRESENT);
-                    for (NumericConstraint.Range range : numericConstraint.getRanges()) {
-                        NumericConstraint.Bound lower = new NumericConstraint.Bound(range.upper().isInclusive(), -range.upper().value());
-                        NumericConstraint.Bound upper = new NumericConstraint.Bound(range.lower().isInclusive(), -range.lower().value());
-                        copy = copy.or(new NumericConstraint(Optionality.PRESENT, lower, upper));
-                    }
-                    constraint = copy;
-                }
-            }
-        }
-    }
 }

@@ -5,9 +5,14 @@ import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public record FieldReference(@NotNull RapidType type, @Nullable String moduleName, @NotNull String name) implements ReferenceValue {
+public record FieldValue(@NotNull RapidType type, @Nullable String moduleName, @NotNull String name) implements ReferenceValue {
     @Override
     public void accept(@NotNull ControlFlowVisitor visitor) {
         visitor.visitFieldVariableValue(this);
+    }
+
+    @Override
+    public @NotNull RapidType getType() {
+        return type();
     }
 }

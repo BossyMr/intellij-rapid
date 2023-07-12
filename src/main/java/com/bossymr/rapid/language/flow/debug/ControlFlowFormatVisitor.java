@@ -170,14 +170,6 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         if (variable.name() != null) {
             stringBuilder.append(" [").append(variable.name()).append("]");
         }
-        if (variable.value() != null) {
-            stringBuilder.append(" := ");
-            if (variable.value() instanceof String) {
-                stringBuilder.append("\"").append(variable.value()).append("\"");
-            } else {
-                stringBuilder.append(variable.value());
-            }
-        }
         stringBuilder.append(";");
         super.visitVariable(variable);
     }
@@ -299,13 +291,13 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitLocalVariableValue(@NotNull VariableReference value) {
+    public void visitLocalVariableValue(@NotNull VariableValue value) {
         stringBuilder.append("_").append(value.field().index());
         super.visitLocalVariableValue(value);
     }
 
     @Override
-    public void visitFieldVariableValue(@NotNull FieldReference value) {
+    public void visitFieldVariableValue(@NotNull FieldValue value) {
         if (value.moduleName() != null) {
             stringBuilder.append(value.moduleName()).append(":");
         }
@@ -314,7 +306,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitIndexVariableValue(@NotNull IndexReference value) {
+    public void visitIndexVariableValue(@NotNull IndexValue value) {
         value.variable().accept(this);
         stringBuilder.append("[");
         value.index().accept(this);
@@ -323,7 +315,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitComponentVariableValue(@NotNull ComponentReference value) {
+    public void visitComponentVariableValue(@NotNull ComponentValue value) {
         value.variable().accept(this);
         stringBuilder.append(".");
         stringBuilder.append(value.component());

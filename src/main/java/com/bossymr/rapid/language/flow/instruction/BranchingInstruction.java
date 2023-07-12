@@ -1,6 +1,8 @@
 package com.bossymr.rapid.language.flow.instruction;
 
-import com.bossymr.rapid.language.flow.*;
+import com.bossymr.rapid.language.flow.ArgumentDescriptor;
+import com.bossymr.rapid.language.flow.BasicBlock;
+import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.symbol.RapidType;
@@ -28,7 +30,7 @@ public sealed interface BranchingInstruction extends Instruction {
                                            @NotNull BasicBlock onFailure) implements BranchingInstruction {
 
         public ConditionalBranchingInstruction {
-            assert value.type().isAssignable(RapidType.BOOLEAN);
+            assert value.getType().isAssignable(RapidType.BOOLEAN);
         }
 
         @Override

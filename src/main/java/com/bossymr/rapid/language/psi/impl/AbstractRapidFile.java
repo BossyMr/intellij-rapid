@@ -6,7 +6,6 @@ import com.bossymr.rapid.language.psi.stubs.RapidFileStub;
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.psi.FileViewProvider;
-import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.stubs.StubElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,11 +28,6 @@ public abstract class AbstractRapidFile extends PsiFileBase {
             return fileStub;
         }
         return null;
-    }
-
-    @Override
-    public void accept(@NotNull PsiElementVisitor visitor) {
-        visitor.visitFile(this);
     }
 
     @Override

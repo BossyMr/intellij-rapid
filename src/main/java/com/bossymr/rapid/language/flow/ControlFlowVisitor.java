@@ -82,19 +82,19 @@ public class ControlFlowVisitor {
 
     public void visitInstruction(@NotNull Instruction instruction) {}
 
-    public void visitLocalVariableValue(@NotNull VariableReference value) {
+    public void visitLocalVariableValue(@NotNull VariableValue value) {
         visitVariableValue(value);
     }
 
-    public void visitFieldVariableValue(@NotNull FieldReference value) {
+    public void visitFieldVariableValue(@NotNull FieldValue value) {
         visitVariableValue(value);
     }
 
-    public void visitIndexVariableValue(@NotNull IndexReference value) {
+    public void visitIndexVariableValue(@NotNull IndexValue value) {
         visitVariableValue(value);
     }
 
-    public void visitComponentVariableValue(@NotNull ComponentReference component) {
+    public void visitComponentVariableValue(@NotNull ComponentValue component) {
         visitVariableValue(component);
     }
 

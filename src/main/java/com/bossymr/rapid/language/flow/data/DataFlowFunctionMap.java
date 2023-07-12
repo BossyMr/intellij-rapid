@@ -7,10 +7,7 @@ import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -18,9 +15,9 @@ public class DataFlowFunctionMap {
 
     private final @NotNull Map<BlockDescriptor, Block.FunctionBlock> descriptorMap;
     private final @NotNull Map<BlockDescriptor, DataFlowFunction> functionMap;
-    private final @NotNull Map<BlockDescriptor, Set<DataFlowBlock>> workList;
+    private final @NotNull Deque<WorkListEntry> workList;
 
-    public DataFlowFunctionMap(@NotNull Map<BlockDescriptor, Block.FunctionBlock> descriptorMap, @NotNull Map<BlockDescriptor, Set<DataFlowBlock>> workList) {
+    public DataFlowFunctionMap(@NotNull Map<BlockDescriptor, Block.FunctionBlock> descriptorMap, @NotNull Deque<WorkListEntry> workList) {
         this.descriptorMap = descriptorMap;
         this.functionMap = new HashMap<>();
         this.workList = workList;
@@ -30,8 +27,10 @@ public class DataFlowFunctionMap {
         if (functionMap.containsKey(blockDescriptor)) {
             return functionMap.get(blockDescriptor);
         }
-        workList.computeIfAbsent(blockDescriptor, key -> new HashSet<>());
-        workList.get(blockDescriptor).add(currentBlock);
+        WorkListEntry entry = new WorkListEntry(blockDescriptor, currentBlock);
+        if (!(workList.contains(entry))) {
+            workList.add(entry);
+        }
         return new PhysicalDataFlowFunction(descriptorMap.get(blockDescriptor));
     }
 
@@ -45,6 +44,21 @@ public class DataFlowFunctionMap {
             PhysicalDataFlowFunction function = new PhysicalDataFlowFunction(descriptorMap.get(blockDescriptor));
             function.addResult(returnBlock, constraints, result);
             functionMap.put(blockDescriptor, function);
+        }
+    }
+
+    public record WorkListEntry(@NotNull BlockDescriptor descriptor, @NotNull DataFlowBlock block) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            WorkListEntry that = (WorkListEntry) o;
+            return Objects.equals(block, that.block);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(block);
         }
     }
 
@@ -94,7 +108,7 @@ public class DataFlowFunctionMap {
             }
             RapidType returnType = functionBlock.getReturnType();
             Constraint returnConstraint = returnType != null ? Constraint.any(returnType) : null;
-            return Set.of(Result.Success.create(constraints, returnType, returnConstraint));
+            return Set.of(Result.Success.create(functionBlock, constraints, returnType, returnConstraint));
         }
 
         private boolean contains(@NotNull Map<Argument, Constraint> results, @NotNull Map<Argument, Constraint> arguments) {

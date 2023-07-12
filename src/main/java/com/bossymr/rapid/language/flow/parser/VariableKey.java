@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.flow.parser;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
-import com.bossymr.rapid.language.flow.value.VariableReference;
+import com.bossymr.rapid.language.flow.value.VariableValue;
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -17,9 +17,9 @@ public interface VariableKey {
             private ReferenceValue value;
 
             @Override
-            public @NotNull ReferenceValue create(@NotNull Block currentBlock, @NotNull RapidType type, @Nullable Object initialValue) {
-                Variable variable = currentBlock.createVariable(name, fieldType, type, initialValue);
-                return this.value = new VariableReference(variable);
+            public @NotNull ReferenceValue create(@NotNull Block currentBlock, @NotNull RapidType type) {
+                Variable variable = currentBlock.createVariable(name, fieldType, type);
+                return this.value = new VariableValue(variable);
             }
 
             @Override
@@ -33,7 +33,7 @@ public interface VariableKey {
         return createField(null, null);
     }
 
-    @NotNull ReferenceValue create(@NotNull Block currentBlock, @NotNull RapidType type, @Nullable Object initialValue);
+    @NotNull ReferenceValue create(@NotNull Block currentBlock, @NotNull RapidType type);
 
     @Nullable ReferenceValue retrieve();
 

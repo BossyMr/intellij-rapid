@@ -4,7 +4,6 @@ import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
-import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.ParameterType;
@@ -23,14 +22,14 @@ import java.util.Map;
  */
 public class ControlFlowBuilder {
 
-    private final @NotNull ControlFlow controlFlow = new ControlFlow();
+    private final @NotNull Map<BlockDescriptor, Block> controlFlow = new HashMap<>();
 
     private Block currentBlock;
     private BasicBlock currentBasicBlock;
     private Map<String, BasicBlock> currentLabels;
 
-    public @NotNull Block enterFunction(@NotNull String moduleName, @NotNull String name, @Nullable RapidType returnType, @NotNull RoutineType routineType, boolean hasArguments) {
-        Block block = new Block.FunctionBlock(moduleName, name, returnType, routineType, hasArguments);
+    public @NotNull Block enterFunction(@NotNull String moduleName, @NotNull String name, @Nullable RapidType returnType, @NotNull RoutineType routineType) {
+        Block block = new Block.FunctionBlock(moduleName, name, returnType, routineType);
         enterBlock(block);
         return block;
     }
@@ -56,7 +55,7 @@ public class ControlFlowBuilder {
         if (currentBasicBlock != null) {
             throw new IllegalStateException("Cannot exit block as current scope: " + currentBasicBlock + " is still active");
         }
-        controlFlow.setBlock(currentBlock);
+        controlFlow.put(BlockDescriptor.getBlockKey(currentBlock), currentBlock);
         this.currentBlock = null;
         this.currentLabels = null;
     }
@@ -71,7 +70,7 @@ public class ControlFlowBuilder {
         this.currentBasicBlock = currentBlock.setEntryBlock(scopeType);
     }
 
-    public void enterBasicBlock(@Nullable List<Value> exceptions) {
+    public void enterBasicBlock(@Nullable List<Integer> exceptions) {
         if (currentBlock == null) {
             throw new IllegalStateException("Cannot enter basicBlock as no block is currently active");
         }
@@ -81,11 +80,11 @@ public class ControlFlowBuilder {
         this.currentBasicBlock = currentBlock.setErrorClause(exceptions);
     }
 
-    public @NotNull ReferenceValue createVariable(@NotNull VariableKey variableKey, @NotNull RapidType type, @Nullable Object initialValue) {
+    public @NotNull ReferenceValue createVariable(@NotNull VariableKey variableKey, @NotNull RapidType type) {
         if (currentBlock == null) {
             throw new IllegalStateException("Cannot create variable as no block is currently active");
         }
-        return variableKey.create(currentBlock, type, initialValue);
+        return variableKey.create(currentBlock, type);
     }
 
     public void enterBasicBlock(@NotNull BasicBlock basicBlock) {
@@ -192,7 +191,7 @@ public class ControlFlowBuilder {
     }
 
     public @NotNull ControlFlow build() {
-        return controlFlow;
+        return new ControlFlow(controlFlow);
     }
 
 }

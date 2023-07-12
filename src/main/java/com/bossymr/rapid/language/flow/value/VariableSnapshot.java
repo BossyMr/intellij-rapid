@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.Field;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,25 +21,26 @@ public final class VariableSnapshot implements ReferenceValue {
 
     private final @NotNull RapidType type;
 
-    public VariableSnapshot(@NotNull RapidType variable) {
-        this.type = variable;
+    public VariableSnapshot(@NotNull RapidType type) {
+        this.type = type;
+    }
+
+    public VariableSnapshot(@NotNull Field field) {
+        this.type = field.type();
     }
 
     @Override
     public void accept(@NotNull ControlFlowVisitor visitor) {}
 
     @Override
-    public @NotNull RapidType type() {
+    public @NotNull RapidType getType() {
         return type;
     }
 
     @Override
-    public boolean equals(Object o) {
-        return super.equals(o);
-    }
-
-    @Override
-    public int hashCode() {
-        return super.hashCode();
+    public String toString() {
+        return "VariableSnapshot{" +
+                "type=" + type +
+                '}';
     }
 }

@@ -9,8 +9,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -23,6 +23,9 @@ public class Condition {
     private @NotNull Expression expression;
 
     public Condition(@NotNull ReferenceValue variable, @NotNull ConditionType conditionType, @NotNull Expression expression) {
+        if (expression instanceof AggregateExpression) {
+            throw new IllegalArgumentException("Cannot create condition with aggregate expression");
+        }
         this.variable = variable;
         this.conditionType = conditionType;
         this.expression = expression;
@@ -33,7 +36,7 @@ public class Condition {
     }
 
     @Contract(pure = true)
-    public @NotNull List<Condition> solve() {
+    public @NotNull List<Condition> getVariants() {
         List<Condition> result = new ArrayList<>();
         result.add(this);
         expression.accept(new SolveVisitor(result));
@@ -68,27 +71,50 @@ public class Condition {
 
     public boolean contains(@NotNull ReferenceValue variable) {
         AtomicBoolean atomicBoolean = new AtomicBoolean();
-        expression.accept(new ExpressionVisitor(result -> {
-            atomicBoolean.set(atomicBoolean.get() || result.equals(variable));
-            return result;
-        }, result -> {throw new AssertionError();}));
+        expression.accept(ExpressionVisitor.visit(result -> atomicBoolean.set(atomicBoolean.get() || result.equals(variable))));
         return atomicBoolean.get();
     }
 
-    @Contract(pure = true)
-    public @NotNull Condition replace(@NotNull ReferenceValue target, @NotNull ReferenceValue variable) {
-        Condition condition = new Condition(variable, conditionType, expression);
-        expression.accept(new ExpressionVisitor(result -> result.equals(target) ? variable : result, this::setExpression));
-        return condition;
+    public void iterate(@NotNull Function<ReferenceValue, ReferenceValue> function) {
+        expression.accept(ExpressionVisitor.iterate(function, this::setExpression));
     }
 
-    public @NotNull List<ReferenceValue> collect() {
+    public void replace(@NotNull ReferenceValue target, @NotNull ReferenceValue variable) {
+        expression.accept(ExpressionVisitor.iterate(result -> {
+            if (result.equals(target)) {
+                return variable;
+            } else {
+                return result;
+            }
+        }, this::setExpression));
+    }
+
+    public @NotNull List<ReferenceValue> getVariables() {
         List<ReferenceValue> variables = new ArrayList<>();
-        expression.accept(new ExpressionVisitor(result -> {
-            variables.add(result);
-            return result;
-        }, result -> {throw new AssertionError();}));
+        expression.accept(ExpressionVisitor.visit(variables::add));
         return variables;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Condition condition = (Condition) o;
+        return Objects.equals(variable, condition.variable) && conditionType == condition.conditionType && Objects.equals(expression, condition.expression);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(variable, conditionType, expression);
+    }
+
+    @Override
+    public String toString() {
+        return "Condition{" +
+                "variable=" + variable +
+                ", conditionType=" + conditionType +
+                ", expression=" + expression +
+                '}';
     }
 
     private class SolveVisitor extends ControlFlowVisitor {
@@ -112,7 +138,7 @@ public class Condition {
             List<Value> values = expression.values();
             for (int i = 0; i < values.size(); i++) {
                 if (values.get(i) instanceof ReferenceValue value) {
-                    IndexReference index = new IndexReference(value.type(), variable, new ConstantValue(RapidType.NUMBER, i));
+                    IndexValue index = new IndexValue(variable, new ConstantValue(RapidType.NUMBER, i));
                     conditions.add(new Condition(value, ConditionType.EQUALITY, new VariableExpression(index)));
                 }
             }
@@ -164,61 +190,4 @@ public class Condition {
             super.visitUnaryExpression(expression);
         }
     }
-
-    private static class ExpressionVisitor extends ControlFlowVisitor {
-
-        private final @NotNull Function<ReferenceValue, ReferenceValue> function;
-        private final @NotNull Consumer<Expression> consumer;
-
-        public ExpressionVisitor(@NotNull Function<ReferenceValue, ReferenceValue> function, @NotNull Consumer<Expression> consumer) {
-            this.function = function;
-            this.consumer = consumer;
-        }
-
-        @Override
-        public void visitVariableExpression(@NotNull VariableExpression expression) {
-            Value value = computeValue(expression.value());
-            if (!value.equals(expression.value())) {
-                consumer.accept(new VariableExpression(value));
-            }
-            super.visitVariableExpression(expression);
-        }
-
-        @Override
-        public void visitAggregateExpression(@NotNull AggregateExpression expression) {
-            List<Value> values = expression.values().stream()
-                    .map(this::computeValue).toList();
-            if (!values.equals(expression.values())) {
-                consumer.accept(new AggregateExpression(values));
-            }
-            super.visitAggregateExpression(expression);
-        }
-
-        private @NotNull Value computeValue(@NotNull Value value) {
-            if (!(value instanceof ReferenceValue cast)) {
-                return value;
-            }
-            return function.apply(cast);
-        }
-
-        @Override
-        public void visitBinaryExpression(@NotNull BinaryExpression expression) {
-            Value left = computeValue(expression.left());
-            Value right = computeValue(expression.right());
-            if (!left.equals(expression.left()) || !right.equals(expression.right())) {
-                consumer.accept(new BinaryExpression(expression.operator(), left, right));
-            }
-            super.visitBinaryExpression(expression);
-        }
-
-        @Override
-        public void visitUnaryExpression(@NotNull UnaryExpression expression) {
-            Value value = computeValue(expression.value());
-            if (!value.equals(expression.value())) {
-                consumer.accept(new UnaryExpression(expression.operator(), expression.value()));
-            }
-            super.visitUnaryExpression(expression);
-        }
-    }
-
 }

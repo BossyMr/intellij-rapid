@@ -22,8 +22,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
 
@@ -44,13 +44,8 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
 
     @Override
     public void visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
-        VariableSnapshot snapshot = new VariableSnapshot(instruction.variable().type());
-        Condition condition = new Condition(snapshot, ConditionType.EQUALITY, instruction.value());
-        for (DataFlowState state : block.states()) {
-            for (Condition result : condition.solve()) {
-                state.setCondition(result);
-            }
-            state.snapshots().put(instruction.variable(), snapshot);
+        for (DataFlowState state : block.getStates()) {
+            state.assign(instruction.variable(), instruction.value());
         }
     }
 
@@ -64,97 +59,26 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         if (!(constraint instanceof BooleanConstraint booleanConstraint)) {
             throw new IllegalStateException();
         }
-        block.successors().add(new DataFlowEdge(booleanConstraint.contains(BooleanConstraint.alwaysTrue()), blocks.get(instruction.onSuccess()), getStates(value, true)));
-        block.successors().add(new DataFlowEdge(booleanConstraint.contains(BooleanConstraint.alwaysFalse()), blocks.get(instruction.onFailure()), getStates(value, false)));
+        if (booleanConstraint.contains(BooleanConstraint.alwaysTrue())) {
+            block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.onSuccess()), getStates(value, true)));
+        }
+        if (booleanConstraint.contains(BooleanConstraint.alwaysFalse())) {
+            block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.onFailure()), getStates(value, false)));
+        }
     }
 
     private @NotNull Set<DataFlowState> getStates(@NotNull ReferenceValue value, boolean result) {
-        return block.states().stream()
-                .map(state -> new DataFlowState(state.conditions(), state.snapshots()))
-                .filter(state -> state.intersects(value, state.getConstraint(value)))
-                .peek(state -> {
-                    List<Condition> ascertain = ascertain(state, new VariableExpression(value), result);
-                    for (Condition child : ascertain) {
-                        state.setCondition(child);
-                    }
-                })
+        return block.getStates().stream()
+                .map(DataFlowState::new)
+                .filter(state -> state.intersects(value, BooleanConstraint.withValue(result)))
+                .peek(state -> state.add(new Condition(value, ConditionType.EQUALITY, Expression.booleanConstant(result))))
                 .collect(Collectors.toSet());
-    }
-
-    public @NotNull List<Condition> ascertain(@NotNull DataFlowState state, @NotNull Expression expression, boolean result) {
-        List<Condition> conditions = new ArrayList<>();
-        expression.accept(new ControlFlowVisitor() {
-            @Override
-            public void visitVariableExpression(@NotNull VariableExpression expression) {
-                Value value = expression.value();
-                assert value.type().isAssignable(RapidType.BOOLEAN);
-                if (!(value instanceof ReferenceValue referenceValue)) {
-                    return;
-                }
-                conditions.add(new Condition(referenceValue, ConditionType.EQUALITY, new VariableExpression(new ConstantValue(RapidType.BOOLEAN, result))));
-                List<Condition> children = state.getConditions(referenceValue);
-                for (Condition child : children) {
-                    conditions.addAll(ascertain(state, child.getExpression(), result));
-                }
-            }
-
-            @Override
-            public void visitBinaryExpression(@NotNull BinaryExpression expression) {
-                Value left = expression.left();
-                if (!(left instanceof ReferenceValue referenceValue)) {
-                    return;
-                }
-                switch (expression.operator()) {
-                    case LESS_THAN ->
-                            getCondition(conditions, new Condition(referenceValue, ConditionType.LESS_THAN, new VariableExpression(expression.right())), result);
-                    case LESS_THAN_OR_EQUAL ->
-                            getCondition(conditions, new Condition(referenceValue, ConditionType.LESS_THAN_OR_EQUAL, new VariableExpression(expression.right())), result);
-                    case EQUAL_TO ->
-                            getCondition(conditions, new Condition(referenceValue, ConditionType.EQUALITY, new VariableExpression(expression.right())), result);
-                    case NOT_EQUAL_TO ->
-                            getCondition(conditions, new Condition(referenceValue, ConditionType.INEQUALITY, new VariableExpression(expression.right())), result);
-                    case GREATER_THAN ->
-                            getCondition(conditions, new Condition(referenceValue, ConditionType.GREATER_THAN, new VariableExpression(expression.right())), result);
-                    case GREATER_THAN_OR_EQUAL ->
-                            getCondition(conditions, new Condition(referenceValue, ConditionType.GREATER_THAN_OR_EQUAL, new VariableExpression(expression.right())), result);
-                    case AND -> {
-                        if (result) {
-                            conditions.add(new Condition(referenceValue, ConditionType.EQUALITY, new VariableExpression(new ConstantValue(RapidType.BOOLEAN, true))));
-                            if (expression.right() instanceof ReferenceValue right) {
-                                conditions.add(new Condition(right, ConditionType.EQUALITY, new VariableExpression(new ConstantValue(RapidType.BOOLEAN, true))));
-                            }
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void visitUnaryExpression(@NotNull UnaryExpression expression) {
-                Value value = expression.value();
-                if (!(value instanceof ReferenceValue referenceValue)) {
-                    return;
-                }
-                if (expression.operator() == UnaryOperator.NOT) {
-                    conditions.add(new Condition(referenceValue, ConditionType.EQUALITY, new VariableExpression(new ConstantValue(RapidType.BOOLEAN, !result))));
-                    List<Condition> children = state.getConditions(referenceValue);
-                    for (Condition child : children) {
-                        conditions.addAll(ascertain(state, child.getExpression(), !result));
-                    }
-                }
-            }
-        });
-        return List.copyOf(conditions);
-    }
-
-    private void getCondition(@NotNull List<Condition> conditions, @NotNull Condition condition, boolean result) {
-        Condition value = result ? condition : condition.negate();
-        conditions.add(value);
     }
 
 
     @Override
     public void visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
-        block.successors().add(new DataFlowEdge(true, blocks.get(instruction.next()), block.states()));
+        block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.next()), block.getStates()));
     }
 
     @Override
@@ -171,7 +95,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
     public void visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
         Map<Argument, Constraint> arguments = getArguments();
         ReferenceValue referenceValue = getReferenceValue(instruction.value());
-        functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, arguments, new DataFlowFunction.Result.Success(block.states(), referenceValue));
+        functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, arguments, new DataFlowFunction.Result.Success(block.getStates(), referenceValue));
     }
 
     @Override
@@ -184,19 +108,21 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
     public void visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
         Map<Argument, Constraint> arguments = getArguments();
         ReferenceValue referenceValue = getReferenceValue(instruction.exception());
-        functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, arguments, new DataFlowFunction.Result.Error(block.states(), referenceValue));
+        functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, arguments, new DataFlowFunction.Result.Error(block.getStates(), referenceValue));
     }
 
-    private @Nullable ReferenceValue getReferenceValue(@Nullable Value exception) {
-        if (exception instanceof ConstantValue constantValue) {
-            ReferenceValue referenceValue = new VariableSnapshot(constantValue.type());
-            block.add(new Condition(referenceValue, ConditionType.EQUALITY, new VariableExpression(constantValue)));
-            return referenceValue;
+    private @Nullable ReferenceValue getReferenceValue(@Nullable Value variable) {
+        if (variable instanceof ConstantValue constantValue) {
+            VariableSnapshot snapshot = new VariableSnapshot(variable.getType());
+            for (DataFlowState state : block.getStates()) {
+                state.assign(snapshot, new VariableExpression(constantValue));
+            }
+            return snapshot;
         }
-        if (exception instanceof ReferenceValue value) {
+        if (variable instanceof ReferenceValue value) {
             return value;
         }
-        if (exception == null) {
+        if (variable == null) {
             return null;
         }
         throw new IllegalStateException();
@@ -204,7 +130,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
 
     @Override
     public void visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
-        block.successors().add(new DataFlowEdge(false, blocks.get(instruction.next()), block.states()));
+        block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.next()), block.getStates()));
     }
 
     @Override
@@ -253,32 +179,32 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
             throw new AssertionError();
         }
         if (!(block.getConstraint(referenceValue) instanceof StringConstraint constraint)) {
-            Set<DataFlowState> states = block.states().stream()
-                    .map(state -> new DataFlowState(state.conditions(), state.snapshots()))
+            Set<DataFlowState> states = block.getStates().stream()
+                    .map(DataFlowState::new)
                     .peek(state -> {
                         if (instruction.returnValue() != null) {
-                            state.getConditions(instruction.returnValue()).forEach(state.conditions()::remove);
+                            state.assign(instruction.returnValue(), Constraint.any(instruction.returnValue().getType()));
                         }
                         for (Value value : instruction.arguments().values()) {
                             if (value instanceof ReferenceValue argumentValue) {
-                                state.getConditions(argumentValue).forEach(state.conditions()::remove);
+                                state.assign(argumentValue, Constraint.any(argumentValue.getType()));
                             }
                         }
                     })
                     .collect(Collectors.toSet());
-            block.successors().add(new DataFlowEdge(true, blocks.get(instruction.next()), states));
+            block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.next()), states));
             return;
         }
         for (String sequence : constraint.sequences()) {
             BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.element(), sequence);
-            if(blockDescriptor == null) {
+            if (blockDescriptor == null) {
                 continue;
             }
             DataFlowFunction function = functionMap.get(block, blockDescriptor);
-            Set<DataFlowState> states = block.states().stream()
-                    .map(state -> new DataFlowState(state.conditions(), state.snapshots()))
+            Set<DataFlowState> states = block.getStates().stream()
+                    .map(DataFlowState::new)
                     .filter(state -> state.intersects(referenceValue, new StringConstraint(Optionality.PRESENT, Set.of(sequence))))
-                    .peek(state -> state.setCondition(new Condition(referenceValue, ConditionType.EQUALITY, new VariableExpression(new ConstantValue(RapidType.STRING, sequence)))))
+                    .peek(state -> state.assign(referenceValue, new VariableExpression(new ConstantValue(RapidType.STRING, sequence))))
                     .collect(Collectors.toSet());
             processResult(instruction, states, function, getArguments(function.getBlock(), instruction.arguments()));
         }
@@ -296,7 +222,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
             throw new AssertionError();
         }
         DataFlowFunction function = functionMap.get(block, blockDescriptor);
-        processResult(instruction, block.states(), function, getArguments(function.getBlock(), instruction.arguments()));
+        processResult(instruction, block.getStates(), function, getArguments(function.getBlock(), instruction.arguments()));
     }
 
     private void processResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull Set<DataFlowState> states, @NotNull DataFlowFunction function, @NotNull Map<Argument, Value> arguments) {
@@ -304,63 +230,60 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         arguments.forEach((argument, value) -> constraints.put(argument, block.getConstraint(value)));
         Set<DataFlowFunction.Result> results = function.getOutput(constraints);
         for (DataFlowFunction.Result result : results) {
-            if (!(result instanceof DataFlowFunction.Result.Success success)) {
-                continue;
+            if (result instanceof DataFlowFunction.Result.Exit) {
+                functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, getArguments(), new DataFlowFunction.Result.Exit());
+            } else if (result instanceof DataFlowFunction.Result.Error error) {
+                processErrorResult(arguments, error);
+            } else if (result instanceof DataFlowFunction.Result.Success success) {
+                processSuccessfulResult(instruction, arguments, states, success);
             }
-            List<DataFlowState> trimmed = success.states().stream()
-                    .peek(state -> {
-                        Set<ReferenceValue> references = new HashSet<>();
-                        Deque<ReferenceValue> queue = new ArrayDeque<>();
-                        Map<ReferenceValue, ReferenceValue> snapshots = new HashMap<>();
-                        if (success.returnValue() != null) {
-                            queue.add(state.getValue(success.returnValue()));
-                        }
-                        for (ArgumentGroup argumentGroup : functionBlock.getArgumentGroups()) {
-                            for (Argument argument : argumentGroup.arguments()) {
-                                VariableReference value = new VariableReference(argument);
-                                if (argument.parameterType() != ParameterType.INPUT) {
-                                    // Any modification to this argument will be kept, so the latest snapshot for the
-                                    // argument needs to be updated to match the snapshot for the argument.
-                                    if(arguments.containsKey(argument)) {
-                                        snapshots.put((ReferenceValue) arguments.get(argument), state.getValue(value));
-                                    }
-                                }
-                                queue.add(state.getValue(value));
-                            }
-                        }
-                        while (!(queue.isEmpty())) {
-                            ReferenceValue referenceValue = queue.removeFirst();
-                            for (Condition condition : state.getConditions(referenceValue)) {
-                                for (ReferenceValue value : condition.collect()) {
-                                    if (!(references.contains(value))) {
-                                        queue.add(referenceValue);
-                                    }
-                                }
-                            }
-                            references.add(referenceValue);
-                        }
-                        state.conditions().removeIf(condition -> !(references.contains(condition.getVariable())));
-                        state.snapshots().clear();
-                        state.snapshots().putAll(snapshots);
-                    })
-                    .toList();
-            Set<DataFlowState> next = states.stream()
-                    .map(state -> new DataFlowState(state.conditions(), state.snapshots()))
-                    .flatMap(state -> {
-                        Stream.Builder<DataFlowState> builder = Stream.builder();
-                        for (DataFlowState temporary : trimmed) {
-                            DataFlowState copy = new DataFlowState(state.conditions(), state.snapshots());
-                            for (Condition condition : temporary.conditions()) {
-                                copy.setCondition(condition);
-                            }
-                            copy.snapshots().putAll(temporary.snapshots());
-                            builder.accept(temporary);
-                        }
-                        return builder.build();
-                    })
-                    .collect(Collectors.toSet());
-            block.successors().add(new DataFlowEdge(true, blocks.get(instruction.next()), next));
         }
+    }
+
+    private void processErrorResult(@NotNull Map<Argument, Value> arguments, @NotNull DataFlowFunction.Result.Error result) {
+        VariableSnapshot snapshot = result.exceptionValue() != null ? new VariableSnapshot(result.exceptionValue().getType()) : null;
+        Set<DataFlowState> states = getSimplifiedState(arguments, result, snapshot);
+        functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, getArguments(), new DataFlowFunction.Result.Error(states, snapshot));
+    }
+
+    private void processSuccessfulResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull Map<Argument, Value> arguments, @NotNull Set<DataFlowState> states, @NotNull DataFlowFunction.Result.Success result) {
+        Set<DataFlowState> simplified = getSimplifiedState(arguments, result, instruction.returnValue());
+        Set<DataFlowState> output = states.stream()
+                .mapMulti((DataFlowState state, Consumer<DataFlowState> consumer) -> {
+                    for (DataFlowState embedded : simplified) {
+                        DataFlowState copy = new DataFlowState(state);
+                        copy.merge(embedded);
+                        consumer.accept(copy);
+                    }
+                }).collect(Collectors.toSet());
+        block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.next()), output));
+    }
+
+    private @NotNull Set<DataFlowState> getSimplifiedState(@NotNull Map<Argument, Value> arguments, @NotNull DataFlowFunction.Result result, @Nullable ReferenceValue target) {
+        Map<ReferenceValue, ReferenceValue> references = new HashMap<>();
+        Set<ReferenceValue> variables = new HashSet<>();
+        for (Argument argument : arguments.keySet()) {
+            if (argument.parameterType() != ParameterType.INPUT) {
+                if (arguments.get(argument) instanceof ReferenceValue referenceValue) {
+                    VariableValue variableValue = new VariableValue(argument);
+                    references.put(variableValue, referenceValue);
+                    variables.add(variableValue);
+                }
+            }
+        }
+        if (result instanceof DataFlowFunction.Result.Error error && error.exceptionValue() != null) {
+            variables.add(error.exceptionValue());
+        }
+        if (result instanceof DataFlowFunction.Result.Success success && success.returnValue() != null) {
+            variables.add(success.returnValue());
+            if (target != null) {
+                references.put(success.returnValue(), target);
+            }
+        }
+        return block.getStates().stream()
+                .map(DataFlowState::new)
+                .peek(state -> state.simplify(references, variables))
+                .collect(Collectors.toSet());
     }
 
     private @NotNull Map<Argument, Value> getArguments(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<ArgumentDescriptor, Value> values) {
@@ -391,7 +314,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
                 .flatMap(argumentGroup -> argumentGroup.arguments().stream())
                 .toList();
         for (Argument argument : arguments) {
-            constraints.put(argument, block.getConstraint(new VariableReference(argument)));
+            constraints.put(argument, block.getConstraint(new VariableValue(argument)));
         }
         return constraints;
     }

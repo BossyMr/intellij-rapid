@@ -4,14 +4,15 @@ import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
-public record ErrorValue() implements Value {
+public record IndexValue(@NotNull ReferenceValue variable, @NotNull Value index) implements ReferenceValue {
     @Override
     public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitErrorValue(this);
+        visitor.visitIndexVariableValue(this);
     }
 
     @Override
     public @NotNull RapidType getType() {
-        return RapidType.ANYTYPE;
+        RapidType type = variable.getType();
+        return type.createArrayType(type.getDimensions() - 1);
     }
 }

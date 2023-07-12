@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -17,8 +16,8 @@ public class ControlFlow {
 
     private final @NotNull Map<BlockDescriptor, Block> map;
 
-    public ControlFlow() {
-        this.map = new HashMap<>();
+    public ControlFlow(@NotNull Map<BlockDescriptor, Block> map) {
+        this.map = Map.copyOf(map);
     }
 
     public void accept(@NotNull ControlFlowVisitor visitor) {
@@ -46,7 +45,4 @@ public class ControlFlow {
         return map.get(new BlockDescriptor(moduleName, name));
     }
 
-    public void setBlock(@NotNull Block block) {
-        map.put(BlockDescriptor.getBlockKey(block), block);
-    }
 }

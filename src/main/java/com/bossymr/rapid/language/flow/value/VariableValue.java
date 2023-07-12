@@ -10,9 +10,9 @@ import org.jetbrains.annotations.NotNull;
  *
  * @param field the field.
  */
-public record VariableReference(@NotNull Field field) implements ReferenceValue {
+public record VariableValue(@NotNull Field field) implements ReferenceValue {
     @Override
-    public @NotNull RapidType type() {
+    public @NotNull RapidType getType() {
         return field.type();
     }
 

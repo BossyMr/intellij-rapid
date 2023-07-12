@@ -1,9 +1,5 @@
 package com.bossymr.rapid.language.flow.constraint;
 
-import com.bossymr.rapid.language.flow.condition.Condition;
-import com.bossymr.rapid.language.flow.condition.ConditionType;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -59,23 +55,6 @@ public class NumericConstraint implements Constraint {
 
     public @NotNull List<Range> getRanges() {
         return ranges;
-    }
-
-    @Override
-    public @NotNull Set<Set<Condition>> toConditions(@NotNull ReferenceValue referenceValue) {
-        Set<Set<Condition>> sets = new HashSet<>(ranges.size(), 1);
-        for (Range range : ranges) {
-            if (range.lower().value() == range.upper().value()) {
-                if(range.lower().isInclusive() && range.upper().isInclusive()) {
-                    sets.add(Set.of(new Condition(referenceValue, ConditionType.EQUALITY, Expression.numericConstant(range.lower().value()))));
-                }
-            } else {
-                Condition lowerBound = new Condition(referenceValue, range.lower().isInclusive() ? ConditionType.GREATER_THAN_OR_EQUAL : ConditionType.GREATER_THAN, Expression.numericConstant(range.lower().value()));
-                Condition upperBound = new Condition(referenceValue, range.upper().isInclusive() ? ConditionType.LESS_THAN_OR_EQUAL : ConditionType.LESS_THAN, Expression.numericConstant(range.upper().value()));
-                sets.add(Set.of(lowerBound, upperBound));
-            }
-        }
-        return Set.copyOf(sets);
     }
 
     @Override
@@ -205,12 +184,47 @@ public class NumericConstraint implements Constraint {
         return false;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        NumericConstraint that = (NumericConstraint) o;
+        return optionality == that.optionality && Objects.equals(ranges, that.ranges);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(optionality, ranges);
+    }
+
+    @Override
+    public String toString() {
+        return "NumericConstraint{" +
+                "optionality=" + optionality +
+                ", ranges=" + ranges +
+                '}';
+    }
+
     public record Range(@NotNull Bound lower, @NotNull Bound upper) {
 
         public Range {
             if (lower.value() > upper.value()) {
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("Upper bound must be larger than lower bound");
             }
+            if (lower.value() == upper.value()) {
+                if (!(lower.isInclusive() && upper.isInclusive())) {
+                    throw new IllegalArgumentException("Range must span at least one point");
+                }
+            }
+        }
+
+        public @NotNull Optional<Double> getPoint() {
+            if (lower().value() == upper().value()) {
+                if (lower().isInclusive() && upper().isInclusive()) {
+                    return Optional.of(lower().value());
+                }
+            }
+            return Optional.empty();
         }
 
         /**
@@ -220,7 +234,38 @@ public class NumericConstraint implements Constraint {
          * @return whether this range encompasses the specified range.
          */
         public boolean contains(@NotNull Range range) {
-            return contains(range.lower()) && contains(range.upper());
+            return contains(range.lower(), true) && contains(range.upper(), false);
+        }
+
+        public @NotNull Optional<Boolean> isSmaller(@NotNull Range range) {
+            if (intersects(range) && !(contains(range))) {
+                return Optional.empty();
+            }
+            if (upper().value() < range.lower().value()) {
+                return Optional.of(true);
+            }
+            if (lower().value() < range.upper().value()) {
+                return Optional.of(false);
+            }
+            if (upper().value() == range.lower().value()) {
+                return Optional.of(!(contains(range.lower(), true)));
+            }
+            if (lower().value() == range.upper().value()) {
+                return Optional.of(!(contains(range.upper(), false)));
+            }
+            return Optional.empty();
+        }
+
+        public @NotNull Optional<Boolean> isEqual(@NotNull Range range) {
+            Optional<Double> point = getPoint();
+            if (point.isEmpty()) {
+                return Optional.empty();
+            }
+            Optional<Double> otherPoint = range.getPoint();
+            if (otherPoint.isEmpty()) {
+                return Optional.empty();
+            }
+            return Optional.of(point.equals(otherPoint));
         }
 
         /**
@@ -230,22 +275,31 @@ public class NumericConstraint implements Constraint {
          * @return whether this range intersects the specified range.
          */
         public boolean intersects(@NotNull Range range) {
-            return contains(range.lower()) || contains(range.upper()) || range.contains(lower()) || range.contains(upper());
+            return contains(range.lower(), true) || contains(range.upper(), false) || range.contains(lower(), true) || range.contains(upper(), false);
         }
 
-        private boolean contains(@NotNull Bound point) {
+        private boolean contains(@NotNull Bound point, boolean isLower) {
             if (lower().value() < point.value() && upper().value() > point.value()) {
                 return true;
             } else if (point.value() == lower().value()) {
-                return point.isInclusive() && lower().isInclusive();
+                return lower().isInclusive() ? point.isInclusive() || isLower : !(point.isInclusive()) && isLower;
             } else if (point.value() == upper().value()) {
-                return point.isInclusive() && upper().isInclusive();
+                return upper().isInclusive() ? point.isInclusive() || !(isLower) : !(point.isInclusive()) && !(isLower);
             } else {
                 return false;
             }
         }
 
+        /**
+         * Creates a new range which encompasses the range which both this range and the specified range contain.
+         *
+         * @param range the range.
+         * @return a new range which encompasses the intersection of this range and the specified range.
+         */
         public @NotNull Range intersect(@NotNull Range range) {
+            if (!(intersects(range))) {
+                throw new IllegalArgumentException();
+            }
             Bound lowerBound = getUpperbound(lower(), range.lower(), lower().isInclusive() && range.lower().isInclusive());
             Bound upperbound = getLowerBound(upper(), range.upper(), upper().isInclusive() && range.upper().isInclusive());
             return new Range(lowerBound, upperbound);
@@ -255,9 +309,12 @@ public class NumericConstraint implements Constraint {
          * Creates a new range which combines both this range and the specified range.
          *
          * @param range the range.
-         * @return a new range which encompasses both this and the specified range.
+         * @return a new range which encompasses the union of both this and the specified range.
          */
         public @NotNull Range union(@NotNull Range range) {
+            if (!(intersects(range))) {
+                throw new IllegalArgumentException();
+            }
             Bound lowerBound = getLowerBound(lower(), range.lower(), lower().isInclusive() || range.lower().isInclusive());
             Bound upperbound = getUpperbound(upper(), range.upper(), upper().isInclusive() || range.upper().isInclusive());
             return new Range(lowerBound, upperbound);
@@ -294,7 +351,14 @@ public class NumericConstraint implements Constraint {
      */
     public record Bound(boolean isInclusive, double value) {
 
+        /**
+         * The largest value for a numeric value.
+         */
         public static @NotNull Bound MAX_VALUE = new Bound(true, 2 ^ 52);
+
+        /**
+         * The smaller value for a numeric value.
+         */
         public static @NotNull Bound MIN_VALUE = new Bound(true, -2 ^ 52);
 
     }

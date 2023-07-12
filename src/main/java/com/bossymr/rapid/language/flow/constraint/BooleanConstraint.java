@@ -5,8 +5,8 @@ import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import java.util.Optional;
 import java.util.Set;
 
 public class BooleanConstraint implements Constraint {
@@ -32,8 +32,20 @@ public class BooleanConstraint implements Constraint {
         this.value = value;
     }
 
+    public static @NotNull BooleanConstraint withValue(boolean value) {
+        return value ? alwaysTrue() : alwaysFalse();
+    }
+
     public static @NotNull BooleanConstraint any() {
         return ANY_VALUE;
+    }
+
+    public static @NotNull BooleanConstraint any(@NotNull Optionality optionality) {
+        if (optionality == Optionality.PRESENT) {
+            return ANY_VALUE;
+        } else {
+            return new BooleanConstraint(optionality, BooleanValue.ANY_VALUE);
+        }
     }
 
     public static @NotNull BooleanConstraint noValue() {
@@ -48,16 +60,6 @@ public class BooleanConstraint implements Constraint {
         return ALWAYS_FALSE;
     }
 
-    @Override
-    public @NotNull Set<Set<Condition>> toConditions(@NotNull ReferenceValue referenceValue) {
-        return switch (value) {
-            case NO_VALUE -> Set.of();
-            case ALWAYS_FALSE -> Set.of(getConditions(referenceValue, false));
-            case ANY_VALUE -> Set.of(getConditions(referenceValue, true), getConditions(referenceValue, false));
-            case ALWAYS_TRUE -> Set.of(getConditions(referenceValue, true));
-        };
-    }
-
     private @NotNull Set<Condition> getConditions(@NotNull ReferenceValue referenceValue, boolean value) {
         return Set.of(new Condition(referenceValue, ConditionType.EQUALITY, Expression.booleanConstant(value)), new Condition(referenceValue, ConditionType.INEQUALITY, Expression.booleanConstant(!value)));
     }
@@ -69,6 +71,10 @@ public class BooleanConstraint implements Constraint {
 
     public @NotNull BooleanValue getValue() {
         return value;
+    }
+
+    public @NotNull Optional<Boolean> getBooleanValue() {
+        return value.getBooleanValue();
     }
 
     @Override
@@ -108,15 +114,15 @@ public class BooleanConstraint implements Constraint {
         ANY_VALUE,
         ALWAYS_TRUE;
 
-        public static @NotNull BooleanValue get(boolean value) {
+        public static @NotNull BooleanValue withValue(boolean value) {
             return value ? ALWAYS_TRUE : ALWAYS_FALSE;
         }
 
-        public @Nullable Boolean get() {
+        public @NotNull Optional<Boolean> getBooleanValue() {
             return switch (this) {
-                case ALWAYS_FALSE -> false;
-                case ALWAYS_TRUE -> true;
-                default -> null;
+                case ALWAYS_FALSE -> Optional.of(false);
+                case ALWAYS_TRUE -> Optional.of(true);
+                default -> Optional.empty();
             };
         }
 
