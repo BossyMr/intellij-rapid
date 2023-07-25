@@ -18,6 +18,10 @@ public class DataFlow {
         this.controlFlow = controlFlow;
     }
 
+    public @NotNull ControlFlow getControlFlow() {
+        return controlFlow;
+    }
+
     public @NotNull DataFlowBlock getBlock(@NotNull BasicBlock block) {
         if (!(map.containsKey(block))) {
             Block parentBlock = block.getBlock();

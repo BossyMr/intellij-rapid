@@ -57,9 +57,8 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 if (routine == null) {
                     return;
                 }
-                ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(expression);
-                DataFlow dataFlow = controlFlow.getDataFlow();
-                Block.FunctionBlock functionBlock = getBlock(routine, controlFlow);
+                DataFlow dataFlow = ControlFlowService.getInstance().getDataFlow(expression);
+                Block.FunctionBlock functionBlock = getBlock(routine, dataFlow.getControlFlow());
                 if (functionBlock == null) {
                     return;
                 }

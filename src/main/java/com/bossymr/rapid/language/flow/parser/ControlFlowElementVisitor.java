@@ -456,12 +456,16 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
 
     @Override
     public void visitAssignmentStatement(@NotNull RapidAssignmentStatement statement) {
-        if (!(statement.getLeft() instanceof RapidReferenceExpression referenceExpression)) {
+        ReferenceValue variable;
+        if (statement.getLeft() instanceof RapidReferenceExpression referenceExpression) {
+            variable = ControlFlowExpressionVisitor.computeVariable(builder, referenceExpression);
+        } else if (statement.getLeft() instanceof RapidIndexExpression indexExpression) {
+            variable = ControlFlowExpressionVisitor.computeIndexVariable(builder, indexExpression);
+        } else {
             builder.failScope(statement);
             return;
         }
         RapidExpression right = statement.getRight();
-        ReferenceValue variable = ControlFlowExpressionVisitor.computeVariable(builder, referenceExpression);
         if (right == null || variable == null) {
             builder.failScope(statement);
             return;

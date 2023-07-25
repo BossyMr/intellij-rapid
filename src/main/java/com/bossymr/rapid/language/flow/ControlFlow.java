@@ -1,16 +1,12 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.data.DataFlow;
-import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
-import com.bossymr.rapid.language.flow.data.DataFlowBlock;
-import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * A {@code ControlFlow} instance represents the control flow graph for a program.
@@ -22,42 +18,14 @@ public class ControlFlow {
 
     private final @NotNull Project project;
     private final @NotNull Map<BlockDescriptor, Block> map;
-    private final @NotNull DataFlow dataFlow;
 
     public ControlFlow(@NotNull Project project, @NotNull Map<BlockDescriptor, Block> map) {
         this.map = Map.copyOf(map);
         this.project = project;
-        this.dataFlow = createDataFlow();
-    }
-
-    private @NotNull DataFlow createDataFlow() {
-        Stream<Block.FunctionBlock> stream = getBlocks().stream()
-                .filter(block -> block instanceof Block.FunctionBlock)
-                .map(block -> (Block.FunctionBlock) block);
-        Map<BasicBlock, DataFlowBlock> dataFlow = new HashMap<>();
-        Map<BlockDescriptor, Block.FunctionBlock> descriptorMap = stream.collect(Collectors.toMap(BlockDescriptor::getBlockKey, block -> block));
-        Deque<DataFlowFunctionMap.WorkListEntry> workList = new ArrayDeque<>();
-        DataFlowFunctionMap functionMap = new DataFlowFunctionMap(descriptorMap, workList);
-        for (Block block : getBlocks()) {
-            if (!(block instanceof Block.FunctionBlock functionBlock)) {
-                continue;
-            }
-            Map<BasicBlock, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap);
-            dataFlow.putAll(result);
-        }
-        for (DataFlowFunctionMap.WorkListEntry entry : workList) {
-            Block.FunctionBlock block = ((Block.FunctionBlock) entry.block().getBasicBlock().getBlock());
-            DataFlowAnalyzer.reanalyze(block, functionMap, dataFlow, Set.of(entry.block()));
-        }
-        return new DataFlow(this, dataFlow);
     }
 
     public @NotNull Project getProject() {
         return project;
-    }
-
-    public @NotNull DataFlow getDataFlow() {
-        return dataFlow;
     }
 
     public void accept(@NotNull ControlFlowVisitor visitor) {

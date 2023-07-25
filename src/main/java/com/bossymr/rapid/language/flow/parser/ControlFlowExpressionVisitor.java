@@ -81,7 +81,22 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             ReferenceValue variable = computeVariable(builder, referenceExpression);
             return variable != null ? variable : new ErrorValue();
         }
-        return computeExpression(builder, expression);
+        return computeExpression(builder, VariableKey.createVariable(expression), expression);
+    }
+
+    public static @Nullable IndexValue computeIndexVariable(@NotNull ControlFlowBuilder builder, @NotNull RapidIndexExpression expression) {
+        List<RapidExpression> dimensions = expression.getArray().getDimensions();
+        if (dimensions.stream().anyMatch(dimension -> !(dimension instanceof RapidLiteralExpression))) {
+            return null;
+        }
+        if (dimensions.isEmpty()) {
+            return null;
+        }
+        ReferenceValue referenceValue = computeExpression(builder, expression.getExpression());
+        for (RapidExpression dimension : dimensions) {
+            referenceValue = new IndexValue(referenceValue, computeValue(builder, dimension));
+        }
+        return (IndexValue) referenceValue;
     }
 
     public static @Nullable ReferenceValue computeVariable(@NotNull ControlFlowBuilder builder, @NotNull RapidReferenceExpression expression) {
@@ -131,8 +146,13 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     }
 
     public static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, @NotNull RapidExpression expression) {
-        VariableKey variableKey = VariableKey.createVariable(expression);
-        return computeExpression(builder, variableKey, expression);
+        Value value = computeValue(builder, expression);
+        if (value instanceof ReferenceValue referenceValue) {
+            return referenceValue;
+        }
+        ReferenceValue variable = builder.createVariable(VariableKey.createVariable(null), value.getType());
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new VariableExpression(value)));
+        return variable;
     }
 
     public static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, @NotNull RapidElement element, @NotNull String name, @Nullable FieldType fieldType, @NotNull RapidExpression expression) {
@@ -140,7 +160,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         return computeExpression(builder, variableKey, expression);
     }
 
-    private static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, VariableKey variableKey, @NotNull RapidExpression expression) {
+    private static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, @NotNull VariableKey variableKey, @NotNull RapidExpression expression) {
         ControlFlowExpressionVisitor visitor = new ControlFlowExpressionVisitor(builder, variableKey);
         expression.accept(visitor);
         ReferenceValue result = variableKey.retrieve();
@@ -386,17 +406,11 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         List<ConstantValue> constants = values.stream()
                 .map(value -> (ConstantValue) value)
                 .toList();
-        for (int i = 1; i < dimensions.size(); i++) {
-            targetVariable.addLast(VariableKey.createVariable(null));
+        for (ConstantValue constant : constants) {
+            variable = new IndexValue(variable, constant);
         }
-        for (int i = 0; i < constants.size(); i++) {
-            ConstantValue constant = constants.get(i);
-            RapidType arrayType = type.createArrayType(type.getDimensions() - (i + 1));
-            ReferenceValue latest = popVariable(arrayType);
-            ReferenceValue indexVariable = new IndexValue(variable, constant);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, latest, new VariableExpression(indexVariable)));
-            variable = latest;
-        }
+        ReferenceValue referenceValue = popVariable(type.createArrayType(type.getDimensions() - constants.size()));
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, referenceValue, new VariableExpression(variable)));
     }
 
     @Override

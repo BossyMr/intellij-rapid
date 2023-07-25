@@ -1,6 +1,10 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.flow.data.DataFlow;
+import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
+import com.bossymr.rapid.language.flow.data.DataFlowBlock;
+import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
 import com.bossymr.rapid.language.flow.parser.ControlFlowElementVisitor;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
@@ -19,8 +23,9 @@ import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.psi.util.PsiModificationTracker;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A service used to retrieve the control flow graph for a program.
@@ -30,6 +35,41 @@ public final class ControlFlowService {
 
     public static @NotNull ControlFlowService getInstance() {
         return ApplicationManager.getApplication().getService(ControlFlowService.class);
+    }
+
+    public @NotNull DataFlow getDataFlow(@NotNull PsiElement element) {
+        ControlFlow controlFlow = getControlFlow(element);
+        return getDataFlow(controlFlow);
+    }
+
+    public @NotNull DataFlow getDataFlow(@NotNull Module module) {
+        ControlFlow controlFlow = getControlFlow(module);
+        return getDataFlow(controlFlow);
+    }
+
+    public @NotNull DataFlow getDataFlow(@NotNull ControlFlow controlFlow) {
+        Project project = controlFlow.getProject();
+        return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
+            Stream<Block.FunctionBlock> stream = controlFlow.getBlocks().stream()
+                    .filter(block -> block instanceof Block.FunctionBlock)
+                    .map(block -> (Block.FunctionBlock) block);
+            Map<BasicBlock, DataFlowBlock> dataFlow = new HashMap<>();
+            Map<BlockDescriptor, Block.FunctionBlock> descriptorMap = stream.collect(Collectors.toMap(BlockDescriptor::getBlockKey, block -> block));
+            Deque<DataFlowFunctionMap.WorkListEntry> workList = new ArrayDeque<>();
+            DataFlowFunctionMap functionMap = new DataFlowFunctionMap(descriptorMap, workList);
+            for (Block block : controlFlow.getBlocks()) {
+                if (!(block instanceof Block.FunctionBlock functionBlock)) {
+                    continue;
+                }
+                Map<BasicBlock, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap);
+                dataFlow.putAll(result);
+            }
+            for (DataFlowFunctionMap.WorkListEntry entry : workList) {
+                Block.FunctionBlock block = ((Block.FunctionBlock) entry.block().getBasicBlock().getBlock());
+                DataFlowAnalyzer.reanalyze(block, functionMap, dataFlow, Set.of(entry.block()));
+            }
+            return CachedValueProvider.Result.createSingleDependency(new DataFlow(controlFlow, dataFlow), PsiModificationTracker.MODIFICATION_COUNT);
+        });
     }
 
     /**

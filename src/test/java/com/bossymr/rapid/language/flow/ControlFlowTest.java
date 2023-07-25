@@ -135,6 +135,34 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """);
     }
 
+    public void testArrayExpression() {
+        check("""
+                MODULE foo
+                    FUNC num bar()
+                        VAR num value{2, 3} := [[1, 2, 3], [3, 4, 5]];
+                        value{2, 3} := 6;
+                        return value{0, 2};
+                    ENDPROC
+                ENDMODULE
+                """, """
+                func num foo:bar() {
+                	num{*} _0;
+                	num{*} _1;
+                	var num{*,*} _2 [value];
+                	num _3;
+                                
+                	entry 0 {
+                		_0 := [1.0, 2.0, 3.0];
+                		_1 := [3.0, 4.0, 5.0];
+                		_2 := [_0, _1];
+                		_2[2.0][3.0] := 6.0;
+                		_3 := _2[0.0][2.0];
+                		return _3;
+                	}
+                }
+                """);
+    }
+
     public void testGoToStatement() {
         check("""
                 MODULE foo
