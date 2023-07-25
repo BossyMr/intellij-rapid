@@ -13,15 +13,24 @@ import java.util.Objects;
 public class VirtualField implements RapidField, VirtualSymbol {
 
     private final @NotNull FieldType fieldType;
-    private final @NotNull String name;
+    private final @NotNull String moduleName, name;
     private final @NotNull RapidType type;
     private final boolean isModifiable;
 
     public VirtualField(@NotNull FieldType fieldType, @NotNull String name, @NotNull RapidType type, boolean isModifiable) {
+        this(fieldType, "", name, type, isModifiable);
+    }
+
+    public VirtualField(@NotNull FieldType fieldType, @NotNull String moduleName, @NotNull String name, @NotNull RapidType type, boolean isModifiable) {
         this.fieldType = fieldType;
+        this.moduleName = moduleName;
         this.name = name;
         this.type = type;
         this.isModifiable = isModifiable;
+    }
+
+    public @NotNull String getModuleName() {
+        return moduleName;
     }
 
     @Override

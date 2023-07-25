@@ -9,15 +9,18 @@ import com.bossymr.rapid.language.flow.value.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiFunction;
 
 public class ConstraintVisitor extends ControlFlowVisitor {
 
     private final @NotNull DataFlowState state;
+    private final @NotNull Set<ReferenceValue> visited;
     private Constraint constraint;
 
-    public ConstraintVisitor(@NotNull DataFlowState state) {
+    public ConstraintVisitor(@NotNull DataFlowState state, @NotNull Set<ReferenceValue> visited) {
         this.state = state;
+        this.visited = visited;
     }
 
     public @NotNull Constraint getResult() {
@@ -27,18 +30,18 @@ public class ConstraintVisitor extends ControlFlowVisitor {
 
     @Override
     public void visitVariableExpression(@NotNull VariableExpression expression) {
-        constraint = state.getConstraint(expression.value());
+        constraint = state.getConstraint(expression.value(), visited);
     }
 
     @Override
     public void visitAggregateExpression(@NotNull AggregateExpression expression) {
-        throw new IllegalStateException("Cannot visit condition with aggregate expression");
+        throw new UnsupportedOperationException("Cannot visit: " + expression);
     }
 
     @Override
     public void visitBinaryExpression(@NotNull BinaryExpression expression) {
-        Constraint left = state.getConstraint(expression.left());
-        Constraint right = state.getConstraint(expression.right());
+        Constraint left = state.getConstraint(expression.left(), visited);
+        Constraint right = state.getConstraint(expression.right(), visited);
         BinaryOperator operator = expression.operator();
         constraint = switch (operator) {
             case ADD, SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> {
@@ -104,7 +107,7 @@ public class ConstraintVisitor extends ControlFlowVisitor {
         };
     }
 
-    private @NotNull NumericConstraint getNumericBinaryConstraint(@NotNull BinaryOperator operator, @NotNull NumericConstraint left, @NotNull NumericConstraint right) {
+    private @NotNull Constraint getNumericBinaryConstraint(@NotNull BinaryOperator operator, @NotNull NumericConstraint left, @NotNull NumericConstraint right) {
         return getConstraintForFunction(left, right, getFunctionForOperator(operator));
     }
 
@@ -120,23 +123,31 @@ public class ConstraintVisitor extends ControlFlowVisitor {
         };
     }
 
-    private @NotNull NumericConstraint getConstraintForFunction(@NotNull NumericConstraint left, @NotNull NumericConstraint right, @NotNull BiFunction<Double, Double, Double> computation) {
-        NumericConstraint constraint = new NumericConstraint(Optionality.PRESENT);
+    private @NotNull Constraint getConstraintForFunction(@NotNull NumericConstraint left, @NotNull NumericConstraint right, @NotNull BiFunction<Double, Double, Double> operation) {
+        Constraint constraint = new NumericConstraint(Optionality.PRESENT);
         for (NumericConstraint.Range leftRange : left.getRanges()) {
             for (NumericConstraint.Range rightRange : right.getRanges()) {
-                boolean lowerInclusive = leftRange.lower().isInclusive() && rightRange.lower().isInclusive();
-                Double lowerValue = computation.apply(leftRange.lower().value(), rightRange.lower().value());
-                boolean upperInclusive = leftRange.upper().isInclusive() && rightRange.upper().isInclusive();
-                Double upperValue = computation.apply(leftRange.upper().value(), rightRange.upper().value());
-                constraint = constraint.or(new NumericConstraint(Optionality.PRESENT, new NumericConstraint.Bound(lowerInclusive, lowerValue), new NumericConstraint.Bound(upperInclusive, upperValue)));
+                NumericConstraint.Bound a = compute(leftRange.lower(), rightRange.lower(), operation);
+                NumericConstraint.Bound b = compute(leftRange.lower(), rightRange.upper(), operation);
+                NumericConstraint.Bound c = compute(leftRange.upper(), rightRange.lower(), operation);
+                NumericConstraint.Bound d = compute(leftRange.upper(), rightRange.upper(), operation);
+                NumericConstraint.Bound max = NumericConstraint.Bound.max(NumericConstraint.Bound.max(a, b), NumericConstraint.Bound.max(c, d));
+                NumericConstraint.Bound min = NumericConstraint.Bound.min(NumericConstraint.Bound.min(a, b), NumericConstraint.Bound.min(c, d));
+                constraint = constraint.or(new NumericConstraint(Optionality.PRESENT, min, max));
             }
         }
         return constraint;
     }
 
+    private @NotNull NumericConstraint.Bound compute(@NotNull NumericConstraint.Bound a, @NotNull NumericConstraint.Bound b, @NotNull BiFunction<Double, Double, Double> operation) {
+        boolean isInclusive = a.isInclusive() && b.isInclusive();
+        Double value = operation.apply(a.value(), b.value());
+        return new NumericConstraint.Bound(isInclusive, value);
+    }
+
     private @NotNull BooleanConstraint getBooleanBinaryConstraint(@NotNull BinaryOperator operator, @NotNull NumericConstraint left, @NotNull NumericConstraint right) {
-        NumericConstraint.Range leftRange = new NumericConstraint.Range(left.getMinimum(), left.getMaximum());
-        NumericConstraint.Range rightRange = new NumericConstraint.Range(right.getMinimum(), right.getMaximum());
+        NumericConstraint.Range leftRange = left.getRange().orElse(NumericConstraint.Range.MAXIMUM_RANGE);
+        NumericConstraint.Range rightRange = right.getRange().orElse(NumericConstraint.Range.MAXIMUM_RANGE);
         return switch (operator) {
             case LESS_THAN -> leftRange.isSmaller(rightRange)
                     .map(BooleanConstraint::withValue)
@@ -165,7 +176,7 @@ public class ConstraintVisitor extends ControlFlowVisitor {
 
     @Override
     public void visitUnaryExpression(@NotNull UnaryExpression expression) {
-        Constraint value = state.getConstraint(expression.value());
+        Constraint value = state.getConstraint(expression.value(), visited);
         switch (expression.operator()) {
             case NOT -> {
                 if (!(value instanceof BooleanConstraint booleanConstraint)) {

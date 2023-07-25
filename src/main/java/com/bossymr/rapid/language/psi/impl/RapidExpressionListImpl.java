@@ -21,7 +21,7 @@ public class RapidExpressionListImpl extends RapidElementListImpl implements Rap
     }
 
     @Override
-    public List<RapidExpression> getExpressions() {
+    public @NotNull List<RapidExpression> getExpressions() {
         return findChildrenByType(RapidElementTypes.EXPRESSIONS);
     }
 

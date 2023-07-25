@@ -40,30 +40,28 @@ public class VirtualComponent implements RapidComponent, VirtualSymbol {
     }
 
     @Override
+    public @NotNull VirtualPointer<VirtualComponent> createPointer() {
+        return new VirtualPointer<>(this, getClass());
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         VirtualComponent that = (VirtualComponent) o;
-        return Objects.equals(record.getName(), that.record.getName()) && Objects.equals(name, that.name) && Objects.equals(type, that.type);
+        return Objects.equals(name, that.name) && Objects.equals(type, that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(record.getName(), name, type);
+        return Objects.hash(name, type);
     }
 
     @Override
     public String toString() {
         return "VirtualComponent{" +
-                "record=" + record.getName() +
-                ", name='" + name + '\'' +
+                "name='" + name + '\'' +
                 ", type=" + type +
                 '}';
     }
-
-    @Override
-    public @NotNull VirtualPointer<VirtualComponent> createPointer() {
-        return new VirtualPointer<>(this, getClass());
-    }
-
 }

@@ -458,7 +458,7 @@ public class RapidValidator {
         RapidType right = expression.getType();
         if (type == null || right == null) return;
         if (type.getDimensions() < 0 || right.getDimensions() < 0) return;
-        if (!(RapidType.isAssignable(type, right))) {
+        if (!(type.isAssignable(right))) {
             annotateIncompatibleType(type, right, expression.getTextRange());
         }
     }
@@ -512,13 +512,13 @@ public class RapidValidator {
                     RapidParameter last = previous.get(previous.size() - 1);
                     int prev = parameters.indexOf(last.getParameterGroup());
                     if (prev > index) {
-                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.argument.order"))
+                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.order"))
                                 .range(argument)
                                 .create();
                         continue;
                     }
                     if (prev == index) {
-                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.argument.exclusive", parameter.getName(), last.getName()))
+                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.exclusive", parameter.getName(), last.getName()))
                                 .range(argument)
                                 .create();
                         continue;
@@ -535,7 +535,7 @@ public class RapidValidator {
                     if (argument instanceof RapidOptionalArgument && argument.getArgument() == null) {
                         RapidType type = parameter.getType();
                         if (type != null && !(type.getPresentableText().equals("switch"))) {
-                            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.optional.argument.not.switch", parameter.getName()))
+                            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.optional.parameter.not.switch", parameter.getName()))
                                     .range(argument)
                                     .create();
                             continue;
@@ -699,6 +699,9 @@ public class RapidValidator {
     public void checkType(@Nullable RapidExpression expression, @NotNull String message,
                           @NotNull Function<RapidSymbol, String> function, @NotNull Predicate<RapidSymbol> predicate) {
         if (expression == null) return;
+        if (expression instanceof RapidIndexExpression indexExpression) {
+            expression = indexExpression.getExpression();
+        }
         if (!(expression instanceof RapidReferenceExpression referenceExpression)) {
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, message)
                     .range(expression)

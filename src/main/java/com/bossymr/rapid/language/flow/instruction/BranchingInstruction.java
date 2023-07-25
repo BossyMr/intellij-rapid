@@ -80,7 +80,9 @@ public sealed interface BranchingInstruction extends Instruction {
     record ReturnInstruction(@Nullable PsiElement element, @Nullable Value value) implements BranchingInstruction {
 
         public ReturnInstruction {
-            assert (element == null || value != null) && (element != null || value == null);
+            if (element != null && value == null) {
+                throw new AssertionError();
+            }
         }
 
         @Override

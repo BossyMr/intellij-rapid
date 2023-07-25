@@ -75,10 +75,10 @@ public class RapidType {
 
     public @Nullable ValueType getValueType() {
         if (structure == null) return null;
-        if (this == RapidType.NUMBER) return ValueType.VALUE_TYPE;
-        if (this == RapidType.DOUBLE) return ValueType.VALUE_TYPE;
-        if (this == RapidType.BOOLEAN) return ValueType.VALUE_TYPE;
-        if (this == RapidType.STRING) return ValueType.VALUE_TYPE;
+        if (isAssignable(RapidType.NUMBER)) return ValueType.VALUE_TYPE;
+        if (isAssignable(RapidType.DOUBLE)) return ValueType.VALUE_TYPE;
+        if (isAssignable(RapidType.BOOLEAN)) return ValueType.VALUE_TYPE;
+        if (isAssignable(RapidType.STRING)) return ValueType.VALUE_TYPE;
         if (structure instanceof RapidAtomic atomic) {
             return atomic.getAssociatedType() != null ? ValueType.SEMI_VALUE_TYPE : ValueType.NON_VALUE_TYPE;
         }

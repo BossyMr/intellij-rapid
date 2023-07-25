@@ -56,13 +56,10 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
     public void visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
         ReferenceValue value = instruction.value();
         Constraint constraint = block.getConstraint(value);
-        if (!(constraint instanceof BooleanConstraint booleanConstraint)) {
-            throw new IllegalStateException();
-        }
-        if (booleanConstraint.contains(BooleanConstraint.alwaysTrue())) {
+        if (constraint.contains(BooleanConstraint.alwaysTrue())) {
             block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.onSuccess()), getStates(value, true)));
         }
-        if (booleanConstraint.contains(BooleanConstraint.alwaysFalse())) {
+        if (constraint.contains(BooleanConstraint.alwaysFalse())) {
             block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.onFailure()), getStates(value, false)));
         }
     }
@@ -219,12 +216,13 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         }
         BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.element(), text);
         if (blockDescriptor == null) {
-            throw new AssertionError();
+            throw new IllegalStateException("Method: " + text + " was not found");
         }
         DataFlowFunction function = functionMap.get(block, blockDescriptor);
         processResult(instruction, block.getStates(), function, getArguments(function.getBlock(), instruction.arguments()));
     }
 
+    // TODO: 2023-07-23 It seems to be working so far, the Abs output is correct, so the problem must be somewhere when it is simplified or merged.
     private void processResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull Set<DataFlowState> states, @NotNull DataFlowFunction function, @NotNull Map<Argument, Value> arguments) {
         Map<Argument, Constraint> constraints = new HashMap<>(arguments.size(), 1);
         arguments.forEach((argument, value) -> constraints.put(argument, block.getConstraint(value)));
@@ -241,7 +239,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
     }
 
     private void processErrorResult(@NotNull Map<Argument, Value> arguments, @NotNull DataFlowFunction.Result.Error result) {
-        VariableSnapshot snapshot = result.exceptionValue() != null ? new VariableSnapshot(result.exceptionValue().getType()) : null;
+        VariableSnapshot snapshot = result.exceptionValue() != null ? new VariableSnapshot(result.exceptionValue()) : null;
         Set<DataFlowState> states = getSimplifiedState(arguments, result, snapshot);
         functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, getArguments(), new DataFlowFunction.Result.Error(states, snapshot));
     }
@@ -260,14 +258,20 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
     }
 
     private @NotNull Set<DataFlowState> getSimplifiedState(@NotNull Map<Argument, Value> arguments, @NotNull DataFlowFunction.Result result, @Nullable ReferenceValue target) {
-        Map<ReferenceValue, ReferenceValue> references = new HashMap<>();
+        if (result instanceof DataFlowFunction.Result.Exit) {
+            throw new IllegalArgumentException();
+        }
+        Map<ReferenceValue, ReferenceValue> snapshots = new HashMap<>();
         Set<ReferenceValue> variables = new HashSet<>();
+        Map<ReferenceValue, ReferenceValue> references = new HashMap<>();
         for (Argument argument : arguments.keySet()) {
-            if (argument.parameterType() != ParameterType.INPUT) {
-                if (arguments.get(argument) instanceof ReferenceValue referenceValue) {
-                    VariableValue variableValue = new VariableValue(argument);
-                    references.put(variableValue, referenceValue);
+            if (arguments.get(argument) instanceof ReferenceValue referenceValue) {
+                VariableValue variableValue = new VariableValue(argument);
+                if (argument.parameterType() != ParameterType.INPUT) {
+                    snapshots.put(variableValue, referenceValue);
                     variables.add(variableValue);
+                } else {
+                    references.put(variableValue, referenceValue);
                 }
             }
         }
@@ -277,12 +281,20 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         if (result instanceof DataFlowFunction.Result.Success success && success.returnValue() != null) {
             variables.add(success.returnValue());
             if (target != null) {
-                references.put(success.returnValue(), target);
+                snapshots.put(success.returnValue(), target);
             }
         }
-        return block.getStates().stream()
+        Set<DataFlowState> states;
+        if (result instanceof DataFlowFunction.Result.Success success) {
+            states = success.states();
+        } else if (result instanceof DataFlowFunction.Result.Error error) {
+            states = error.states();
+        } else {
+            throw new IllegalArgumentException();
+        }
+        return states.stream()
                 .map(DataFlowState::new)
-                .peek(state -> state.simplify(references, variables))
+                .peek(state -> state.simplify(snapshots, variables, references))
                 .collect(Collectors.toSet());
     }
 

@@ -8,7 +8,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * A {@code BasicBlock} represents a set of {@link LinearInstruction instructions} which are always executed
@@ -41,40 +40,20 @@ public sealed abstract class BasicBlock {
 
     public @NotNull BranchingInstruction getTerminator() {
         if (terminator == null) {
-            throw new IllegalStateException("BasicBlock: " + getIndex() + " is not completed");
+            throw new IllegalStateException("BasicBlock: " + this + " is complete");
         }
         return terminator;
     }
 
     public void setTerminator(@NotNull BranchingInstruction instruction) {
         if (terminator != null) {
-            throw new IllegalStateException("BasicBlock: " + getIndex() + " is already completed");
+            throw new IllegalStateException("BasicBlock: " + this + " is already completed");
         }
         this.terminator = instruction;
     }
 
     public void accept(@NotNull ControlFlowVisitor visitor) {
         visitor.visitBasicBlock(this);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        BasicBlock basicBlock = (BasicBlock) o;
-        return getBlock() == basicBlock.getBlock() && getIndex() == basicBlock.getIndex();
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(getIndex());
-    }
-
-    @Override
-    public String toString() {
-        return "BasicBlock{" +
-                "index=" + getIndex() +
-                '}';
     }
 
     public static final class EntryBasicBlock extends BasicBlock {
@@ -92,6 +71,13 @@ public sealed abstract class BasicBlock {
         @Override
         public @NotNull StatementListType getScopeType() {
             return scopeType;
+        }
+
+        @Override
+        public String toString() {
+            return "EntryBasicBlock{" +
+                    "scopeType=" + scopeType +
+                    '}';
         }
     }
 
@@ -112,6 +98,13 @@ public sealed abstract class BasicBlock {
         public @Nullable List<Integer> getExceptions() {
             return exceptions;
         }
+
+        @Override
+        public String toString() {
+            return "ErrorBasicBlock{" +
+                    "exceptions=" + getExceptions() +
+                    '}';
+        }
     }
 
     public static final class IntermediateBasicBlock extends BasicBlock {
@@ -123,6 +116,11 @@ public sealed abstract class BasicBlock {
         @Override
         public @Nullable StatementListType getScopeType() {
             return null;
+        }
+
+        @Override
+        public String toString() {
+            return "IntermediateBasicBlock{}";
         }
     }
 }

@@ -8,6 +8,7 @@ import com.bossymr.rapid.language.psi.StatementListType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +29,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     @Override
     public void visitControlFlow(@NotNull ControlFlow controlFlow) {
         List<Block> blocks = new ArrayList<>(controlFlow.getBlocks());
+        blocks.sort(Comparator.comparing(block -> block.getModuleName() + ":" + block.getName()));
         for (int i = 0; i < blocks.size(); i++) {
             if (i > 0) {
                 stringBuilder.append("\n");
@@ -274,12 +276,14 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         }
         stringBuilder.append("(");
         List<Map.Entry<ArgumentDescriptor, Value>> arguments = new ArrayList<>(instruction.arguments().entrySet());
+        arguments.sort(Comparator.comparing(this::getDescriptorName));
         for (int i = 0; i < arguments.size(); i++) {
             if (i > 0) {
                 stringBuilder.append(", ");
             }
             Map.Entry<ArgumentDescriptor, Value> entry = arguments.get(i);
-            stringBuilder.append("_").append(entry.getKey());
+            String key = getDescriptorName(entry);
+            stringBuilder.append("_").append(key);
             if (entry.getValue() != null) {
                 stringBuilder.append(" := ");
                 entry.getValue().accept(this);
@@ -288,6 +292,18 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         stringBuilder.append(")");
         stringBuilder.append(" -> ").append(instruction.next().getIndex()).append(";");
         super.visitCallInstruction(instruction);
+    }
+
+    private @NotNull String getDescriptorName(Map.@NotNull Entry<ArgumentDescriptor, Value> entry) {
+        String key;
+        if (entry.getKey() instanceof ArgumentDescriptor.Optional optional) {
+            key = optional.name();
+        } else if (entry.getKey() instanceof ArgumentDescriptor.Required required) {
+            key = String.valueOf(required.index());
+        } else {
+            throw new IllegalStateException();
+        }
+        return key;
     }
 
     @Override

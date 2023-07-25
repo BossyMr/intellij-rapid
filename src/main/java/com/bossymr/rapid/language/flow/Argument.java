@@ -30,11 +30,11 @@ public record Argument(
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Argument argument = (Argument) o;
-        return index == argument.index;
+        return index == argument.index && parameterType == argument.parameterType && Objects.equals(type, argument.type) && Objects.equals(name, argument.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index);
+        return Objects.hash(index, parameterType, type, name);
     }
 }

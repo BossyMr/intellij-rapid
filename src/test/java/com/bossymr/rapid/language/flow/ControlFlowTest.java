@@ -174,14 +174,16 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 func num foo:bar() {
-                	var num _0 [value] := 0.0;
-                	num _1 [i] := 0.0;
-                	num _2 := 0;
-                	bool _3 := false;
+                	var num _0 [value];
+                	num _1 [i];
+                	num _2;
+                	bool _3;
                 	num _4;
-                	bool _5 := false;
+                	bool _5;
                                 
                 	entry 0 {
+                	    _0 := 0.0;
+                	    _1 := 0.0;
                 		_3 := _1 < 10.0;
                 		if(_3) -> [true: 3, false: 4]
                 	}
@@ -224,12 +226,14 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 func num foo:bar() {
-                	var num _0 [value] := 0.0;
-                	num _1 [i] := 0.0;
+                	var num _0 [value];
+                	num _1 [i];
                 	num _2;
-                	bool _3 := false;
+                	bool _3;
                                 
                 	entry 0 {
+                	    _0 := 0.0;
+                        _1 := 0.0;
                 		goto -> 1;
                 	}
                                 
@@ -269,18 +273,19 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 func num foo:bar() {
-                	var num _0 [value] := 0.0;
-                	bool _1 := false;
-                	bool _2 := false;
-                	bool _3 := false;
-                	bool _4 := false;
-                	bool _5 := false;
-                	bool _6 := false;
-                	bool _7 := false;
-                	bool _8 := false;
-                	bool _9 := false;
+                	var num _0 [value];
+                	bool _1;
+                	bool _2;
+                	bool _3;
+                	bool _4;
+                	bool _5;
+                	bool _6;
+                	bool _7;
+                	bool _8;
+                	bool _9;
                                 
                 	entry 0 {
+                	    _0 := 0.0;
                 		_1 := _0 = 0.0;
                 		if(_1) -> [true: 1, false: 2]
                 	}
@@ -344,6 +349,25 @@ public class ControlFlowTest extends BasePlatformTestCase {
                     ENDFUNC
                 ENDMODULE
                 """, """
+                func num foo:Abs(input num _0 [value]) {
+                	bool _1;
+                	num _2;
+                                
+                	entry 0 {
+                		_1 := _0 >= 0.0;
+                		if(_1) -> [true: 1, false: 2]
+                	}
+                                
+                	block 1 {
+                		return _0;
+                	}
+                                
+                	block 2 {
+                		_2 := -_0;
+                		return _2;
+                	}
+                }
+                                
                 func num foo:bar() {
                 	var num _0 [value];
                 	num _1;
@@ -356,25 +380,6 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	block 1 {
                 		return _1;
                 	}
-                }
-                                
-                func num foo:Abs(input num _0 [value]) {
-                    bool _1;
-                    num _2;
-                    
-                    entry 0 {
-                        _1 := _0 >= 0.0;
-                        if(_1) -> [true: 1, false: 2]
-                    }
-                    
-                    block 1 {
-                        return _0;
-                    }
-                    
-                    block 2 {
-                        _2 := -_0;
-                        return _2;
-                    }
                 }
                 """);
     }
@@ -389,17 +394,11 @@ public class ControlFlowTest extends BasePlatformTestCase {
                     PROC conditional(\\num a) ENDPROC
                 ENDMODULE
                 """, """
-                proc foo:conditional(\\input num _0 [a]) {
-                	entry 0 {
-                		return;
-                	}
-                }
-                                
                 proc foo:bar(\\input num _0 [a]) {
                 	bool _1;
                                 
                 	entry 0 {
-                		_1 := Present(_0 := _0) -> 2;
+                		_1 := :Present(_0 := _0) -> 2;
                 	}
                                 
                 	block 1 {
@@ -411,11 +410,17 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	}
                                 
                 	block 3 {
-                		foo:conditional(_0) -> 1;
+                		foo:conditional(_a := _0) -> 1;
                 	}
                                 
                 	block 4 {
                 		foo:conditional() -> 1;
+                	}
+                }
+                                
+                proc foo:conditional(\\input num _0 [a]) {
+                	entry 0 {
+                		return;
                 	}
                 }
                 """);
@@ -431,19 +436,13 @@ public class ControlFlowTest extends BasePlatformTestCase {
                     PROC conditional(\\num a, \\num b) ENDPROC
                 ENDMODULE
                 """, """
-                proc foo:conditional(\\input num _0 [a], \\input num _1 [b]) {
-                	entry 0 {
-                		return;
-                	}
-                }
-                                
                 proc foo:bar(\\input num _0 [a], \\input num _1 [b]) {
                 	bool _2;
                 	bool _3;
                 	bool _4;
                                 
                 	entry 0 {
-                		_2 := Present(_0 := _0) -> 2;
+                		_2 := :Present(_0 := _0) -> 2;
                 	}
                                 
                 	block 1 {
@@ -455,11 +454,11 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	}
                                 
                 	block 3 {
-                		_3 := Present(_0 := _1) -> 5;
+                		_3 := :Present(_0 := _1) -> 5;
                 	}
                                 
                 	block 4 {
-                		_4 := Present(_0 := _1) -> 8;
+                		_4 := :Present(_0 := _1) -> 8;
                 	}
                                 
                 	block 5 {
@@ -467,11 +466,11 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	}
                                 
                 	block 6 {
-                		foo:conditional(_0, _1) -> 1;
+                		foo:conditional(_a := _0, _b := _1) -> 1;
                 	}
                                 
                 	block 7 {
-                		foo:conditional(_0) -> 1;
+                		foo:conditional(_a := _0) -> 1;
                 	}
                                 
                 	block 8 {
@@ -479,11 +478,17 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	}
                                 
                 	block 9 {
-                		foo:conditional(_1) -> 1;
+                		foo:conditional(_b := _1) -> 1;
                 	}
                                 
                 	block 10 {
                 		foo:conditional() -> 1;
+                	}
+                }
+                                
+                proc foo:conditional(\\input num _0 [a], \\input num _1 [b]) {
+                	entry 0 {
+                		return;
                 	}
                 }
                 """);

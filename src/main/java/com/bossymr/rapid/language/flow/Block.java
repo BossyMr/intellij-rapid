@@ -1,10 +1,8 @@
 package com.bossymr.rapid.language.flow;
 
+import com.bossymr.rapid.language.psi.RapidElement;
 import com.bossymr.rapid.language.psi.StatementListType;
-import com.bossymr.rapid.language.symbol.FieldType;
-import com.bossymr.rapid.language.symbol.ParameterType;
-import com.bossymr.rapid.language.symbol.RapidType;
-import com.bossymr.rapid.language.symbol.RoutineType;
+import com.bossymr.rapid.language.symbol.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,13 +18,20 @@ public sealed abstract class Block {
     private final @NotNull Map<StatementListType, BasicBlock> entryBlocks;
     private final @NotNull List<Variable> variables;
 
-    public Block(@Nullable String moduleName, @NotNull String name, @Nullable RapidType returnType) {
+    private final @NotNull RapidSymbol element;
+
+    public Block(@NotNull RapidSymbol element, @Nullable String moduleName, @NotNull String name, @Nullable RapidType returnType) {
         this.moduleName = moduleName;
         this.name = name;
         this.returnType = returnType;
         this.basicBlocks = new ArrayList<>();
         this.entryBlocks = new HashMap<>();
         this.variables = new ArrayList<>();
+        this.element = element;
+    }
+
+    public @NotNull RapidSymbol getElement() {
+        return element;
     }
 
     public @Nullable String getModuleName() {
@@ -99,8 +104,8 @@ public sealed abstract class Block {
         return basicBlock;
     }
 
-    public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
-        Variable variable = new Variable(getNextVariableIndex(), fieldType, type, name);
+    public @NotNull Variable createVariable(@Nullable RapidElement element, @Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
+        Variable variable = new Variable(getNextVariableIndex(), element, fieldType, type, name);
         variables.add(variable);
         return variable;
     }
@@ -110,10 +115,25 @@ public sealed abstract class Block {
     }
 
     protected int getNextVariableIndex() {
-        return getVariables().size();
+        return getArgumentGroups().stream()
+                .mapToInt(argumentGroup -> argumentGroup.arguments().size())
+                .sum() + getVariables().size();
     }
 
     public abstract void accept(@NotNull ControlFlowVisitor visitor);
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Block block = (Block) o;
+        return Objects.equals(element, block.element);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(element);
+    }
 
     @Override
     public String toString() {
@@ -123,28 +143,20 @@ public sealed abstract class Block {
                 '}';
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Block block = (Block) o;
-        return Objects.equals(moduleName, block.moduleName) && Objects.equals(name, block.name);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(moduleName, name);
-    }
-
     public static final class FunctionBlock extends Block {
 
         private final @NotNull RoutineType routineType;
         private final @NotNull List<ArgumentGroup> argumentGroups;
 
-        public FunctionBlock(@Nullable String moduleName, @NotNull String name, @Nullable RapidType returnType, @NotNull RoutineType routineType) {
-            super(moduleName, name, returnType);
+        public FunctionBlock(@NotNull RapidRoutine routine, @Nullable String moduleName) {
+            super(routine, moduleName, Objects.requireNonNull(routine.getName()), routine.getType());
+            this.routineType = routine.getRoutineType();
             this.argumentGroups = routineType != RoutineType.TRAP ? new ArrayList<>() : List.of();
-            this.routineType = routineType;
+        }
+
+        @Override
+        public @NotNull RapidRoutine getElement() {
+            return (RapidRoutine) super.getElement();
         }
 
         public @NotNull RoutineType getRoutineType() {
@@ -174,29 +186,18 @@ public sealed abstract class Block {
         }
 
         @Override
-        protected int getNextVariableIndex() {
-            int size = getVariables().size();
-            size += getArgumentGroups().size();
-            return size;
-        }
-
-        @Override
         public void accept(@NotNull ControlFlowVisitor visitor) {
             visitor.visitFunctionBlock(this);
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            if (!super.equals(o)) return false;
-            FunctionBlock that = (FunctionBlock) o;
-            return routineType == that.routineType && Objects.equals(argumentGroups, that.argumentGroups);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(super.hashCode(), routineType, argumentGroups);
+        public String toString() {
+            return "FunctionBlock{" +
+                    "routineType=" + routineType +
+                    ", moduleName='" + getModuleName() + '\'' +
+                    ", name='" + getName() + '\'' +
+                    ", returnType=" + getReturnType() +
+                    '}';
         }
     }
 
@@ -204,9 +205,13 @@ public sealed abstract class Block {
 
         private final @NotNull FieldType fieldType;
 
-        public FieldBlock(@NotNull String moduleName, @NotNull String name, @NotNull RapidType returnType, @NotNull FieldType fieldType) {
-            super(moduleName, name, returnType);
-            this.fieldType = fieldType;
+        public FieldBlock(@NotNull RapidField field, @NotNull String moduleName) {
+            super(field, moduleName, Objects.requireNonNull(field.getName()), field.getType());
+            this.fieldType = field.getFieldType();
+        }
+
+        public @NotNull RapidField getElement() {
+            return (RapidField) super.getElement();
         }
 
         public @NotNull FieldType getFieldType() {
@@ -224,17 +229,13 @@ public sealed abstract class Block {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            if (!super.equals(o)) return false;
-            FieldBlock that = (FieldBlock) o;
-            return fieldType == that.fieldType;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(super.hashCode(), fieldType);
+        public String toString() {
+            return "FieldBlock{" +
+                    "fieldType=" + fieldType +
+                    ", moduleName='" + getModuleName() + '\'' +
+                    ", name='" + getName() + '\'' +
+                    ", returnType=" + getReturnType() +
+                    '}';
         }
     }
 }

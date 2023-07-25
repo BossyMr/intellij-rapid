@@ -1,9 +1,11 @@
 package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.Field;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 
 /**
  * A {@code VariableSnapshot} represents the previous state of a variable. The below example shows how snapshots can be
@@ -19,18 +21,30 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class VariableSnapshot implements ReferenceValue {
 
+    private final @Nullable ReferenceValue referenceValue;
     private final @NotNull RapidType type;
 
     public VariableSnapshot(@NotNull RapidType type) {
+        this.referenceValue = null;
         this.type = type;
     }
 
-    public VariableSnapshot(@NotNull Field field) {
-        this.type = field.type();
+    public VariableSnapshot(@NotNull ReferenceValue referenceValue) {
+        this.referenceValue = referenceValue;
+        this.type = referenceValue.getType();
     }
 
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {}
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        if (referenceValue != null) {
+            referenceValue.accept(visitor);
+        }
+    }
+
+    public @NotNull Optional<ReferenceValue> getReferenceValue() {
+        // TODO: 2023-07-21 Rebuild with correct reference value after reference function call argument -> OptPar -> x
+        return Optional.ofNullable(referenceValue);
+    }
 
     @Override
     public @NotNull RapidType getType() {
@@ -38,9 +52,10 @@ public final class VariableSnapshot implements ReferenceValue {
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return "VariableSnapshot{" +
-                "type=" + type +
+                "identity='" + hashCode() + '\'' +
+                ", type='" + type + '\'' +
                 '}';
     }
 }

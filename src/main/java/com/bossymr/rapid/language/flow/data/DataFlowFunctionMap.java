@@ -4,12 +4,12 @@ import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
+import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 public class DataFlowFunctionMap {
 
@@ -21,6 +21,13 @@ public class DataFlowFunctionMap {
         this.descriptorMap = descriptorMap;
         this.functionMap = new HashMap<>();
         this.workList = workList;
+        for (HardcodedContract value : HardcodedContract.values()) {
+            DataFlowFunction function = value.getFunction();
+            Block.FunctionBlock functionBlock = function.getBlock();
+            BlockDescriptor blockKey = BlockDescriptor.getBlockKey(functionBlock);
+            descriptorMap.put(blockKey, functionBlock);
+            functionMap.put(blockKey, function);
+        }
     }
 
     public @NotNull DataFlowFunction get(@NotNull DataFlowBlock currentBlock, @NotNull BlockDescriptor blockDescriptor) {
@@ -31,7 +38,11 @@ public class DataFlowFunctionMap {
         if (!(workList.contains(entry))) {
             workList.add(entry);
         }
-        return new PhysicalDataFlowFunction(descriptorMap.get(blockDescriptor));
+        Block.FunctionBlock functionBlock = descriptorMap.get(blockDescriptor);
+        if (functionBlock == null) {
+            throw new IllegalStateException("Could not find function: " + blockDescriptor.moduleName() + ":" + blockDescriptor.name());
+        }
+        return new PhysicalDataFlowFunction(functionBlock);
     }
 
     public void set(@NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowBlock returnBlock, @NotNull Map<Argument, Constraint> constraints, @NotNull DataFlowFunction.Result result) {
@@ -62,7 +73,7 @@ public class DataFlowFunctionMap {
         }
     }
 
-    private static final class PhysicalDataFlowFunction implements DataFlowFunction {
+    private static final class PhysicalDataFlowFunction extends AbstractDataFlowFunction {
 
         private final @NotNull Block.FunctionBlock functionBlock;
         private final @NotNull AtomicReference<Map<Map<Argument, Constraint>, Map<DataFlowBlock, Result>>> result = new AtomicReference<>();
@@ -83,6 +94,7 @@ public class DataFlowFunctionMap {
                 data.get(constraints).put(returnBlock, value);
                 setResult(data);
             } else {
+                map.computeIfAbsent(constraints, (k) -> new HashMap<>());
                 Map<DataFlowBlock, Result> entries = map.get(constraints);
                 entries.put(returnBlock, value);
             }
@@ -94,13 +106,20 @@ public class DataFlowFunctionMap {
         }
 
         @Override
+        protected @NotNull Map<Map<Argument, Constraint>, Set<Result>> getResults() {
+            Map<Map<Argument, Constraint>, Set<Result>> map = new HashMap<>(result.get().size(), 1);
+            result.get().forEach((arguments, results) -> {
+                map.computeIfAbsent(arguments, value -> new HashSet<>(1));
+                map.get(arguments).addAll(results.values());
+            });
+            return map;
+        }
+
+        @Override
         public @NotNull Set<Result> getOutput(@NotNull Map<Argument, Constraint> arguments) {
             Map<Map<Argument, Constraint>, Map<DataFlowBlock, Result>> value = result.get();
             if (value != null) {
-                return value.keySet().stream()
-                        .filter(constraints -> contains(constraints, arguments))
-                        .flatMap(constraints -> value.get(constraints).values().stream())
-                        .collect(Collectors.toSet());
+                return super.getOutput(arguments);
             }
             Map<Argument, Constraint> constraints = new HashMap<>();
             for (Argument argument : arguments.keySet()) {
@@ -111,15 +130,6 @@ public class DataFlowFunctionMap {
             return Set.of(Result.Success.create(functionBlock, constraints, returnType, returnConstraint));
         }
 
-        private boolean contains(@NotNull Map<Argument, Constraint> results, @NotNull Map<Argument, Constraint> arguments) {
-            for (Argument argument : results.keySet()) {
-                Constraint constraint = results.get(argument);
-                if (!(constraint.contains(arguments.get(argument)))) {
-                    return false;
-                }
-            }
-            return true;
-        }
 
     }
 }

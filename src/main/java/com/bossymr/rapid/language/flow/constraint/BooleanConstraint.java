@@ -1,23 +1,19 @@
 package com.bossymr.rapid.language.flow.constraint;
 
-import com.bossymr.rapid.language.flow.condition.Condition;
-import com.bossymr.rapid.language.flow.condition.ConditionType;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 
 public class BooleanConstraint implements Constraint {
 
     private static final @NotNull BooleanConstraint ANY_VALUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
 
-    private static final @NotNull BooleanConstraint ALWAYS_TRUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+    private static final @NotNull BooleanConstraint ALWAYS_TRUE = new BooleanConstraint(BooleanValue.ALWAYS_TRUE);
 
-    private static final @NotNull BooleanConstraint ALWAYS_FALSE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+    private static final @NotNull BooleanConstraint ALWAYS_FALSE = new BooleanConstraint(BooleanValue.ALWAYS_FALSE);
 
-    private static final @NotNull BooleanConstraint NO_VALUE = new BooleanConstraint(BooleanValue.ANY_VALUE);
+    private static final @NotNull BooleanConstraint NO_VALUE = new BooleanConstraint(BooleanValue.NO_VALUE);
 
     private final @NotNull Optionality optionality;
     private final @NotNull BooleanValue value;
@@ -60,17 +56,22 @@ public class BooleanConstraint implements Constraint {
         return ALWAYS_FALSE;
     }
 
-    private @NotNull Set<Condition> getConditions(@NotNull ReferenceValue referenceValue, boolean value) {
-        return Set.of(new Condition(referenceValue, ConditionType.EQUALITY, Expression.booleanConstant(value)), new Condition(referenceValue, ConditionType.INEQUALITY, Expression.booleanConstant(!value)));
-    }
-
     @Override
     public @NotNull Optionality getOptionality() {
         return optionality;
     }
 
-    public @NotNull BooleanValue getValue() {
-        return value;
+    @Override
+    public @NotNull Constraint setOptionality(@NotNull Optionality optionality) {
+        return new BooleanConstraint(optionality, value);
+    }
+
+    public @NotNull Optional<Boolean> getValue() {
+        return switch (value) {
+            case NO_VALUE, ANY_VALUE -> Optional.empty();
+            case ALWAYS_FALSE -> Optional.of(false);
+            case ALWAYS_TRUE -> Optional.of(true);
+        };
     }
 
     public @NotNull Optional<Boolean> getBooleanValue() {
@@ -83,19 +84,25 @@ public class BooleanConstraint implements Constraint {
     }
 
     @Override
-    public @NotNull BooleanConstraint and(@NotNull Constraint constraint) {
-        if (!(constraint instanceof BooleanConstraint booleanCondition)) {
-            throw new IllegalArgumentException();
+    public @NotNull Constraint and(@NotNull Constraint constraint) {
+        if (constraint instanceof OpenConstraint || constraint instanceof ClosedConstraint) {
+            return constraint.and(this);
         }
-        return new BooleanConstraint(getOptionality().combine(constraint.getOptionality()), value.and(booleanCondition.value));
+        if (!(constraint instanceof BooleanConstraint booleanCondition)) {
+            throw new IllegalArgumentException("Cannot create intersection of: " + this + " and " + constraint);
+        }
+        return new BooleanConstraint(getOptionality().and(constraint.getOptionality()), value.and(booleanCondition.value));
     }
 
     @Override
-    public @NotNull BooleanConstraint or(@NotNull Constraint constraint) {
-        if (!(constraint instanceof BooleanConstraint booleanCondition)) {
-            throw new IllegalArgumentException();
+    public @NotNull Constraint or(@NotNull Constraint constraint) {
+        if (constraint instanceof OpenConstraint || constraint instanceof ClosedConstraint) {
+            return constraint.or(this);
         }
-        return new BooleanConstraint(getOptionality().combine(constraint.getOptionality()), value.or(booleanCondition.value));
+        if (!(constraint instanceof BooleanConstraint booleanCondition)) {
+            throw new IllegalArgumentException("Cannot create union of: " + this + " and " + constraint);
+        }
+        return new BooleanConstraint(getOptionality().or(constraint.getOptionality()), value.or(booleanCondition.value));
     }
 
     @Override
@@ -106,6 +113,27 @@ public class BooleanConstraint implements Constraint {
     @Override
     public boolean isEmpty() {
         return value == BooleanValue.NO_VALUE;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BooleanConstraint that = (BooleanConstraint) o;
+        return optionality == that.optionality && value == that.value;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(optionality, value);
+    }
+
+    @Override
+    public String toString() {
+        return "BooleanConstraint{" +
+                "optionality=" + optionality +
+                ", value=" + value +
+                '}';
     }
 
     public enum BooleanValue {
@@ -139,27 +167,36 @@ public class BooleanConstraint implements Constraint {
             if (this == NO_VALUE || value == NO_VALUE) {
                 return NO_VALUE;
             }
-            if (this == ANY_VALUE || value == ANY_VALUE) {
-                return ANY_VALUE;
+            if (this == ANY_VALUE && value != ANY_VALUE) {
+                return value;
             }
-            if (this == BooleanValue.ALWAYS_TRUE) {
-                return value == ALWAYS_TRUE ? ALWAYS_TRUE : ALWAYS_FALSE;
+            if (this != ANY_VALUE && value == ANY_VALUE) {
+                return this;
             }
-            if (this == BooleanValue.ALWAYS_FALSE) {
-                return value == ALWAYS_FALSE ? ALWAYS_TRUE : ALWAYS_FALSE;
+            if (this == ALWAYS_TRUE) {
+                return value == ALWAYS_TRUE ? ALWAYS_TRUE : NO_VALUE;
             }
-            throw new AssertionError();
+            if (this == ALWAYS_FALSE) {
+                return value == ALWAYS_FALSE ? ALWAYS_FALSE : NO_VALUE;
+            }
+            return ANY_VALUE;
         }
 
         public @NotNull BooleanValue or(@NotNull BooleanValue value) {
-            if (this == NO_VALUE || value == NO_VALUE) {
-                return NO_VALUE;
+            if (this == NO_VALUE) {
+                return value;
             }
-            if (this == ALWAYS_TRUE || value == ALWAYS_TRUE) {
-                return ALWAYS_TRUE;
+            if (value == NO_VALUE) {
+                return this;
             }
-            if (this == ALWAYS_FALSE && value == ALWAYS_FALSE) {
-                return ALWAYS_FALSE;
+            if (this == ANY_VALUE || value == ANY_VALUE) {
+                return ANY_VALUE;
+            }
+            if (this == ALWAYS_TRUE) {
+                return value == ALWAYS_TRUE ? ALWAYS_TRUE : ANY_VALUE;
+            }
+            if (this == ALWAYS_FALSE) {
+                return value == ALWAYS_FALSE ? ALWAYS_FALSE : ANY_VALUE;
             }
             return ANY_VALUE;
         }

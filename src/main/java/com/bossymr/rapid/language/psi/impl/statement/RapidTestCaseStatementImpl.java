@@ -25,6 +25,11 @@ public class RapidTestCaseStatementImpl extends PhysicalElement implements Rapid
     }
 
     @Override
+    public @Nullable RapidExpressionList getExpressionList() {
+        return findChildByType(RapidElementTypes.EXPRESSION_LIST);
+    }
+
+    @Override
     public @NotNull RapidStatementList getStatements() {
         return findNotNullChildByType(RapidElementTypes.STATEMENT_LIST);
     }

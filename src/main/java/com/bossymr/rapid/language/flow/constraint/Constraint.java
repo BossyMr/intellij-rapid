@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Optional;
 
 /**
  * A {@code Constraint} represents a condition which a variable must fulfill.
@@ -52,23 +53,13 @@ public interface Constraint {
      * @return the constraint.
      */
     static @NotNull Constraint any(@NotNull RapidType type) {
-        if (type.isAssignable(RapidType.NUMBER)) {
-            return NumericConstraint.any();
-        }
-        if (type.isAssignable(RapidType.STRING)) {
-            return new InverseStringConstraint(Optionality.PRESENT, new HashSet<>());
-        }
-        if (type.isAssignable(RapidType.BOOLEAN)) {
-            return BooleanConstraint.any();
-        }
-        RapidStructure targetStructure = type.getTargetStructure();
-        if (targetStructure instanceof RapidAtomic) {
-            return new OpenConstraint(Optionality.PRESENT);
-        }
-        throw new IllegalArgumentException();
+        return any(type, Optionality.PRESENT);
     }
 
     static @NotNull Constraint any(@NotNull RapidType type, @NotNull Optionality optionality) {
+        if (type.equals(RapidType.ANYTYPE)) {
+            return new OpenConstraint(optionality);
+        }
         if (type.isAssignable(RapidType.NUMBER)) {
             return new NumericConstraint(optionality, NumericConstraint.Bound.MIN_VALUE, NumericConstraint.Bound.MAX_VALUE);
         }
@@ -76,13 +67,13 @@ public interface Constraint {
             return new InverseStringConstraint(optionality, new HashSet<>());
         }
         if (type.isAssignable(RapidType.BOOLEAN)) {
-            return BooleanConstraint.any();
+            return BooleanConstraint.any(optionality);
         }
         RapidStructure targetStructure = type.getTargetStructure();
         if (targetStructure instanceof RapidAtomic) {
             return new OpenConstraint(Optionality.PRESENT);
         }
-        throw new IllegalArgumentException();
+        throw new IllegalArgumentException("Cannot create constraint for type: " + type);
     }
 
     /**
@@ -93,6 +84,17 @@ public interface Constraint {
      */
     @Contract(pure = true)
     @NotNull Optionality getOptionality();
+
+    /**
+     * Creates a copy of this constraint with the specified optionality.
+     *
+     * @param optionality the optionality.
+     * @return a copy of this constraint.
+     */
+    @Contract(pure = true)
+    @NotNull Constraint setOptionality(@NotNull Optionality optionality);
+
+    @NotNull Optional<?> getValue();
 
     /**
      * Returns a new condition which is the opposite to this condition.
@@ -147,7 +149,28 @@ public interface Constraint {
      */
     @Contract(pure = true)
     default boolean contains(@NotNull Constraint constraint) {
-        Constraint union = or(constraint);
+        if (constraint instanceof OpenConstraint) {
+            return false;
+        }
+        if (!(this.getClass().isInstance(constraint))) {
+            return false;
+        }
+        if (getOptionality() == Optionality.PRESENT) {
+            if (constraint.getOptionality() == Optionality.MISSING) {
+                return false;
+            }
+        }
+        if (getOptionality() == Optionality.MISSING) {
+            if (constraint.getOptionality() == Optionality.PRESENT) {
+                return false;
+            }
+        }
+        Constraint union;
+        try {
+            union = or(constraint);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
         return union.equals(this);
     }
 
@@ -159,7 +182,22 @@ public interface Constraint {
      */
     @Contract(pure = true)
     default boolean intersects(@NotNull Constraint constraint) {
-        Constraint intersection = and(constraint);
+        if (getOptionality() == Optionality.PRESENT) {
+            if (constraint.getOptionality() == Optionality.MISSING) {
+                return false;
+            }
+        }
+        if (getOptionality() == Optionality.MISSING) {
+            if (constraint.getOptionality() == Optionality.PRESENT) {
+                return false;
+            }
+        }
+        Constraint intersection;
+        try {
+            intersection = and(constraint);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
         return !(intersection.isEmpty());
     }
 }

@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow.constraint;
 
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -62,25 +61,52 @@ public class NumericConstraint implements Constraint {
         return optionality;
     }
 
-    public @NotNull Bound getMinimum() {
-        return ranges.get(0).lower();
+    @Override
+    public @NotNull Constraint setOptionality(@NotNull Optionality optionality) {
+        return new NumericConstraint(optionality, new ArrayList<>(ranges));
     }
 
-    public @NotNull Bound getMaximum() {
-        return ranges.get(ranges.size() - 1).upper();
+    public @NotNull Optional<Range> getRange() {
+        Optional<Bound> minimum = getMinimum();
+        Optional<Bound> maximum = getMaximum();
+        if (minimum.isEmpty() || maximum.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new Range(minimum.orElseThrow(), maximum.orElseThrow()));
     }
 
-    public @Nullable Double getPoint() {
+    @Override
+    public @NotNull Optional<Double> getValue() {
+        return getPoint();
+    }
+
+    public @NotNull Optional<Bound> getMinimum() {
+        if (ranges.isEmpty()) {
+            return Optional.empty();
+        }
+        Range range = ranges.get(0);
+        return Optional.of(range.lower());
+    }
+
+    public @NotNull Optional<Bound> getMaximum() {
+        if (ranges.isEmpty()) {
+            return Optional.empty();
+        }
+        Range range = ranges.get(ranges.size() - 1);
+        return Optional.of(range.upper());
+    }
+
+    public @NotNull Optional<Double> getPoint() {
         if (ranges.size() != 1) {
-            return null;
+            return Optional.empty();
         }
         Range range = ranges.get(0);
         if (range.lower().isInclusive() && range.upper().isInclusive()) {
             if (range.lower().value() == range.upper().value()) {
-                return range.lower().value();
+                return Optional.of(range.lower().value());
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     /**
@@ -119,11 +145,8 @@ public class NumericConstraint implements Constraint {
                     .filter(range -> range.intersects(next))
                     .map(range -> range.intersect(next))
                     .toList();
-            if (intersects.isEmpty()) {
-                iterator.remove();
-            } else {
-                intersects.forEach(iterator::add);
-            }
+            iterator.remove();
+            intersects.forEach(iterator::add);
         }
     }
 
@@ -144,30 +167,36 @@ public class NumericConstraint implements Constraint {
     }
 
     @Override
-    public @NotNull NumericConstraint negate() {
-        NumericConstraint condition = new NumericConstraint(getOptionality(), Bound.MIN_VALUE, Bound.MAX_VALUE);
+    public @NotNull Constraint negate() {
+        Constraint constraint = new NumericConstraint(getOptionality(), Bound.MIN_VALUE, Bound.MAX_VALUE);
         for (Range range : ranges) {
-            condition = condition.and(negate(range));
+            constraint = constraint.and(negate(range));
         }
-        return condition;
+        return constraint;
     }
 
     @Override
-    public @NotNull NumericConstraint and(@NotNull Constraint constraint) {
-        if (!(constraint instanceof NumericConstraint numericCondition)) {
-            throw new IllegalArgumentException();
+    public @NotNull Constraint and(@NotNull Constraint constraint) {
+        if (constraint instanceof OpenConstraint || constraint instanceof ClosedConstraint) {
+            return constraint.and(this);
         }
-        NumericConstraint copy = new NumericConstraint(getOptionality().combine(constraint.getOptionality()), new ArrayList<>(ranges));
+        if (!(constraint instanceof NumericConstraint numericCondition)) {
+            throw new IllegalArgumentException("Cannot create intersection of: " + this + " and " + constraint);
+        }
+        NumericConstraint copy = new NumericConstraint(getOptionality().and(constraint.getOptionality()), new ArrayList<>(ranges));
         copy.intersect(numericCondition.ranges);
         return copy;
     }
 
     @Override
-    public @NotNull NumericConstraint or(@NotNull Constraint constraint) {
-        if (!(constraint instanceof NumericConstraint numericCondition)) {
-            throw new IllegalArgumentException();
+    public @NotNull Constraint or(@NotNull Constraint constraint) {
+        if (constraint instanceof OpenConstraint || constraint instanceof ClosedConstraint) {
+            return constraint.or(this);
         }
-        NumericConstraint copy = new NumericConstraint(getOptionality().combine(constraint.getOptionality()), new ArrayList<>(ranges));
+        if (!(constraint instanceof NumericConstraint numericCondition)) {
+            throw new IllegalArgumentException("Cannot create union of: " + this + " and " + constraint);
+        }
+        NumericConstraint copy = new NumericConstraint(getOptionality().or(constraint.getOptionality()), new ArrayList<>(ranges));
         for (Range range : numericCondition.ranges) {
             copy.union(range);
         }
@@ -181,7 +210,7 @@ public class NumericConstraint implements Constraint {
 
     @Override
     public boolean isEmpty() {
-        return false;
+        return ranges.isEmpty();
     }
 
     @Override
@@ -206,6 +235,8 @@ public class NumericConstraint implements Constraint {
     }
 
     public record Range(@NotNull Bound lower, @NotNull Bound upper) {
+
+        public static @NotNull Range MAXIMUM_RANGE = new Range(Bound.MIN_VALUE, Bound.MAX_VALUE);
 
         public Range {
             if (lower.value() > upper.value()) {
@@ -354,12 +385,44 @@ public class NumericConstraint implements Constraint {
         /**
          * The largest value for a numeric value.
          */
-        public static @NotNull Bound MAX_VALUE = new Bound(true, 2 ^ 52);
+        public static @NotNull Bound MAX_VALUE = new Bound(true, Math.pow(2, 52));
 
         /**
          * The smaller value for a numeric value.
          */
-        public static @NotNull Bound MIN_VALUE = new Bound(true, -2 ^ 52);
+        public static @NotNull Bound MIN_VALUE = new Bound(true, -Math.pow(2, 52));
+
+        public static @NotNull Bound min(@NotNull Bound a, @NotNull Bound b) {
+            if (a.value() < b.value()) {
+                return a;
+            }
+            if (b.value() < a.value()) {
+                return b;
+            }
+            if (a.isInclusive()) {
+                return a;
+            }
+            if (b.isInclusive()) {
+                return b;
+            }
+            return a;
+        }
+
+        public static @NotNull Bound max(@NotNull Bound a, @NotNull Bound b) {
+            if (a.value() > b.value()) {
+                return a;
+            }
+            if (b.value() > a.value()) {
+                return b;
+            }
+            if (a.isInclusive()) {
+                return a;
+            }
+            if (b.isInclusive()) {
+                return b;
+            }
+            return a;
+        }
 
     }
 }

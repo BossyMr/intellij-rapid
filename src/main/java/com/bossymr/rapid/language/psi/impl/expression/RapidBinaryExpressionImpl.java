@@ -52,7 +52,7 @@ public class RapidBinaryExpressionImpl extends RapidExpressionImpl implements Ra
             return RapidType.BOOLEAN;
         }
         if (sign == EQ) {
-            if (left.isAssignable(right) && left.getValueType() != null && left.getValueType() == ValueType.VALUE_TYPE) {
+            if (left.isAssignable(right) && left.getValueType() == ValueType.VALUE_TYPE) {
                 return RapidType.BOOLEAN;
             }
         }

@@ -24,6 +24,8 @@ public interface RapidTestCaseStatement extends RapidStatement {
      */
     @Nullable List<RapidExpression> getExpressions();
 
+    @Nullable RapidExpressionList getExpressionList();
+
     /**
      * Returns the statements in this test case statement.
      *

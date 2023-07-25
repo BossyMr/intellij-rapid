@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.symbol.resolve;
 
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
@@ -121,7 +122,7 @@ public class RapidResolveService {
         if (moduleName == null) {
             return findSymbols(context, name);
         }
-        if(moduleName.isBlank()) {
+        if (moduleName.isBlank()) {
             RapidSymbol symbol = findSymbol("RAPID/" + name);
             return symbol != null ? List.of(symbol) : List.of();
         }
@@ -133,6 +134,27 @@ public class RapidResolveService {
                 .filter(symbol -> name.equalsIgnoreCase(symbol.getName()))
                 .map(symbol -> (RapidSymbol) symbol)
                 .toList();
+    }
+
+    public @Nullable RapidSymbol findCustomSymbol(@NotNull String[] sections) {
+        try {
+            HardcodedContract contract = HardcodedContract.valueOf(sections[1].toUpperCase());
+            RapidRoutine element = contract.getFunction().getBlock().getElement();
+            if (sections.length == 3) {
+                return findChild(element, sections[2]);
+            }
+            return element;
+        } catch (IllegalArgumentException ignored) {}
+        return switch (sections[1]) {
+            case "num" -> RapidType.NUMBER.getStructure();
+            case "dnum" -> RapidType.DOUBLE.getStructure();
+            case "string" -> RapidType.STRING.getStructure();
+            case "bool" -> RapidType.BOOLEAN.getStructure();
+            case "pose" -> RapidType.POSE.getStructure();
+            case "orient" -> RapidType.ORIENTATION.getStructure();
+            case "pos" -> RapidType.POSITION.getStructure();
+            default -> null;
+        };
     }
 
     private @Nullable RapidModule findModule(@NotNull String moduleName) {
@@ -164,6 +186,10 @@ public class RapidResolveService {
         String[] sections = canonicalName.split("/");
         if (sections.length <= 1) {
             throw new IllegalArgumentException("Malformed name: " + canonicalName);
+        }
+        RapidSymbol customSymbol = findCustomSymbol(sections);
+        if (customSymbol != null) {
+            return customSymbol;
         }
         RapidSymbol symbol = findSymbol(robot, sections);
         if (symbol != null) {

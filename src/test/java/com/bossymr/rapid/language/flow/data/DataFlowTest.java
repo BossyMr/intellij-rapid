@@ -12,7 +12,7 @@ public class DataFlowTest extends BasePlatformTestCase {
         myFixture.configureByText(RapidFileType.getInstance(), text);
         ControlFlowService service = ControlFlowService.getInstance();
         ControlFlow controlFlow = service.getControlFlow(myFixture.getModule());
-        return service.getDataFlow(controlFlow);
+        return controlFlow.getDataFlow();
     }
 
     public void testSimpleExpression() {

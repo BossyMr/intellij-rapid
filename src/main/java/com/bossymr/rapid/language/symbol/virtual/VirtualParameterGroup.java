@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.symbol.virtual;
 
 import com.bossymr.rapid.language.symbol.RapidParameterGroup;
-import com.bossymr.rapid.language.symbol.RapidRoutine;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -20,7 +19,7 @@ public class VirtualParameterGroup implements RapidParameterGroup {
     }
 
     @Override
-    public @NotNull RapidRoutine getRoutine() {
+    public @NotNull VirtualRoutine getRoutine() {
         return routine;
     }
 
@@ -39,20 +38,20 @@ public class VirtualParameterGroup implements RapidParameterGroup {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         VirtualParameterGroup that = (VirtualParameterGroup) o;
-        return isOptional == that.isOptional && Objects.equals(routine, that.routine) && Objects.equals(parameters, that.parameters);
+        return isOptional == that.isOptional && Objects.equals(parameters, that.parameters);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(routine, isOptional, parameters);
+        return Objects.hash(isOptional, parameters);
     }
 
     @Override
     public String toString() {
         return "VirtualParameterGroup{" +
-                "routine=" + routine +
-                ", isOptional=" + isOptional +
+                "isOptional=" + isOptional +
                 ", parameters=" + parameters +
+                ", optional=" + isOptional() +
                 '}';
     }
 }

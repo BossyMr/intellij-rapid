@@ -40,7 +40,11 @@ public class RapidAggregateExpressionImpl extends RapidExpressionImpl implements
         if (getParent() instanceof RapidVariable) {
             return ((RapidVariable) getParent()).getType();
         } else if (getParent() instanceof RapidAggregateExpression) {
-            return ((RapidAggregateExpression) getParent()).getType();
+            RapidType parentType = ((RapidAggregateExpression) getParent()).getType();
+            if (parentType == null) {
+                return null;
+            }
+            return parentType.createArrayType(parentType.getDimensions() - 1);
         } else if (getParent() instanceof RapidAssignmentStatement) {
             RapidExpression left = ((RapidAssignmentStatement) getParent()).getLeft();
             return left != null ? left.getType() : null;

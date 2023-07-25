@@ -6,8 +6,11 @@ import com.bossymr.rapid.language.flow.constraint.Optionality;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
+import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -43,6 +46,6 @@ class DataFlowStateTest {
     }
 
     private @NotNull Block.FunctionBlock getEmptyFunctionBlock() {
-        return new Block.FunctionBlock("foo", "bar", null, RoutineType.PROCEDURE);
+        return new Block.FunctionBlock(new VirtualRoutine(RoutineType.PROCEDURE, "bar", null, List.of()), "foo");
     }
 }

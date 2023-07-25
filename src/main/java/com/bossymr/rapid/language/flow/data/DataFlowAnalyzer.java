@@ -2,10 +2,11 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
-import com.bossymr.rapid.language.flow.constraint.Optionality;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.flow.value.ComponentValue;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
+import com.bossymr.rapid.language.flow.value.VariableValue;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.RapidType;
@@ -24,15 +25,12 @@ public class DataFlowAnalyzer {
     private final @NotNull DataFlowFunctionMap functionMap;
     private final @NotNull Deque<DataFlowBlock> workList;
 
-    private final @NotNull DataFlowState defaultState;
-
     public DataFlowAnalyzer(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull Map<BasicBlock, DataFlowBlock> blocks, @NotNull Deque<DataFlowBlock> workList) {
         this.functionBlock = functionBlock;
         this.functionMap = functionMap;
         this.variables = getVariables(functionBlock);
         this.workList = workList;
         this.blocks = blocks;
-        this.defaultState = createDefaultState();
     }
 
     public static @NotNull Map<BasicBlock, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap) {
@@ -66,24 +64,90 @@ public class DataFlowAnalyzer {
         return List.copyOf(variables);
     }
 
-    private @NotNull Map<ReferenceValue, Constraint> getConstraints(@NotNull DataFlowBlock block) {
-        return variables.stream().collect(Collectors.toMap(value -> value, block::getConstraint));
-    }
-
     public void process() {
         while (!(workList.isEmpty())) {
             DataFlowBlock block = workList.removeFirst();
             Set<DataFlowEdge> successors = block.getSuccessors();
-            Map<ReferenceValue, Constraint> before = getConstraints(block);
+            Set<DataFlowState> before = block.getStates();
             process(block);
-            Map<ReferenceValue, Constraint> after = getConstraints(block);
-            boolean modified = variables.stream().anyMatch(variable -> !(before.get(variable).contains(after.get(variable)))) || !(successors.equals(block.getSuccessors()));
+            Set<DataFlowState> after = block.getStates();
+            boolean modified = isModified(before, after) || !(successors.equals(block.getSuccessors()));
             if (modified) {
                 for (DataFlowEdge successor : block.getSuccessors()) {
                     workList.add(successor.getBlock());
                 }
             }
         }
+    }
+
+    private boolean isModified(@NotNull Set<DataFlowState> before, @NotNull Set<DataFlowState> after) {
+        if (before.isEmpty() || after.isEmpty()) {
+            return before.isEmpty() && after.isEmpty();
+        }
+        if (before.equals(after)) {
+            return false;
+        }
+        for (ReferenceValue variable : variables) {
+            RapidType type = variable.getType();
+            if (type.getDimensions() == 0 && !(type.getStructure() instanceof RapidRecord)) {
+                if (isModified(before, after, variable)) {
+                    return true;
+                }
+            }
+            if (type.getStructure() instanceof RapidRecord record) {
+                for (RapidComponent component : record.getComponents()) {
+                    String name = component.getName();
+                    RapidType componentType = component.getType();
+                    if (componentType == null || name == null) {
+                        continue;
+                    }
+                    if (isModified(before, after, new ComponentValue(componentType, variable, name))) {
+                        return true;
+                    }
+                }
+            }
+            if (type.getDimensions() > 0) {
+                Map<Constraint, Constraint> beforeMap = getIndexConstraints(variable, before);
+                Map<Constraint, Constraint> afterMap = getIndexConstraints(variable, after);
+                for (Constraint afterConstraint : afterMap.keySet()) {
+                    for (Constraint beforeConstraint : beforeMap.keySet()) {
+                        if (afterConstraint.intersects(beforeConstraint)) {
+                            if (!(afterMap.get(afterConstraint).contains(beforeMap.get(beforeConstraint)))) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private @NotNull Map<Constraint, Constraint> getIndexConstraints(@NotNull ReferenceValue referenceValue, @NotNull Set<DataFlowState> states) {
+        Map<Constraint, Constraint> result = new HashMap<>();
+        for (DataFlowState state : states) {
+            Map<Constraint, Constraint> indexConstraint = state.getIndexConstraint(referenceValue);
+            for (Constraint constraint : indexConstraint.keySet()) {
+                result.replaceAll((key, value) -> {
+                    if (constraint.contains(key)) {
+                        return indexConstraint.get(constraint).and(value);
+                    } else if (constraint.intersects(key)) {
+                        return indexConstraint.get(constraint).or(value);
+                    }
+                    return value;
+                });
+                if (!(result.containsKey(constraint))) {
+                    result.put(constraint, indexConstraint.get(constraint));
+                }
+            }
+        }
+        return result;
+    }
+
+    private boolean isModified(@NotNull Set<DataFlowState> before, @NotNull Set<DataFlowState> after, @NotNull ReferenceValue variable) {
+        Constraint beforeConstraint = DataFlowBlock.getConstraint(before, variable);
+        Constraint afterConstraint = DataFlowBlock.getConstraint(after, variable);
+        return !(beforeConstraint.contains(afterConstraint));
     }
 
     private void process(@NotNull DataFlowBlock block) {
@@ -96,57 +160,16 @@ public class DataFlowAnalyzer {
         }
         BasicBlock basicBlock = block.getBasicBlock();
         DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(functionBlock, block, blocks, functionMap);
-        block.getStates().add(new DataFlowState(defaultState));
+        if (block.getStates().isEmpty()) {
+            block.getStates().add(new DataFlowState(functionBlock));
+        }
         for (LinearInstruction instruction : basicBlock.getInstructions()) {
             instruction.accept(visitor);
         }
         BranchingInstruction terminator = basicBlock.getTerminator();
         terminator.accept(visitor);
         for (DataFlowEdge successor : block.getSuccessors()) {
-            successor.getBlock().getPredecessors().add(successor);
-        }
-    }
-
-    private @NotNull DataFlowState createDefaultState() {
-        DataFlowState state = new DataFlowState(functionBlock);
-        for (Variable variable : functionBlock.getVariables()) {
-            initializeVariable(state, new VariableValue(variable));
-        }
-        for (ArgumentGroup argumentGroup : functionBlock.getArgumentGroups()) {
-            for (Argument argument : argumentGroup.arguments()) {
-                Optionality optionality = argumentGroup.isOptional() ? Optionality.UNKNOWN : Optionality.PRESENT;
-                state.assign(new VariableValue(argument), Constraint.any(argument.type(), optionality));
-            }
-        }
-        return state;
-    }
-
-    private void initializeVariable(@NotNull DataFlowState state, @NotNull ReferenceValue value) {
-        RapidType type = value.getType();
-        if (type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE)) {
-            state.assign(value, Expression.numericConstant(0));
-        } else if (type.isAssignable(RapidType.BOOLEAN)) {
-            state.assign(value, Expression.booleanConstant(false));
-        } else if (type.isAssignable(RapidType.STRING)) {
-            state.assign(value, Expression.stringConstant(""));
-        } else if (type.getDimensions() > 0) {
-            VariableSnapshot snapshot = new VariableSnapshot(RapidType.NUMBER);
-            state.assign(snapshot, Constraint.any(RapidType.NUMBER));
-            IndexValue indexValue = new IndexValue(value, snapshot);
-            state.assign(indexValue, Constraint.any(indexValue.getType()));
-            if (type.getDimensions() > 1) {
-                initializeVariable(state, indexValue);
-            }
-        } else if (type.getTargetStructure() instanceof RapidRecord record) {
-            for (RapidComponent component : record.getComponents()) {
-                RapidType componentType = component.getType();
-                Objects.requireNonNull(componentType);
-                String componentName = component.getName();
-                Objects.requireNonNull(componentName);
-                initializeVariable(state, new ComponentValue(componentType, value, componentName));
-            }
-        } else {
-            state.assign(value, Constraint.any(value.getType()));
+            successor.getBlock().getPredecessors().add(new DataFlowEdge(block, successor.getStates()));
         }
     }
 }

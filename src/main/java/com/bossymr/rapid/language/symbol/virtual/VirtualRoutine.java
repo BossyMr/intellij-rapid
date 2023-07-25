@@ -10,19 +10,29 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Objects;
 
 public class VirtualRoutine implements RapidRoutine, VirtualSymbol {
 
     private final @NotNull RoutineType routineType;
-    private final @NotNull String name;
+    private final @NotNull String moduleName, name;
     private final @Nullable RapidType type;
     private final @Nullable List<VirtualParameterGroup> parameters;
 
     public VirtualRoutine(@NotNull RoutineType routineType, @NotNull String name, @Nullable RapidType type, @Nullable List<VirtualParameterGroup> parameters) {
+        this(routineType, "", name, type, parameters);
+    }
+
+    public VirtualRoutine(@NotNull RoutineType routineType, @NotNull String moduleName, @NotNull String name, @Nullable RapidType type, @Nullable List<VirtualParameterGroup> parameters) {
         this.routineType = routineType;
+        this.moduleName = moduleName;
         this.name = name;
         this.type = type;
         this.parameters = parameters;
+    }
+
+    public @NotNull String getModuleName() {
+        return moduleName;
     }
 
     @Override
@@ -74,10 +84,24 @@ public class VirtualRoutine implements RapidRoutine, VirtualSymbol {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        VirtualRoutine that = (VirtualRoutine) o;
+        return routineType == that.routineType && Objects.equals(moduleName, that.moduleName) && Objects.equals(name, that.name) && Objects.equals(type, that.type) && Objects.equals(parameters, that.parameters);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(routineType, moduleName, name, type, parameters);
+    }
+
+    @Override
     public String toString() {
         return "VirtualRoutine{" +
                 "routineType=" + routineType +
                 ", name='" + name + '\'' +
+                ", identity='" + hashCode() + '\'' +
                 ", type=" + type +
                 '}';
     }

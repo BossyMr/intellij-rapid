@@ -63,6 +63,7 @@ tasks {
 
     test {
         useJUnitPlatform()
+        systemProperty("idea.log.debug.categories", "com.bossymr.rapid.language.flow.DataFlowState")
     }
 
     patchPluginXml {

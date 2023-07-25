@@ -2,6 +2,8 @@ package com.bossymr.rapid.language.flow.constraint;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 public record InverseStringConstraint(@NotNull Optionality optionality, @NotNull Set<String> sequences) implements Constraint {
@@ -12,8 +14,18 @@ public record InverseStringConstraint(@NotNull Optionality optionality, @NotNull
     }
 
     @Override
+    public @NotNull Constraint setOptionality(@NotNull Optionality optionality) {
+        return new InverseStringConstraint(optionality, new HashSet<>(sequences));
+    }
+
+    @Override
+    public @NotNull Optional<?> getValue() {
+        return Optional.empty();
+    }
+
+    @Override
     public @NotNull StringConstraint negate() {
-        return new StringConstraint(getOptionality(), sequences());
+        return new StringConstraint(getOptionality(), new HashSet<>(sequences));
     }
 
     @Override

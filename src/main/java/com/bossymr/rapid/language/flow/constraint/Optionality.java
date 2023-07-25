@@ -19,15 +19,51 @@ public enum Optionality {
     /**
      * The variable is guaranteed to be missing, and attempting to access the variable will always fail.
      */
-    MISSING;
+    MISSING,
 
-    public @NotNull Optionality combine(@NotNull Optionality optionality) {
-        if (this == MISSING && optionality == MISSING) {
-            return Optionality.MISSING;
+    /**
+     * The variable is neither missing nor present and the instruction is unreachable.
+     * <p>
+     * A variable might receive this optionality if one asserts that it is missing after having asserted that it is
+     * present.
+     */
+    NO_VALUE;
+
+    public @NotNull Optionality and(@NotNull Optionality optionality) {
+        if (this == NO_VALUE || optionality == NO_VALUE) {
+            return NO_VALUE;
         }
-        if (this == MISSING || optionality == MISSING || this == UNKNOWN || optionality == UNKNOWN) {
-            return Optionality.UNKNOWN;
+        if (this == UNKNOWN && optionality != UNKNOWN) {
+            return optionality;
         }
-        return Optionality.PRESENT;
+        if (this != UNKNOWN && optionality == UNKNOWN) {
+            return this;
+        }
+        if (this == PRESENT) {
+            return optionality == PRESENT ? PRESENT : NO_VALUE;
+        }
+        if (this == MISSING) {
+            return optionality == MISSING ? MISSING : NO_VALUE;
+        }
+        return UNKNOWN;
+    }
+
+    public @NotNull Optionality or(@NotNull Optionality optionality) {
+        if (this == NO_VALUE) {
+            return optionality;
+        }
+        if (optionality == NO_VALUE) {
+            return this;
+        }
+        if (this == UNKNOWN || optionality == UNKNOWN) {
+            return UNKNOWN;
+        }
+        if (this == PRESENT) {
+            return optionality == PRESENT ? PRESENT : UNKNOWN;
+        }
+        if (this == MISSING) {
+            return optionality == MISSING ? MISSING : UNKNOWN;
+        }
+        return UNKNOWN;
     }
 }

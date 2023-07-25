@@ -1,5 +1,7 @@
 package com.bossymr.rapid.language.psi;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.List;
 
 /**
@@ -12,6 +14,6 @@ public interface RapidExpressionList extends RapidElement {
      *
      * @return the expressions contained in this expression list.
      */
-    List<RapidExpression> getExpressions();
+    @NotNull List<RapidExpression> getExpressions();
 
 }

@@ -5,39 +5,58 @@ import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.psi.StatementListType;
-import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidType;
-import com.bossymr.rapid.language.symbol.RoutineType;
+import com.bossymr.rapid.language.symbol.physical.PhysicalField;
+import com.bossymr.rapid.language.symbol.physical.PhysicalParameter;
+import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
+import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
+import com.bossymr.rapid.language.symbol.virtual.VirtualField;
+import com.bossymr.rapid.language.symbol.virtual.VirtualParameter;
+import com.bossymr.rapid.language.symbol.virtual.VirtualParameterGroup;
+import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
+import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A {@code ControlFlowBuilder} is used to create a control flow graph.
  */
 public class ControlFlowBuilder {
 
+    private final @NotNull Project project;
     private final @NotNull Map<BlockDescriptor, Block> controlFlow = new HashMap<>();
 
     private Block currentBlock;
     private BasicBlock currentBasicBlock;
     private Map<String, BasicBlock> currentLabels;
 
-    public @NotNull Block enterFunction(@NotNull String moduleName, @NotNull String name, @Nullable RapidType returnType, @NotNull RoutineType routineType) {
-        Block block = new Block.FunctionBlock(moduleName, name, returnType, routineType);
-        enterBlock(block);
-        return block;
+    public ControlFlowBuilder(@NotNull Project project) {
+        this.project = project;
     }
 
-    public @NotNull Block enterField(@NotNull String moduleName, @NotNull String name, @NotNull RapidType returnType, @NotNull FieldType fieldType) {
-        Block block = new Block.FieldBlock(moduleName, name, returnType, fieldType);
+    public void enterFunction(@NotNull PhysicalRoutine routine, @NotNull String moduleName) {
+        VirtualRoutine virtualRoutine = new VirtualRoutine(routine.getRoutineType(), moduleName, Objects.requireNonNull(routine.getName()), routine.getType(), new ArrayList<>());
+        List<PhysicalParameterGroup> parameters = routine.getParameters();
+        if (parameters != null) {
+            for (PhysicalParameterGroup parameterGroup : parameters) {
+                VirtualParameterGroup virtualParameterGroup = new VirtualParameterGroup(virtualRoutine, parameterGroup.isOptional(), new ArrayList<>());
+                for (PhysicalParameter parameter : parameterGroup.getParameters()) {
+                    virtualParameterGroup.getParameters().add(new VirtualParameter(virtualParameterGroup, parameter.getParameterType(), Objects.requireNonNull(parameter.getName()), Objects.requireNonNull(parameter.getType())));
+                }
+            }
+        }
+        Block block = new Block.FunctionBlock(virtualRoutine, moduleName);
         enterBlock(block);
-        return block;
+    }
+
+    public void enterField(@NotNull PhysicalField field, @NotNull String moduleName) {
+        VirtualField virtualField = new VirtualField(field.getFieldType(), moduleName, Objects.requireNonNull(field.getName()), Objects.requireNonNull(field.getType()), field.isModifiable());
+        Block block = new Block.FieldBlock(virtualField, moduleName);
+        enterBlock(block);
     }
 
     private void enterBlock(@NotNull Block block) {
@@ -191,7 +210,7 @@ public class ControlFlowBuilder {
     }
 
     public @NotNull ControlFlow build() {
-        return new ControlFlow(controlFlow);
+        return new ControlFlow(project, controlFlow);
     }
 
 }

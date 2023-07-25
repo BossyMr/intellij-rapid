@@ -56,20 +56,18 @@ public class VirtualParameter implements RapidParameter, VirtualSymbol {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         VirtualParameter that = (VirtualParameter) o;
-        return Objects.equals(parameterGroup.getRoutine().getName(), that.parameterGroup.getRoutine().getName()) && parameterType == that.parameterType && Objects.equals(name, that.name) && Objects.equals(type, that.type);
+        return parameterType == that.parameterType && Objects.equals(name, that.name) && Objects.equals(type, that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(parameterGroup.getRoutine().getName(), parameterType, name, type);
+        return Objects.hash(parameterType, name, type);
     }
 
     @Override
     public String toString() {
         return "VirtualParameter{" +
-                "optional=" + parameterGroup.isOptional() +
-                "routine='" + parameterGroup.getRoutine().getName() + '\'' +
-                ", parameterType=" + parameterType +
+                "parameterType=" + parameterType +
                 ", name='" + name + '\'' +
                 ", type=" + type +
                 '}';

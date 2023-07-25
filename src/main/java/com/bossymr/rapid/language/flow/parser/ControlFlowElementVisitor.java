@@ -1,6 +1,9 @@
 package com.bossymr.rapid.language.flow.parser;
 
-import com.bossymr.rapid.language.flow.*;
+import com.bossymr.rapid.language.flow.Argument;
+import com.bossymr.rapid.language.flow.ArgumentGroup;
+import com.bossymr.rapid.language.flow.BasicBlock;
+import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
@@ -10,10 +13,8 @@ import com.bossymr.rapid.language.symbol.RapidLabelStatement;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.physical.*;
+import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.util.CachedValueProvider;
-import com.intellij.psi.util.CachedValuesManager;
-import com.intellij.psi.util.PsiModificationTracker;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -24,7 +25,11 @@ import java.util.function.Supplier;
 
 public class ControlFlowElementVisitor extends RapidElementVisitor {
 
-    private final @NotNull ControlFlowBuilder builder = new ControlFlowBuilder();
+    private final @NotNull ControlFlowBuilder builder;
+
+    public ControlFlowElementVisitor(@NotNull Project project) {
+        this.builder = new ControlFlowBuilder(project);
+    }
 
     public static @Nullable String getModuleName(@NotNull PhysicalVisibleSymbol symbol) {
         PhysicalModule module = PsiTreeUtil.getParentOfType(symbol, PhysicalModule.class);
@@ -69,75 +74,100 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             }
         }
         if (builder.isInsideScope()) {
-            // VariableValue ReferenceValue in a Function
             if (initializer != null) {
-                ControlFlowExpressionVisitor.computeExpression(builder, name, fieldType, initializer);
+                ControlFlowExpressionVisitor.computeExpression(builder, field, name, fieldType, initializer);
             } else {
-                builder.createVariable(VariableKey.createField(name, fieldType), type);
+                builder.createVariable(VariableKey.createField(field, name, fieldType), type);
             }
         } else {
-            CachedValuesManager.getCachedValue(field, () -> {
-                String moduleName = getModuleName(field);
-                if (moduleName == null) {
-                    return CachedValueProvider.Result.createSingleDependency(null, PsiModificationTracker.MODIFICATION_COUNT);
-                }
-                Block block = builder.enterField(moduleName, name, type, fieldType);
-                builder.enterBasicBlock(StatementListType.STATEMENT_LIST);
-                ReferenceValue variable;
-                if (initializer != null) {
-                    variable = ControlFlowExpressionVisitor.computeExpression(builder, initializer);
-                } else {
-                    variable = builder.createVariable(VariableKey.createVariable(), type);
-                }
-                if (builder.isInsideScope()) {
-                    builder.exitBasicBlock(new BranchingInstruction.ReturnInstruction(null, variable));
-                }
-                builder.exitBlock();
-                return CachedValueProvider.Result.createSingleDependency(block, PsiModificationTracker.MODIFICATION_COUNT);
-            });
+            String moduleName = getModuleName(field);
+            if (moduleName == null) {
+                return;
+            }
+            builder.enterField(field, moduleName);
+            builder.enterBasicBlock(StatementListType.STATEMENT_LIST);
+            Value variable;
+            if (initializer != null) {
+                variable = ControlFlowExpressionVisitor.computeExpression(builder, initializer);
+            } else {
+                variable = builder.createVariable(VariableKey.createVariable(null), type);
+            }
+            if (builder.isInsideScope()) {
+                builder.exitBasicBlock(new BranchingInstruction.ReturnInstruction(null, variable));
+            }
+            builder.exitBlock();
         }
     }
 
     @Override
     public void visitRoutine(@NotNull PhysicalRoutine routine) {
-        CachedValuesManager.getCachedValue(routine, () -> {
-            String moduleName = getModuleName(routine);
-            String name = routine.getName();
-            RapidType type = routine.getType();
-            RoutineType routineType = routine.getRoutineType();
-            if (moduleName == null || name == null) {
-                return CachedValueProvider.Result.createSingleDependency(null, PsiModificationTracker.MODIFICATION_COUNT);
+        String moduleName = getModuleName(routine);
+        String name = routine.getName();
+        RapidType type = routine.getType();
+        RoutineType routineType = routine.getRoutineType();
+        if (moduleName == null || name == null) {
+            return;
+        }
+        if (type != null) {
+            if (routineType != RoutineType.FUNCTION) {
+                return;
             }
+        } else {
+            if (routineType == RoutineType.FUNCTION) {
+                return;
+            }
+        }
+        if (routine.getParameterList() != null) {
+            if (routineType == RoutineType.TRAP) {
+                return;
+            }
+        } else {
+            if (routineType != RoutineType.TRAP) {
+                return;
+            }
+        }
+        builder.enterFunction(routine, moduleName);
+        List<PhysicalParameterGroup> parameters = routine.getParameters();
+        if (parameters != null) {
+            for (PhysicalParameterGroup parameterGroup : parameters) {
+                parameterGroup.accept(this);
+            }
+        }
+        builder.enterBasicBlock(StatementListType.STATEMENT_LIST);
+        for (PhysicalField field : routine.getFields()) {
+            field.accept(this);
+        }
+        routine.getStatementList().accept(this);
+        if (builder.isInsideScope()) {
             if (type != null) {
-                if (routineType != RoutineType.FUNCTION) {
-                    return CachedValueProvider.Result.createSingleDependency(null, PsiModificationTracker.MODIFICATION_COUNT);
-                }
+                builder.failScope(null);
             } else {
-                if (routineType == RoutineType.FUNCTION) {
-                    return CachedValueProvider.Result.createSingleDependency(null, PsiModificationTracker.MODIFICATION_COUNT);
-                }
+                builder.exitBasicBlock(new BranchingInstruction.ReturnInstruction(null, null));
             }
-            if (routine.getParameterList() != null) {
-                if (routineType == RoutineType.TRAP) {
-                    return CachedValueProvider.Result.createSingleDependency(null, PsiModificationTracker.MODIFICATION_COUNT);
+        }
+        for (RapidStatementList statementList : routine.getStatementLists()) {
+            if (statementList.getStatementListType() == StatementListType.STATEMENT_LIST) {
+                continue;
+            }
+            if (statementList.getStatementListType() == StatementListType.ERROR_CLAUSE) {
+                List<RapidExpression> expressions = statementList.getExpressions();
+                List<Integer> values;
+                if (expressions == null) {
+                    values = null;
+                } else {
+                    values = expressions.stream()
+                            .filter(expression -> expression instanceof RapidLiteralExpression)
+                            .map(expression -> (RapidLiteralExpression) expression)
+                            .map(RapidLiteralExpression::getValue)
+                            .filter(value -> value instanceof Integer)
+                            .map(value -> (Integer) value)
+                            .toList();
                 }
+                builder.enterBasicBlock(values);
             } else {
-                if (routineType != RoutineType.TRAP) {
-                    return CachedValueProvider.Result.createSingleDependency(null, PsiModificationTracker.MODIFICATION_COUNT);
-                }
+                builder.enterBasicBlock(statementList.getStatementListType());
             }
-            Block block = builder.enterFunction(moduleName, name, type, routineType);
-            List<PhysicalParameterGroup> parameters = routine.getParameters();
-            if (parameters != null) {
-                for (PhysicalParameterGroup parameterGroup : parameters) {
-                    parameterGroup.accept(this);
-                }
-            }
-            builder.enterBasicBlock(StatementListType.STATEMENT_LIST);
-            for (PhysicalField field : routine.getFields()) {
-                field.accept(this);
-            }
-            routine.getStatementList().accept(this);
+            statementList.accept(this);
             if (builder.isInsideScope()) {
                 if (type != null) {
                     builder.failScope(null);
@@ -145,40 +175,8 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
                     builder.exitBasicBlock(new BranchingInstruction.ReturnInstruction(null, null));
                 }
             }
-            for (RapidStatementList statementList : routine.getStatementLists()) {
-                if (statementList.getStatementListType() == StatementListType.STATEMENT_LIST) {
-                    continue;
-                }
-                if (statementList.getStatementListType() == StatementListType.ERROR_CLAUSE) {
-                    List<RapidExpression> expressions = statementList.getExpressions();
-                    List<Integer> values;
-                    if (expressions == null) {
-                        values = null;
-                    } else {
-                        values = expressions.stream()
-                                .filter(expression -> expression instanceof RapidLiteralExpression)
-                                .map(expression -> (RapidLiteralExpression) expression)
-                                .map(RapidLiteralExpression::getValue)
-                                .filter(value -> value instanceof Integer)
-                                .map(value -> (Integer) value)
-                                .toList();
-                    }
-                    builder.enterBasicBlock(values);
-                } else {
-                    builder.enterBasicBlock(statementList.getStatementListType());
-                }
-                statementList.accept(this);
-                if (builder.isInsideScope()) {
-                    if (type != null) {
-                        builder.failScope(null);
-                    } else {
-                        builder.exitBasicBlock(new BranchingInstruction.ReturnInstruction(null, null));
-                    }
-                }
-            }
-            builder.exitBlock();
-            return CachedValueProvider.Result.createSingleDependency(block, PsiModificationTracker.MODIFICATION_COUNT);
-        });
+        }
+        builder.exitBlock();
     }
 
     @Override
@@ -222,17 +220,26 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
                 continue;
             }
             BasicBlock onSuccess = builder.createBasicBlock();
-            BasicBlock onFailure = i + 1 == testCaseStatements.size() ? (nextBasicBlock != null ? nextBasicBlock = builder.createBasicBlock() : nextBasicBlock) : builder.createBasicBlock();
-            ReferenceValue conditionVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
+            BasicBlock onFailure;
+            if (testCaseStatements.size() == (i + 1)) {
+                if (nextBasicBlock != null) {
+                    onFailure = nextBasicBlock;
+                } else {
+                    onFailure = nextBasicBlock = builder.createBasicBlock();
+                }
+            } else {
+                onFailure = builder.createBasicBlock();
+            }
+            ReferenceValue conditionVariable = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN);
             for (int j = 0; j < expressions.size(); j++) {
                 RapidExpression expression = expressions.get(j);
                 Value value = ControlFlowExpressionVisitor.computeValue(builder, expression);
                 Expression equalExpression = new BinaryExpression(BinaryOperator.EQUAL_TO, completeValue, value);
                 if (j > 0) {
-                    ReferenceValue checkValue = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
+                    ReferenceValue checkValue = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN);
                     builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, checkValue, equalExpression));
                     Expression conditionExpression = new BinaryExpression(BinaryOperator.OR, conditionVariable, checkValue);
-                    ReferenceValue tempValue = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
+                    ReferenceValue tempValue = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN);
                     builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, tempValue, conditionExpression));
                     builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, conditionVariable, new VariableExpression(tempValue)));
                 } else {
@@ -264,7 +271,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             return;
         }
         Value toValue = ControlFlowExpressionVisitor.computeValue(builder, toExpression);
-        ReferenceValue indexVariable = ControlFlowExpressionVisitor.computeExpression(builder, variableName, null, fromExpression);
+        ReferenceValue indexVariable = ControlFlowExpressionVisitor.computeExpression(builder, targetVariable, variableName, null, fromExpression);
         Value stepValue;
         BasicBlock loopBasicBlock = builder.createBasicBlock();
         BasicBlock nextBasicBlock = builder.createBasicBlock();
@@ -273,10 +280,10 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             stepValue = ControlFlowExpressionVisitor.computeValue(builder, stepExpression);
             builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, loopBasicBlock));
         } else {
-            // Compute default step value -> +1 if from < to or -1 if from > to
-            ReferenceValue stepVariable = builder.createVariable(VariableKey.createVariable(), RapidType.NUMBER);
+            // Compute default step value -> +1 if from < to or -1 if from > t
+            ReferenceValue stepVariable = builder.createVariable(VariableKey.createVariable(null), RapidType.NUMBER);
             stepValue = stepVariable;
-            ReferenceValue directionVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN); // TRUE = ASCENDING FALSE = DESCENDING
+            ReferenceValue directionVariable = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN); // TRUE = ASCENDING FALSE = DESCENDING
             Expression directionExpression = new BinaryExpression(BinaryOperator.LESS_THAN, indexVariable, toValue);
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, directionVariable, directionExpression));
             BasicBlock ascending = builder.createBasicBlock();
@@ -295,7 +302,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             // Add the step to the variable.
             Expression indexExpression = new BinaryExpression(BinaryOperator.ADD, indexVariable, stepValue);
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, indexVariable, indexExpression));
-            ReferenceValue conditionVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
+            ReferenceValue conditionVariable = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN);
             // Check if the variable is equal to the result, in which case, do not loop.
             Expression conditionExpression = new BinaryExpression(BinaryOperator.EQUAL_TO, indexVariable, toValue);
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, conditionVariable, conditionExpression));
@@ -386,7 +393,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         List<RapidArgument> arguments = statement.getArgumentList().getArguments();
         Value routineValue = ControlFlowExpressionVisitor.computeValue(builder, expression);
         if (!(routineValue instanceof ConstantValue || routineValue instanceof VariableValue)) {
-            ReferenceValue variable = builder.createVariable(VariableKey.createVariable(), routineValue.getType());
+            ReferenceValue variable = builder.createVariable(VariableKey.createVariable(null), routineValue.getType());
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, variable, new VariableExpression(routineValue)));
             routineValue = variable;
         }
@@ -489,6 +496,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
     @Override
     public void visitParameterGroup(@NotNull PhysicalParameterGroup parameterGroup) {
         ArgumentGroup argumentGroup = new ArgumentGroup(parameterGroup.isOptional(), new ArrayList<>());
+        builder.withArgumentGroup(argumentGroup);
         for (PhysicalParameter parameter : parameterGroup.getParameters()) {
             String name = parameter.getName();
             RapidType type = parameter.getType();
@@ -499,6 +507,5 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             Argument argument = builder.createArgument(name, type, parameter.getParameterType());
             argumentGroup.arguments().add(argument);
         }
-        builder.withArgumentGroup(argumentGroup);
     }
 }
