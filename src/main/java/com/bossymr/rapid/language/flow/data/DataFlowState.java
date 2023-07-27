@@ -5,9 +5,7 @@ import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.constraint.*;
 import com.bossymr.rapid.language.flow.value.*;
-import com.bossymr.rapid.language.symbol.RapidComponent;
-import com.bossymr.rapid.language.symbol.RapidRecord;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.symbol.*;
 import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -71,16 +69,22 @@ public class DataFlowState {
     private final @NotNull Map<VariableSnapshot, Constraint> constraints;
 
     /**
+     * The first snapshots for each argument. If this state is merged with another state, these snapshots are replaced
+     * by the value with which the function was invoked.
+     */
+    private final @NotNull Map<Argument, VariableSnapshot> roots;
+
+    /**
      * Creates a new {@code DataFlowState} for the specified block. All variables and arguments are also initialized.
      *
      * @param block the block.
      */
-    public DataFlowState(@NotNull Block.FunctionBlock block) {
+    private DataFlowState(@NotNull Block.FunctionBlock block) {
         this.functionBlock = block;
         this.conditions = new HashSet<>();
         this.snapshots = new HashMap<>();
         this.constraints = new HashMap<>();
-        initialize(block);
+        this.roots = new HashMap<>();
     }
 
     /**
@@ -88,61 +92,85 @@ public class DataFlowState {
      *
      * @param state the state.
      */
-    public DataFlowState(@NotNull DataFlowState state) {
+    private DataFlowState(@NotNull DataFlowState state) {
         this.functionBlock = state.functionBlock;
         this.conditions = new HashSet<>(state.conditions);
         this.snapshots = new HashMap<>(state.snapshots);
         this.constraints = new HashMap<>(state.constraints);
+        this.roots = new HashMap<>(state.roots);
     }
 
-    private void initialize(@NotNull Block.FunctionBlock block) {
-        for (Variable variable : block.getVariables()) {
-            initializeVariable(new VariableValue(variable));
+    public static @NotNull DataFlowState createCopy(@NotNull DataFlowState state) {
+        return new DataFlowState(state);
+    }
+
+    public static @NotNull DataFlowState createFull(@NotNull Block.FunctionBlock block) {
+        DataFlowState state = new DataFlowState(block);
+        state.initialize(false);
+        return state;
+    }
+
+    public static @NotNull DataFlowState createLight(@NotNull Block.FunctionBlock block) {
+        DataFlowState state = new DataFlowState(block);
+        state.initialize(true);
+        return state;
+    }
+
+    private void initialize(boolean initializeVariables) {
+        Optionality variableOptionality = initializeVariables ? Optionality.PRESENT : null;
+        for (Variable variable : functionBlock.getVariables()) {
+            VariableSnapshot snapshot = new VariableSnapshot(new VariableValue(variable));
+            snapshots.put(new VariableValue(variable), snapshot);
+            initialize(snapshot, variableOptionality);
         }
-        for (ArgumentGroup argumentGroup : block.getArgumentGroups()) {
+        for (ArgumentGroup argumentGroup : functionBlock.getArgumentGroups()) {
             Optionality optionality = argumentGroup.isOptional() ? Optionality.UNKNOWN : Optionality.PRESENT;
             for (Argument argument : argumentGroup.arguments()) {
-                VariableValue value = new VariableValue(argument);
-                if (argument.type().getDimensions() > 0) {
-                    initializeArray(value, Constraint.any(argument.type(), optionality));
-                } else {
-                    assign(value, Constraint.any(argument.type(), optionality));
-                }
+                VariableSnapshot snapshot = new VariableSnapshot(new VariableValue(argument));
+                snapshots.put(new VariableValue(argument), snapshot);
+                initialize(snapshot, optionality);
+                roots.put(argument, snapshot);
             }
         }
     }
 
-    private void initializeArray(@NotNull ReferenceValue value, @NotNull Constraint constraint) {
-        RapidType arrayType = value.getType();
-        VariableSnapshot snapshot = new VariableSnapshot(RapidType.NUMBER);
-        add(snapshot, Constraint.any(RapidType.NUMBER));
-        for (int i = 0; i < arrayType.getDimensions(); i++) {
-            value = new IndexValue(value, snapshot);
+    private void initialize(@NotNull ReferenceValue variable, @Nullable Optionality optionality) {
+        while (variable.getType().getDimensions() > 0) {
+            VariableSnapshot snapshot = new VariableSnapshot(RapidType.NUMBER);
+            add(snapshot, Constraint.any(RapidType.NUMBER));
+            variable = new IndexValue(variable, snapshot);
         }
-        assign(value, constraint);
-    }
-
-    private void initializeVariable(@NotNull ReferenceValue value) {
-        RapidType type = value.getType();
-        if (type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE)) {
-            assign(value, Expression.numericConstant(0));
-        } else if (type.isAssignable(RapidType.BOOLEAN)) {
-            assign(value, Expression.booleanConstant(false));
-        } else if (type.isAssignable(RapidType.STRING)) {
-            assign(value, Expression.stringConstant(""));
-        } else if (type.getDimensions() > 0) {
-            initializeArray(value, NumericConstraint.equalTo(0));
-        } else if (type.getTargetStructure() instanceof RapidRecord record) {
+        RapidType type = variable.getType();
+        RapidStructure structure = type.getTargetStructure();
+        if (structure instanceof RapidRecord record) {
             for (RapidComponent component : record.getComponents()) {
-                RapidType componentType = component.getType();
-                Objects.requireNonNull(componentType);
-                String componentName = component.getName();
-                Objects.requireNonNull(componentName);
-                initializeVariable(new ComponentValue(componentType, value, componentName));
+                RapidType componentType = Objects.requireNonNull(component.getType());
+                String name = Objects.requireNonNull(component.getName());
+                initialize(new ComponentValue(componentType, variable, name), optionality);
             }
+        } else if (optionality != null) {
+            assign(variable, Constraint.any(type, optionality));
+        } else if (type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE)) {
+            assign(variable, Expression.numericConstant(0));
+        } else if (type.isAssignable(RapidType.STRING)) {
+            assign(variable, Expression.stringConstant(""));
+        } else if (type.isAssignable(RapidType.BOOLEAN)) {
+            assign(variable, Expression.booleanConstant(false));
         } else {
-            assign(value, Constraint.any(value.getType()));
+            throw new IllegalArgumentException("Could not initialize: " + variable);
         }
+    }
+
+    private @NotNull VariableSnapshot getSnapshot(@NotNull ReferenceValue variable) {
+        if (variable instanceof VariableSnapshot snapshot) {
+            return snapshot;
+        }
+        if (!(snapshots.containsKey(variable))) {
+            throw new IllegalArgumentException("Could not find snapshot for variable: " + variable);
+        }
+        VariableSnapshot snapshot = snapshots.get(variable);
+        Objects.requireNonNull(snapshot, "Snapshots are corrupted: " + snapshots);
+        return snapshot;
     }
 
     public void assign(@NotNull ReferenceValue variable, @NotNull Expression expression) {
@@ -187,7 +215,7 @@ public class DataFlowState {
             if (!(snapshots.containsKey(variable))) {
                 throw new IllegalStateException();
             }
-            snapshot = snapshots.get(variable);
+            snapshot = getSnapshot(variable);
         }
         if (constraints.containsKey(snapshot)) {
             constraint = constraints.get(snapshot).and(constraint);
@@ -206,13 +234,13 @@ public class DataFlowState {
                 Objects.requireNonNull(snapshot);
                 snapshots.put(reference, snapshot);
             } else {
-                snapshot = snapshots.get(reference);
+                snapshot = getSnapshot(reference);
             }
             condition = new Condition(snapshot, condition.getConditionType(), condition.getExpression());
         }
         prepareCondition(condition);
         logger.debug("Adding condition: " + condition);
-        conditions.add(condition);
+        conditions.addAll(condition.getVariants());
         inferSideEffect(condition);
     }
 
@@ -232,139 +260,115 @@ public class DataFlowState {
         }
     }
 
-    /**
-     * Simplifies this {@code DataFlowState} by removing all conditions and constraints which are the specified
-     * variables are not dependent upon.
-     * Snapshots are also remapped according to the specified map.
-     * For example, if an argument {@code x} has a snapshot {@code x1}, and the specified map contains {@code x} to
-     * {@code y}, the result will specify that the field {@code y} has a snapshot {@code x1}.
-     * <p>
-     * References to variables specified in the {@code references} are remapped, while its latest snapshot is unchanged.
-     *
-     * @param snapshots the snapshots to update.
-     * @param variables the variables to keep.
-     * @param references the variables to update.
-     */
-    public void simplify(@NotNull Map<ReferenceValue, ReferenceValue> snapshots, @NotNull Set<ReferenceValue> variables, @NotNull Map<ReferenceValue, ReferenceValue> references) {
-        Set<ReferenceValue> referenceValues = variables.stream()
-                .flatMap(variable -> getSnapshots(variable).stream())
-                .collect(Collectors.toSet());
-        conditions.removeIf(condition -> !(referenceValues.contains(condition.getVariable())) && condition.getVariables().stream().noneMatch(referenceValues::contains));
-        constraints.keySet().removeIf(snapshot -> !(referenceValues.contains(snapshot)));
-        Map<ReferenceValue, VariableSnapshot> updated = new HashMap<>();
-        for (ReferenceValue referenceValue : snapshots.keySet()) {
-            VariableSnapshot snapshot = this.snapshots.get(referenceValue);
-            updated.put(snapshots.get(referenceValue), snapshot);
-        }
-        this.snapshots.clear();
-        this.snapshots.putAll(updated);
-        for (Condition condition : conditions) {
-            condition.iterate(variable -> {
-                if (references.containsKey(variable)) {
-                    return this.snapshots.get(references.get(variable));
-                }
-                return variable;
-            });
-        }
-    }
-
-    public void merge(@NotNull DataFlowState state) {
-        state = combine(state);
-        for (ReferenceValue referenceValue : state.snapshots.keySet()) {
-            Optionality optionality = state.getConstraint(referenceValue).getOptionality();
-            checkOptionality(referenceValue, optionality);
-        }
-        for (Condition condition : state.conditions) {
-            add(condition);
-        }
-        for (VariableSnapshot value : state.constraints.keySet()) {
-            Constraint constraint = state.constraints.get(value);
-            Optional<ReferenceValue> variable = state.snapshots.entrySet().stream()
-                    .filter(entry -> entry.getValue().equals(value))
-                    .map(Map.Entry::getKey)
-                    .findFirst();
-            if (variable.isPresent()) {
-                RapidType type = snapshots.get(variable.orElseThrow()).getType();
-                if (constraint instanceof OpenConstraint) {
-                    constraint = Constraint.any(type, constraint.getOptionality());
-                } else if (constraint instanceof ClosedConstraint) {
-                    constraint = Constraint.any(type).negate();
-                }
-            }
-            add(value, constraint);
-        }
-        snapshots.putAll(state.snapshots);
-    }
-
-    /**
-     * Modifies the type of snapshots which were passed to a function with a different type.
-     * <p>
-     * If a function has an {@code anytype} argument, the value passed to the function will retain that type, although
-     * it originally had a different type.
-     * This method corrects this, by finding the original type of that value in this state, and modifying the mapping to
-     * every condition, constraint and snapshot where it occurs.
-     *
-     * @param state the original state, which might be either correct or incorrect.
-     * @return the correct state.
-     */
-    private @NotNull DataFlowState combine(@NotNull DataFlowState state) {
-        Map<ReferenceValue, ReferenceValue> underlying = new HashMap<>();
+    public void merge(@NotNull DataFlowState state, @NotNull Map<Argument, ReferenceValue> arguments, @Nullable ReferenceValue returnValue, @Nullable ReferenceValue returnTarget) {
+        Set<ReferenceValue> variables = new HashSet<>();
+        /*
+         * If this map contains the entry x -> y, snapshots referring to x will be replaced by a snapshot referring to y.
+         * Alternatively, if y is already a snapshot, the variable will simply be replaced by y.
+         */
+        Map<ReferenceValue, ReferenceValue> modifications = new HashMap<>();
+        /*
+         * If a snapshot is replaced, all other occurrences of the snapshot also need to be replaced by the same snapshot.
+         */
         Map<VariableSnapshot, VariableSnapshot> remapped = new HashMap<>();
-        for (ReferenceValue referenceValue : state.snapshots.keySet()) {
-            if (!(snapshots.containsKey(referenceValue))) {
-                continue;
+        for (Argument argument : arguments.keySet()) {
+            VariableSnapshot snapshot = state.roots.get(argument);
+            ReferenceValue value = arguments.get(argument);
+            if (argument.parameterType() != ParameterType.INPUT) {
+                variables.add(new VariableValue(argument));
             }
-            VariableSnapshot current = snapshots.get(referenceValue);
-            VariableSnapshot snapshot = state.snapshots.get(referenceValue);
-            if (current.getReferenceValue().isEmpty()) {
-                continue;
-            }
-            ReferenceValue reference = current.getReferenceValue().orElseThrow();
-            if (snapshot.getReferenceValue().equals(Optional.of(reference))) {
-                continue;
-            }
-            underlying.put(snapshot.getReferenceValue().orElse(null), reference);
-            remapped.put(snapshot, new VariableSnapshot(reference));
+            modifications.put(new VariableValue(argument), arguments.get(argument));
+            remapped.put(snapshot, getSnapshot(value));
         }
-        DataFlowState copy = new DataFlowState(state);
-        for (ReferenceValue referenceValue : state.snapshots.keySet()) {
-            VariableSnapshot snapshot = getCorrectSnapshot(remapped, underlying, state.snapshots.get(referenceValue));
-            if (snapshot != null) {
-                copy.snapshots.put(referenceValue, snapshot);
-            }
+        if (returnValue != null) {
+            variables.add(returnValue);
         }
-        for (VariableSnapshot referenceValue : state.constraints.keySet()) {
-            VariableSnapshot snapshot = getCorrectSnapshot(remapped, underlying, referenceValue);
-            if (snapshot != null) {
-                copy.constraints.put(snapshot, copy.constraints.get(referenceValue));
-                copy.constraints.remove(referenceValue);
-            }
-        }
+        Set<ReferenceValue> dependentVariables = getDependentVariables(state, variables);
+        state.conditions.removeIf(condition -> !(dependentVariables.contains(condition.getVariable())) && condition.getVariables().stream().noneMatch(dependentVariables::contains));
+        state.constraints.keySet().removeIf(variable -> !(dependentVariables.contains(variable)));
         for (Condition condition : state.conditions) {
-            VariableSnapshot correctVariable = getCorrectSnapshot(remapped, underlying, condition.getVariable());
-            if (correctVariable != null) {
-                copy.conditions.remove(condition);
-                condition = new Condition(correctVariable, condition.getConditionType(), condition.getExpression());
-                copy.conditions.add(condition);
-            }
-            condition.iterate(previous -> {
-                VariableSnapshot snapshot = getCorrectSnapshot(remapped, underlying, previous);
-                return snapshot != null ? snapshot : previous;
-            });
+            condition = new Condition(getModifiedSnapshot(condition.getVariable(), modifications, remapped), condition.getConditionType(), condition.getExpression());
+            condition.iterate(variable -> getModifiedSnapshot(variable, modifications, remapped));
+            conditions.add(condition);
         }
-        return copy;
+        for (VariableSnapshot snapshot : state.constraints.keySet()) {
+            Constraint constraint = state.constraints.get(snapshot);
+            VariableSnapshot modifiedSnapshot = getModifiedSnapshot(snapshot, modifications, remapped);
+            if (snapshot.getType().equals(RapidType.ANYTYPE)) {
+                if (constraint instanceof OpenConstraint) {
+                    constraint = Constraint.any(modifiedSnapshot.getType(), constraint.getOptionality());
+                } else if (constraint instanceof ClosedConstraint) {
+                    constraint = Constraint.any(modifiedSnapshot.getType(), constraint.getOptionality()).negate();
+                }
+            }
+            constraints.put(modifiedSnapshot, constraint);
+        }
+        for (Argument argument : arguments.keySet()) {
+            if (argument.parameterType() != ParameterType.INPUT) {
+                VariableSnapshot snapshot = remapped.get(state.getSnapshot(new VariableValue(argument)));
+                Objects.requireNonNull(snapshot);
+                snapshots.put(arguments.get(argument), snapshot);
+            }
+        }
+        if (returnValue != null) {
+            if (returnTarget == null) {
+                throw new IllegalArgumentException();
+            }
+            VariableSnapshot snapshot = remapped.get(state.getSnapshot(returnValue));
+            Objects.requireNonNull(snapshot);
+            snapshots.put(returnTarget, snapshot);
+        }
     }
 
-    private @Nullable VariableSnapshot getCorrectSnapshot(@NotNull Map<VariableSnapshot, VariableSnapshot> remapped, Map<ReferenceValue, ReferenceValue> underlying, @NotNull ReferenceValue variable) {
-        if (!(variable instanceof VariableSnapshot snapshot)) {
-            return null;
+    private @NotNull VariableSnapshot getModifiedSnapshot(@NotNull ReferenceValue previous, @NotNull Map<ReferenceValue, ReferenceValue> modifications, @NotNull Map<VariableSnapshot, VariableSnapshot> remapped) {
+        if (!(previous instanceof VariableSnapshot previousSnapshot)) {
+            throw new IllegalArgumentException("Unexpected value: " + previous);
         }
-        if (remapped.containsKey(snapshot)) {
-            return remapped.get(snapshot);
+        if (remapped.containsKey(previousSnapshot)) {
+            return remapped.get(previousSnapshot);
         }
-        ReferenceValue correctVariable = underlying.get(snapshot.getReferenceValue().orElse(null));
-        remapped.put(snapshot, new VariableSnapshot(correctVariable));
-        return remapped.get(snapshot);
+        Optional<ReferenceValue> referenceValue = previousSnapshot.getReferenceValue();
+        if (referenceValue.isEmpty()) {
+            remapped.put(previousSnapshot, previousSnapshot);
+            return previousSnapshot;
+        }
+        ReferenceValue underlyingValue = referenceValue.orElseThrow();
+        if (modifications.containsKey(underlyingValue)) {
+            ReferenceValue value = modifications.get(underlyingValue);
+            if (value instanceof VariableSnapshot snapshot) {
+                remapped.put(previousSnapshot, snapshot);
+                return snapshot;
+            }
+            VariableSnapshot snapshot = new VariableSnapshot(value);
+            remapped.put(previousSnapshot, snapshot);
+            return snapshot;
+        }
+        VariableSnapshot snapshot = new VariableSnapshot(previousSnapshot.getType());
+        remapped.put(previousSnapshot, snapshot);
+        return snapshot;
+    }
+
+    private @NotNull Set<ReferenceValue> getDependentVariables(@NotNull DataFlowState state, @NotNull Set<ReferenceValue> variables) {
+        Deque<ReferenceValue> workList = new ArrayDeque<>();
+        for (ReferenceValue value : variables) {
+            Set<VariableSnapshot> snapshots = state.getSnapshots(value);
+            workList.addAll(snapshots);
+        }
+        Set<ReferenceValue> referenceValues = new HashSet<>();
+        while (!(workList.isEmpty())) {
+            ReferenceValue referenceValue = workList.removeFirst();
+            referenceValues.add(referenceValue);
+            Set<Condition> conditions = state.getConditions(referenceValue);
+            for (Condition condition : conditions) {
+                for (ReferenceValue variable : condition.getVariables()) {
+                    if (referenceValues.contains(variable)) {
+                        continue;
+                    }
+                    workList.add(variable);
+                }
+            }
+        }
+        return referenceValues;
     }
 
     private @NotNull Optionality getOptionality(@NotNull ReferenceValue referenceValue) {
@@ -390,7 +394,7 @@ public class DataFlowState {
                 continue;
             }
             VariableValue variableValue = new VariableValue(sibling);
-            VariableSnapshot snapshot = snapshots.get(variableValue);
+            VariableSnapshot snapshot = getSnapshot(variableValue);
             constraints.put(snapshot, constraints.get(snapshot).setOptionality(Optionality.MISSING));
         }
     }
@@ -455,6 +459,9 @@ public class DataFlowState {
     }
 
     private @NotNull VariableSnapshot createSnapshot(@NotNull ReferenceValue value) {
+        if (value instanceof VariableSnapshot snapshot) {
+            return snapshot;
+        }
         VariableSnapshot snapshot = new VariableSnapshot(value);
         logger.debug("Creating snapshot: " + snapshot + " for: " + value);
         Objects.requireNonNull(snapshot);
@@ -467,10 +474,7 @@ public class DataFlowState {
             if (!(value instanceof VariableValue variable)) {
                 return value;
             }
-            if (!(snapshots.containsKey(variable))) {
-                throw new IllegalStateException("Condition: " + condition + " references an uninitialized variable: " + variable);
-            }
-            return snapshots.get(variable);
+            return getSnapshot(variable);
         });
     }
 
@@ -587,7 +591,7 @@ public class DataFlowState {
             variables.add(snapshots.getOrDefault(variable, snapshot));
         } else if (variable instanceof VariableValue || variable instanceof ComponentValue) {
             if (snapshots.containsKey(variable)) {
-                variables.add(snapshots.get(variable));
+                variables.add(getSnapshot(variable));
             }
         } else if (variable instanceof IndexValue indexValue) {
             Constraint constraint = getConstraint(indexValue.index());

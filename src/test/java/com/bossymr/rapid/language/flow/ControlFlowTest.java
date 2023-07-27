@@ -399,10 +399,12 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 func num foo:bar() {
                 	var num _0 [value];
                 	num _1;
+                	num _2;
                                 
                 	entry 0 {
                 		_0 := -1.0;
-                		_1 := foo:Abs(_0 := -1.0) -> 1;
+                		_2 := -1.0;
+                		_1 := foo:Abs(_0 := _2) -> 1;
                 	}
                                 
                 	block 1 {

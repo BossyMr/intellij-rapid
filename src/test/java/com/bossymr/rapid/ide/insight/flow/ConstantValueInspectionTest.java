@@ -39,7 +39,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
         doTest("""
                 MODULE foo
                     PROC bar()
-                        VAR num variable := Abs(-1);
+                        VAR num variable := 0;
+                        variable := Abs(-1);
                         IF <warning descr="Value of expression is always true">variable = 1</warning> THEN
                         ENDIF
                     ENDPROC
@@ -80,7 +81,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testVariableReference() {
+    public void testVariableAssignment() {
         doTest("""
                 MODULE foo
                     PROC bar()

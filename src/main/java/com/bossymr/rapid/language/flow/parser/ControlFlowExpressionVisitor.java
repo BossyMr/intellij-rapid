@@ -186,7 +186,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 .filter(expression -> expression instanceof ArgumentDescriptor.Conditional)
                 .findFirst();
         if (descriptor.isEmpty()) {
-            Map<ArgumentDescriptor, Value> values = getArguments(builder, arguments);
+            Map<ArgumentDescriptor, ReferenceValue> values = getArguments(builder, arguments);
             builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, routine, values, returnVariable, nextBlock));
         } else {
             ArgumentDescriptor value = descriptor.get();
@@ -198,7 +198,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             ConstantValue presentRoutine = new ConstantValue(RapidType.ANYTYPE, ":Present");
             Argument argument = builder.findArgument(conditional.name());
             Objects.requireNonNull(argument);
-            Map<ArgumentDescriptor, Value> presentArguments = Map.of(new ArgumentDescriptor.Required(0), new VariableValue(argument));
+            Map<ArgumentDescriptor, ReferenceValue> presentArguments = Map.of(new ArgumentDescriptor.Required(0), new VariableValue(argument));
             builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, presentRoutine, presentArguments, presentReturnVariable, ifBlock));
             builder.enterBasicBlock(ifBlock);
             BasicBlock presentBlock = builder.createBasicBlock();
@@ -220,10 +220,10 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         }
     }
 
-    private static @NotNull Map<ArgumentDescriptor, Value> getArguments(@NotNull ControlFlowBuilder builder, @NotNull Map<ArgumentDescriptor, RapidExpression> arguments) {
-        Map<ArgumentDescriptor, Value> result = new HashMap<>();
+    private static @NotNull Map<ArgumentDescriptor, ReferenceValue> getArguments(@NotNull ControlFlowBuilder builder, @NotNull Map<ArgumentDescriptor, RapidExpression> arguments) {
+        Map<ArgumentDescriptor, ReferenceValue> result = new HashMap<>();
         arguments.forEach((descriptor, expression) -> {
-            Value value = expression != null ? computeValue(builder, expression) : null;
+            ReferenceValue value = expression != null ? computeExpression(builder, expression) : null;
             result.put(descriptor, value);
         });
         return result;

@@ -161,7 +161,7 @@ public class DataFlowAnalyzer {
         BasicBlock basicBlock = block.getBasicBlock();
         DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(functionBlock, block, blocks, functionMap);
         if (block.getStates().isEmpty()) {
-            block.getStates().add(new DataFlowState(functionBlock));
+            block.getStates().add(DataFlowState.createFull(functionBlock));
         }
         for (LinearInstruction instruction : basicBlock.getInstructions()) {
             instruction.accept(visitor);

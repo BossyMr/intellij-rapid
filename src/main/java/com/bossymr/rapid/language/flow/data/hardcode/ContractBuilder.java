@@ -64,7 +64,7 @@ public class ContractBuilder {
     public class FunctionContractBuilder {
 
         private final @NotNull Map<Argument, Constraint> constraints = new HashMap<>();
-        private final @NotNull DataFlowState state = new DataFlowState(functionBlock);
+        private final @NotNull DataFlowState state = DataFlowState.createFull(functionBlock);
         private final @Nullable ReferenceValue output;
 
         public FunctionContractBuilder() {

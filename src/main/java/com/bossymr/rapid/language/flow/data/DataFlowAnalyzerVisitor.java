@@ -11,7 +11,6 @@ import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.PhysicalElement;
-import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidType;
@@ -21,7 +20,10 @@ import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -66,7 +68,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
 
     private @NotNull Set<DataFlowState> getStates(@NotNull ReferenceValue value, boolean result) {
         return block.getStates().stream()
-                .map(DataFlowState::new)
+                .map(DataFlowState::createCopy)
                 .filter(state -> state.intersects(value, BooleanConstraint.withValue(result)))
                 .peek(state -> state.add(new Condition(value, ConditionType.EQUALITY, Expression.booleanConstant(result))))
                 .collect(Collectors.toSet());
@@ -177,7 +179,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         }
         if (!(block.getConstraint(referenceValue) instanceof StringConstraint constraint)) {
             Set<DataFlowState> states = block.getStates().stream()
-                    .map(DataFlowState::new)
+                    .map(DataFlowState::createCopy)
                     .peek(state -> {
                         if (instruction.returnValue() != null) {
                             state.assign(instruction.returnValue(), Constraint.any(instruction.returnValue().getType()));
@@ -199,7 +201,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
             }
             DataFlowFunction function = functionMap.get(block, blockDescriptor);
             Set<DataFlowState> states = block.getStates().stream()
-                    .map(DataFlowState::new)
+                    .map(DataFlowState::createCopy)
                     .filter(state -> state.intersects(referenceValue, new StringConstraint(Optionality.PRESENT, Set.of(sequence))))
                     .peek(state -> state.assign(referenceValue, new VariableExpression(new ConstantValue(RapidType.STRING, sequence))))
                     .collect(Collectors.toSet());
@@ -222,87 +224,47 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         processResult(instruction, block.getStates(), function, getArguments(function.getBlock(), instruction.arguments()));
     }
 
-    // TODO: 2023-07-23 It seems to be working so far, the Abs output is correct, so the problem must be somewhere when it is simplified or merged.
-    private void processResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull Set<DataFlowState> states, @NotNull DataFlowFunction function, @NotNull Map<Argument, Value> arguments) {
+    private void processResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull Set<DataFlowState> states, @NotNull DataFlowFunction function, @NotNull Map<Argument, ReferenceValue> arguments) {
         Map<Argument, Constraint> constraints = new HashMap<>(arguments.size(), 1);
         arguments.forEach((argument, value) -> constraints.put(argument, block.getConstraint(value)));
         Set<DataFlowFunction.Result> results = function.getOutput(constraints);
+        BlockDescriptor blockKey = BlockDescriptor.getBlockKey(functionBlock);
         for (DataFlowFunction.Result result : results) {
             if (result instanceof DataFlowFunction.Result.Exit) {
-                functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, getArguments(), new DataFlowFunction.Result.Exit());
-            } else if (result instanceof DataFlowFunction.Result.Error error) {
-                processErrorResult(arguments, error);
+                functionMap.set(blockKey, block, getArguments(), new DataFlowFunction.Result.Exit());
+                continue;
+            }
+            Set<DataFlowState> resultStates;
+            ReferenceValue resultValue;
+            if (result instanceof DataFlowFunction.Result.Error error) {
+                resultStates = error.states();
+                resultValue = error.exceptionValue();
             } else if (result instanceof DataFlowFunction.Result.Success success) {
-                processSuccessfulResult(instruction, arguments, states, success);
+                resultStates = success.states();
+                resultValue = success.returnValue();
+            } else {
+                throw new IllegalArgumentException();
             }
-        }
-    }
-
-    private void processErrorResult(@NotNull Map<Argument, Value> arguments, @NotNull DataFlowFunction.Result.Error result) {
-        VariableSnapshot snapshot = result.exceptionValue() != null ? new VariableSnapshot(result.exceptionValue()) : null;
-        Set<DataFlowState> states = getSimplifiedState(arguments, result, snapshot);
-        functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, getArguments(), new DataFlowFunction.Result.Error(states, snapshot));
-    }
-
-    private void processSuccessfulResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull Map<Argument, Value> arguments, @NotNull Set<DataFlowState> states, @NotNull DataFlowFunction.Result.Success result) {
-        Set<DataFlowState> simplified = getSimplifiedState(arguments, result, instruction.returnValue());
-        Set<DataFlowState> output = states.stream()
-                .mapMulti((DataFlowState state, Consumer<DataFlowState> consumer) -> {
-                    for (DataFlowState embedded : simplified) {
-                        DataFlowState copy = new DataFlowState(state);
-                        copy.merge(embedded);
-                        consumer.accept(copy);
-                    }
-                }).collect(Collectors.toSet());
-        block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.next()), output));
-    }
-
-    private @NotNull Set<DataFlowState> getSimplifiedState(@NotNull Map<Argument, Value> arguments, @NotNull DataFlowFunction.Result result, @Nullable ReferenceValue target) {
-        if (result instanceof DataFlowFunction.Result.Exit) {
-            throw new IllegalArgumentException();
-        }
-        Map<ReferenceValue, ReferenceValue> snapshots = new HashMap<>();
-        Set<ReferenceValue> variables = new HashSet<>();
-        Map<ReferenceValue, ReferenceValue> references = new HashMap<>();
-        for (Argument argument : arguments.keySet()) {
-            if (arguments.get(argument) instanceof ReferenceValue referenceValue) {
-                VariableValue variableValue = new VariableValue(argument);
-                if (argument.parameterType() != ParameterType.INPUT) {
-                    snapshots.put(variableValue, referenceValue);
-                    variables.add(variableValue);
-                } else {
-                    references.put(variableValue, referenceValue);
+            Set<DataFlowState> merged = states.stream().mapMulti((DataFlowState state, Consumer<DataFlowState> consumer) -> {
+                for (DataFlowState resultState : resultStates) {
+                    DataFlowState copy = DataFlowState.createCopy(state);
+                    copy.merge(resultState, arguments, resultValue, instruction.returnValue());
+                    consumer.accept(copy);
                 }
+            }).collect(Collectors.toSet());
+            if (result instanceof DataFlowFunction.Result.Error) {
+                functionMap.set(blockKey, block, getArguments(), new DataFlowFunction.Result.Error(merged, resultValue));
+            } else {
+                block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.next()), merged));
             }
         }
-        if (result instanceof DataFlowFunction.Result.Error error && error.exceptionValue() != null) {
-            variables.add(error.exceptionValue());
-        }
-        if (result instanceof DataFlowFunction.Result.Success success && success.returnValue() != null) {
-            variables.add(success.returnValue());
-            if (target != null) {
-                snapshots.put(success.returnValue(), target);
-            }
-        }
-        Set<DataFlowState> states;
-        if (result instanceof DataFlowFunction.Result.Success success) {
-            states = success.states();
-        } else if (result instanceof DataFlowFunction.Result.Error error) {
-            states = error.states();
-        } else {
-            throw new IllegalArgumentException();
-        }
-        return states.stream()
-                .map(DataFlowState::new)
-                .peek(state -> state.simplify(snapshots, variables, references))
-                .collect(Collectors.toSet());
     }
 
-    private @NotNull Map<Argument, Value> getArguments(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<ArgumentDescriptor, Value> values) {
+    private @NotNull Map<Argument, ReferenceValue> getArguments(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<ArgumentDescriptor, ReferenceValue> values) {
         List<Argument> arguments = functionBlock.getArgumentGroups().stream()
                 .flatMap(argumentGroup -> argumentGroup.arguments().stream())
                 .toList();
-        Map<Argument, Value> result = new HashMap<>();
+        Map<Argument, ReferenceValue> result = new HashMap<>();
         values.forEach((index, value) -> {
             Argument argument;
             if (index instanceof ArgumentDescriptor.Required required) {

@@ -50,7 +50,7 @@ public class ConstantValueInspection extends LocalInspectionTool {
         return new RapidElementVisitor() {
             @Override
             public void visitExpression(@NotNull RapidExpression expression) {
-                if (!(expression instanceof RapidBinaryExpression || expression instanceof RapidUnaryExpression || expression instanceof RapidReferenceExpression)) {
+                if (!(expression instanceof RapidBinaryExpression || expression instanceof RapidReferenceExpression)) {
                     return;
                 }
                 PhysicalRoutine routine = PhysicalRoutine.getRoutine(expression);
@@ -66,7 +66,6 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 if (basicBlock == null) {
                     return;
                 }
-                // TODO: 2023-07-23 Add check if index variable is less than 0
                 Instruction instruction = Objects.requireNonNull(getInstruction(expression, basicBlock));
                 if (instruction instanceof LinearInstruction.AssignmentInstruction assignmentInstruction) {
                     ReferenceValue variable = assignmentInstruction.variable();

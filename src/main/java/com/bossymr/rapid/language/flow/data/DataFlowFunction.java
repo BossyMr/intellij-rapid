@@ -50,12 +50,12 @@ public interface DataFlowFunction {
 
             public Success {
                 states = states.stream()
-                        .map(DataFlowState::new)
+                        .map(DataFlowState::createCopy)
                         .collect(Collectors.toSet());
             }
 
             public static @NotNull Success create(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint returnConstraint) {
-                DataFlowState state = new DataFlowState(functionBlock);
+                DataFlowState state = DataFlowState.createLight(functionBlock);
                 for (Argument argument : constraints.keySet()) {
                     state.assign(new VariableValue(argument), constraints.get(argument));
                 }

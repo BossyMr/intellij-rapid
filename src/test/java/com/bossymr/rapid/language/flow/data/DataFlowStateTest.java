@@ -18,7 +18,7 @@ class DataFlowStateTest {
 
     @Test
     void getConstraintFromConstraint() {
-        DataFlowState state = new DataFlowState(getEmptyFunctionBlock());
+        DataFlowState state = DataFlowState.createFull(getEmptyFunctionBlock());
         VariableSnapshot snapshot = new VariableSnapshot(RapidType.NUMBER);
         NumericConstraint constraint = new NumericConstraint(Optionality.UNKNOWN, new NumericConstraint.Bound(true, 0), new NumericConstraint.Bound(true, 10));
         state.assign(snapshot, constraint);
@@ -27,17 +27,18 @@ class DataFlowStateTest {
 
     @Test
     void getConstraintFromCondition() {
-        DataFlowState state = new DataFlowState(getEmptyFunctionBlock());
+        DataFlowState state = DataFlowState.createFull(getEmptyFunctionBlock());
         VariableSnapshot snapshot = new VariableSnapshot(RapidType.NUMBER);
         state.assign(snapshot, Expression.numericConstant(0));
         assertEquals(NumericConstraint.equalTo(0), state.getConstraint(snapshot));
+        snapshot = new VariableSnapshot(RapidType.NUMBER);
         state.assign(snapshot, new BinaryExpression(BinaryOperator.MULTIPLY, new ConstantValue(RapidType.NUMBER, 5), new ConstantValue(RapidType.NUMBER, 10)));
         assertEquals(NumericConstraint.equalTo(50), state.getConstraint(snapshot));
     }
 
     @Test
     void getConstraintWithRelation() {
-        DataFlowState state = new DataFlowState(getEmptyFunctionBlock());
+        DataFlowState state = DataFlowState.createFull(getEmptyFunctionBlock());
         VariableSnapshot reference = new VariableSnapshot(RapidType.NUMBER);
         state.assign(reference, new NumericConstraint(Optionality.PRESENT, new NumericConstraint.Bound(true, 0), new NumericConstraint.Bound(true, 10)));
         VariableSnapshot snapshot = new VariableSnapshot(RapidType.NUMBER);

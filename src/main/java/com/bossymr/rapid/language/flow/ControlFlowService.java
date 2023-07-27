@@ -25,7 +25,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * A service used to retrieve the control flow graph for a program.
@@ -38,38 +37,59 @@ public final class ControlFlowService {
     }
 
     public @NotNull DataFlow getDataFlow(@NotNull PsiElement element) {
-        ControlFlow controlFlow = getControlFlow(element);
-        return getDataFlow(controlFlow);
+        Project project = element.getProject();
+        PsiFile file = element.getContainingFile();
+        Module module = ModuleUtil.findModuleForFile(file);
+        if (module != null) {
+            return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
+                ControlFlow controlFlow = calculateControlFlow(module);
+                DataFlow dataFlow = getDataFlow(controlFlow);
+                return CachedValueProvider.Result.createSingleDependency(dataFlow, PsiModificationTracker.MODIFICATION_COUNT);
+            });
+        }
+        return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
+            ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor(project);
+            PhysicalModule physicalModule = PhysicalModule.getModule(element);
+            if (physicalModule != null) {
+                physicalModule.accept(analyzer);
+            }
+            if (!(element instanceof RapidRoutine)) {
+                return CachedValueProvider.Result.createSingleDependency(getDataFlow(new ControlFlow(project, Map.of())), PsiModificationTracker.MODIFICATION_COUNT);
+            }
+            element.accept(analyzer);
+            return CachedValueProvider.Result.createSingleDependency(getDataFlow(analyzer.getControlFlow()), PsiModificationTracker.MODIFICATION_COUNT);
+        });
     }
 
     public @NotNull DataFlow getDataFlow(@NotNull Module module) {
-        ControlFlow controlFlow = getControlFlow(module);
-        return getDataFlow(controlFlow);
+        Project project = module.getProject();
+        return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
+            ControlFlow controlFlow = calculateControlFlow(module);
+            return CachedValueProvider.Result.createSingleDependency(getDataFlow(controlFlow), PsiModificationTracker.MODIFICATION_COUNT);
+        });
     }
 
     public @NotNull DataFlow getDataFlow(@NotNull ControlFlow controlFlow) {
-        Project project = controlFlow.getProject();
-        return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
-            Stream<Block.FunctionBlock> stream = controlFlow.getBlocks().stream()
-                    .filter(block -> block instanceof Block.FunctionBlock)
-                    .map(block -> (Block.FunctionBlock) block);
-            Map<BasicBlock, DataFlowBlock> dataFlow = new HashMap<>();
-            Map<BlockDescriptor, Block.FunctionBlock> descriptorMap = stream.collect(Collectors.toMap(BlockDescriptor::getBlockKey, block -> block));
-            Deque<DataFlowFunctionMap.WorkListEntry> workList = new ArrayDeque<>();
-            DataFlowFunctionMap functionMap = new DataFlowFunctionMap(descriptorMap, workList);
-            for (Block block : controlFlow.getBlocks()) {
-                if (!(block instanceof Block.FunctionBlock functionBlock)) {
-                    continue;
-                }
-                Map<BasicBlock, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap);
-                dataFlow.putAll(result);
+        Map<BasicBlock, DataFlowBlock> dataFlow = new HashMap<>();
+        Collection<Block> blocks = controlFlow.getBlocks();
+        Map<BlockDescriptor, Block.FunctionBlock> descriptorMap = blocks.stream()
+                .filter(block -> block instanceof Block.FunctionBlock)
+                .map(block -> (Block.FunctionBlock) block)
+                .collect(Collectors.toMap(BlockDescriptor::getBlockKey, block -> block));
+        Deque<DataFlowFunctionMap.WorkListEntry> workList = new ArrayDeque<>();
+        DataFlowFunctionMap functionMap = new DataFlowFunctionMap(descriptorMap, workList);
+        for (Block block : blocks) {
+            if (!(block instanceof Block.FunctionBlock functionBlock)) {
+                continue;
             }
-            for (DataFlowFunctionMap.WorkListEntry entry : workList) {
-                Block.FunctionBlock block = ((Block.FunctionBlock) entry.block().getBasicBlock().getBlock());
-                DataFlowAnalyzer.reanalyze(block, functionMap, dataFlow, Set.of(entry.block()));
-            }
-            return CachedValueProvider.Result.createSingleDependency(new DataFlow(controlFlow, dataFlow), PsiModificationTracker.MODIFICATION_COUNT);
-        });
+            Map<BasicBlock, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap);
+            dataFlow.putAll(result);
+        }
+        for (DataFlowFunctionMap.WorkListEntry entry : workList) {
+            Block.FunctionBlock block = ((Block.FunctionBlock) entry.block().getBasicBlock().getBlock());
+            DataFlowAnalyzer.reanalyze(block, functionMap, dataFlow, Set.of(entry.block()));
+        }
+        return new DataFlow(controlFlow, dataFlow);
     }
 
     /**
@@ -86,7 +106,10 @@ public final class ControlFlowService {
         PsiFile file = element.getContainingFile();
         Module module = ModuleUtil.findModuleForFile(file);
         if (module != null) {
-            return getControlFlow(module);
+            return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
+                ControlFlow controlFlow = calculateControlFlow(module);
+                return CachedValueProvider.Result.createSingleDependency(controlFlow, PsiModificationTracker.MODIFICATION_COUNT);
+            });
         }
         return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
             ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor(project);
@@ -111,16 +134,23 @@ public final class ControlFlowService {
     public @NotNull ControlFlow getControlFlow(@NotNull Module module) {
         Project project = module.getProject();
         return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
-            ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor(project);
-            PsiManager manager = PsiManager.getInstance(project);
-            Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), module.getModuleContentScope());
-            for (VirtualFile virtualFile : virtualFiles) {
-                PsiFile file = manager.findFile(virtualFile);
-                if (file != null) {
-                    file.accept(analyzer);
-                }
-            }
-            return CachedValueProvider.Result.createSingleDependency(analyzer.getControlFlow(), PsiModificationTracker.MODIFICATION_COUNT);
+            ControlFlow controlFlow = calculateControlFlow(module);
+            return CachedValueProvider.Result.createSingleDependency(controlFlow, PsiModificationTracker.MODIFICATION_COUNT);
         });
     }
+
+    private @NotNull ControlFlow calculateControlFlow(@NotNull Module module) {
+        Project project = module.getProject();
+        ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor(project);
+        PsiManager manager = PsiManager.getInstance(project);
+        Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), module.getModuleContentScope());
+        for (VirtualFile virtualFile : virtualFiles) {
+            PsiFile file1 = manager.findFile(virtualFile);
+            if (file1 != null) {
+                file1.accept(analyzer);
+            }
+        }
+        return analyzer.getControlFlow();
+    }
+
 }

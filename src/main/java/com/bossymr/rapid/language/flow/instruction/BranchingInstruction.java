@@ -136,7 +136,7 @@ public sealed interface BranchingInstruction extends Instruction {
      * argument is only present.
      * @param returnValue the field to store the return value of this routine.
      */
-    record CallInstruction(@NotNull PsiElement element, @NotNull Value routine, @NotNull Map<ArgumentDescriptor, Value> arguments,
+    record CallInstruction(@NotNull PsiElement element, @NotNull Value routine, @NotNull Map<ArgumentDescriptor, ReferenceValue> arguments,
                            @Nullable ReferenceValue returnValue, @NotNull BasicBlock next) implements BranchingInstruction {
 
         @Override

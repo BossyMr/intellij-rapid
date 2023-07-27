@@ -185,7 +185,7 @@ public class Condition {
         @Override
         public void visitUnaryExpression(@NotNull UnaryExpression expression) {
             if (expression.value() instanceof ReferenceValue value) {
-                conditions.add(new Condition(value, conditionType.flip(), new VariableExpression(variable)));
+                conditions.add(new Condition(value, conditionType.flip(), new UnaryExpression(expression.operator(), variable)));
             }
             super.visitUnaryExpression(expression);
         }

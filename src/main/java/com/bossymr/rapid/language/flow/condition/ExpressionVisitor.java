@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.flow.value.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -14,7 +15,7 @@ public abstract class ExpressionVisitor extends ControlFlowVisitor {
         return new ExpressionVisitor() {
             @Override
             protected @NotNull ReferenceValue process(@NotNull ReferenceValue value) {
-                return mapper.apply(value);
+                return Objects.requireNonNull(mapper.apply(value));
             }
 
             @Override
@@ -63,10 +64,10 @@ public abstract class ExpressionVisitor extends ControlFlowVisitor {
     }
 
     private @NotNull Value computeValue(@NotNull Value value) {
-        if (!(value instanceof ReferenceValue cast)) {
+        if (!(value instanceof ReferenceValue referenceValue)) {
             return value;
         }
-        return process(cast);
+        return process(referenceValue);
     }
 
     @Override
@@ -83,7 +84,7 @@ public abstract class ExpressionVisitor extends ControlFlowVisitor {
     public void visitUnaryExpression(@NotNull UnaryExpression expression) {
         Value value = computeValue(expression.value());
         if (!value.equals(expression.value())) {
-            update(new UnaryExpression(expression.operator(), expression.value()));
+            update(new UnaryExpression(expression.operator(), value));
         }
         super.visitUnaryExpression(expression);
     }
