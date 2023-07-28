@@ -4,6 +4,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A {@code RangeCondition} represents a condition where a variable might be equal to any value in the range.
@@ -214,6 +215,23 @@ public class NumericConstraint implements Constraint {
     }
 
     @Override
+    public @NotNull String getPresentableText() {
+        return ranges.stream()
+                .map(range -> (range.lower().isInclusive() ? "[" : "(") + getPresentableText(range.lower()) + "," + getPresentableText(range.upper()) + (range.upper().isInclusive() ? "]" : ")"))
+                .collect(Collectors.joining(", "));
+    }
+
+    private @NotNull String getPresentableText(@NotNull Bound bound) {
+        if (bound.value() == Bound.MAX_VALUE.value()) {
+            return "max";
+        }
+        if (bound.value() == Bound.MIN_VALUE.value()) {
+            return "min";
+        }
+        return String.valueOf(bound.value());
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -269,13 +287,13 @@ public class NumericConstraint implements Constraint {
         }
 
         public @NotNull Optional<Boolean> isSmaller(@NotNull Range range) {
-            if (intersects(range) && !(contains(range))) {
+            if (intersects(range) || range.intersects(this)) {
                 return Optional.empty();
             }
             if (upper().value() < range.lower().value()) {
                 return Optional.of(true);
             }
-            if (lower().value() < range.upper().value()) {
+            if (lower().value() > range.upper().value()) {
                 return Optional.of(false);
             }
             if (upper().value() == range.lower().value()) {

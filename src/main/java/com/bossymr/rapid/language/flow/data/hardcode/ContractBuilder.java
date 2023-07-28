@@ -118,7 +118,7 @@ public class ContractBuilder {
                 throw new IllegalStateException();
             }
             results.computeIfAbsent(constraints, value -> new HashSet<>(1));
-            results.get(constraints).add(new Result.Success(Set.of(), null));
+            results.get(constraints).add(new Result.Success(List.of(), null));
             return ContractBuilder.this;
         }
 
@@ -132,7 +132,7 @@ public class ContractBuilder {
             }
             state.assign(snapshot, constraint);
             results.computeIfAbsent(constraints, value -> new HashSet<>(1));
-            results.get(constraints).add(new Result.Success(Set.of(state), snapshot));
+            results.get(constraints).add(new Result.Success(List.of(state), snapshot));
             return ContractBuilder.this;
         }
 

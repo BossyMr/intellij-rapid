@@ -36,9 +36,7 @@ public final class VariableSnapshot implements ReferenceValue {
 
     @Override
     public void accept(@NotNull ControlFlowVisitor visitor) {
-        if (referenceValue != null) {
-            referenceValue.accept(visitor);
-        }
+        visitor.visitSnapshot(this);
     }
 
     public @NotNull Optional<ReferenceValue> getReferenceValue() {

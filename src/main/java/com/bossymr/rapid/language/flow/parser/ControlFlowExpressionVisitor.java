@@ -34,6 +34,14 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         this.targetVariable.addLast(targetVariable);
     }
 
+    /**
+     * Computes the value of the specified expression. If possible, a constant value will be returned, otherwise, the
+     * expression will be evaluated to a variable which is returned.
+     *
+     * @param builder the builder.
+     * @param expression the expression.
+     * @return the value of the specified expression, or an {@link ErrorValue} if the expression could not evaluated.
+     */
     public static @NotNull Value computeValue(@NotNull ControlFlowBuilder builder, @NotNull RapidExpression expression) {
         RapidType type = getType(expression.getType());
         if (expression instanceof RapidLiteralExpression literalExpression) {
@@ -68,6 +76,10 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 return new ErrorValue();
             }
         }
+        if (expression instanceof RapidIndexExpression indexExpression) {
+            IndexValue indexValue = computeIndexVariable(builder, indexExpression);
+            return indexValue != null ? indexValue : new ErrorValue();
+        }
         if (expression instanceof RapidReferenceExpression referenceExpression) {
             RapidSymbol symbol = referenceExpression.getSymbol();
             if (symbol instanceof RapidRoutine routine) {
@@ -81,7 +93,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             ReferenceValue variable = computeVariable(builder, referenceExpression);
             return variable != null ? variable : new ErrorValue();
         }
-        return computeExpression(builder, VariableKey.createVariable(expression), expression);
+        return computeExpression(builder, VariableKey.createVariable(), expression);
     }
 
     public static @Nullable IndexValue computeIndexVariable(@NotNull ControlFlowBuilder builder, @NotNull RapidIndexExpression expression) {
@@ -150,13 +162,13 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         if (value instanceof ReferenceValue referenceValue) {
             return referenceValue;
         }
-        ReferenceValue variable = builder.createVariable(VariableKey.createVariable(null), value.getType());
+        ReferenceValue variable = builder.createVariable(VariableKey.createVariable(), value.getType());
         builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new VariableExpression(value)));
         return variable;
     }
 
-    public static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, @NotNull RapidElement element, @NotNull String name, @Nullable FieldType fieldType, @NotNull RapidExpression expression) {
-        VariableKey variableKey = VariableKey.createField(element, name, fieldType);
+    public static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, @NotNull String name, @Nullable FieldType fieldType, @NotNull RapidExpression expression) {
+        VariableKey variableKey = VariableKey.createField(name, fieldType);
         return computeExpression(builder, variableKey, expression);
     }
 
@@ -193,7 +205,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             if (!(value instanceof ArgumentDescriptor.Conditional conditional)) {
                 throw new IllegalStateException();
             }
-            ReferenceValue presentReturnVariable = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN);
+            ReferenceValue presentReturnVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
             BasicBlock ifBlock = builder.createBasicBlock();
             ConstantValue presentRoutine = new ConstantValue(RapidType.ANYTYPE, ":Present");
             Argument argument = builder.findArgument(conditional.name());

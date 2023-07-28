@@ -67,22 +67,26 @@ public class DataFlowAnalyzer {
     public void process() {
         while (!(workList.isEmpty())) {
             DataFlowBlock block = workList.removeFirst();
-            Set<DataFlowEdge> successors = block.getSuccessors();
-            Set<DataFlowState> before = block.getStates();
+            Set<DataFlowEdge> successors = Set.copyOf(block.getSuccessors());
+            List<DataFlowState> before = List.copyOf(block.getStates());
             process(block);
-            Set<DataFlowState> after = block.getStates();
+            List<DataFlowState> after = block.getStates();
             boolean modified = isModified(before, after) || !(successors.equals(block.getSuccessors()));
             if (modified) {
                 for (DataFlowEdge successor : block.getSuccessors()) {
-                    workList.add(successor.getBlock());
+                    DataFlowBlock successorBlock = successor.getBlock();
+                    if (workList.contains(successorBlock)) {
+                        continue;
+                    }
+                    workList.add(successorBlock);
                 }
             }
         }
     }
 
-    private boolean isModified(@NotNull Set<DataFlowState> before, @NotNull Set<DataFlowState> after) {
+    private boolean isModified(@NotNull List<DataFlowState> before, @NotNull List<DataFlowState> after) {
         if (before.isEmpty() || after.isEmpty()) {
-            return before.isEmpty() && after.isEmpty();
+            return !(before.isEmpty() && after.isEmpty());
         }
         if (before.equals(after)) {
             return false;
@@ -123,7 +127,7 @@ public class DataFlowAnalyzer {
         return false;
     }
 
-    private @NotNull Map<Constraint, Constraint> getIndexConstraints(@NotNull ReferenceValue referenceValue, @NotNull Set<DataFlowState> states) {
+    private @NotNull Map<Constraint, Constraint> getIndexConstraints(@NotNull ReferenceValue referenceValue, @NotNull List<DataFlowState> states) {
         Map<Constraint, Constraint> result = new HashMap<>();
         for (DataFlowState state : states) {
             Map<Constraint, Constraint> indexConstraint = state.getIndexConstraint(referenceValue);
@@ -144,7 +148,7 @@ public class DataFlowAnalyzer {
         return result;
     }
 
-    private boolean isModified(@NotNull Set<DataFlowState> before, @NotNull Set<DataFlowState> after, @NotNull ReferenceValue variable) {
+    private boolean isModified(@NotNull List<DataFlowState> before, @NotNull List<DataFlowState> after, @NotNull ReferenceValue variable) {
         Constraint beforeConstraint = DataFlowBlock.getConstraint(before, variable);
         Constraint afterConstraint = DataFlowBlock.getConstraint(after, variable);
         return !(beforeConstraint.contains(afterConstraint));
@@ -153,8 +157,9 @@ public class DataFlowAnalyzer {
     private void process(@NotNull DataFlowBlock block) {
         block.getStates().clear();
         for (DataFlowEdge successor : block.getSuccessors()) {
-            successor.getBlock().getPredecessors().remove(successor);
+            successor.getBlock().getPredecessors().removeIf(edge -> edge.getBlock().equals(block));
         }
+        block.getSuccessors().clear();
         for (DataFlowEdge predecessors : block.getPredecessors()) {
             block.getStates().addAll(predecessors.getStates());
         }

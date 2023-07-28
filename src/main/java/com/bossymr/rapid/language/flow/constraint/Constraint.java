@@ -200,4 +200,6 @@ public interface Constraint {
         }
         return !(intersection.isEmpty());
     }
+
+    @NotNull String getPresentableText();
 }

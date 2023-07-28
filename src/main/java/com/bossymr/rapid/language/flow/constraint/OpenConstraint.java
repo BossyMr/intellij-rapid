@@ -45,4 +45,9 @@ public record OpenConstraint(@NotNull Optionality optionality) implements Constr
     public boolean isEmpty() {
         return false;
     }
+
+    @Override
+    public @NotNull String getPresentableText() {
+        return "any";
+    }
 }

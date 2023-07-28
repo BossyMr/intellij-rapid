@@ -9,9 +9,7 @@ import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.flow.value.VariableSnapshot;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A {@code DataFlowBlock} represents the state of a program at the end of a {@link BasicBlock}. A block contains a
@@ -20,7 +18,7 @@ import java.util.Set;
 public final class DataFlowBlock {
 
     private final @NotNull BasicBlock basicBlock;
-    private final @NotNull Set<DataFlowState> states;
+    private final @NotNull List<DataFlowState> states;
 
     private final @NotNull Set<DataFlowEdge> predecessors;
     private final @NotNull Set<DataFlowEdge> successors;
@@ -29,10 +27,10 @@ public final class DataFlowBlock {
         this.basicBlock = basicBlock;
         this.predecessors = new HashSet<>(1);
         this.successors = new HashSet<>(1);
-        this.states = new HashSet<>(1);
+        this.states = new ArrayList<>(1);
     }
 
-    public static @NotNull Constraint getConstraint(@NotNull Set<DataFlowState> states, @NotNull Value value) {
+    public static @NotNull Constraint getConstraint(@NotNull List<DataFlowState> states, @NotNull Value value) {
         return Constraint.or(states.stream()
                 .map(state -> state.getConstraint(value))
                 .toList());
@@ -91,7 +89,7 @@ public final class DataFlowBlock {
         return successors;
     }
 
-    public @NotNull Set<DataFlowState> getStates() {
+    public @NotNull List<DataFlowState> getStates() {
         return states;
     }
 

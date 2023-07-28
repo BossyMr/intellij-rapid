@@ -45,4 +45,9 @@ public record ClosedConstraint(@NotNull Optionality optionality) implements Cons
     public boolean isEmpty() {
         return true;
     }
+
+    @Override
+    public @NotNull String getPresentableText() {
+        return "none";
+    }
 }

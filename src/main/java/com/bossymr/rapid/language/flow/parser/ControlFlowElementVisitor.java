@@ -75,9 +75,9 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         }
         if (builder.isInsideScope()) {
             if (initializer != null) {
-                ControlFlowExpressionVisitor.computeExpression(builder, field, name, fieldType, initializer);
+                ControlFlowExpressionVisitor.computeExpression(builder, name, fieldType, initializer);
             } else {
-                builder.createVariable(VariableKey.createField(field, name, fieldType), type);
+                builder.createVariable(VariableKey.createField(name, fieldType), type);
             }
         } else {
             String moduleName = getModuleName(field);
@@ -88,9 +88,9 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             builder.enterBasicBlock(StatementListType.STATEMENT_LIST);
             Value variable;
             if (initializer != null) {
-                variable = ControlFlowExpressionVisitor.computeExpression(builder, initializer);
+                variable = ControlFlowExpressionVisitor.computeValue(builder, initializer);
             } else {
-                variable = builder.createVariable(VariableKey.createVariable(null), type);
+                variable = builder.createVariable(VariableKey.createVariable(), type);
             }
             if (builder.isInsideScope()) {
                 builder.exitBasicBlock(new BranchingInstruction.ReturnInstruction(null, variable));
@@ -230,16 +230,16 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             } else {
                 onFailure = builder.createBasicBlock();
             }
-            ReferenceValue conditionVariable = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN);
+            ReferenceValue conditionVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
             for (int j = 0; j < expressions.size(); j++) {
                 RapidExpression expression = expressions.get(j);
                 Value value = ControlFlowExpressionVisitor.computeValue(builder, expression);
                 Expression equalExpression = new BinaryExpression(BinaryOperator.EQUAL_TO, completeValue, value);
                 if (j > 0) {
-                    ReferenceValue checkValue = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN);
+                    ReferenceValue checkValue = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
                     builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, checkValue, equalExpression));
                     Expression conditionExpression = new BinaryExpression(BinaryOperator.OR, conditionVariable, checkValue);
-                    ReferenceValue tempValue = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN);
+                    ReferenceValue tempValue = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
                     builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, tempValue, conditionExpression));
                     builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, conditionVariable, new VariableExpression(tempValue)));
                 } else {
@@ -271,7 +271,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             return;
         }
         Value toValue = ControlFlowExpressionVisitor.computeValue(builder, toExpression);
-        ReferenceValue indexVariable = ControlFlowExpressionVisitor.computeExpression(builder, targetVariable, variableName, null, fromExpression);
+        ReferenceValue indexVariable = ControlFlowExpressionVisitor.computeExpression(builder, variableName, null, fromExpression);
         Value stepValue;
         BasicBlock loopBasicBlock = builder.createBasicBlock();
         BasicBlock nextBasicBlock = builder.createBasicBlock();
@@ -281,9 +281,9 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, loopBasicBlock));
         } else {
             // Compute default step value -> +1 if from < to or -1 if from > t
-            ReferenceValue stepVariable = builder.createVariable(VariableKey.createVariable(null), RapidType.NUMBER);
+            ReferenceValue stepVariable = builder.createVariable(VariableKey.createVariable(), RapidType.NUMBER);
             stepValue = stepVariable;
-            ReferenceValue directionVariable = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN); // TRUE = ASCENDING FALSE = DESCENDING
+            ReferenceValue directionVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN); // TRUE = ASCENDING FALSE = DESCENDING
             Expression directionExpression = new BinaryExpression(BinaryOperator.LESS_THAN, indexVariable, toValue);
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, directionVariable, directionExpression));
             BasicBlock ascending = builder.createBasicBlock();
@@ -302,7 +302,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             // Add the step to the variable.
             Expression indexExpression = new BinaryExpression(BinaryOperator.ADD, indexVariable, stepValue);
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, indexVariable, indexExpression));
-            ReferenceValue conditionVariable = builder.createVariable(VariableKey.createVariable(null), RapidType.BOOLEAN);
+            ReferenceValue conditionVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
             // Check if the variable is equal to the result, in which case, do not loop.
             Expression conditionExpression = new BinaryExpression(BinaryOperator.EQUAL_TO, indexVariable, toValue);
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, conditionVariable, conditionExpression));
@@ -393,7 +393,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         List<RapidArgument> arguments = statement.getArgumentList().getArguments();
         Value routineValue = ControlFlowExpressionVisitor.computeValue(builder, expression);
         if (!(routineValue instanceof ConstantValue || routineValue instanceof VariableValue)) {
-            ReferenceValue variable = builder.createVariable(VariableKey.createVariable(null), routineValue.getType());
+            ReferenceValue variable = builder.createVariable(VariableKey.createVariable(), routineValue.getType());
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, variable, new VariableExpression(routineValue)));
             routineValue = variable;
         }

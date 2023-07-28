@@ -76,4 +76,9 @@ public record StringConstraint(@NotNull Optionality optionality, @NotNull Set<St
     public boolean isEmpty() {
         return sequences.isEmpty();
     }
+
+    @Override
+    public @NotNull String getPresentableText() {
+        return "any of " + sequences();
+    }
 }

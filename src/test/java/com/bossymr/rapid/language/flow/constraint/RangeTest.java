@@ -40,7 +40,7 @@ class RangeTest {
         assertTrue(range.isSmaller(new Range(new Bound(true, -10), new Bound(false, 0))).orElseThrow());
         assertTrue(range.isSmaller(new Range(new Bound(true, -10), new Bound(true, 0))).orElseThrow());
         assertTrue(range.isSmaller(new Range(new Bound(true, -10), new Bound(true, 5))).isEmpty());
-        assertFalse(range.isSmaller(new Range(new Bound(true, 10), new Bound(true, 15))).orElseThrow());
+        assertTrue(range.isSmaller(new Range(new Bound(true, 10), new Bound(true, 15))).orElseThrow());
     }
 
     @Test

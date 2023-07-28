@@ -1,6 +1,5 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.psi.RapidElement;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.*;
 import org.jetbrains.annotations.NotNull;
@@ -104,8 +103,8 @@ public sealed abstract class Block {
         return basicBlock;
     }
 
-    public @NotNull Variable createVariable(@Nullable RapidElement element, @Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
-        Variable variable = new Variable(getNextVariableIndex(), element, fieldType, type, name);
+    public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
+        Variable variable = new Variable(getNextVariableIndex(), fieldType, type, name);
         variables.add(variable);
         return variable;
     }

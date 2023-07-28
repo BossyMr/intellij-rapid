@@ -116,6 +116,16 @@ public class BooleanConstraint implements Constraint {
     }
 
     @Override
+    public @NotNull String getPresentableText() {
+        return switch (value) {
+            case NO_VALUE -> "[]";
+            case ALWAYS_FALSE -> "[false]";
+            case ANY_VALUE -> "[true, false]";
+            case ALWAYS_TRUE -> "[true]";
+        };
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

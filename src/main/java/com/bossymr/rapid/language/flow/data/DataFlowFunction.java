@@ -10,9 +10,9 @@ import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * A {@code DataFlowFunction} represents a callable function.
@@ -46,12 +46,12 @@ public interface DataFlowFunction {
          * @param states the state of the variables in the function when it returned.
          * @param returnValue the value which was returned, or {@code null} if a variable was not returned.
          */
-        record Success(@NotNull Set<DataFlowState> states, @Nullable ReferenceValue returnValue) implements Result {
+        record Success(@NotNull List<DataFlowState> states, @Nullable ReferenceValue returnValue) implements Result {
 
             public Success {
                 states = states.stream()
                         .map(DataFlowState::createCopy)
-                        .collect(Collectors.toSet());
+                        .toList();
             }
 
             public static @NotNull Success create(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint returnConstraint) {
@@ -64,7 +64,7 @@ public interface DataFlowFunction {
                     returnValue = new VariableSnapshot(returnType);
                     state.assign(returnValue, returnConstraint);
                 }
-                return new Success(Set.of(state), returnValue);
+                return new Success(List.of(state), returnValue);
             }
         }
 
@@ -75,7 +75,7 @@ public interface DataFlowFunction {
          * @param exceptionValue the exception which was thrown, or {@code null} if a specific exception was not
          * thrown.
          */
-        record Error(@NotNull Set<DataFlowState> states, @Nullable ReferenceValue exceptionValue) implements Result {}
+        record Error(@NotNull List<DataFlowState> states, @Nullable ReferenceValue exceptionValue) implements Result {}
 
         /**
          * This function terminated the program.

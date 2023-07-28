@@ -286,6 +286,13 @@ public class DataFlowState {
         Set<ReferenceValue> dependentVariables = getDependentVariables(state, variables);
         state.conditions.removeIf(condition -> !(dependentVariables.contains(condition.getVariable())) && condition.getVariables().stream().noneMatch(dependentVariables::contains));
         state.constraints.keySet().removeIf(variable -> !(dependentVariables.contains(variable)));
+        for (var entry : arguments.entrySet()) {
+            Optional<Argument> argument = getArgument(entry.getValue());
+            if (argument.isPresent()) {
+                Constraint constraint = state.getConstraint(new VariableValue(entry.getKey()));
+                checkOptionality(entry.getValue(), constraint.getOptionality());
+            }
+        }
         for (Condition condition : state.conditions) {
             condition = new Condition(getModifiedSnapshot(condition.getVariable(), modifications, remapped), condition.getConditionType(), condition.getExpression());
             condition.iterate(variable -> getModifiedSnapshot(variable, modifications, remapped));
@@ -305,7 +312,8 @@ public class DataFlowState {
         }
         for (Argument argument : arguments.keySet()) {
             if (argument.parameterType() != ParameterType.INPUT) {
-                VariableSnapshot snapshot = remapped.get(state.getSnapshot(new VariableValue(argument)));
+                VariableValue value = new VariableValue(argument);
+                VariableSnapshot snapshot = remapped.get(state.getSnapshot(value));
                 Objects.requireNonNull(snapshot);
                 snapshots.put(arguments.get(argument), snapshot);
             }
@@ -516,6 +524,22 @@ public class DataFlowState {
         ConstraintVisitor visitor = new ConstraintVisitor(this, visited);
         expression.accept(visitor);
         return visitor.getResult();
+    }
+
+    public Block.@NotNull FunctionBlock getFunctionBlock() {
+        return functionBlock;
+    }
+
+    public @NotNull Set<Condition> getConditions() {
+        return conditions;
+    }
+
+    public @NotNull Map<ReferenceValue, VariableSnapshot> getSnapshots() {
+        return snapshots;
+    }
+
+    public @NotNull Map<VariableSnapshot, Constraint> getConstraints() {
+        return constraints;
     }
 
     /**

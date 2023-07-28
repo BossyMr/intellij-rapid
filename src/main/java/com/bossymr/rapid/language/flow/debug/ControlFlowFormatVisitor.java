@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.language.flow.*;
+import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
@@ -331,6 +332,20 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
+    public void visitSnapshot(@NotNull VariableSnapshot snapshot) {
+        stringBuilder.append("=");
+        stringBuilder.append(snapshot.hashCode());
+        stringBuilder.append("[");
+        if (snapshot.getReferenceValue().isPresent()) {
+            ReferenceValue referenceValue = snapshot.getReferenceValue().orElseThrow();
+            referenceValue.accept(this);
+        } else {
+            stringBuilder.append(snapshot.getType().getPresentableText());
+        }
+        stringBuilder.append("]");
+    }
+
+    @Override
     public void visitComponentVariableValue(@NotNull ComponentValue value) {
         value.variable().accept(this);
         stringBuilder.append(".");
@@ -410,5 +425,21 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
         }
         expression.value().accept(this);
         super.visitUnaryExpression(expression);
+    }
+
+    @Override
+    public void visitCondition(@NotNull Condition condition) {
+        condition.getVariable().accept(this);
+        stringBuilder.append(" ");
+        stringBuilder.append(switch (condition.getConditionType()) {
+            case EQUALITY -> "=";
+            case INEQUALITY -> "!=";
+            case LESS_THAN -> "<";
+            case LESS_THAN_OR_EQUAL -> "<=";
+            case GREATER_THAN -> ">";
+            case GREATER_THAN_OR_EQUAL -> ">=";
+        });
+        stringBuilder.append(" ");
+        condition.getExpression().accept(this);
     }
 }

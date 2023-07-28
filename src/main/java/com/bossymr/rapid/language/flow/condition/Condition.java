@@ -117,6 +117,10 @@ public class Condition {
                 '}';
     }
 
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitCondition(this);
+    }
+
     private class SolveVisitor extends ControlFlowVisitor {
 
         private final @NotNull List<Condition> conditions;

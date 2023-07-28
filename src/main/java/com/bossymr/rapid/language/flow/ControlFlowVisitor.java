@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow;
 
+import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
@@ -94,6 +95,8 @@ public class ControlFlowVisitor {
         visitVariableValue(value);
     }
 
+    public void visitSnapshot(@NotNull VariableSnapshot snapshot) {}
+
     public void visitComponentVariableValue(@NotNull ComponentValue component) {
         visitVariableValue(component);
     }
@@ -129,4 +132,6 @@ public class ControlFlowVisitor {
     }
 
     public void visitExpression(@NotNull Expression expression) {}
+
+    public void visitCondition(@NotNull Condition condition) {}
 }

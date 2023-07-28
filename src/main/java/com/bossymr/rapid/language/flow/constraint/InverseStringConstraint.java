@@ -47,4 +47,9 @@ public record InverseStringConstraint(@NotNull Optionality optionality, @NotNull
     public boolean isEmpty() {
         return false;
     }
+
+    @Override
+    public @NotNull String getPresentableText() {
+        return "none of " + sequences();
+    }
 }

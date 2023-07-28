@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
 
@@ -66,18 +65,20 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         }
     }
 
-    private @NotNull Set<DataFlowState> getStates(@NotNull ReferenceValue value, boolean result) {
+    private @NotNull List<DataFlowState> getStates(@NotNull ReferenceValue value, boolean result) {
         return block.getStates().stream()
                 .map(DataFlowState::createCopy)
                 .filter(state -> state.intersects(value, BooleanConstraint.withValue(result)))
                 .peek(state -> state.add(new Condition(value, ConditionType.EQUALITY, Expression.booleanConstant(result))))
-                .collect(Collectors.toSet());
+                .toList();
     }
 
 
     @Override
     public void visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
-        block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.next()), block.getStates()));
+        block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.next()), block.getStates().stream()
+                .map(DataFlowState::createCopy)
+                .toList()));
     }
 
     @Override
@@ -178,7 +179,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
             throw new AssertionError();
         }
         if (!(block.getConstraint(referenceValue) instanceof StringConstraint constraint)) {
-            Set<DataFlowState> states = block.getStates().stream()
+            List<DataFlowState> states = block.getStates().stream()
                     .map(DataFlowState::createCopy)
                     .peek(state -> {
                         if (instruction.returnValue() != null) {
@@ -190,7 +191,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
                             }
                         }
                     })
-                    .collect(Collectors.toSet());
+                    .toList();
             block.getSuccessors().add(new DataFlowEdge(blocks.get(instruction.next()), states));
             return;
         }
@@ -200,11 +201,11 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
                 continue;
             }
             DataFlowFunction function = functionMap.get(block, blockDescriptor);
-            Set<DataFlowState> states = block.getStates().stream()
+            List<DataFlowState> states = block.getStates().stream()
                     .map(DataFlowState::createCopy)
                     .filter(state -> state.intersects(referenceValue, new StringConstraint(Optionality.PRESENT, Set.of(sequence))))
                     .peek(state -> state.assign(referenceValue, new VariableExpression(new ConstantValue(RapidType.STRING, sequence))))
-                    .collect(Collectors.toSet());
+                    .toList();
             processResult(instruction, states, function, getArguments(function.getBlock(), instruction.arguments()));
         }
     }
@@ -224,7 +225,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         processResult(instruction, block.getStates(), function, getArguments(function.getBlock(), instruction.arguments()));
     }
 
-    private void processResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull Set<DataFlowState> states, @NotNull DataFlowFunction function, @NotNull Map<Argument, ReferenceValue> arguments) {
+    private void processResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull List<DataFlowState> states, @NotNull DataFlowFunction function, @NotNull Map<Argument, ReferenceValue> arguments) {
         Map<Argument, Constraint> constraints = new HashMap<>(arguments.size(), 1);
         arguments.forEach((argument, value) -> constraints.put(argument, block.getConstraint(value)));
         Set<DataFlowFunction.Result> results = function.getOutput(constraints);
@@ -234,7 +235,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
                 functionMap.set(blockKey, block, getArguments(), new DataFlowFunction.Result.Exit());
                 continue;
             }
-            Set<DataFlowState> resultStates;
+            List<DataFlowState> resultStates;
             ReferenceValue resultValue;
             if (result instanceof DataFlowFunction.Result.Error error) {
                 resultStates = error.states();
@@ -245,13 +246,13 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
             } else {
                 throw new IllegalArgumentException();
             }
-            Set<DataFlowState> merged = states.stream().mapMulti((DataFlowState state, Consumer<DataFlowState> consumer) -> {
+            List<DataFlowState> merged = states.stream().mapMulti((DataFlowState state, Consumer<DataFlowState> consumer) -> {
                 for (DataFlowState resultState : resultStates) {
                     DataFlowState copy = DataFlowState.createCopy(state);
                     copy.merge(resultState, arguments, resultValue, instruction.returnValue());
                     consumer.accept(copy);
                 }
-            }).collect(Collectors.toSet());
+            }).toList();
             if (result instanceof DataFlowFunction.Result.Error) {
                 functionMap.set(blockKey, block, getArguments(), new DataFlowFunction.Result.Error(merged, resultValue));
             } else {

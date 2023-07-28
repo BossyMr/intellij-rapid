@@ -2,15 +2,15 @@ package com.bossymr.rapid.language.flow.data;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 public final class DataFlowEdge {
 
     private final @NotNull DataFlowBlock block;
-    private final @NotNull Set<DataFlowState> states;
+    private final @NotNull List<DataFlowState> states;
 
-    public DataFlowEdge(@NotNull DataFlowBlock block, @NotNull Set<DataFlowState> states) {
+    public DataFlowEdge(@NotNull DataFlowBlock block, @NotNull List<DataFlowState> states) {
         this.block = block;
         this.states = states;
     }
@@ -19,7 +19,7 @@ public final class DataFlowEdge {
         return block;
     }
 
-    public @NotNull Set<DataFlowState> getStates() {
+    public @NotNull List<DataFlowState> getStates() {
         return states;
     }
 
