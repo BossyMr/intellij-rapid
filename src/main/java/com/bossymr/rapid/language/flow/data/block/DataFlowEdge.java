@@ -14,7 +14,7 @@ public final class DataFlowEdge {
     private final @NotNull DataFlowBlock destination;
 
     private final @NotNull List<DataFlowState> states;
-    private @NotNull List<DataFlowState> latest;
+    private List<DataFlowState> latest;
 
     public DataFlowEdge(@NotNull DataFlowBlock source, @NotNull DataFlowBlock destination, @NotNull List<DataFlowState> states) {
         this.source = source;
@@ -32,12 +32,12 @@ public final class DataFlowEdge {
 
     public @NotNull List<DataFlowState> getStates() {
         latest = states.stream()
-                .map(DataFlowState::copy)
+                .map(state -> DataFlowState.copy(destination, state))
                 .toList();
         return latest;
     }
 
-    public @NotNull List<DataFlowState> getLatest() {
+    public List<DataFlowState> getLatest() {
         return latest;
     }
 

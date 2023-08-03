@@ -1,16 +1,19 @@
 package com.bossymr.rapid.language.flow.data;
 
+import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.constraint.NumericConstraint;
 import com.bossymr.rapid.language.flow.constraint.Optionality;
+import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.BinaryExpression;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.ConstantValue;
 import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
@@ -53,7 +56,8 @@ class DataFlowStateTest {
         assertEquals(new NumericConstraint(Optionality.PRESENT, new NumericConstraint.Bound(true, 0), new NumericConstraint.Bound(true, 50)), state.getConstraint(snapshot));
     }
 
-    private @NotNull Block.FunctionBlock getEmptyFunctionBlock() {
-        return new Block.FunctionBlock(new VirtualRoutine(RoutineType.PROCEDURE, "bar", null, List.of()), "foo");
+    private @NotNull DataFlowBlock getEmptyFunctionBlock() {
+        Block.FunctionBlock functionBlock = new Block.FunctionBlock(new VirtualRoutine(RoutineType.PROCEDURE, "bar", null, List.of()), "foo");
+        return new DataFlowBlock(new BasicBlock.EntryBasicBlock(functionBlock, StatementListType.STATEMENT_LIST));
     }
 }

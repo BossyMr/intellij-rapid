@@ -49,6 +49,8 @@ import java.util.stream.Collectors;
  */
 public class DataFlowState {
 
+    private final @NotNull DataFlowBlock block;
+
     private final @NotNull Block.FunctionBlock functionBlock;
 
     /**
@@ -72,15 +74,21 @@ public class DataFlowState {
      */
     private final @NotNull Map<Argument, ReferenceSnapshot> roots;
 
-    private DataFlowState(@NotNull Block.FunctionBlock block) {
-        this.functionBlock = block;
+    private DataFlowState(@NotNull DataFlowBlock block) {
+        this.block = block;
+        Block blockEntity = block.getBasicBlock().getBlock();
+        if (!(blockEntity instanceof Block.FunctionBlock functionEntity)) {
+            throw new IllegalArgumentException();
+        }
+        this.functionBlock = functionEntity;
         this.conditions = new HashSet<>();
         this.snapshots = new HashMap<>();
         this.constraints = new HashMap<>();
         this.roots = new HashMap<>();
     }
 
-    private DataFlowState(@NotNull DataFlowState state) {
+    private DataFlowState(@NotNull DataFlowBlock block, @NotNull DataFlowState state) {
+        this.block = block;
         this.functionBlock = state.functionBlock;
         this.snapshots = new HashMap<>();
         Map<ReferenceSnapshot, ReferenceSnapshot> remapping = new HashMap<>();
@@ -107,8 +115,8 @@ public class DataFlowState {
      * @param state the state.
      * @return the copy.
      */
-    public static @NotNull DataFlowState copy(@NotNull DataFlowState state) {
-        return new DataFlowState(state);
+    public static @NotNull DataFlowState copy(@NotNull DataFlowBlock block, @NotNull DataFlowState state) {
+        return new DataFlowState(block, state);
     }
 
     /**
@@ -118,7 +126,7 @@ public class DataFlowState {
      * @param block the block.
      * @return the state.
      */
-    public static @NotNull DataFlowState createState(@NotNull Block.FunctionBlock block) {
+    public static @NotNull DataFlowState createState(@NotNull DataFlowBlock block) {
         DataFlowState state = new DataFlowState(block);
         state.initialize(AssignmentType.INITIALIZE);
         return state;
@@ -132,7 +140,7 @@ public class DataFlowState {
      * @param block the block.
      * @return the state.
      */
-    public static @NotNull DataFlowState createUnknownState(@NotNull Block.FunctionBlock block) {
+    public static @NotNull DataFlowState createUnknownState(@NotNull DataFlowBlock block) {
         DataFlowState state = new DataFlowState(block);
         state.initialize(AssignmentType.UNKNOWN);
         return state;

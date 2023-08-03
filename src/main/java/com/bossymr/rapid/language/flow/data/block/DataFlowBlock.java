@@ -86,7 +86,7 @@ public class DataFlowBlock {
             }
             for (int i = 0; i < assignments.size(); i++) {
                 ArrayEntry assignment = assignments.get(i);
-                DataFlowState copy = DataFlowState.copy(state);
+                DataFlowState copy = DataFlowState.copy(this, state);
                 assignAssignment(copy, indexValue, ConditionType.EQUALITY, assignment);
                 for (int j = 0; j < i; j++) {
                     assignAssignment(copy, indexValue, ConditionType.INEQUALITY, assignments.get(j));
@@ -183,21 +183,21 @@ public class DataFlowBlock {
     }
 
     public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull Condition condition) {
-        List<DataFlowState> states = split(condition);
+        List<DataFlowState> states = split(successor, condition);
         successors.add(new DataFlowEdge(this, successor, states));
     }
 
-    public @NotNull List<DataFlowState> split(@NotNull Condition condition) {
+    public @NotNull List<DataFlowState> split(@NotNull DataFlowBlock block, @NotNull Condition condition) {
         return getStates().stream()
                 .filter(state -> state.intersects(condition))
-                .map(DataFlowState::copy)
+                .map(state -> DataFlowState.copy(block, state))
                 .peek(state -> state.add(condition))
                 .toList();
     }
 
     public void addSuccessor(@NotNull DataFlowBlock successor) {
         List<DataFlowState> states = getStates().stream()
-                .map(DataFlowState::copy)
+                .map(state -> DataFlowState.copy(successor, state))
                 .toList();
         successors.add(new DataFlowEdge(this, successor, states));
     }

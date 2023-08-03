@@ -51,14 +51,8 @@ public interface DataFlowFunction {
          */
         record Success(@NotNull List<DataFlowState> states, @Nullable ReferenceValue returnValue) implements Result {
 
-            public Success {
-                states = states.stream()
-                        .map(DataFlowState::copy)
-                        .toList();
-            }
-
-            public static @NotNull Success create(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint returnConstraint) {
-                DataFlowState state = DataFlowState.createUnknownState(functionBlock);
+            public static @NotNull Success create(@NotNull DataFlowBlock block, @NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint returnConstraint) {
+                DataFlowState state = DataFlowState.createUnknownState(block);
                 for (Argument argument : constraints.keySet()) {
                     state.assign(new VariableValue(argument), constraints.get(argument));
                 }
