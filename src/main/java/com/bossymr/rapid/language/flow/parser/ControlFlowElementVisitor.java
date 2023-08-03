@@ -8,10 +8,7 @@ import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.symbol.FieldType;
-import com.bossymr.rapid.language.symbol.RapidLabelStatement;
-import com.bossymr.rapid.language.symbol.RapidType;
-import com.bossymr.rapid.language.symbol.RoutineType;
+import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.*;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiFile;
@@ -391,15 +388,33 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
     public void visitProcedureCallStatement(@NotNull RapidProcedureCallStatement statement) {
         RapidExpression expression = statement.getReferenceExpression();
         List<RapidArgument> arguments = statement.getArgumentList().getArguments();
-        Value routineValue = ControlFlowExpressionVisitor.computeValue(builder, expression);
-        if (!(routineValue instanceof ConstantValue || routineValue instanceof VariableValue)) {
-            ReferenceValue variable = builder.createVariable(VariableKey.createVariable(), routineValue.getType());
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, variable, new ValueExpression(routineValue)));
-            routineValue = variable;
+        Value routineValue;
+        if (statement.isLate()) {
+            routineValue = ControlFlowExpressionVisitor.computeValue(builder, expression);
+        } else {
+            routineValue = getFunctionValue(statement);
+        }
+        if (!(routineValue.getType().isAssignable(RapidType.STRING))) {
+            builder.failScope(statement);
+            return;
         }
         BasicBlock nextBlock = builder.createBasicBlock();
         ControlFlowExpressionVisitor.buildFunctionCall(statement, builder, arguments, routineValue, null, nextBlock);
         builder.enterBasicBlock(nextBlock);
+    }
+
+    private @NotNull Value getFunctionValue(@NotNull RapidProcedureCallStatement statement) {
+        RapidExpression expression = statement.getReferenceExpression();
+        if (!(expression instanceof RapidReferenceExpression referenceExpression)) {
+            return new ErrorValue();
+        }
+        RapidSymbol symbol = referenceExpression.getSymbol();
+        if (!(symbol instanceof RapidRoutine routine) || routine.getName() == null) {
+            return new ConstantValue(RapidType.STRING, referenceExpression.getCanonicalText());
+        }
+        String moduleName = routine instanceof PhysicalRoutine physicalRoutine ? ControlFlowElementVisitor.getModuleName(physicalRoutine) : null;
+        String name = (moduleName != null ? moduleName + ":" : "") + routine.getName();
+        return new ConstantValue(RapidType.STRING, name);
     }
 
     @Override

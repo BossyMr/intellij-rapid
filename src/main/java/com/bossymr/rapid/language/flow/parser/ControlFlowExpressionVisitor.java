@@ -91,7 +91,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 if (name == null) {
                     return new ErrorValue();
                 }
-                return new ConstantValue(type, (moduleName != null ? moduleName + ":" : "") + name);
+                return new ConstantValue(RapidType.STRING, (moduleName != null ? moduleName + ":" : "") + name);
             }
             ReferenceValue variable = computeVariable(builder, referenceExpression);
             return variable != null ? variable : new ErrorValue();
@@ -189,7 +189,9 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     }
 
     public static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @NotNull List<RapidArgument> arguments, @NotNull Value routineValue, @Nullable ReferenceValue returnVariable, @NotNull BasicBlock nextBlock) {
-        assert routineValue instanceof VariableValue || routineValue instanceof ConstantValue;
+        if (!(routineValue.getType().isAssignable(RapidType.STRING))) {
+            throw new IllegalArgumentException("Cannot invoke: " + routineValue);
+        }
         buildFunctionCall(element, builder, routineValue, nextBlock, returnVariable, getArguments(arguments));
     }
 
@@ -198,7 +200,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 .filter(expression -> expression instanceof ArgumentDescriptor.Conditional)
                 .findFirst();
         if (descriptor.isEmpty()) {
-            Map<ArgumentDescriptor, ReferenceValue> values = getArguments(builder, arguments);
+            Map<ArgumentDescriptor, Value> values = getArguments(builder, arguments);
             builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, routine, values, returnVariable, nextBlock));
         } else {
             ArgumentDescriptor value = descriptor.get();
@@ -207,10 +209,10 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             }
             ReferenceValue presentReturnVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
             BasicBlock ifBlock = builder.createBasicBlock();
-            ConstantValue presentRoutine = new ConstantValue(RapidType.ANYTYPE, ":Present");
+            ConstantValue presentRoutine = new ConstantValue(RapidType.STRING, ":Present");
             Argument argument = builder.findArgument(conditional.name());
             Objects.requireNonNull(argument);
-            Map<ArgumentDescriptor, ReferenceValue> presentArguments = Map.of(new ArgumentDescriptor.Required(0), new VariableValue(argument));
+            Map<ArgumentDescriptor, Value> presentArguments = Map.of(new ArgumentDescriptor.Required(0), new VariableValue(argument));
             builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, presentRoutine, presentArguments, presentReturnVariable, ifBlock));
             builder.enterBasicBlock(ifBlock);
             BasicBlock presentBlock = builder.createBasicBlock();
@@ -232,10 +234,10 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         }
     }
 
-    private static @NotNull Map<ArgumentDescriptor, ReferenceValue> getArguments(@NotNull ControlFlowBuilder builder, @NotNull Map<ArgumentDescriptor, RapidExpression> arguments) {
-        Map<ArgumentDescriptor, ReferenceValue> result = new HashMap<>();
+    private static @NotNull Map<ArgumentDescriptor, Value> getArguments(@NotNull ControlFlowBuilder builder, @NotNull Map<ArgumentDescriptor, RapidExpression> arguments) {
+        Map<ArgumentDescriptor, Value> result = new HashMap<>();
         arguments.forEach((descriptor, expression) -> {
-            ReferenceValue value = expression != null ? computeExpression(builder, expression) : null;
+            Value value = expression != null ? computeValue(builder, expression) : null;
             result.put(descriptor, value);
         });
         return result;
@@ -247,7 +249,6 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         for (RapidArgument argument : arguments) {
             if (argument instanceof RapidRequiredArgument) {
                 result.put(new ArgumentDescriptor.Required(index), argument.getArgument());
-                index += 1;
             } else {
                 RapidReferenceExpression referenceExpression = argument.getParameter();
                 Objects.requireNonNull(referenceExpression);
@@ -255,6 +256,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 ArgumentDescriptor argumentDescriptor = argument instanceof RapidConditionalArgument ? new ArgumentDescriptor.Conditional(canonicalText) : new ArgumentDescriptor.Optional(canonicalText);
                 result.put(argumentDescriptor, argument.getArgument());
             }
+            index += 1;
         }
         return result;
     }
@@ -384,14 +386,15 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     public void visitFunctionCallExpression(@NotNull RapidFunctionCallExpression expression) {
         RapidType type = getType(expression.getType());
         RapidSymbol symbol = expression.getReferenceExpression().getSymbol();
+        ConstantValue routineValue;
         if (!(symbol instanceof RapidRoutine routine) || routine.getName() == null) {
-            targetVariable.removeLast();
-            return;
+            routineValue = new ConstantValue(RapidType.STRING, expression.getReferenceExpression().getCanonicalText());
+        } else {
+            String moduleName = routine instanceof PhysicalRoutine physicalRoutine ? ControlFlowElementVisitor.getModuleName(physicalRoutine) : null;
+            String name = (moduleName != null ? moduleName + ":" : "") + routine.getName();
+            routineValue = new ConstantValue(RapidType.STRING, name);
         }
-        String moduleName = routine instanceof PhysicalRoutine physicalRoutine ? ControlFlowElementVisitor.getModuleName(physicalRoutine) : null;
-        String name = (moduleName != null ? moduleName + ":" : "") + routine.getName();
         BasicBlock nextBlock = builder.createBasicBlock();
-        ConstantValue routineValue = new ConstantValue(RapidType.ANYTYPE, name);
         List<RapidArgument> arguments = expression.getArgumentList().getArguments();
         ReferenceValue returnVariable = popVariable(type);
         buildFunctionCall(expression, builder, arguments, routineValue, returnVariable, nextBlock);

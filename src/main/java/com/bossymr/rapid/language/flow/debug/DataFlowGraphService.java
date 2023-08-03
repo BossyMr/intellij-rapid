@@ -69,7 +69,10 @@ public class DataFlowGraphService implements LanguageCodeInsightActionHandler {
         stringBuilder.append("rankdir=LR;\n");
         ControlFlow controlFlow = dataFlow.getControlFlow();
         for (Block block : controlFlow.getBlocks()) {
-            writeBlock(stringBuilder, block, dataFlow);
+            if (!(block instanceof Block.FunctionBlock functionBlock)) {
+                continue;
+            }
+            writeBlock(stringBuilder, functionBlock, dataFlow);
         }
         for (DataFlowBlock block : dataFlow.getUsages().keySet()) {
             DataFlowUsage usage = dataFlow.getUsages().get(block);
@@ -88,7 +91,7 @@ public class DataFlowGraphService implements LanguageCodeInsightActionHandler {
         return stringBuilder.toString();
     }
 
-    private static void writeBlock(@NotNull StringBuilder stringBuilder, @NotNull Block block, @NotNull DataFlow dataFlow) {
+    private static void writeBlock(@NotNull StringBuilder stringBuilder, @NotNull Block.FunctionBlock block, @NotNull DataFlow dataFlow) {
         String blockName = block.getModuleName() + ":" + block.getName();
         stringBuilder.append("subgraph \"cluster_").append(blockName).append("\" {").append("\n");
         stringBuilder.append("style=dotted;\nlabel=\"").append(blockName).append("\";").append("\n");

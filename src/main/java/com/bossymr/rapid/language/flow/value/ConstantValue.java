@@ -12,6 +12,12 @@ import org.jetbrains.annotations.NotNull;
  */
 public record ConstantValue(@NotNull RapidType type, @NotNull Object value) implements Value {
 
+    public ConstantValue {
+        assert !(type.isAssignable(RapidType.DOUBLE) || type.isAssignable(RapidType.NUMBER)) || value instanceof Number : "Cannot create constant value of type: " + type + " with value: " + value;
+        assert !(type.isAssignable(RapidType.STRING)) || value instanceof String : "Cannot create constant value of type: " + type + " with value: " + value;
+        assert !(type.isAssignable(RapidType.BOOLEAN)) || value instanceof Boolean : "Cannot create constant value of type: " + type + " with value: " + value;
+    }
+
     public static @NotNull ConstantValue of(boolean value) {
         return new ConstantValue(RapidType.BOOLEAN, value);
     }

@@ -92,16 +92,15 @@ public class DataFlowFunctionMap {
         }
     }
 
-
-    public @NotNull DataFlowFunction get(@NotNull BlockDescriptor blockDescriptor) {
+    public @NotNull Optional<DataFlowFunction> get(@NotNull BlockDescriptor blockDescriptor) {
         if (functionMap.containsKey(blockDescriptor)) {
-            return functionMap.get(blockDescriptor);
+            return Optional.ofNullable(functionMap.get(blockDescriptor));
         }
         if (!(descriptorMap.containsKey(blockDescriptor))) {
-            throw new IllegalStateException("Could not find block: " + blockDescriptor.moduleName() + ":" + blockDescriptor.name());
+            return Optional.empty();
         }
         Block.FunctionBlock functionBlock = descriptorMap.get(blockDescriptor);
-        return new PhysicalDataFlowFunction(functionBlock);
+        return Optional.of(new PhysicalDataFlowFunction(functionBlock));
     }
 
     public void set(@NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowBlock returnBlock, @NotNull Map<Argument, Constraint> arguments, @NotNull DataFlowFunction.Result result) {

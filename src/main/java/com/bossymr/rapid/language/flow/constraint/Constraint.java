@@ -88,7 +88,7 @@ public interface Constraint {
         if (targetStructure instanceof RapidAtomic) {
             return new OpenConstraint(Optionality.PRESENT);
         }
-        throw new IllegalArgumentException("Cannot create constraint for type: " + type);
+        return new OpenConstraint(optionality);
     }
 
     static @NotNull Constraint none(@NotNull RapidType type) {

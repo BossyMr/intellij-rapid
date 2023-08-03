@@ -276,13 +276,13 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             routine.accept(this);
         }
         stringBuilder.append("(");
-        List<Map.Entry<ArgumentDescriptor, ReferenceValue>> arguments = new ArrayList<>(instruction.arguments().entrySet());
+        List<Map.Entry<ArgumentDescriptor, Value>> arguments = new ArrayList<>(instruction.arguments().entrySet());
         arguments.sort(Comparator.comparing(entry -> getDescriptorName(entry.getKey())));
         for (int i = 0; i < arguments.size(); i++) {
             if (i > 0) {
                 stringBuilder.append(", ");
             }
-            Map.Entry<ArgumentDescriptor, ReferenceValue> entry = arguments.get(i);
+            Map.Entry<ArgumentDescriptor, Value> entry = arguments.get(i);
             String key = getDescriptorName(entry.getKey());
             stringBuilder.append("_").append(key);
             if (entry.getValue() != null) {

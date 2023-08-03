@@ -350,7 +350,7 @@ public class DataFlowState {
         }
     }
 
-    public void merge(@NotNull DataFlowState state, @NotNull Map<Argument, ReferenceValue> arguments, @Nullable ReferenceValue returnValue, @Nullable ReferenceValue returnTarget) {
+    public void merge(@NotNull DataFlowState state, @NotNull Map<Argument, Value> arguments, @Nullable ReferenceValue returnValue, @Nullable ReferenceValue returnTarget) {
         Set<ReferenceValue> variables = new HashSet<>();
         /*
          * If this map contains the entry x -> y, snapshots referring to x will be replaced by a snapshot referring to y.
@@ -363,12 +363,15 @@ public class DataFlowState {
         Map<ReferenceSnapshot, ReferenceSnapshot> remapped = new HashMap<>();
         for (Argument argument : arguments.keySet()) {
             ReferenceSnapshot snapshot = state.roots.get(argument);
-            ReferenceValue value = arguments.get(argument);
+            Value value = arguments.get(argument);
+            if (!(value instanceof ReferenceValue referenceValue)) {
+                continue;
+            }
             if (argument.parameterType() != ParameterType.INPUT) {
                 variables.add(new VariableValue(argument));
             }
-            modifications.put(new VariableValue(argument), arguments.get(argument));
-            remapped.put(snapshot, getSnapshot(value));
+            modifications.put(new VariableValue(argument), referenceValue);
+            remapped.put(snapshot, getSnapshot(referenceValue));
         }
         if (returnValue != null) {
             variables.add(returnValue);
@@ -377,10 +380,13 @@ public class DataFlowState {
         state.conditions.removeIf(condition -> !(dependentVariables.contains(condition.getVariable())) && condition.getVariables().stream().noneMatch(dependentVariables::contains));
         state.constraints.keySet().removeIf(variable -> !(dependentVariables.contains(variable)));
         for (var entry : arguments.entrySet()) {
-            Optional<Argument> argument = getArgument(entry.getValue());
+            if (!(entry.getValue() instanceof ReferenceValue referenceValue)) {
+                continue;
+            }
+            Optional<Argument> argument = getArgument(referenceValue);
             if (argument.isPresent()) {
                 Constraint constraint = state.getConstraint(new VariableValue(entry.getKey()));
-                checkOptionality(entry.getValue(), constraint.getOptionality());
+                checkOptionality(referenceValue, constraint.getOptionality());
             }
         }
         for (Condition condition : state.conditions) {
@@ -405,7 +411,12 @@ public class DataFlowState {
                 VariableValue value = new VariableValue(argument);
                 ReferenceValue snapshot = remapped.get(state.getSnapshot(value));
                 Objects.requireNonNull(snapshot);
-                assign(new Condition(arguments.get(argument), ConditionType.EQUALITY, new ValueExpression(snapshot)));
+                if (arguments.get(argument) instanceof ReferenceValue referenceValue) {
+                    /*
+                     * The argument which was passed to the function now reflects any potential modifications made by the function.
+                     */
+                    assign(new Condition(referenceValue, ConditionType.EQUALITY, new ValueExpression(snapshot)));
+                }
             }
         }
         if (returnValue != null) {
@@ -997,7 +1008,9 @@ public class DataFlowState {
             @Override
             public @NotNull Constraint getConstraint(@NotNull Optionality optionality, @NotNull RapidType type) {
                 Constraint constraint;
-                if (type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE)) {
+                if (type.equals(RapidType.ANYTYPE)) {
+                    constraint = new OpenConstraint(optionality);
+                } else if (type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE)) {
                     constraint = NumericConstraint.equalTo(0);
                 } else if (type.isAssignable(RapidType.STRING)) {
                     constraint = StringConstraint.anyOf("");

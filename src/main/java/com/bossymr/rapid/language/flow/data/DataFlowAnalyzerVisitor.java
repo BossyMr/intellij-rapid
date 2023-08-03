@@ -13,18 +13,14 @@ import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.PhysicalElement;
-import com.bossymr.rapid.language.symbol.RapidRoutine;
-import com.bossymr.rapid.language.symbol.RapidSymbol;
+import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
@@ -120,18 +116,86 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
 
     @Override
     public void visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
-        Value routine = instruction.routine();
-        if (routine instanceof ConstantValue) {
-            getEarlyBoundCall(instruction);
+        if (!(block.getConstraint(instruction.routine()) instanceof StringConstraint constraint)) {
+            visitAnyCallInstruction(instruction);
         } else {
-            getLateBoundCall(instruction);
+            for (String sequence : constraint.sequences()) {
+                BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.element(), sequence);
+                List<DataFlowState> states;
+                if (instruction.routine() instanceof ReferenceValue referenceValue && constraint.sequences().size() > 1) {
+                    states = block.split(new Condition(referenceValue, ConditionType.EQUALITY, Expression.of(sequence)));
+                } else {
+                    states = block.getStates();
+                }
+                if (blockDescriptor == null) {
+                    /*
+                     * The function call could not be found, assume that all provided arguments were modified.
+                     */
+                    visitAnyCallInstruction(instruction);
+                    continue;
+                }
+                Optional<DataFlowFunction> function = functionMap.get(blockDescriptor);
+                if (function.isEmpty()) {
+                    PsiElement context = instruction.element();
+                    RapidResolveService service = RapidResolveService.getInstance(context.getProject());
+                    List<RapidSymbol> symbols = service.findSymbols(context, blockDescriptor.moduleName(), blockDescriptor.name());
+                    if (symbols.size() == 1 && symbols.get(0) instanceof RapidRoutine routine) {
+                        visitAnyCallInstruction(instruction, routine);
+                    } else {
+                        visitAnyCallInstruction(instruction);
+                    }
+                    continue;
+                }
+                processResult(instruction, states, function.orElseThrow(), getArguments(function.orElseThrow().getBlock(), instruction.arguments()));
+            }
         }
+    }
+
+    private void visitAnyCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull RapidRoutine routine) {
+        ReferenceValue returnValue = instruction.returnValue();
+        Map<RapidParameter, Value> parameters = getParameters(routine, instruction.arguments());
+        List<DataFlowState> states = block.getStates().stream()
+                .map(DataFlowState::copy)
+                .peek(state -> {
+                    if (returnValue != null) {
+                        state.assign(returnValue, Constraint.any(returnValue.getType()));
+                    }
+                    for (var entry : parameters.entrySet()) {
+                        if (entry.getKey().getParameterType() != ParameterType.INPUT) {
+                            Value argument = entry.getValue();
+                            if (argument instanceof ReferenceValue referenceValue) {
+                                state.assign(referenceValue, Constraint.any(argument.getType()));
+                            }
+                        }
+                    }
+                }).toList();
+        block.addSuccessor(blocks.get(instruction.next()), states);
+    }
+
+    private void visitAnyCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
+        ReferenceValue returnValue = instruction.returnValue();
+        List<DataFlowState> states = block.getStates().stream()
+                .map(DataFlowState::copy)
+                .peek(state -> {
+                    if (returnValue != null) {
+                        state.assign(returnValue, Constraint.any(returnValue.getType()));
+                    }
+                    for (Value value : instruction.arguments().values()) {
+                        if (value instanceof ReferenceValue referenceValue) {
+                            state.assign(referenceValue, Constraint.any(value.getType()));
+                        }
+                    }
+                }).toList();
+        block.addSuccessor(blocks.get(instruction.next()), states);
     }
 
     private @Nullable BlockDescriptor getBlockDescriptor(@NotNull PsiElement context, @NotNull String text) {
         String[] strings = text.split(":");
         if (strings.length == 2) {
             return new BlockDescriptor(strings[0], strings[1]);
+        }
+        if (strings.length != 1) {
+            return null;
         }
         List<RapidSymbol> symbols = RapidResolveService.getInstance(context.getProject()).findSymbols(context, text);
         if (symbols.isEmpty()) {
@@ -159,60 +223,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         }
     }
 
-    private void getLateBoundCall(@NotNull BranchingInstruction.CallInstruction instruction) {
-        if (!(instruction.routine() instanceof ReferenceValue referenceValue)) {
-            throw new AssertionError();
-        }
-        if (!(block.getConstraint(referenceValue) instanceof StringConstraint constraint)) {
-            /*
-             * The set of functions which might be invoked is unbounded. As a result, the return value is assumed to be
-             * unknown; furthermore, all arguments are assumed to have been modified to an unknown value.
-             */
-            ReferenceValue returnValue = instruction.returnValue();
-            List<DataFlowState> states = block.getStates().stream()
-                    .map(DataFlowState::copy)
-                    .peek(state -> {
-                        if (returnValue != null) {
-                            state.assign(returnValue, Constraint.any(returnValue.getType()));
-                        }
-                        for (ReferenceValue value : instruction.arguments().values()) {
-                            state.assign(value, Constraint.any(value.getType()));
-                        }
-                    }).toList();
-            block.addSuccessor(blocks.get(instruction.next()), states);
-        } else {
-            for (String sequence : constraint.sequences()) {
-                BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.element(), sequence);
-                if (blockDescriptor == null) {
-                    /*
-                     * The sequence is invalid. Technically, a warning should be shown that the method might throw an
-                     * exception.
-                     */
-                    continue;
-                }
-                DataFlowFunction function = functionMap.get(blockDescriptor);
-                List<DataFlowState> states = block.split(new Condition(referenceValue, ConditionType.EQUALITY, Expression.of(sequence)));
-                processResult(instruction, states, function, getArguments(function.getBlock(), instruction.arguments()));
-            }
-        }
-    }
-
-    private void getEarlyBoundCall(@NotNull BranchingInstruction.CallInstruction instruction) {
-        if (!(instruction.routine() instanceof ConstantValue value)) {
-            throw new AssertionError();
-        }
-        if (!(value.value() instanceof String text)) {
-            throw new AssertionError();
-        }
-        BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.element(), text);
-        if (blockDescriptor == null) {
-            throw new IllegalStateException("Method: " + text + " was not found");
-        }
-        DataFlowFunction function = functionMap.get(blockDescriptor);
-        processResult(instruction, block.getStates(), function, getArguments(function.getBlock(), instruction.arguments()));
-    }
-
-    private void processResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull List<DataFlowState> states, @NotNull DataFlowFunction function, @NotNull Map<Argument, ReferenceValue> arguments) {
+    private void processResult(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull List<DataFlowState> states, @NotNull DataFlowFunction function, @NotNull Map<Argument, Value> arguments) {
         Map<Argument, Constraint> constraints = new HashMap<>(arguments.size(), 1);
         arguments.forEach((argument, value) -> constraints.put(argument, block.getConstraint(value)));
         Set<DataFlowFunction.Result> results = function.getOutput(block, constraints);
@@ -248,11 +259,11 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         }
     }
 
-    private @NotNull Map<Argument, ReferenceValue> getArguments(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<ArgumentDescriptor, ReferenceValue> values) {
+    private @NotNull Map<Argument, Value> getArguments(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<ArgumentDescriptor, Value> values) {
         List<Argument> arguments = functionBlock.getArgumentGroups().stream()
                 .flatMap(argumentGroup -> argumentGroup.arguments().stream())
                 .toList();
-        Map<Argument, ReferenceValue> result = new HashMap<>();
+        Map<Argument, Value> result = new HashMap<>();
         values.forEach((index, value) -> {
             Argument argument;
             if (index instanceof ArgumentDescriptor.Required required) {
@@ -260,6 +271,32 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
             } else if (index instanceof ArgumentDescriptor.Optional optional) {
                 argument = arguments.stream()
                         .filter(element -> element.name().equals(optional.name()))
+                        .findFirst()
+                        .orElseThrow();
+            } else {
+                throw new AssertionError();
+            }
+            result.put(argument, value);
+        });
+        return result;
+    }
+
+    private @NotNull Map<RapidParameter, Value> getParameters(@NotNull RapidRoutine routine, @NotNull Map<ArgumentDescriptor, Value> values) {
+        Map<RapidParameter, Value> result = new HashMap<>();
+        List<? extends RapidParameterGroup> parameters = routine.getParameters();
+        if (parameters == null) {
+            return result;
+        }
+        List<? extends RapidParameter> arguments = parameters.stream()
+                .flatMap(parameterGroup -> parameterGroup.getParameters().stream())
+                .toList();
+        values.forEach((index, value) -> {
+            RapidParameter argument;
+            if (index instanceof ArgumentDescriptor.Required required) {
+                argument = arguments.get(required.index());
+            } else if (index instanceof ArgumentDescriptor.Optional optional) {
+                argument = arguments.stream()
+                        .filter(element -> Objects.equals(element.getName(), optional.name()))
                         .findFirst()
                         .orElseThrow();
             } else {
