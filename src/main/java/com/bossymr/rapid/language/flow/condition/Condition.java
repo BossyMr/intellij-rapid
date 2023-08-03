@@ -23,9 +23,6 @@ public class Condition {
     private @NotNull Expression expression;
 
     public Condition(@NotNull ReferenceValue variable, @NotNull ConditionType conditionType, @NotNull Expression expression) {
-        if (expression instanceof AggregateExpression) {
-            throw new IllegalArgumentException("Cannot create condition with aggregate expression");
-        }
         this.variable = variable;
         this.conditionType = conditionType;
         this.expression = expression;
@@ -33,6 +30,14 @@ public class Condition {
 
     public static @NotNull Condition create(@NotNull LinearInstruction.AssignmentInstruction instruction) {
         return new Condition(instruction.variable(), ConditionType.EQUALITY, instruction.value());
+    }
+
+    public static @NotNull Condition create(@NotNull Condition condition, @NotNull Function<ReferenceValue, ReferenceValue> variableMapper, @NotNull Function<ReferenceValue, ReferenceValue> expressionMapper) {
+        return new Condition(variableMapper.apply(condition.getVariable()), condition.getConditionType(), ExpressionVisitor.modify(condition.getExpression(), expressionMapper));
+    }
+
+    public static @NotNull Condition create(@NotNull Condition condition, @NotNull Function<ReferenceValue, ReferenceValue> mapper) {
+        return create(condition, mapper, mapper);
     }
 
     @Contract(pure = true)
@@ -48,11 +53,6 @@ public class Condition {
         return new Condition(variable, conditionType.negate(), expression);
     }
 
-    @Contract(pure = true)
-    public @NotNull Condition flip() {
-        return new Condition(variable, conditionType.flip(), expression);
-    }
-
     public @NotNull ReferenceValue getVariable() {
         return variable;
     }
@@ -61,6 +61,7 @@ public class Condition {
         return conditionType;
     }
 
+    @Contract(pure = true)
     public @NotNull Expression getExpression() {
         return expression;
     }
@@ -75,18 +76,11 @@ public class Condition {
         return atomicBoolean.get();
     }
 
-    public void iterate(@NotNull Function<ReferenceValue, ReferenceValue> function) {
-        expression.accept(ExpressionVisitor.iterate(function, this::setExpression));
-    }
-
-    public void replace(@NotNull ReferenceValue target, @NotNull ReferenceValue variable) {
-        expression.accept(ExpressionVisitor.iterate(result -> {
-            if (result.equals(target)) {
-                return variable;
-            } else {
-                return result;
-            }
-        }, this::setExpression));
+    @Contract(pure = true)
+    public @NotNull Condition modify(@NotNull Function<ReferenceValue, ReferenceValue> function) {
+        Condition condition = new Condition(getVariable(), getConditionType(), getExpression());
+        condition.getExpression().accept(ExpressionVisitor.iterate(function, condition::setExpression));
+        return condition;
     }
 
     public @NotNull List<ReferenceValue> getVariables() {
@@ -130,11 +124,11 @@ public class Condition {
         }
 
         @Override
-        public void visitVariableExpression(@NotNull VariableExpression expression) {
+        public void visitValueExpression(@NotNull ValueExpression expression) {
             if (expression.value() instanceof ReferenceValue value) {
-                conditions.add(new Condition(value, conditionType.flip(), new VariableExpression(variable)));
+                conditions.add(new Condition(value, conditionType.flip(), new ValueExpression(variable)));
             }
-            super.visitVariableExpression(expression);
+            super.visitValueExpression(expression);
         }
 
         @Override
@@ -143,7 +137,7 @@ public class Condition {
             for (int i = 0; i < values.size(); i++) {
                 if (values.get(i) instanceof ReferenceValue value) {
                     IndexValue index = new IndexValue(variable, new ConstantValue(RapidType.NUMBER, i));
-                    conditions.add(new Condition(value, ConditionType.EQUALITY, new VariableExpression(index)));
+                    conditions.add(new Condition(value, ConditionType.EQUALITY, new ValueExpression(index)));
                 }
             }
             super.visitAggregateExpression(expression);

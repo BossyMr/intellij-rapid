@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.language.symbol.virtual.VirtualAtomic;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRecord;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -102,6 +103,7 @@ public class RapidType {
         throw new IllegalStateException();
     }
 
+    @Contract(pure = true)
     public boolean isAssignable(@NotNull RapidType type) {
         return isAssignable(this, type);
     }

@@ -3,8 +3,8 @@ package com.bossymr.rapid.language.flow;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
-import com.bossymr.rapid.language.flow.data.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
+import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.parser.ControlFlowElementVisitor;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
@@ -76,7 +76,7 @@ public final class ControlFlowService {
                 .filter(block -> block instanceof Block.FunctionBlock)
                 .map(block -> (Block.FunctionBlock) block)
                 .collect(Collectors.toMap(BlockDescriptor::getBlockKey, block -> block));
-        Deque<DataFlowFunctionMap.WorkListEntry> workList = new ArrayDeque<>();
+        Deque<DataFlowBlock> workList = new ArrayDeque<>();
         DataFlowFunctionMap functionMap = new DataFlowFunctionMap(descriptorMap, workList);
         for (Block block : blocks) {
             if (!(block instanceof Block.FunctionBlock functionBlock)) {
@@ -85,11 +85,10 @@ public final class ControlFlowService {
             Map<BasicBlock, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap);
             dataFlow.putAll(result);
         }
-        for (DataFlowFunctionMap.WorkListEntry entry : workList) {
-            Block.FunctionBlock block = ((Block.FunctionBlock) entry.block().getBasicBlock().getBlock());
-            DataFlowAnalyzer.reanalyze(block, functionMap, dataFlow, Set.of(entry.block()));
+        for (DataFlowBlock entry : workList) {
+            DataFlowAnalyzer.reanalyze(entry, functionMap, dataFlow);
         }
-        return new DataFlow(controlFlow, dataFlow);
+        return new DataFlow(controlFlow, dataFlow, functionMap.getUsages());
     }
 
     /**

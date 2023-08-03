@@ -27,9 +27,20 @@ public enum Optionality {
      * A variable might receive this optionality if one asserts that it is missing after having asserted that it is
      * present.
      */
-    NO_VALUE;
+    NO_VALUE,
+
+    /**
+     * The optionality of the variable is irrelevant.
+     */
+    ANY_VALUE;
 
     public @NotNull Optionality and(@NotNull Optionality optionality) {
+        if (this == ANY_VALUE) {
+            return optionality;
+        }
+        if (optionality == ANY_VALUE) {
+            return this;
+        }
         if (this == NO_VALUE || optionality == NO_VALUE) {
             return NO_VALUE;
         }
@@ -49,10 +60,10 @@ public enum Optionality {
     }
 
     public @NotNull Optionality or(@NotNull Optionality optionality) {
-        if (this == NO_VALUE) {
+        if (this == NO_VALUE || this == ANY_VALUE) {
             return optionality;
         }
-        if (optionality == NO_VALUE) {
+        if (optionality == NO_VALUE || optionality == ANY_VALUE) {
             return this;
         }
         if (this == UNKNOWN || optionality == UNKNOWN) {

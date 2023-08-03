@@ -8,6 +8,10 @@ import java.util.Set;
 
 public record StringConstraint(@NotNull Optionality optionality, @NotNull Set<String> sequences) implements Constraint {
 
+    public static @NotNull StringConstraint anyOf(@NotNull String... sequences) {
+        return new StringConstraint(Optionality.PRESENT, Set.of(sequences));
+    }
+
     @Override
     public @NotNull Optionality getOptionality() {
         return optionality();

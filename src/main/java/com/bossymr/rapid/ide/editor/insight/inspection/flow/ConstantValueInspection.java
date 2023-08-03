@@ -8,7 +8,7 @@ import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.constraint.Optionality;
 import com.bossymr.rapid.language.flow.data.DataFlow;
-import com.bossymr.rapid.language.flow.data.DataFlowBlock;
+import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
@@ -23,6 +23,7 @@ import com.intellij.psi.PsiElementVisitor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
@@ -91,7 +92,9 @@ public class ConstantValueInspection extends LocalInspectionTool {
                     }
                     Optional<?> value = constraint.getValue();
                     if (value.isPresent()) {
-                        holder.registerProblem(expression, RapidBundle.message("inspection.message.constant.expression", value.orElseThrow()));
+                        Object object = value.orElseThrow();
+                        String string = object instanceof Double ? BigDecimal.valueOf((Double) object).stripTrailingZeros().toPlainString() : String.valueOf(object);
+                        holder.registerProblem(expression, RapidBundle.message("inspection.message.constant.expression", string));
                     }
                 }
 

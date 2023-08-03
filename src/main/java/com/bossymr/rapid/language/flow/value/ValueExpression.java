@@ -5,14 +5,14 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-public record VariableExpression(@NotNull Value value) implements Expression {
+public record ValueExpression(@NotNull Value value) implements Expression {
 
-    public VariableExpression {
+    public ValueExpression {
         Objects.requireNonNull(value);
     }
 
     @Override
     public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitVariableExpression(this);
+        visitor.visitValueExpression(this);
     }
 }

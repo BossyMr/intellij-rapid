@@ -112,7 +112,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 MODULE foo
                     PROC bar(num x)
                         VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];
-                        variable{1, x} := <warning descr="Value of expression is always 8">variable{1, 1} * variable{0, 2}</warning>;
+                        variable{1, x} := <warning descr="Value of expression is always 8">variable{1, 3} * variable{2, 2}</warning>;
                     ENDPROC
                 ENDMODULE
                 """);

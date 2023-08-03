@@ -1,11 +1,11 @@
-package com.bossymr.rapid.language.flow.value;
+package com.bossymr.rapid.language.flow.data.snapshots;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.value.ReferenceSnapshot;
+import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Optional;
 
 /**
  * A {@code VariableSnapshot} represents the previous state of a variable. The below example shows how snapshots can be
@@ -19,7 +19,7 @@ import java.util.Optional;
  * 3: x = 10                                // x2 = 10
  * }
  */
-public final class VariableSnapshot implements ReferenceValue {
+public class VariableSnapshot implements ReferenceSnapshot {
 
     private final @Nullable ReferenceValue referenceValue;
     private final @NotNull RapidType type;
@@ -34,14 +34,13 @@ public final class VariableSnapshot implements ReferenceValue {
         this.type = referenceValue.getType();
     }
 
-    @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitSnapshot(this);
+    public @Nullable ReferenceValue getVariable() {
+        return referenceValue;
     }
 
-    public @NotNull Optional<ReferenceValue> getReferenceValue() {
-        // TODO: 2023-07-21 Rebuild with correct reference value after reference function call argument -> OptPar -> x
-        return Optional.ofNullable(referenceValue);
+    @Override
+    public void accept(@NotNull ControlFlowVisitor visitor) {
+        visitor.visitVariableSnapshot(this);
     }
 
     @Override

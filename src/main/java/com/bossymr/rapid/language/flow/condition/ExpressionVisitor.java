@@ -6,10 +6,27 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 public abstract class ExpressionVisitor extends ControlFlowVisitor {
+
+    public static @NotNull Expression modify(@NotNull Expression expression, @NotNull Function<ReferenceValue, ReferenceValue> mapper) {
+        AtomicReference<Expression> result = new AtomicReference<>(expression);
+        expression.accept(new ExpressionVisitor() {
+            @Override
+            protected @NotNull ReferenceValue process(@NotNull ReferenceValue value) {
+                return mapper.apply(value);
+            }
+
+            @Override
+            protected void update(@NotNull Expression expression) {
+                result.set(expression);
+            }
+        });
+        return Objects.requireNonNull(result.get());
+    }
 
     public static @NotNull ExpressionVisitor iterate(@NotNull Function<ReferenceValue, ReferenceValue> mapper, @NotNull Consumer<Expression> consumer) {
         return new ExpressionVisitor() {
@@ -45,12 +62,12 @@ public abstract class ExpressionVisitor extends ControlFlowVisitor {
     protected abstract void update(@NotNull Expression expression);
 
     @Override
-    public void visitVariableExpression(@NotNull VariableExpression expression) {
+    public void visitValueExpression(@NotNull ValueExpression expression) {
         Value value = computeValue(expression.value());
         if (!value.equals(expression.value())) {
-            update(new VariableExpression(value));
+            update(new ValueExpression(value));
         }
-        super.visitVariableExpression(expression);
+        super.visitValueExpression(expression);
     }
 
     @Override

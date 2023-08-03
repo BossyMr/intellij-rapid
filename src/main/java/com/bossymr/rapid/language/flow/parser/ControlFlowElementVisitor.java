@@ -241,7 +241,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
                     Expression conditionExpression = new BinaryExpression(BinaryOperator.OR, conditionVariable, checkValue);
                     ReferenceValue tempValue = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
                     builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, tempValue, conditionExpression));
-                    builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, conditionVariable, new VariableExpression(tempValue)));
+                    builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, conditionVariable, new ValueExpression(tempValue)));
                 } else {
                     builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, conditionVariable, equalExpression));
                 }
@@ -290,10 +290,10 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             BasicBlock descending = builder.createBasicBlock();
             builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, directionVariable, ascending, descending));
             builder.enterBasicBlock(ascending);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new VariableExpression(new ConstantValue(RapidType.NUMBER, 1))));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ValueExpression(new ConstantValue(RapidType.NUMBER, 1))));
             builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, loopBasicBlock));
             builder.enterBasicBlock(descending);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new VariableExpression(new ConstantValue(RapidType.NUMBER, -1))));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ValueExpression(new ConstantValue(RapidType.NUMBER, -1))));
             builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, loopBasicBlock));
         }
         builder.enterBasicBlock(loopBasicBlock);
@@ -394,7 +394,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         Value routineValue = ControlFlowExpressionVisitor.computeValue(builder, expression);
         if (!(routineValue instanceof ConstantValue || routineValue instanceof VariableValue)) {
             ReferenceValue variable = builder.createVariable(VariableKey.createVariable(), routineValue.getType());
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, variable, new VariableExpression(routineValue)));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, variable, new ValueExpression(routineValue)));
             routineValue = variable;
         }
         BasicBlock nextBlock = builder.createBasicBlock();
@@ -460,7 +460,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         if (statement.getLeft() instanceof RapidReferenceExpression referenceExpression) {
             variable = ControlFlowExpressionVisitor.computeVariable(builder, referenceExpression);
         } else if (statement.getLeft() instanceof RapidIndexExpression indexExpression) {
-            variable = ControlFlowExpressionVisitor.computeIndexVariable(builder, indexExpression);
+            variable = ControlFlowExpressionVisitor.computeExpression(builder, indexExpression);
         } else {
             builder.failScope(statement);
             return;
@@ -471,7 +471,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             return;
         }
         Value value = ControlFlowExpressionVisitor.computeValue(builder, right);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, variable, new VariableExpression(value)));
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, variable, new ValueExpression(value)));
     }
 
     @Override

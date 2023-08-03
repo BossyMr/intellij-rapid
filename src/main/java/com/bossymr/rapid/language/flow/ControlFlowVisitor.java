@@ -1,6 +1,9 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.flow.condition.Condition;
+import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
@@ -84,24 +87,22 @@ public class ControlFlowVisitor {
     public void visitInstruction(@NotNull Instruction instruction) {}
 
     public void visitLocalVariableValue(@NotNull VariableValue value) {
-        visitVariableValue(value);
+        visitReferenceValue(value);
     }
 
     public void visitFieldVariableValue(@NotNull FieldValue value) {
-        visitVariableValue(value);
+        visitReferenceValue(value);
     }
-
-    public void visitIndexVariableValue(@NotNull IndexValue value) {
-        visitVariableValue(value);
-    }
-
-    public void visitSnapshot(@NotNull VariableSnapshot snapshot) {}
 
     public void visitComponentVariableValue(@NotNull ComponentValue component) {
-        visitVariableValue(component);
+        visitReferenceValue(component);
     }
 
-    public void visitVariableValue(@NotNull ReferenceValue value) {
+    public void visitIndexValue(@NotNull IndexValue value) {
+        visitReferenceValue(value);
+    }
+
+    public void visitReferenceValue(@NotNull ReferenceValue value) {
         visitValue(value);
     }
 
@@ -115,7 +116,7 @@ public class ControlFlowVisitor {
 
     public void visitValue(@NotNull Value value) {}
 
-    public void visitVariableExpression(@NotNull VariableExpression expression) {
+    public void visitValueExpression(@NotNull ValueExpression expression) {
         visitExpression(expression);
     }
 
@@ -134,4 +135,18 @@ public class ControlFlowVisitor {
     public void visitExpression(@NotNull Expression expression) {}
 
     public void visitCondition(@NotNull Condition condition) {}
+
+    public void visitArraySnapshot(@NotNull ArraySnapshot snapshot) {
+        visitSnapshot(snapshot);
+    }
+
+    public void visitRecordSnapshot(@NotNull RecordSnapshot snapshot) {
+        visitSnapshot(snapshot);
+    }
+
+    public void visitVariableSnapshot(VariableSnapshot snapshot) {
+        visitSnapshot(snapshot);
+    }
+
+    public void visitSnapshot(@NotNull ReferenceSnapshot snapshot) {}
 }

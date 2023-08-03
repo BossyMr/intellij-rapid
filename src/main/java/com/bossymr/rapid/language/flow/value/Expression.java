@@ -7,18 +7,18 @@ import org.jetbrains.annotations.NotNull;
 /**
  * An {@code Expression} represents an expression.
  */
-public sealed interface Expression permits AggregateExpression, BinaryExpression, UnaryExpression, VariableExpression {
+public sealed interface Expression permits AggregateExpression, BinaryExpression, UnaryExpression, ValueExpression {
 
-    static @NotNull Expression booleanConstant(boolean value) {
-        return new VariableExpression(new ConstantValue(RapidType.BOOLEAN, value));
+    static @NotNull Expression of(boolean value) {
+        return new ValueExpression(new ConstantValue(RapidType.BOOLEAN, value));
     }
 
-    static @NotNull Expression numericConstant(double value) {
-        return new VariableExpression(new ConstantValue(RapidType.NUMBER, value));
+    static @NotNull Expression of(double value) {
+        return new ValueExpression(new ConstantValue(RapidType.NUMBER, value));
     }
 
-    static @NotNull Expression stringConstant(@NotNull String value) {
-        return new VariableExpression(new ConstantValue(RapidType.STRING, value));
+    static @NotNull Expression of(@NotNull String value) {
+        return new ValueExpression(new ConstantValue(RapidType.STRING, value));
     }
 
     void accept(@NotNull ControlFlowVisitor visitor);

@@ -89,7 +89,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
             variable.accept(this);
             stringBuilder.append("\n");
         }
-        if (variables.size() > 0) {
+        if (!(variables.isEmpty())) {
             stringBuilder.append("\n");
         }
         List<BasicBlock> basicBlocks = block.getBasicBlocks();
@@ -323,34 +323,25 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitIndexVariableValue(@NotNull IndexValue value) {
-        value.variable().accept(this);
-        stringBuilder.append("[");
-        value.index().accept(this);
-        stringBuilder.append("]");
-        super.visitIndexVariableValue(value);
-    }
-
-    @Override
-    public void visitSnapshot(@NotNull VariableSnapshot snapshot) {
+    public void visitSnapshot(@NotNull ReferenceSnapshot snapshot) {
         stringBuilder.append("=");
         stringBuilder.append(snapshot.hashCode());
-        stringBuilder.append("[");
-        if (snapshot.getReferenceValue().isPresent()) {
-            ReferenceValue referenceValue = snapshot.getReferenceValue().orElseThrow();
-            referenceValue.accept(this);
-        } else {
-            stringBuilder.append(snapshot.getType().getPresentableText());
-        }
-        stringBuilder.append("]");
     }
 
     @Override
     public void visitComponentVariableValue(@NotNull ComponentValue value) {
         value.variable().accept(this);
         stringBuilder.append(".");
-        stringBuilder.append(value.component());
+        stringBuilder.append(value.name());
         super.visitComponentVariableValue(value);
+    }
+
+    @Override
+    public void visitIndexValue(@NotNull IndexValue value) {
+        value.variable().accept(this);
+        stringBuilder.append("[");
+        value.index().accept(this);
+        stringBuilder.append("]");
     }
 
     @Override
@@ -370,9 +361,9 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitVariableExpression(@NotNull VariableExpression expression) {
+    public void visitValueExpression(@NotNull ValueExpression expression) {
         expression.value().accept(this);
-        super.visitVariableExpression(expression);
+        super.visitValueExpression(expression);
     }
 
     @Override

@@ -8,9 +8,9 @@ import com.bossymr.rapid.language.flow.constraint.Optionality;
 import com.bossymr.rapid.language.flow.data.AbstractDataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction.Result;
-import com.bossymr.rapid.language.flow.data.DataFlowState;
+import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
-import com.bossymr.rapid.language.flow.value.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.VariableValue;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidType;
@@ -64,7 +64,7 @@ public class ContractBuilder {
     public class FunctionContractBuilder {
 
         private final @NotNull Map<Argument, Constraint> constraints = new HashMap<>();
-        private final @NotNull DataFlowState state = DataFlowState.createFull(functionBlock);
+        private final @NotNull DataFlowState state = DataFlowState.createState(functionBlock);
         private final @Nullable ReferenceValue output;
 
         public FunctionContractBuilder() {

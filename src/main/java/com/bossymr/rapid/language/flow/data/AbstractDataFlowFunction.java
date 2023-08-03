@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.constraint.Optionality;
+import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -14,7 +15,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
     protected abstract @NotNull Map<Map<Argument, Constraint>, Set<DataFlowFunction.Result>> getResults();
 
     @Override
-    public @NotNull Set<Result> getOutput(@NotNull Map<Argument, Constraint> arguments) {
+    public @NotNull Set<Result> getOutput(@NotNull DataFlowBlock callingBlock, @NotNull Map<Argument, Constraint> arguments) {
         Map<Map<Argument, Constraint>, Set<Result>> results = getResults();
         return results.keySet().stream()
                 .filter(constraints -> contains(constraints, arguments))

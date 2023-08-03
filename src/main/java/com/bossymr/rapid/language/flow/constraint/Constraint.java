@@ -6,15 +6,30 @@ import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
 
 /**
  * A {@code Constraint} represents a condition which a variable must fulfill.
  */
 public interface Constraint {
+
+    static @NotNull Collector<Constraint, List<Constraint>, Constraint> or(@NotNull RapidType type) {
+        return of(Constraint::or, () -> Constraint.none(type));
+    }
+
+    static @NotNull Collector<Constraint, List<Constraint>, Constraint> and(@NotNull RapidType type) {
+        return of(Constraint::and, () -> Constraint.any(type));
+    }
+
+    private static @NotNull Collector<Constraint, List<Constraint>, Constraint> of(@NotNull Function<List<Constraint>, Constraint> mapper, @NotNull Supplier<Constraint> empty) {
+        return Collector.of(ArrayList::new, List::add, (left, right) -> {
+            left.addAll(right);
+            return left;
+        }, constraints -> constraints.isEmpty() ? empty.get() : mapper.apply(constraints));
+    }
 
     /**
      * Creates a new {@code Constraint} which will match if any of the specified constraints match.
@@ -74,6 +89,10 @@ public interface Constraint {
             return new OpenConstraint(Optionality.PRESENT);
         }
         throw new IllegalArgumentException("Cannot create constraint for type: " + type);
+    }
+
+    static @NotNull Constraint none(@NotNull RapidType type) {
+        return any(type).negate();
     }
 
     /**
@@ -142,7 +161,7 @@ public interface Constraint {
 
     /**
      * Checks if this constraint contains the specified constraint. This constraint contains another constraint if every
-     * value which matches the specified constraint also matches this constraint.
+     * value that matches the specified constraint also matches this constraint.
      *
      * @param constraint the constraint.
      * @return if this constraint contains the specified constraint.

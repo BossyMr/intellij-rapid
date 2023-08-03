@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.condition;
 
 import com.bossymr.rapid.language.flow.constraint.NumericConstraint;
+import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.junit.jupiter.api.Test;

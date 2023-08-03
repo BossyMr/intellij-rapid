@@ -136,7 +136,7 @@ public class RapidResolveService {
                 .toList();
     }
 
-    public @Nullable RapidSymbol findCustomSymbol(@NotNull String[] sections) {
+    public @Nullable RapidSymbol findCustomSymbol(@NotNull String @NotNull [] sections) {
         try {
             HardcodedContract contract = HardcodedContract.valueOf(sections[1].toUpperCase());
             RapidRoutine element = contract.getFunction().getBlock().getElement();

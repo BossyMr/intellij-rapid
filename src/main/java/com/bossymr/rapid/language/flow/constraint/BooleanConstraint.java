@@ -28,7 +28,7 @@ public class BooleanConstraint implements Constraint {
         this.value = value;
     }
 
-    public static @NotNull BooleanConstraint withValue(boolean value) {
+    public static @NotNull BooleanConstraint equalTo(boolean value) {
         return value ? alwaysTrue() : alwaysFalse();
     }
 

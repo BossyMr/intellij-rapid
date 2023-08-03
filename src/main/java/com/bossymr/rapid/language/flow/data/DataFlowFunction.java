@@ -3,8 +3,10 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
+import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
+import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
-import com.bossymr.rapid.language.flow.value.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.VariableValue;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -30,10 +32,11 @@ public interface DataFlowFunction {
     /**
      * Calculates the result of calling this function with the specified arguments.
      *
+     * @param callingBlock the block which called this function.
      * @param arguments the arguments with which this function is called with.
      * @return the result of calling this function.
      */
-    @NotNull Set<Result> getOutput(@NotNull Map<Argument, Constraint> arguments);
+    @NotNull Set<Result> getOutput(@NotNull DataFlowBlock callingBlock, @NotNull Map<Argument, Constraint> arguments);
 
     /**
      * A {@code Result} object represents the possible output of calling a {@link DataFlowFunction}.
@@ -50,12 +53,12 @@ public interface DataFlowFunction {
 
             public Success {
                 states = states.stream()
-                        .map(DataFlowState::createCopy)
+                        .map(DataFlowState::copy)
                         .toList();
             }
 
             public static @NotNull Success create(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint returnConstraint) {
-                DataFlowState state = DataFlowState.createLight(functionBlock);
+                DataFlowState state = DataFlowState.createUnknownState(functionBlock);
                 for (Argument argument : constraints.keySet()) {
                     state.assign(new VariableValue(argument), constraints.get(argument));
                 }

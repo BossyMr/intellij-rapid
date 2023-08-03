@@ -33,6 +33,26 @@ public interface VariableKey {
         return createField(null, null);
     }
 
+    static @NotNull VariableKey useVariable(@NotNull ReferenceValue variable) {
+        return new VariableKey() {
+
+            private @Nullable ReferenceValue referenceValue;
+
+            @Override
+            public @NotNull ReferenceValue create(@NotNull Block currentBlock, @NotNull RapidType type) {
+                if (!(variable.getType().isAssignable(type))) {
+                    return referenceValue = new VariableValue(currentBlock.createVariable(null, null, type));
+                }
+                return referenceValue = variable;
+            }
+
+            @Override
+            public @Nullable ReferenceValue retrieve() {
+                return referenceValue;
+            }
+        };
+    }
+
     @NotNull ReferenceValue create(@NotNull Block currentBlock, @NotNull RapidType type);
 
     @Nullable ReferenceValue retrieve();
