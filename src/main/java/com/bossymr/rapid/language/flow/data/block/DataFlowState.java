@@ -17,7 +17,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * A {@code DataFlowState} represents the state of the program at a specific point.
@@ -49,7 +48,7 @@ import java.util.stream.Collectors;
  */
 public class DataFlowState {
 
-    private final @NotNull DataFlowBlock block;
+    private final @Nullable DataFlowState predecessor;
 
     private final @NotNull Block.FunctionBlock functionBlock;
 
@@ -74,21 +73,17 @@ public class DataFlowState {
      */
     private final @NotNull Map<Argument, ReferenceSnapshot> roots;
 
-    private DataFlowState(@NotNull DataFlowBlock block) {
-        this.block = block;
-        Block blockEntity = block.getBasicBlock().getBlock();
-        if (!(blockEntity instanceof Block.FunctionBlock functionEntity)) {
-            throw new IllegalArgumentException();
-        }
-        this.functionBlock = functionEntity;
+    private DataFlowState(@NotNull Block.FunctionBlock block, @Nullable DataFlowState predecessor) {
+        this.predecessor = predecessor;
+        this.functionBlock = block;
         this.conditions = new HashSet<>();
         this.snapshots = new HashMap<>();
         this.constraints = new HashMap<>();
         this.roots = new HashMap<>();
     }
 
-    private DataFlowState(@NotNull DataFlowBlock block, @NotNull DataFlowState state) {
-        this.block = block;
+    private DataFlowState(@NotNull DataFlowState state) {
+        this.predecessor = state.predecessor;
         this.functionBlock = state.functionBlock;
         this.snapshots = new HashMap<>();
         Map<ReferenceSnapshot, ReferenceSnapshot> remapping = new HashMap<>();
@@ -115,8 +110,8 @@ public class DataFlowState {
      * @param state the state.
      * @return the copy.
      */
-    public static @NotNull DataFlowState copy(@NotNull DataFlowBlock block, @NotNull DataFlowState state) {
-        return new DataFlowState(block, state);
+    public static @NotNull DataFlowState copy(@NotNull DataFlowState state) {
+        return new DataFlowState(state);
     }
 
     /**
@@ -126,8 +121,8 @@ public class DataFlowState {
      * @param block the block.
      * @return the state.
      */
-    public static @NotNull DataFlowState createState(@NotNull DataFlowBlock block) {
-        DataFlowState state = new DataFlowState(block);
+    public static @NotNull DataFlowState createState(@NotNull Block.FunctionBlock block) {
+        DataFlowState state = new DataFlowState(block, null);
         state.initialize(AssignmentType.INITIALIZE);
         return state;
     }
@@ -140,10 +135,18 @@ public class DataFlowState {
      * @param block the block.
      * @return the state.
      */
-    public static @NotNull DataFlowState createUnknownState(@NotNull DataFlowBlock block) {
-        DataFlowState state = new DataFlowState(block);
+    public static @NotNull DataFlowState createUnknownState(@NotNull Block.FunctionBlock block) {
+        DataFlowState state = new DataFlowState(block, null);
         state.initialize(AssignmentType.UNKNOWN);
         return state;
+    }
+
+    public static @NotNull DataFlowState createSuccessorState(@NotNull Block.FunctionBlock block, @NotNull DataFlowState predecessor) {
+        return new DataFlowState(block, predecessor);
+    }
+
+    public @NotNull Optional<DataFlowState> getPredecessor() {
+        return Optional.ofNullable(predecessor);
     }
 
     private @NotNull Value mapSnapshot(@NotNull Value previous, @NotNull Map<ReferenceSnapshot, ReferenceSnapshot> remapping) {
@@ -301,16 +304,14 @@ public class DataFlowState {
 
     public void add(@NotNull ReferenceValue variable, @NotNull Constraint constraint) {
         VariableSnapshot snapshot = (VariableSnapshot) getSnapshot(variable);
-        if (constraints.containsKey(snapshot)) {
-            constraint = constraints.get(snapshot).and(constraint);
-        }
         insert(snapshot, constraint);
     }
 
     private void insert(@NotNull VariableSnapshot variable, @NotNull Constraint constraint) {
         checkOptionality(variable, constraint.getOptionality());
-        if (constraints.containsKey(variable)) {
-            constraint = constraints.get(variable).and(constraint);
+        Optional<Constraint> previous = getPrecomputedConstraint(variable);
+        if (previous.isPresent()) {
+            constraint = previous.orElseThrow().and(constraint);
         }
         constraints.put(variable, constraint);
     }
@@ -415,10 +416,15 @@ public class DataFlowState {
             constraints.put(modifiedSnapshot, constraint);
         }
         for (Argument argument : arguments.keySet()) {
+            VariableValue value = new VariableValue(argument);
+            ReferenceSnapshot snapshot = state.getSnapshot(value);
+            if (remapped.containsKey(snapshot)) {
+                snapshot = remapped.get(snapshot);
+            }
+            if (!(arguments.get(argument) instanceof ReferenceValue)) {
+                add(new Condition(snapshot, ConditionType.EQUALITY, new ValueExpression(arguments.get(argument))));
+            }
             if (argument.parameterType() != ParameterType.INPUT) {
-                VariableValue value = new VariableValue(argument);
-                ReferenceValue snapshot = remapped.get(state.getSnapshot(value));
-                Objects.requireNonNull(snapshot);
                 if (arguments.get(argument) instanceof ReferenceValue referenceValue) {
                     /*
                      * The argument which was passed to the function now reflects any potential modifications made by the function.
@@ -511,7 +517,7 @@ public class DataFlowState {
             }
             VariableValue variableValue = new VariableValue(sibling);
             VariableSnapshot snapshot = (VariableSnapshot) getSnapshot(variableValue);
-            constraints.put(snapshot, constraints.get(snapshot).setOptionality(Optionality.MISSING));
+            constraints.put(snapshot, getConstraint(snapshot).setOptionality(Optionality.MISSING));
         }
     }
 
@@ -637,8 +643,7 @@ public class DataFlowState {
      */
     private @NotNull Optional<Constraint> getConstraint(@NotNull ReferenceValue variable, @NotNull Set<ReferenceValue> visited) {
         ReferenceSnapshot snapshot = getSnapshot(variable);
-        List<Constraint> constraints = conditions.stream()
-                .filter(condition -> condition.getVariable().equals(snapshot))
+        List<Constraint> constraints = getConditions(snapshot).stream()
                 .filter(condition -> condition.getVariables().stream().noneMatch(snapshot::equals))
                 .filter(condition -> condition.getVariables().stream().noneMatch(visited::contains))
                 .map(condition -> {
@@ -672,10 +677,13 @@ public class DataFlowState {
         if (!(snapshot instanceof VariableSnapshot variableSnapshot)) {
             return Optional.empty();
         }
-        if (!(constraints.containsKey(variableSnapshot))) {
-            return Optional.empty();
+        if (constraints.containsKey(variableSnapshot)) {
+            return Optional.of(constraints.get(variableSnapshot));
         }
-        return Optional.of(constraints.get(variableSnapshot));
+        if (predecessor != null) {
+            return predecessor.getPrecomputedConstraint(snapshot);
+        }
+        return Optional.empty();
     }
 
     private @NotNull Optional<Constraint> getConstraint(@NotNull Condition condition, @NotNull Set<ReferenceValue> visited) {
@@ -738,26 +746,30 @@ public class DataFlowState {
     }
 
     public @NotNull ReferenceSnapshot getSnapshot(@NotNull ReferenceValue variable) {
+        return findSnapshot(variable).orElseGet(() -> createSnapshot(variable));
+    }
+
+    private @NotNull Optional<ReferenceSnapshot> findSnapshot(@NotNull ReferenceValue variable) {
         if (variable instanceof FieldValue) {
-            throw new IllegalArgumentException("Cannot retrieve snapshot of field: " + variable);
+            throw new IllegalArgumentException("Cannot retrieve snapshot for field: " + variable);
         }
         if (variable instanceof ReferenceSnapshot snapshot) {
             /*
              * The variable is already a snapshot, and snapshots should not be nested.
              */
-            return snapshot;
+            return Optional.of(snapshot);
         }
         if (variable instanceof ComponentValue componentValue) {
             ReferenceSnapshot snapshot = getSnapshot(componentValue.variable());
             if (!(snapshot instanceof RecordSnapshot recordSnapshot)) {
-                throw new IllegalArgumentException("Cannot retrieve snapshot of: " + variable);
+                throw new IllegalArgumentException("Cannot retrieve snapshot for component: " + variable);
             }
-            return recordSnapshot.getSnapshot(componentValue);
+            return Optional.of(recordSnapshot.getSnapshot(componentValue));
         }
         if (variable instanceof IndexValue indexValue) {
             ReferenceSnapshot snapshot = getSnapshot(indexValue.variable());
             if (!(snapshot instanceof ArraySnapshot arraySnapshot)) {
-                throw new IllegalArgumentException("Cannot retrieve snapshot of: " + variable);
+                throw new IllegalArgumentException("Cannot retrieve snapshot for index: " + variable);
             }
             Value index;
             if (indexValue.index() instanceof ReferenceValue referenceValue) {
@@ -781,29 +793,33 @@ public class DataFlowState {
             ArrayEntry entry = assignments.iterator().next();
             if (entry instanceof ArrayEntry.DefaultValue defaultValue) {
                 if (indexValue.getType().getDimensions() > 0) {
-                    return new ArraySnapshot(defaultValue.defaultValue(), indexValue);
+                    return Optional.of(new ArraySnapshot(defaultValue.defaultValue(), indexValue));
                 } else {
                     VariableSnapshot defaultSnapshot = new VariableSnapshot(indexValue);
                     add(new Condition(defaultSnapshot, ConditionType.EQUALITY, new ValueExpression(defaultValue.defaultValue())));
-                    return defaultSnapshot;
+                    return Optional.of(defaultSnapshot);
                 }
             } else if (entry instanceof ArrayEntry.Assignment assignment) {
                 if (assignment.value() instanceof ReferenceValue referenceValue) {
-                    return getSnapshot(referenceValue);
+                    return Optional.of(getSnapshot(referenceValue));
                 }
                 VariableSnapshot variableSnapshot = new VariableSnapshot(indexValue);
                 add(new Condition(variableSnapshot, ConditionType.EQUALITY, new ValueExpression(assignment.value())));
-                return variableSnapshot;
+                return Optional.of(variableSnapshot);
             }
         }
         if (!(variable instanceof VariableValue variableValue)) {
             throw new AssertionError();
         }
         if (!(snapshots.containsKey(variableValue))) {
-            return createSnapshot(variableValue);
+            if (predecessor == null) {
+                return Optional.empty();
+            } else {
+                return predecessor.findSnapshot(variable);
+            }
         }
         ReferenceSnapshot snapshot = snapshots.get(variableValue);
-        return Objects.requireNonNull(snapshot);
+        return Optional.ofNullable(snapshot);
     }
 
     private @NotNull Constraint getConstraint(@NotNull Condition condition, @NotNull Constraint constraint) {
@@ -871,10 +887,24 @@ public class DataFlowState {
     }
 
     public @NotNull Set<Condition> getConditions(@NotNull ReferenceValue referenceValue) {
-        ReferenceSnapshot values = getSnapshot(referenceValue);
-        return conditions.stream()
-                .filter(condition -> values.equals(condition.getVariable()))
-                .collect(Collectors.toSet());
+        ReferenceSnapshot snapshot = getSnapshot(referenceValue);
+        Set<Condition> result = new HashSet<>();
+        for (Condition condition : conditions) {
+            if (condition.getVariable().equals(snapshot)) {
+                result.add(condition);
+            }
+        }
+        if (snapshots.containsValue(snapshot)) {
+            /*
+             * The specified snapshot is declared in this state, as a result, it won't be declared in any previous state.
+             */
+            return result;
+        }
+        if (predecessor == null) {
+            return result;
+        }
+        result.addAll(predecessor.getConditions(snapshot));
+        return result;
     }
 
     /**

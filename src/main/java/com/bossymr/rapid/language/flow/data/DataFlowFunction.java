@@ -51,7 +51,7 @@ public interface DataFlowFunction {
          */
         record Success(@NotNull List<DataFlowState> states, @Nullable ReferenceValue returnValue) implements Result {
 
-            public static @NotNull Success create(@NotNull DataFlowBlock block, @NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint returnConstraint) {
+            public static @NotNull Success create(@NotNull Block.FunctionBlock block, @NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint returnConstraint) {
                 DataFlowState state = DataFlowState.createUnknownState(block);
                 for (Argument argument : constraints.keySet()) {
                     state.assign(new VariableValue(argument), constraints.get(argument));

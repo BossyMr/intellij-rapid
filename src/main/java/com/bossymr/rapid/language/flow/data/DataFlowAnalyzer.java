@@ -254,9 +254,9 @@ public class DataFlowAnalyzer {
                  * This block has no predecessors and is not the entry point of a function, as such, assume that any
                  * variable might be equal to any value.
                  */
-                block.getStates().add(DataFlowState.createUnknownState(block));
+                block.getStates().add(DataFlowState.createUnknownState(functionBlock));
             } else {
-                block.getStates().add(DataFlowState.createState(block));
+                block.getStates().add(DataFlowState.createState(functionBlock));
             }
         }
         for (LinearInstruction instruction : basicBlock.getInstructions()) {

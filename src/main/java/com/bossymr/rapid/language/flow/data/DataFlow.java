@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 
@@ -19,6 +20,10 @@ public class DataFlow {
         this.map = Map.copyOf(blocks);
         this.controlFlow = controlFlow;
         this.usages = usages;
+    }
+
+    public @NotNull Collection<DataFlowBlock> getBlocks() {
+        return map.values();
     }
 
     public @NotNull ControlFlow getControlFlow() {

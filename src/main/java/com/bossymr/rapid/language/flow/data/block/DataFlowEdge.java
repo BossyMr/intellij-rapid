@@ -32,7 +32,7 @@ public final class DataFlowEdge {
 
     public @NotNull List<DataFlowState> getStates() {
         latest = states.stream()
-                .map(state -> DataFlowState.copy(destination, state))
+                .map(DataFlowState::copy)
                 .toList();
         return latest;
     }

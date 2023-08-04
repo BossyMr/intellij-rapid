@@ -1,14 +1,12 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
-import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
@@ -216,8 +214,7 @@ public class DataFlowFunctionMap {
             }
             RapidType returnType = functionBlock.getReturnType();
             Constraint returnConstraint = returnType != null ? Constraint.any(returnType) : null;
-            BasicBlock.EntryBasicBlock basicBlock = new BasicBlock.EntryBasicBlock(functionBlock, StatementListType.STATEMENT_LIST);
-            Result output = Result.Success.create(new DataFlowBlock(basicBlock), constraints, returnType, returnConstraint);
+            Result output = Result.Success.create(functionBlock, constraints, returnType, returnConstraint);
             registerUsage(callerBlock, arguments, BlockDescriptor.getBlockKey(functionBlock), output);
             return Set.of(output);
         }

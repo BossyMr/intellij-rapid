@@ -12,11 +12,11 @@ import java.util.function.Function;
 
 public abstract class ExpressionVisitor extends ControlFlowVisitor {
 
-    public static @NotNull Expression modify(@NotNull Expression expression, @NotNull Function<ReferenceValue, ReferenceValue> mapper) {
+    public static @NotNull Expression modify(@NotNull Expression expression, @NotNull Function<ReferenceValue, Value> mapper) {
         AtomicReference<Expression> result = new AtomicReference<>(expression);
         expression.accept(new ExpressionVisitor() {
             @Override
-            protected @NotNull ReferenceValue process(@NotNull ReferenceValue value) {
+            protected @NotNull Value process(@NotNull ReferenceValue value) {
                 return mapper.apply(value);
             }
 
@@ -28,10 +28,10 @@ public abstract class ExpressionVisitor extends ControlFlowVisitor {
         return Objects.requireNonNull(result.get());
     }
 
-    public static @NotNull ExpressionVisitor iterate(@NotNull Function<ReferenceValue, ReferenceValue> mapper, @NotNull Consumer<Expression> consumer) {
+    public static @NotNull ExpressionVisitor iterate(@NotNull Function<ReferenceValue, Value> mapper, @NotNull Consumer<Expression> consumer) {
         return new ExpressionVisitor() {
             @Override
-            protected @NotNull ReferenceValue process(@NotNull ReferenceValue value) {
+            protected @NotNull Value process(@NotNull ReferenceValue value) {
                 return Objects.requireNonNull(mapper.apply(value));
             }
 
@@ -45,7 +45,7 @@ public abstract class ExpressionVisitor extends ControlFlowVisitor {
     public static @NotNull ExpressionVisitor visit(@NotNull Consumer<ReferenceValue> consumer) {
         return new ExpressionVisitor() {
             @Override
-            protected @NotNull ReferenceValue process(@NotNull ReferenceValue value) {
+            protected @NotNull Value process(@NotNull ReferenceValue value) {
                 consumer.accept(value);
                 return value;
             }
@@ -57,7 +57,7 @@ public abstract class ExpressionVisitor extends ControlFlowVisitor {
         };
     }
 
-    protected abstract @NotNull ReferenceValue process(@NotNull ReferenceValue value);
+    protected abstract @NotNull Value process(@NotNull ReferenceValue value);
 
     protected abstract void update(@NotNull Expression expression);
 

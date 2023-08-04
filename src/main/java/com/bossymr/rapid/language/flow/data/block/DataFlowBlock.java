@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.BasicBlock;
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.constraint.BooleanConstraint;
@@ -86,7 +87,7 @@ public class DataFlowBlock {
             }
             for (int i = 0; i < assignments.size(); i++) {
                 ArrayEntry assignment = assignments.get(i);
-                DataFlowState copy = DataFlowState.copy(this, state);
+                DataFlowState copy = DataFlowState.copy(state);
                 assignAssignment(copy, indexValue, ConditionType.EQUALITY, assignment);
                 for (int j = 0; j < i; j++) {
                     assignAssignment(copy, indexValue, ConditionType.INEQUALITY, assignments.get(j));
@@ -183,21 +184,29 @@ public class DataFlowBlock {
     }
 
     public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull Condition condition) {
-        List<DataFlowState> states = split(successor, condition);
+        List<DataFlowState> states = split(condition);
         successors.add(new DataFlowEdge(this, successor, states));
     }
 
-    public @NotNull List<DataFlowState> split(@NotNull DataFlowBlock block, @NotNull Condition condition) {
+    public @NotNull List<DataFlowState> split(@NotNull Condition condition) {
+        Block block = getBasicBlock().getBlock();
+        if (!(block instanceof Block.FunctionBlock functionBlock)) {
+            throw new IllegalArgumentException();
+        }
         return getStates().stream()
                 .filter(state -> state.intersects(condition))
-                .map(state -> DataFlowState.copy(block, state))
+                .map(state -> DataFlowState.createSuccessorState(functionBlock, state))
                 .peek(state -> state.add(condition))
                 .toList();
     }
 
     public void addSuccessor(@NotNull DataFlowBlock successor) {
+        Block block = getBasicBlock().getBlock();
+        if (!(block instanceof Block.FunctionBlock functionBlock)) {
+            throw new IllegalArgumentException();
+        }
         List<DataFlowState> states = getStates().stream()
-                .map(state -> DataFlowState.copy(successor, state))
+                .map(state -> DataFlowState.createSuccessorState(functionBlock, state))
                 .toList();
         successors.add(new DataFlowEdge(this, successor, states));
     }

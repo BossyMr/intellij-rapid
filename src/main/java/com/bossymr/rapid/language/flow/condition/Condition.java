@@ -32,12 +32,18 @@ public class Condition {
         return new Condition(instruction.variable(), ConditionType.EQUALITY, instruction.value());
     }
 
-    public static @NotNull Condition create(@NotNull Condition condition, @NotNull Function<ReferenceValue, ReferenceValue> variableMapper, @NotNull Function<ReferenceValue, ReferenceValue> expressionMapper) {
+    public static @NotNull Condition create(@NotNull Condition condition, @NotNull Function<ReferenceValue, ReferenceValue> variableMapper, @NotNull Function<ReferenceValue, Value> expressionMapper) {
         return new Condition(variableMapper.apply(condition.getVariable()), condition.getConditionType(), ExpressionVisitor.modify(condition.getExpression(), expressionMapper));
     }
 
-    public static @NotNull Condition create(@NotNull Condition condition, @NotNull Function<ReferenceValue, ReferenceValue> mapper) {
-        return create(condition, mapper, mapper);
+    public static @NotNull Condition create(@NotNull Condition condition, @NotNull Function<ReferenceValue, Value> mapper) {
+        return create(condition, (variable) -> {
+            Value value = mapper.apply(variable);
+            if (!(value instanceof ReferenceValue referenceValue)) {
+                throw new IllegalArgumentException("Cannot replace variable for condition: " + condition + " to: " + value);
+            }
+            return referenceValue;
+        }, mapper);
     }
 
     @Contract(pure = true)
@@ -77,7 +83,7 @@ public class Condition {
     }
 
     @Contract(pure = true)
-    public @NotNull Condition modify(@NotNull Function<ReferenceValue, ReferenceValue> function) {
+    public @NotNull Condition modify(@NotNull Function<ReferenceValue, Value> function) {
         Condition condition = new Condition(getVariable(), getConditionType(), getExpression());
         condition.getExpression().accept(ExpressionVisitor.iterate(function, condition::setExpression));
         return condition;

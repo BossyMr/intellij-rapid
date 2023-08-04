@@ -37,8 +37,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class DataFlowGraphService implements LanguageCodeInsightActionHandler {
 
@@ -105,8 +103,9 @@ public class DataFlowGraphService implements LanguageCodeInsightActionHandler {
         }
         for (BasicBlock basicBlock : block.getBasicBlocks()) {
             DataFlowBlock dataFlowBlock = dataFlow.getBlock(basicBlock);
-            stringBuilder.append(getBlockIndex(basicBlock));
-            stringBuilder.append("[shape=plain,label=<");
+            String name = String.valueOf(basicBlock.getIndex());
+            stringBuilder.append("subgraph \"cluster_").append(blockName).append("_").append(":").append(name).append("\" {\n");
+            stringBuilder.append("label=<");
             stringBuilder.append("<table BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">");
             stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Block #").append(basicBlock.getIndex()).append("</td></tr>\n");
             int index = 0;
@@ -115,27 +114,39 @@ public class DataFlowGraphService implements LanguageCodeInsightActionHandler {
                 index += 1;
             }
             writeInstruction(stringBuilder, index, basicBlock.getTerminator());
+            stringBuilder.append("</table>>;");
             index = 0;
             for (DataFlowState state : dataFlowBlock.getStates()) {
-                writeState(stringBuilder, index, state);
+                writeState(stringBuilder, index, basicBlock, state);
                 index += 1;
             }
-            stringBuilder.append("</table>");
-            stringBuilder.append(">];").append("\n");
-            for (DataFlowEdge successor : dataFlowBlock.getSuccessors()) {
-                stringBuilder.append(getBlockIndex(basicBlock)).append(" -> ").append(getBlockIndex(successor.getDestination().getBasicBlock()));
-                List<DataFlowState> states = successor.getDestination().getStates();
-                stringBuilder.append("[label=\"");
-                stringBuilder.append(successor.getLatest().stream()
-                        .map(state -> String.valueOf(states.indexOf(state)))
-                        .collect(Collectors.joining(", ")));
-                stringBuilder.append("\"];\n");
+            stringBuilder.append("};\n");
+            for (DataFlowState state : dataFlowBlock.getStates()) {
+                if (state.getPredecessor().isPresent()) {
+                    DataFlowState predecessor = state.getPredecessor().orElseThrow();
+                    DataFlowBlock predecessorBlock = null;
+                    for (DataFlowEdge edge : dataFlowBlock.getPredecessors()) {
+                        DataFlowBlock source = edge.getSource();
+                        if (source.getStates().contains(predecessor)) {
+                            predecessorBlock = source;
+                        }
+                    }
+                    if (predecessorBlock == null) {
+                        throw new IllegalStateException();
+                    }
+                    stringBuilder.append(getBlockIndex(predecessorBlock.getBasicBlock())).append(":").append(predecessorBlock.getStates().indexOf(predecessor));
+                    stringBuilder.append(" -> ");
+                    stringBuilder.append(getBlockIndex(dataFlowBlock.getBasicBlock())).append(":").append(dataFlowBlock.getStates().indexOf(state));
+                    stringBuilder.append(";\n");
+                }
             }
         }
         stringBuilder.append("};").append("\n");
     }
 
-    private static void writeState(@NotNull StringBuilder stringBuilder, int index, @NotNull DataFlowState state) {
+    private static void writeState(@NotNull StringBuilder stringBuilder, int index, @NotNull BasicBlock basicBlock, @NotNull DataFlowState state) {
+        stringBuilder.append(getBlockIndex(basicBlock)).append(":").append(index);
+        stringBuilder.append("[shape=plain,label=<").append("<table BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">");
         stringBuilder.append("<tr><td COLSPAN=\"3\">").append("State #").append(index).append("</td></tr>\n");
         stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Snapshots").append("</td></tr>\n");
         ControlFlowFormatVisitor visitor = new ControlFlowFormatVisitor(stringBuilder);
@@ -228,6 +239,7 @@ public class DataFlowGraphService implements LanguageCodeInsightActionHandler {
             stringBuilder.append("</td>");
             stringBuilder.append("</tr>\n");
         }
+        stringBuilder.append("</table>>];\n");
     }
 
     private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull ReferenceSnapshot snapshot) {
