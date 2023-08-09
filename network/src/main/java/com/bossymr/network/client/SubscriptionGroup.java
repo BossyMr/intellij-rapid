@@ -66,9 +66,9 @@ public class SubscriptionGroup {
         List<SubscriptionEntity> unique = getUnique(entities);
         for (int i = 0; i < unique.size(); i++) {
             SubscriptionEntity entity = unique.get(i);
-            map.add("resources", String.valueOf(i));
-            map.add(String.valueOf(i), String.valueOf(entity.getEvent().getResource()));
-            map.add(i + "-p", String.valueOf(entity.getPriority().ordinal()));
+            map.put("resources", String.valueOf(i));
+            map.put(String.valueOf(i), String.valueOf(entity.getEvent().getResource()));
+            map.put(i + "-p", String.valueOf(entity.getPriority().ordinal()));
         }
         return map;
     }

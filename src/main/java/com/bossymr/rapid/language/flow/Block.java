@@ -82,7 +82,6 @@ public sealed abstract class Block {
             throw new IllegalStateException();
         }
         BasicBlock basicBlock = new BasicBlock.EntryBasicBlock(this, scopeType);
-        basicBlocks.add(basicBlock);
         entryBlocks.put(scopeType, basicBlock);
         return basicBlock;
     }
@@ -92,15 +91,12 @@ public sealed abstract class Block {
             throw new IllegalStateException();
         }
         BasicBlock basicBlock = new BasicBlock.ErrorBasicBlock(this, exceptions);
-        basicBlocks.add(basicBlock);
         entryBlocks.put(StatementListType.ERROR_CLAUSE, basicBlock);
         return basicBlock;
     }
 
     public @NotNull BasicBlock createBasicBlock() {
-        BasicBlock basicBlock = new BasicBlock.IntermediateBasicBlock(this);
-        basicBlocks.add(basicBlock);
-        return basicBlock;
+        return new BasicBlock.IntermediateBasicBlock(this);
     }
 
     public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {

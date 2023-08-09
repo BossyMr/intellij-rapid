@@ -33,7 +33,13 @@ public class Condition {
     }
 
     public static @NotNull Condition create(@NotNull Condition condition, @NotNull Function<ReferenceValue, ReferenceValue> variableMapper, @NotNull Function<ReferenceValue, Value> expressionMapper) {
-        return new Condition(variableMapper.apply(condition.getVariable()), condition.getConditionType(), ExpressionVisitor.modify(condition.getExpression(), expressionMapper));
+        return new Condition(variableMapper.apply(condition.getVariable()), condition.getConditionType(), ExpressionVisitor.modify(condition.getExpression(), (variable) -> {
+            if (variable instanceof FieldValue) {
+                return variable;
+            } else {
+                return expressionMapper.apply(variable);
+            }
+        }));
     }
 
     public static @NotNull Condition create(@NotNull Condition condition, @NotNull Function<ReferenceValue, Value> mapper) {

@@ -14,7 +14,7 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
 
     private void check(@NotNull String text) throws IOException, ExecutionException {
         myFixture.configureByText(RapidFileType.getInstance(), text);
-        DataFlow dataFlow = ControlFlowService.getInstance().getDataFlow(myFixture.getModule());
+        DataFlow dataFlow = ControlFlowService.getInstance().getDataFlow(myFixture.getProject());
         File outputFile = new File("C:\\Users\\Robert Fromholz\\Downloads\\graph.svg");
         DataFlowGraphService.convert(outputFile, dataFlow);
     }
@@ -22,20 +22,16 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
     public void testModule() throws IOException, ExecutionException {
         check("""
                 MODULE foo
-                    PROC bar()
-                        VAR num variable := 0;
-                        variable := Abs(-1);
-                        IF variable = 1 THEN
+                    PROC bar(\\num x)
+                        VAR num y := 5;
+                        VAR num z := 0;
+                        IF Present(x) THEN
+                            y := y + x;
+                        ELSE
+                            y := y - x;
+                            z := x;
                         ENDIF
                     ENDPROC
-                    
-                    FUNC num Abs(num value)
-                        IF value >= 0 THEN
-                            return value;
-                        ELSE
-                            return -value;
-                        ENDIF
-                    ENDFUNC
                 ENDMODULE
                 """);
     }

@@ -69,7 +69,7 @@ public class RequestFactory {
             } else {
                 value = null;
             }
-            collected.add(key, value);
+            collected.put(key, value);
         }
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
         NetworkRequest<?> request = new NetworkRequest<>(command, URI.create(interpolate(path, proxy, method, args)), GenericType.of(returnType));
@@ -114,7 +114,7 @@ public class RequestFactory {
                         return field;
                     }
                     if (map.containsKey(value)) {
-                        return map.first(value);
+                        return map.get(value);
                     }
                     throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' does not provide value for '" + value + "'");
                 });
@@ -145,13 +145,13 @@ public class RequestFactory {
                 if (name.isEmpty()) {
                     if (args[i] instanceof Map<?, ?> values) {
                         for (Map.Entry<?, ?> entry : values.entrySet()) {
-                            map.add(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
+                            map.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
                         }
                     } else {
                         throw new ProxyException("Parameter of '" + method.getName() + "' should be Map<String, String>");
                     }
                 } else {
-                    map.add(name, convert(args[i]));
+                    map.put(name, convert(args[i]));
                 }
             }
         }

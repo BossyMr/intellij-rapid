@@ -54,12 +54,18 @@ public interface DataFlowFunction {
             public static @NotNull Success create(@NotNull Block.FunctionBlock block, @NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint returnConstraint) {
                 DataFlowState state = DataFlowState.createUnknownState(block);
                 for (Argument argument : constraints.keySet()) {
-                    state.assign(new VariableValue(argument), constraints.get(argument));
+                    ReferenceValue snapshot = state.createSnapshot(new VariableValue(argument));
+                    if (snapshot instanceof VariableSnapshot variableSnapshot) {
+                        state.add(variableSnapshot, constraints.get(argument));
+                    }
                 }
                 ReferenceValue returnValue = null;
                 if (returnType != null && returnConstraint != null) {
                     returnValue = new VariableSnapshot(returnType);
-                    state.assign(returnValue, returnConstraint);
+                    ReferenceValue snapshot = state.createSnapshot(returnValue);
+                    if (snapshot instanceof VariableSnapshot variableSnapshot) {
+                        state.add(variableSnapshot, returnConstraint);
+                    }
                 }
                 return new Success(List.of(state), returnValue);
             }

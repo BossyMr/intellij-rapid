@@ -9,6 +9,7 @@ import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
+import com.intellij.openapi.components.Service;
 import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -25,7 +26,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public class RapidResolveService {
+@Service(Service.Level.PROJECT)
+public final class RapidResolveService {
 
     private final @NotNull Project project;
 

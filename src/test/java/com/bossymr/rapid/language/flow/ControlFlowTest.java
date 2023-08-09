@@ -9,7 +9,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
 
     private void check(@NotNull String text, @NotNull String expected) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
-        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(myFixture.getModule());
+        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(myFixture.getProject());
         assertTextEquals(expected.replaceAll(" {4}", "\t"), ControlFlowFormatVisitor.format(controlFlow));
     }
 
@@ -67,29 +67,29 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	block 1 {
                 		_2 := _0 + 1.0;
                 		_0 := _2;
-                		goto -> 3;
+                		goto -> 5;
                 	}
                                 
                 	block 2 {
                 		_3 := _0 > 2.0;
-                		if(_3) -> [true: 4, false: 5]
+                		if(_3) -> [true: 3, false: 4]
                 	}
                                 
                 	block 3 {
-                		return _0;
+                		_4 := _0 - 1.0;
+                		_0 := _4;
+                		goto -> 5;
                 	}
                                 
                 	block 4 {
-                		_4 := _0 - 1.0;
-                		_0 := _4;
-                		goto -> 3;
-                	}
-                                
-                	block 5 {
                 		_5 := _0 * 2.0;
                 		_6 := _5 + 2.0;
                 		_0 := _6;
-                		goto -> 3;
+                		goto -> 5;
+                	}
+                                
+                	block 5 {
+                		return _0;
                 	}
                 }
                 """);
@@ -108,7 +108,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 func num foo:bar() {
-                    var num _0 [value];
+                	var num _0 [value];
                 	bool _1;
                 	num _2;
                                 
@@ -119,17 +119,17 @@ public class ControlFlowTest extends BasePlatformTestCase {
                                 
                 	block 1 {
                 		_1 := _0 > 0.0;
-                		if(_1) -> [true: 3, false: 2]
+                		if(_1) -> [true: 2, false: 3]
                 	}
                                 
                 	block 2 {
-                		return _0;
-                	}
-                                
-                	block 3 {
                 		_2 := _0 - 1.0;
                 		_0 := _2;
                 		goto -> 1;
+                	}
+                                
+                	block 3 {
+                		return _0;
                 	}
                 }
                 """);
@@ -208,32 +208,32 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _5;
                                 
                 	entry 0 {
-                	    _0 := 0.0;
-                	    _1 := 0.0;
+                		_0 := 0.0;
+                		_1 := 0.0;
                 		_3 := _1 < 10.0;
-                		if(_3) -> [true: 3, false: 4]
+                		if(_3) -> [true: 1, false: 2]
                 	}
                                 
                 	block 1 {
+                		_2 := 1;
+                		goto -> 3;
+                	}
+                                
+                	block 2 {
+                		_2 := -1;
+                		goto -> 3;
+                	}
+                                
+                	block 3 {
                 		_4 := _0 + 1.0;
                 		_0 := _4;
                 		_1 := _1 + _2;
                 		_5 := _1 = 10.0;
-                		if(_5) -> [true: 2, false: 1]
-                	}
-                                
-                	block 2 {
-                		return _0;
-                	}
-                                
-                	block 3 {
-                		_2 := 1;
-                		goto -> 1;
+                		if(_5) -> [true: 4, false: 3]
                 	}
                                 
                 	block 4 {
-                		_2 := -1;
-                		goto -> 1;
+                		return _0;
                 	}
                 }
                 """);
@@ -424,23 +424,23 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _1;
                                 
                 	entry 0 {
-                		_1 := :Present(_0 := _0) -> 2;
+                		_1 := :Present(_0 := _0) -> 1;
                 	}
                                 
                 	block 1 {
-                		return;
+                		if(_1) -> [true: 2, false: 3]
                 	}
                                 
                 	block 2 {
-                		if(_1) -> [true: 3, false: 4]
+                		foo:conditional(_a := _0) -> 4;
                 	}
                                 
                 	block 3 {
-                		foo:conditional(_a := _0) -> 1;
+                		foo:conditional() -> 4;
                 	}
                                 
                 	block 4 {
-                		foo:conditional() -> 1;
+                		return;
                 	}
                 }
                                 
@@ -468,47 +468,47 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _4;
                                 
                 	entry 0 {
-                		_2 := :Present(_0 := _0) -> 2;
+                		_2 := :Present(_0 := _0) -> 1;
                 	}
                                 
                 	block 1 {
-                		return;
+                		if(_2) -> [true: 2, false: 6]
                 	}
                                 
                 	block 2 {
-                		if(_2) -> [true: 3, false: 4]
+                		_3 := :Present(_0 := _1) -> 3;
                 	}
                                 
                 	block 3 {
-                		_3 := :Present(_0 := _1) -> 5;
+                		if(_3) -> [true: 4, false: 5]
                 	}
                                 
                 	block 4 {
-                		_4 := :Present(_0 := _1) -> 8;
+                		foo:conditional(_a := _0, _b := _1) -> 10;
                 	}
                                 
                 	block 5 {
-                		if(_3) -> [true: 6, false: 7]
+                		foo:conditional(_a := _0) -> 10;
                 	}
                                 
                 	block 6 {
-                		foo:conditional(_a := _0, _b := _1) -> 1;
+                		_4 := :Present(_0 := _1) -> 7;
                 	}
                                 
                 	block 7 {
-                		foo:conditional(_a := _0) -> 1;
+                		if(_4) -> [true: 8, false: 9]
                 	}
                                 
                 	block 8 {
-                		if(_4) -> [true: 9, false: 10]
+                		foo:conditional(_b := _1) -> 10;
                 	}
                                 
                 	block 9 {
-                		foo:conditional(_b := _1) -> 1;
+                		foo:conditional() -> 10;
                 	}
                                 
                 	block 10 {
-                		foo:conditional() -> 1;
+                		return;
                 	}
                 }
                                 

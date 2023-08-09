@@ -30,7 +30,7 @@ public sealed interface BranchingInstruction extends Instruction {
                                            @NotNull BasicBlock onFailure) implements BranchingInstruction {
 
         public ConditionalBranchingInstruction {
-            assert value.getType().isAssignable(RapidType.BOOLEAN);
+            assert value.getType().isAssignable(RapidType.BOOLEAN) : "Cannot branch on value: " + value;
         }
 
         @Override

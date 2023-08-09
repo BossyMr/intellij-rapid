@@ -6,21 +6,20 @@ import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.parser.ControlFlowElementVisitor;
-import com.bossymr.rapid.language.symbol.RapidRoutine;
-import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.search.FileTypeIndex;
+import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.CachedValueProvider;
 import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.psi.util.PsiModificationTracker;
+import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -36,39 +35,21 @@ public final class ControlFlowService {
         return ApplicationManager.getApplication().getService(ControlFlowService.class);
     }
 
+    @RequiresReadLock
     public @NotNull DataFlow getDataFlow(@NotNull PsiElement element) {
         Project project = element.getProject();
-        PsiFile file = element.getContainingFile();
-        Module module = ModuleUtil.findModuleForFile(file);
-        if (module != null) {
-            return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
-                ControlFlow controlFlow = calculateControlFlow(module);
-                DataFlow dataFlow = getDataFlow(controlFlow);
-                return CachedValueProvider.Result.createSingleDependency(dataFlow, PsiModificationTracker.MODIFICATION_COUNT);
-            });
-        }
-        return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
-            ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor(project);
-            PhysicalModule physicalModule = PhysicalModule.getModule(element);
-            if (physicalModule != null) {
-                physicalModule.accept(analyzer);
-            }
-            if (!(element instanceof RapidRoutine)) {
-                return CachedValueProvider.Result.createSingleDependency(getDataFlow(new ControlFlow(project, Map.of())), PsiModificationTracker.MODIFICATION_COUNT);
-            }
-            element.accept(analyzer);
-            return CachedValueProvider.Result.createSingleDependency(getDataFlow(analyzer.getControlFlow()), PsiModificationTracker.MODIFICATION_COUNT);
-        });
+        return getDataFlow(project);
     }
 
-    public @NotNull DataFlow getDataFlow(@NotNull Module module) {
-        Project project = module.getProject();
+    @RequiresReadLock
+    public @NotNull DataFlow getDataFlow(@NotNull Project project) {
         return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
-            ControlFlow controlFlow = calculateControlFlow(module);
+            ControlFlow controlFlow = calculateControlFlow(project);
             return CachedValueProvider.Result.createSingleDependency(getDataFlow(controlFlow), PsiModificationTracker.MODIFICATION_COUNT);
         });
     }
 
+    @RequiresReadLock
     public @NotNull DataFlow getDataFlow(@NotNull ControlFlow controlFlow) {
         Map<BasicBlock, DataFlowBlock> dataFlow = new HashMap<>();
         Collection<Block> blocks = controlFlow.getBlocks();
@@ -100,28 +81,10 @@ public final class ControlFlowService {
      * @param element the element to analyze.
      * @return the control flow graph for the specified element.
      */
+    @RequiresReadLock
     public @NotNull ControlFlow getControlFlow(@NotNull PsiElement element) {
         Project project = element.getProject();
-        PsiFile file = element.getContainingFile();
-        Module module = ModuleUtil.findModuleForFile(file);
-        if (module != null) {
-            return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
-                ControlFlow controlFlow = calculateControlFlow(module);
-                return CachedValueProvider.Result.createSingleDependency(controlFlow, PsiModificationTracker.MODIFICATION_COUNT);
-            });
-        }
-        return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
-            ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor(project);
-            PhysicalModule physicalModule = PhysicalModule.getModule(element);
-            if (physicalModule != null) {
-                physicalModule.accept(analyzer);
-            }
-            if (!(element instanceof RapidRoutine)) {
-                return CachedValueProvider.Result.createSingleDependency(new ControlFlow(project, Map.of()), PsiModificationTracker.MODIFICATION_COUNT);
-            }
-            element.accept(analyzer);
-            return CachedValueProvider.Result.createSingleDependency(analyzer.getControlFlow(), PsiModificationTracker.MODIFICATION_COUNT);
-        });
+        return getControlFlow(project);
     }
 
     /**
@@ -130,19 +93,19 @@ public final class ControlFlowService {
      * @param module the module to analyze.
      * @return the control flow graph for the specified element.
      */
-    public @NotNull ControlFlow getControlFlow(@NotNull Module module) {
-        Project project = module.getProject();
+    @RequiresReadLock
+    public @NotNull ControlFlow getControlFlow(@NotNull Project project) {
         return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
-            ControlFlow controlFlow = calculateControlFlow(module);
+            ControlFlow controlFlow = calculateControlFlow(project);
             return CachedValueProvider.Result.createSingleDependency(controlFlow, PsiModificationTracker.MODIFICATION_COUNT);
         });
     }
 
-    private @NotNull ControlFlow calculateControlFlow(@NotNull Module module) {
-        Project project = module.getProject();
+    @RequiresReadLock
+    private @NotNull ControlFlow calculateControlFlow(@NotNull Project project) {
         ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor(project);
         PsiManager manager = PsiManager.getInstance(project);
-        Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), module.getModuleContentScope());
+        Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(project));
         for (VirtualFile virtualFile : virtualFiles) {
             PsiFile file1 = manager.findFile(virtualFile);
             if (file1 != null) {

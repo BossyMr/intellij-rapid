@@ -13,7 +13,7 @@ public final class DataFlowEdge {
     private final @NotNull DataFlowBlock source;
     private final @NotNull DataFlowBlock destination;
 
-    private final @NotNull List<DataFlowState> states;
+    private List<DataFlowState> states;
     private List<DataFlowState> latest;
 
     public DataFlowEdge(@NotNull DataFlowBlock source, @NotNull DataFlowBlock destination, @NotNull List<DataFlowState> states) {
@@ -41,8 +41,8 @@ public final class DataFlowEdge {
         return latest;
     }
 
-    public void setLatest(@NotNull List<DataFlowState> states) {
-        this.latest = states;
+    public void setStates(@NotNull List<DataFlowState> states) {
+        this.states = states;
     }
 
     @Override

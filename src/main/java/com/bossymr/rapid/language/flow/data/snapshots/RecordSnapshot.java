@@ -1,11 +1,12 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.value.ComponentValue;
 import com.bossymr.rapid.language.flow.value.ReferenceSnapshot;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
+import com.bossymr.rapid.language.flow.value.Value;
+import com.bossymr.rapid.language.symbol.RapidComponent;
+import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,27 +19,41 @@ import java.util.Map;
 public class RecordSnapshot implements ReferenceSnapshot {
 
     private final @NotNull ReferenceValue variable;
-    private final @NotNull Map<ComponentValue, VariableSnapshot> snapshots;
+
+    private final @NotNull Map<String, RapidType> components;
+    private final @NotNull Map<String, Value> snapshots;
 
     public RecordSnapshot(@NotNull ReferenceValue variable) {
         this.variable = variable;
+        if (!(variable.getType().getTargetStructure() instanceof RapidRecord record)) {
+            throw new IllegalArgumentException();
+        }
+        this.components = new HashMap<>();
+        for (RapidComponent component : record.getComponents()) {
+            String componentName = component.getName();
+            RapidType componentType = component.getType();
+            if (componentName == null || componentType == null) {
+                continue;
+            }
+            components.put(componentName, componentType);
+        }
         this.snapshots = new HashMap<>();
     }
 
-    public @NotNull Map<ComponentValue, VariableSnapshot> getSnapshots() {
+    public @NotNull Map<String, Value> getSnapshots() {
         return snapshots;
     }
 
-    /**
-     * Creates a new snapshot for the specified component.
-     *
-     * @param component the component.
-     * @return the snapshot.
-     */
-    public @NotNull VariableSnapshot createSnapshot(@NotNull ComponentValue component) {
-        component = getComponentValue(component);
-        VariableSnapshot snapshot = new VariableSnapshot(component);
-        snapshots.put(component, snapshot);
+    public void assign(@NotNull String name, @NotNull Value value) {
+        snapshots.put(name, value);
+    }
+
+    public @NotNull VariableSnapshot createSnapshot(@NotNull String name) {
+        if (!(components.containsKey(name))) {
+            throw new IllegalArgumentException();
+        }
+        VariableSnapshot snapshot = new VariableSnapshot(components.get(name));
+        snapshots.put(name, snapshot);
         return snapshot;
     }
 
@@ -48,24 +63,11 @@ public class RecordSnapshot implements ReferenceSnapshot {
      * @param component the component.
      * @return the snapshot.
      */
-    public @NotNull VariableSnapshot getSnapshot(@NotNull ComponentValue component) {
-        component = getComponentValue(component);
-        if (!(snapshots.containsKey(component))) {
+    public @NotNull Value getValue(@NotNull String name) {
+        if (!(snapshots.containsKey(name))) {
             throw new IllegalArgumentException();
         }
-        return snapshots.get(component);
-    }
-
-    /**
-     * Returns the constraint for the component.
-     *
-     * @param state the state.
-     * @param component the component.
-     * @return the constraint.
-     */
-    public @NotNull Constraint getConstraint(@NotNull DataFlowState state, @NotNull ComponentValue component) {
-        VariableSnapshot snapshot = getSnapshot(component);
-        return state.getConstraint(snapshot);
+        return snapshots.get(name);
     }
 
     private @NotNull ComponentValue getComponentValue(@NotNull ComponentValue componentValue) {

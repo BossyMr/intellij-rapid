@@ -86,7 +86,7 @@ public class RobotNetworkAction extends NetworkAction {
         showNotifications = false;
         URI path = request.getPath();
         NotificationGroupManager.getInstance()
-                .getNotificationGroup("Robot Connection Error")
+                .getNotificationGroup("Robot connection errors")
                 .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)
                 .setContent(throwable.getLocalizedMessage())
                 .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))

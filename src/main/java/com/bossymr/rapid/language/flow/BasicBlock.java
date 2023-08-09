@@ -40,7 +40,7 @@ public sealed abstract class BasicBlock {
 
     public @NotNull BranchingInstruction getTerminator() {
         if (terminator == null) {
-            throw new IllegalStateException("BasicBlock: " + this + " is complete");
+            throw new IllegalStateException("BasicBlock: " + this + " is incomplete");
         }
         return terminator;
     }

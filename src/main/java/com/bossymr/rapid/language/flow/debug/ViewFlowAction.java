@@ -5,14 +5,9 @@ import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
-import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.LightVirtualFile;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,19 +19,15 @@ public class ViewFlowAction extends AnAction {
         if (project == null) {
             return;
         }
-        PsiElement element = e.getData(CommonDataKeys.PSI_FILE);
-        if (element == null) {
-            return;
-        }
-        PsiFile containingFile = element.getContainingFile();
-        Module module = ModuleUtil.findModuleForFile(containingFile);
-        if (module == null) {
-            return;
-        }
-        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(module);
+        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(project);
         String text = ControlFlowFormatVisitor.format(controlFlow);
         LightVirtualFile virtualFile = new LightVirtualFile("ControlFlow.txt", text);
         FileEditorManager.getInstance(project).openTextEditor(new OpenFileDescriptor(project, virtualFile), true);
+    }
+
+    @Override
+    public void update(@NotNull AnActionEvent e) {
+        e.getPresentation().setEnabled(e.getProject() != null);
     }
 
     @Override

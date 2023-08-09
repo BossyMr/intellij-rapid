@@ -36,10 +36,10 @@ class DataFlowStateTest {
     void getConstraintFromCondition() {
         DataFlowState state = DataFlowState.createState(getEmptyFunctionBlock());
         VariableSnapshot snapshot = new VariableSnapshot(RapidType.NUMBER);
-        state.assign(new Condition(snapshot, ConditionType.EQUALITY, Expression.of(0)));
+        state.assign(new Condition(snapshot, ConditionType.EQUALITY, Expression.of(0)), true);
         assertEquals(NumericConstraint.equalTo(0), state.getConstraint(snapshot));
         snapshot = new VariableSnapshot(RapidType.NUMBER);
-        state.assign(new Condition(snapshot, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.MULTIPLY, new ConstantValue(RapidType.NUMBER, 5), new ConstantValue(RapidType.NUMBER, 10))));
+        state.assign(new Condition(snapshot, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.MULTIPLY, new ConstantValue(RapidType.NUMBER, 5), new ConstantValue(RapidType.NUMBER, 10))), true);
         assertEquals(NumericConstraint.equalTo(50), state.getConstraint(snapshot));
     }
 
@@ -49,7 +49,7 @@ class DataFlowStateTest {
         VariableSnapshot reference = new VariableSnapshot(RapidType.NUMBER);
         state.assign(reference, new NumericConstraint(Optionality.PRESENT, new NumericConstraint.Bound(true, 0), new NumericConstraint.Bound(true, 10)));
         VariableSnapshot snapshot = new VariableSnapshot(RapidType.NUMBER);
-        state.assign(new Condition(snapshot, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.MULTIPLY, new ConstantValue(RapidType.NUMBER, 5), reference)));
+        state.assign(new Condition(snapshot, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.MULTIPLY, new ConstantValue(RapidType.NUMBER, 5), reference)), true);
         assertEquals(new NumericConstraint(Optionality.PRESENT, new NumericConstraint.Bound(true, 0), new NumericConstraint.Bound(true, 50)), state.getConstraint(snapshot));
     }
 

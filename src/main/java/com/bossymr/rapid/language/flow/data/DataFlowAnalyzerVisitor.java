@@ -114,7 +114,10 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
 
     @Override
     public void visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
-        block.addSuccessor(blocks.get(instruction.next()));
+        DataFlowBlock successor = blocks.get(instruction.next());
+        if (successor != null) {
+            block.addSuccessor(successor);
+        }
     }
 
     @Override
@@ -122,11 +125,12 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         if (!(block.getConstraint(instruction.routine()) instanceof StringConstraint constraint)) {
             visitAnyCallInstruction(instruction);
         } else {
+            DataFlowBlock successor = blocks.get(instruction.next());
             for (String sequence : constraint.sequences()) {
                 BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.element(), sequence);
                 List<DataFlowState> states;
                 if (instruction.routine() instanceof ReferenceValue referenceValue && constraint.sequences().size() > 1) {
-                    states = block.split(new Condition(referenceValue, ConditionType.EQUALITY, Expression.of(sequence)));
+                    states = block.split(successor, new Condition(referenceValue, ConditionType.EQUALITY, Expression.of(sequence)));
                 } else {
                     states = block.getStates();
                 }
@@ -159,16 +163,21 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         Map<RapidParameter, Value> parameters = getParameters(routine, instruction.arguments());
         DataFlowBlock successor = blocks.get(instruction.next());
         List<DataFlowState> states = block.getStates().stream()
-                .map(state -> DataFlowState.createSuccessorState(functionBlock, state))
+                .map(state -> DataFlowState.createSuccessorState(successor, state))
                 .peek(state -> {
                     if (returnValue != null) {
-                        state.assign(returnValue, Constraint.any(returnValue.getType()));
+                        if (!(returnValue instanceof FieldValue)) {
+                            state.createSnapshot(returnValue);
+                        }
                     }
                     for (var entry : parameters.entrySet()) {
                         if (entry.getKey().getParameterType() != ParameterType.INPUT) {
                             Value argument = entry.getValue();
+                            if (argument instanceof FieldValue) {
+                                continue;
+                            }
                             if (argument instanceof ReferenceValue referenceValue) {
-                                state.assign(referenceValue, Constraint.any(argument.getType()));
+                                state.createSnapshot(referenceValue);
                             }
                         }
                     }
@@ -180,14 +189,14 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         ReferenceValue returnValue = instruction.returnValue();
         DataFlowBlock successor = blocks.get(instruction.next());
         List<DataFlowState> states = block.getStates().stream()
-                .map(state -> DataFlowState.createSuccessorState(functionBlock, state))
+                .map(state -> DataFlowState.createSuccessorState(successor, state))
                 .peek(state -> {
                     if (returnValue != null) {
-                        state.assign(returnValue, Constraint.any(returnValue.getType()));
+                        state.createSnapshot(returnValue);
                     }
                     for (Value value : instruction.arguments().values()) {
                         if (value instanceof ReferenceValue referenceValue) {
-                            state.assign(referenceValue, Constraint.any(value.getType()));
+                            state.createSnapshot(referenceValue);
                         }
                     }
                 }).toList();
@@ -252,7 +261,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
             DataFlowBlock successor = result instanceof DataFlowFunction.Result.Error ? block : blocks.get(instruction.next());
             List<DataFlowState> merged = states.stream().mapMulti((DataFlowState state, Consumer<DataFlowState> consumer) -> {
                 for (DataFlowState resultState : resultStates) {
-                    DataFlowState copy = DataFlowState.createSuccessorState(functionBlock, state);
+                    DataFlowState copy = DataFlowState.createSuccessorState(successor, state);
                     copy.merge(resultState, arguments, resultValue, instruction.returnValue());
                     consumer.accept(copy);
                 }

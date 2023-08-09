@@ -4,6 +4,7 @@ import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.impl.fragment.RapidExpressionCodeFragmentImpl;
 import com.bossymr.rapid.language.symbol.ModuleType;
 import com.bossymr.rapid.language.symbol.RapidField;
+import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFileFactory;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Service(Service.Level.PROJECT)
 public final class RapidElementFactory {
 
     private static final String DUMMY_FILE_NAME = "DUMMY.mod";

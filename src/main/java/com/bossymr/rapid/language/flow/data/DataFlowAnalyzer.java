@@ -74,11 +74,11 @@ public class DataFlowAnalyzer {
     public void process() {
         while (!(workList.isEmpty())) {
             DataFlowBlock block = workList.removeFirst();
-            Set<DataFlowEdge> successors = Set.copyOf(block.getSuccessors());
+            Set<DataFlowEdge> beforeSuccessors = Set.copyOf(block.getSuccessors());
             List<DataFlowState> before = List.copyOf(block.getStates());
             process(block);
-            List<DataFlowState> after = block.getStates();
-            boolean modified = isModified(before, after) || isModified(successors, block.getSuccessors());
+            Set<DataFlowEdge> afterSuccessors = Set.copyOf(block.getSuccessors());
+            boolean modified = isModified(before, block.getStates()) || isModified(beforeSuccessors, afterSuccessors);
             if (modified) {
                 for (DataFlowEdge successor : block.getSuccessors()) {
                     DataFlowBlock successorBlock = successor.getDestination();
@@ -87,16 +87,40 @@ public class DataFlowAnalyzer {
                     }
                     workList.add(successorBlock);
                 }
-            } else {
-                for (DataFlowEdge afterEdge : block.getSuccessors()) {
-                    for (DataFlowEdge beforeEdge : successors) {
-                        if (!(isModified(beforeEdge, afterEdge))) {
-                            afterEdge.setLatest(beforeEdge.getLatest());
-                            break;
-                        }
-                    }
-                }
             }
+        }
+    }
+
+    private void process(@NotNull DataFlowBlock block) {
+        block.getStates().clear();
+        for (DataFlowEdge successor : block.getSuccessors()) {
+            successor.getDestination().getPredecessors().remove(successor);
+        }
+        block.getSuccessors().clear();
+        for (DataFlowEdge predecessors : block.getPredecessors()) {
+            block.getStates().addAll(predecessors.getStates());
+        }
+        BasicBlock basicBlock = block.getBasicBlock();
+        DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(functionBlock, block, blocks, functionMap);
+        if (block.getStates().isEmpty()) {
+            if (block.getBasicBlock() instanceof BasicBlock.IntermediateBasicBlock) {
+                /*
+                 * This block has no predecessors and is not the entry point of a function, as such, assume that any
+                 * variable might be equal to any value.
+                 */
+                block.getStates().add(DataFlowState.createUnknownState(block));
+                return;
+            } else {
+                block.getStates().add(DataFlowState.createState(block));
+            }
+        }
+        for (LinearInstruction instruction : basicBlock.getInstructions()) {
+            instruction.accept(visitor);
+        }
+        BranchingInstruction terminator = basicBlock.getTerminator();
+        terminator.accept(visitor);
+        for (DataFlowEdge successor : block.getSuccessors()) {
+            successor.getDestination().getPredecessors().add(successor);
         }
     }
 
@@ -233,39 +257,6 @@ public class DataFlowAnalyzer {
     private boolean isModified(@NotNull List<DataFlowState> before, @NotNull List<DataFlowState> after, @NotNull ReferenceValue variable) {
         Constraint beforeConstraint = before.stream().map(state -> state.getConstraint(variable)).collect(Constraint.or(variable.getType()));
         Constraint afterConstraint = after.stream().map(state -> state.getConstraint(variable)).collect(Constraint.or(variable.getType()));
-        // TODO: 2023-08-01 This might need to be adjusted, but as #contains it would ignore further modification as first gave the variable any variable
         return !(beforeConstraint.equals(afterConstraint));
-    }
-
-    private void process(@NotNull DataFlowBlock block) {
-        block.getStates().clear();
-        for (DataFlowEdge successor : block.getSuccessors()) {
-            successor.getDestination().getPredecessors().remove(successor);
-        }
-        block.getSuccessors().clear();
-        for (DataFlowEdge predecessors : block.getPredecessors()) {
-            block.getStates().addAll(predecessors.getStates());
-        }
-        BasicBlock basicBlock = block.getBasicBlock();
-        DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(functionBlock, block, blocks, functionMap);
-        if (block.getStates().isEmpty()) {
-            if (block.getBasicBlock() instanceof BasicBlock.IntermediateBasicBlock) {
-                /*
-                 * This block has no predecessors and is not the entry point of a function, as such, assume that any
-                 * variable might be equal to any value.
-                 */
-                block.getStates().add(DataFlowState.createUnknownState(functionBlock));
-            } else {
-                block.getStates().add(DataFlowState.createState(functionBlock));
-            }
-        }
-        for (LinearInstruction instruction : basicBlock.getInstructions()) {
-            instruction.accept(visitor);
-        }
-        BranchingInstruction terminator = basicBlock.getTerminator();
-        terminator.accept(visitor);
-        for (DataFlowEdge successor : block.getSuccessors()) {
-            successor.getDestination().getPredecessors().add(successor);
-        }
     }
 }

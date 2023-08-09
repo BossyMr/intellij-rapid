@@ -15,11 +15,11 @@ public enum HardcodedContract {
     PRESENT(new ContractBuilder("Present", RapidType.BOOLEAN)
             .withArgumentGroup(false).withArgument(ParameterType.REFERENCE, "OptPar", RapidType.ANYTYPE).build()
             .withResult()
-            .withCondition((state, map) -> state.assign(new Condition(map.getArgument("OptPar"), ConditionType.EQUALITY, new ValueExpression(map.getArgument("OptPar")))))
+            .withCondition((state, map) -> state.assign(new Condition(map.getArgument("OptPar"), ConditionType.EQUALITY, new ValueExpression(map.getArgument("OptPar"))), false))
             .whereArgument("OptPar", Constraint.any(RapidType.ANYTYPE, Optionality.PRESENT))
             .withSuccess(BooleanConstraint.alwaysTrue())
             .withResult()
-            .withCondition((state, map) -> state.assign(new Condition(map.getArgument("OptPar"), ConditionType.EQUALITY, new ValueExpression(map.getArgument("OptPar")))))
+            .withCondition((state, map) -> state.assign(new Condition(map.getArgument("OptPar"), ConditionType.EQUALITY, new ValueExpression(map.getArgument("OptPar"))), false))
             .whereArgument("OptPar", Constraint.any(RapidType.ANYTYPE, Optionality.MISSING))
             .withSuccess(BooleanConstraint.alwaysFalse())
             .build());

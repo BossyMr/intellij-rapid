@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.BasicBlock;
-import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.constraint.BooleanConstraint;
@@ -57,7 +56,7 @@ public class DataFlowBlock {
         }
         separate(condition);
         for (DataFlowState state : states) {
-            state.assign(condition);
+            state.assign(condition, true);
         }
     }
 
@@ -76,7 +75,7 @@ public class DataFlowBlock {
     private @NotNull List<DataFlowState> separate(@NotNull IndexValue indexValue) {
         List<DataFlowState> results = new ArrayList<>();
         for (DataFlowState state : states) {
-            ReferenceSnapshot snapshot = state.getSnapshot(indexValue.variable());
+            ReferenceValue snapshot = state.getSnapshot(indexValue.variable());
             if (!(snapshot instanceof ArraySnapshot arraySnapshot)) {
                 throw new IllegalStateException();
             }
@@ -106,7 +105,7 @@ public class DataFlowBlock {
             /*
              * For this assignment to occur, the index for the assignment must match the specified index.
              */
-            state.add(new Condition(referenceValue, conditionType, new ValueExpression(indexValue.index())));
+            state.add(new Condition(referenceValue, conditionType, new ValueExpression(indexValue.index())), true);
         } else if (indexValue.index() instanceof ReferenceValue referenceValue) {
             /*
              * Likewise, for the assignment to occur, the specified index must match the index for the assignment.
@@ -114,7 +113,7 @@ public class DataFlowBlock {
              * added now. However, if the above condition is added, the condition will be solved, and this condition
              * will be added automatically.
              */
-            state.add(new Condition(referenceValue, conditionType, new ValueExpression(assignment.index())));
+            state.add(new Condition(referenceValue, conditionType, new ValueExpression(assignment.index())), true);
         }
     }
 
@@ -184,29 +183,21 @@ public class DataFlowBlock {
     }
 
     public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull Condition condition) {
-        List<DataFlowState> states = split(condition);
+        List<DataFlowState> states = split(successor, condition);
         successors.add(new DataFlowEdge(this, successor, states));
     }
 
-    public @NotNull List<DataFlowState> split(@NotNull Condition condition) {
-        Block block = getBasicBlock().getBlock();
-        if (!(block instanceof Block.FunctionBlock functionBlock)) {
-            throw new IllegalArgumentException();
-        }
+    public @NotNull List<DataFlowState> split(@NotNull DataFlowBlock successor, @NotNull Condition condition) {
         return getStates().stream()
                 .filter(state -> state.intersects(condition))
-                .map(state -> DataFlowState.createSuccessorState(functionBlock, state))
-                .peek(state -> state.add(condition))
+                .map(state -> DataFlowState.createSuccessorState(successor, state))
+                .peek(state -> state.add(condition, true))
                 .toList();
     }
 
     public void addSuccessor(@NotNull DataFlowBlock successor) {
-        Block block = getBasicBlock().getBlock();
-        if (!(block instanceof Block.FunctionBlock functionBlock)) {
-            throw new IllegalArgumentException();
-        }
         List<DataFlowState> states = getStates().stream()
-                .map(state -> DataFlowState.createSuccessorState(functionBlock, state))
+                .map(state -> DataFlowState.createSuccessorState(successor, state))
                 .toList();
         successors.add(new DataFlowEdge(this, successor, states));
     }
@@ -215,4 +206,12 @@ public class DataFlowBlock {
         successors.add(new DataFlowEdge(this, successor, states));
     }
 
+    @Override
+    public String toString() {
+        return "DataFlowBlock{" +
+                "index=" + basicBlock.getIndex() +
+                ", basicBlock=" + basicBlock +
+                ", states=" + states +
+                '}';
+    }
 }

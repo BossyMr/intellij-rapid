@@ -125,6 +125,7 @@ public class ControlFlowBuilder {
             throw new IllegalStateException("Cannot exit scope as no scope is currently active");
         }
         currentBasicBlock.setTerminator(branchingInstruction);
+        currentBlock.getBasicBlocks().add(currentBasicBlock);
         currentBasicBlock = null;
     }
 
@@ -133,8 +134,10 @@ public class ControlFlowBuilder {
             throw new IllegalStateException("Cannot exit basicBlock as no basicBlock is currently active");
         }
         BasicBlock basicBlock = element != null ? createBasicBlock() : null;
-        currentBasicBlock.setTerminator(new BranchingInstruction.ErrorInstruction(element, basicBlock));
-        currentBasicBlock = basicBlock;
+        exitBasicBlock(new BranchingInstruction.ErrorInstruction(element, basicBlock));
+        if (basicBlock != null) {
+            enterBasicBlock(basicBlock);
+        }
     }
 
     public void continueScope(@NotNull LinearInstruction linearInstruction) {

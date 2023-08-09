@@ -119,10 +119,6 @@
 
         <!-- PsiElement  -->
 
-        <projectService serviceImplementation="com.bossymr.rapid.language.psi.RapidElementFactory"/>
-
-        <projectService serviceImplementation="com.bossymr.rapid.language.symbol.resolve.RapidResolveService"/>
-
         <lang.codeReferenceSearcher implementation="com.bossymr.rapid.ide.search.RapidCodeReferenceSearcher"/>
 
         <stubElementTypeHolder externalIdPrefix="rapid." class="com.bossymr.rapid.language.psi.RapidStubElementTypes"/>
@@ -151,11 +147,14 @@
 
         <editorNotificationProvider implementation="com.bossymr.rapid.robot.ui.RobotNotificationProvider"/>
 
-        <notificationGroup displayType="STICKY_BALLOON" id="Robot Connection Error" bundle="messages.RapidBundle"
+        <notificationGroup displayType="STICKY_BALLOON" id="Robot connection errors" bundle="messages.RapidBundle"
                            key="notification.group.robot.connect.error"/>
 
-        <notificationGroup displayType="BALLOON" id="Robot Mastership Error" bundle="messages.RapidBundle"
+        <notificationGroup displayType="BALLOON" id="Robot mastership errors" bundle="messages.RapidBundle"
                            key="notification.group.robot.mastership.error"/>
+
+        <notificationGroup displayType="BALLOON" id="Data flow diagrams" bundle="messages.RapidBundle"
+                           key="notification.group.data.flow.export"/>
 
         <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
 
@@ -176,8 +175,10 @@
     <actions>
         <group id="Internal.Rapid" text="Rapid" popup="true" internal="true">
             <add-to-group group-id="Internal"/>
-            <action id="ViewFlow" class="com.bossymr.rapid.language.flow.debug.ViewFlowAction"
+            <action id="ViewControlFlow" class="com.bossymr.rapid.language.flow.debug.ViewFlowAction"
                     text="View Control Flow" internal="true"/>
+            <action id="ViewDataFlow" class="com.bossymr.rapid.language.flow.debug.DataFlowGraphService"
+                    text="View Data Flow" internal="true"/>
         </group>
 
         <group id="NewRapid">

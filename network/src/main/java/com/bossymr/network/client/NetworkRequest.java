@@ -67,7 +67,7 @@ public class NetworkRequest<T> {
 
     @Contract(mutates = "this")
     public @NotNull NetworkRequest<T> addField(@NotNull String name, @NotNull String value) {
-        fields.add(name, value);
+        fields.put(name, value);
         return this;
     }
 
@@ -82,7 +82,7 @@ public class NetworkRequest<T> {
     @Contract(mutates = "this")
     public @NotNull NetworkRequest<T> addArgument(@NotNull String name, @NotNull String value) {
         MultiMap<String, String> arguments = getArguments();
-        arguments.add(name, value);
+        arguments.put(name, value);
         path = computePath(arguments);
         return this;
     }
@@ -95,7 +95,7 @@ public class NetworkRequest<T> {
     }
 
     private @NotNull URI computePath(@NotNull MultiMap<String, String> arguments) {
-        String query = arguments.stream()
+        String query = arguments.entrySet().stream()
                 .map(entry -> {
                     if (entry.getValue() == null) {
                         return entry.getKey();
@@ -130,7 +130,7 @@ public class NetworkRequest<T> {
             if (strings.length != 2) {
                 throw new IllegalStateException("Malformed argument: " + argument);
             }
-            arguments.add(strings[0], strings[1]);
+            arguments.put(strings[0], strings[1]);
         }
         return arguments;
     }
@@ -139,7 +139,7 @@ public class NetworkRequest<T> {
         if (fields.isEmpty()) {
             return null;
         }
-        return fields.stream()
+        return fields.entrySet().stream()
                 .map(entry -> entry.getKey() + "=" + entry.getValue())
                 .collect(Collectors.joining("&"));
     }

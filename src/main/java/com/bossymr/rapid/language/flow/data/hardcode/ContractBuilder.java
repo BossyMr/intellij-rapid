@@ -128,7 +128,7 @@ public class ContractBuilder {
             }
             ReferenceValue snapshot = Objects.requireNonNull(output);
             for (Argument argument : constraints.keySet()) {
-                state.add(new VariableValue(argument), constraints.get(argument));
+                state.assign(new VariableValue(argument), constraints.get(argument));
             }
             state.assign(snapshot, constraint);
             results.computeIfAbsent(constraints, value -> new HashSet<>(1));

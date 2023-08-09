@@ -74,6 +74,12 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
         if (symbol instanceof RapidRoutine routine) {
             return getPresentableText(routine);
         }
+        if (symbol instanceof RapidParameterGroup parameterGroup) {
+            return getPresentableText(parameterGroup);
+        }
+        if (symbol instanceof RapidParameter parameter) {
+            return getPresentableText(parameter);
+        }
         throw new IllegalStateException("Unexpected symbol: " + symbol);
     }
 
@@ -164,7 +170,7 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
                 RapidParameterGroup group = parameters.get(i);
                 stringBuilder.append(getPresentableText(group));
             }
-            if (parameters.size() > 0) {
+            if (!(parameters.isEmpty())) {
                 stringBuilder.append("\n");
             }
             appendText(stringBuilder, RapidColor.PARENTHESES, ")");
@@ -183,16 +189,23 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
                 appendText(stringBuilder, RapidColor.LINE, " | ");
             }
             RapidParameter parameter = parameters.get(i);
-            appendText(stringBuilder, RapidColor.KEYWORD, switch (parameter.getParameterType()) {
-                case INPUT -> "";
-                case VARIABLE -> "VAR ";
-                case PERSISTENT -> "PERS ";
-                case INOUT -> "INOUT ";
-                case REFERENCE -> "REF ";
-            });
-            appendType(stringBuilder, parameter.getType());
-            appendText(stringBuilder, group.isOptional() ? RapidColor.OPTIONAL_PARAMETER : RapidColor.PARAMETER, parameter.getPresentableName());
+            stringBuilder.append(getPresentableText(parameter));
         }
+        return stringBuilder.toString();
+    }
+
+    private @NotNull String getPresentableText(@NotNull RapidParameter parameter) {
+        RapidParameterGroup group = parameter.getParameterGroup();
+        StringBuilder stringBuilder = new StringBuilder();
+        appendText(stringBuilder, RapidColor.KEYWORD, switch (parameter.getParameterType()) {
+            case INPUT -> "";
+            case VARIABLE -> "VAR ";
+            case PERSISTENT -> "PERS ";
+            case INOUT -> "INOUT ";
+            case REFERENCE -> "REF ";
+        });
+        appendType(stringBuilder, parameter.getType());
+        appendText(stringBuilder, group.isOptional() ? RapidColor.OPTIONAL_PARAMETER : RapidColor.PARAMETER, parameter.getPresentableName());
         return stringBuilder.toString();
     }
 

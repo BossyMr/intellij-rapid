@@ -269,6 +269,10 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     @Override
     public void visitAggregateExpression(@NotNull RapidAggregateExpression expression) {
         List<RapidExpression> expressions = expression.getExpressions();
+        if (expression.getType() == null || expression.getType().getDimensions() <= 0 && !(expression.getType().getTargetStructure() instanceof RapidRecord)) {
+            targetVariable.removeLast();
+            return;
+        }
         RapidType type = getType(expression.getType());
         List<Value> values = expressions.stream()
                 .map(element -> computeValue(builder, element))

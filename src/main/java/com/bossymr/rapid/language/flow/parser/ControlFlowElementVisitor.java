@@ -359,6 +359,10 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         // If the scope has an else branch, which doesn't fall through, don't create a fall through block by calling the supplier.
         BasicBlock elseBasicBlock = elseBranch != null ? builder.createBasicBlock() : nextBasicBlock.get();
         ReferenceValue value = ControlFlowExpressionVisitor.computeExpression(builder, condition);
+        if (!(value.getType().isAssignable(RapidType.BOOLEAN))) {
+            value = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(condition, value, new ValueExpression(new ErrorValue())));
+        }
         builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, value, thenBasicBlock, elseBasicBlock));
         builder.enterBasicBlock(thenBasicBlock);
         thenBranch.accept(this);

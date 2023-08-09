@@ -30,11 +30,21 @@ public record InverseStringConstraint(@NotNull Optionality optionality, @NotNull
 
     @Override
     public @NotNull Constraint and(@NotNull Constraint constraint) {
+        if (constraint instanceof InverseStringConstraint inverseStringConstraint) {
+            InverseStringConstraint copy = new InverseStringConstraint(constraint.getOptionality().and(inverseStringConstraint.getOptionality()), new HashSet<>(sequences));
+            copy.sequences.addAll(inverseStringConstraint.sequences);
+            return copy;
+        }
         return constraint.and(this);
     }
 
     @Override
     public @NotNull Constraint or(@NotNull Constraint constraint) {
+        if (constraint instanceof InverseStringConstraint inverseStringConstraint) {
+            InverseStringConstraint copy = new InverseStringConstraint(constraint.getOptionality().or(inverseStringConstraint.getOptionality()), new HashSet<>(sequences));
+            copy.sequences.retainAll(inverseStringConstraint.sequences);
+            return copy;
+        }
         return constraint.or(this);
     }
 
