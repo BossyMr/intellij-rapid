@@ -282,7 +282,11 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         values.forEach((index, value) -> {
             Argument argument;
             if (index instanceof ArgumentDescriptor.Required required) {
-                argument = arguments.get(required.index());
+                if(required.index() >= arguments.size()) {
+                    return;
+                } else {
+                    argument = arguments.get(required.index());
+                }
             } else if (index instanceof ArgumentDescriptor.Optional optional) {
                 argument = arguments.stream()
                         .filter(element -> element.name().equals(optional.name()))

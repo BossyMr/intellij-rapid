@@ -98,6 +98,14 @@ public class ArraySnapshot implements ReferenceSnapshot {
             if (constraint.equals(BooleanConstraint.alwaysFalse())) {
                 continue;
             }
+            for (ArrayEntry value : values) {
+                if(value instanceof ArrayEntry.Assignment assignmentEntry) {
+                    Constraint comparisonConstraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignmentEntry.index(), assignment.index()));
+                    if(comparisonConstraint.equals(BooleanConstraint.alwaysTrue())) {
+                        break;
+                    }
+                }
+            }
             values.add(assignment);
             if (constraint.equals(BooleanConstraint.alwaysTrue())) {
                 break;
@@ -127,4 +135,12 @@ public class ArraySnapshot implements ReferenceSnapshot {
         return variable.getType();
     }
 
+    @Override
+    public String toString() {
+        return "ArraySnapshot{" +
+                "variable=" + variable +
+                ", defaultValue=" + defaultValue +
+                ", assignments=" + assignments +
+                '}';
+    }
 }

@@ -228,8 +228,9 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("[shape=plain,label=<").append("<table BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">");
         stringBuilder.append("<tr><td COLSPAN=\"3\">").append("State #").append(new ArrayList<>(states.getAll(block)).indexOf(state)).append("</td></tr>\n");
         stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Snapshots").append("</td></tr>\n");
+        Set<ReferenceSnapshot> snapshots = new HashSet<>();
         for (var entry : state.getSnapshots().entrySet()) {
-            writeSnapshot(stringBuilder, state, entry.getKey(), entry.getValue());
+            writeSnapshot(stringBuilder, state, entry.getKey(), entry.getValue(), snapshots);
         }
         stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Conditions").append("</td></tr>\n");
         for (Condition condition : state.getConditions()) {
@@ -278,14 +279,22 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("</table>>];\n");
     }
 
-    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceValue variable, @NotNull ReferenceSnapshot snapshot) {
+    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceValue variable, @NotNull ReferenceSnapshot snapshot, @NotNull Set<ReferenceSnapshot> snapshots) {
+        if(!(snapshots.add(snapshot))) {
+            return;
+        }
         ControlFlowFormatVisitor visitor = new ControlFlowFormatVisitor(stringBuilder);
         stringBuilder.append("<tr>");
         stringBuilder.append("<td>");
         variable.accept(visitor);
+        if(variable instanceof VariableValue variableValue && variableValue.field().name() != null) {
+            stringBuilder.append("[");
+            stringBuilder.append(variableValue.field().name());
+            stringBuilder.append("]");
+        }
         stringBuilder.append("</td>");
         stringBuilder.append("<td COLSPAN=\"2\" align=\"left\">");
-        writeSnapshot(stringBuilder, snapshot);
+        snapshot.accept(visitor);
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");
         if (snapshot instanceof RecordSnapshot recordSnapshot) {
@@ -302,7 +311,7 @@ public class DataFlowGraphService extends AnAction {
             }
             for (var entry : recordSnapshot.getSnapshots().entrySet()) {
                 if (entry.getValue() instanceof ReferenceSnapshot componentSnapshot) {
-                    writeSnapshot(stringBuilder, state, new ComponentValue(componentSnapshot.getType(), recordSnapshot, entry.getKey()), componentSnapshot);
+                    writeSnapshot(stringBuilder, state, new ComponentValue(componentSnapshot.getType(), recordSnapshot, entry.getKey()), componentSnapshot, snapshots);
                 }
             }
         } else if (snapshot instanceof ArraySnapshot arraySnapshot) {
@@ -330,25 +339,14 @@ public class DataFlowGraphService extends AnAction {
             for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments(state, Constraint.any(RapidType.NUMBER))) {
                 if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
                     if (assignment.value() instanceof ReferenceSnapshot referenceValue) {
-                        writeSnapshot(stringBuilder, state, new IndexValue(arraySnapshot, assignment.index()), referenceValue);
+                        writeSnapshot(stringBuilder, state, new IndexValue(arraySnapshot, assignment.index()), referenceValue, snapshots);
                     }
                 } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
                     if (defaultValue.defaultValue() instanceof ReferenceSnapshot referenceValue) {
-                        writeSnapshot(stringBuilder, state, new IndexValue(arraySnapshot, ConstantValue.of(-1)), referenceValue);
+                        writeSnapshot(stringBuilder, state, new IndexValue(arraySnapshot, ConstantValue.of("default")), referenceValue, snapshots);
                     }
                 }
             }
-        }
-    }
-
-    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull ReferenceSnapshot snapshot) {
-        ControlFlowFormatVisitor visitor = new ControlFlowFormatVisitor(stringBuilder);
-        snapshot.accept(visitor);
-        ReferenceValue variable = snapshot.getVariable();
-        if (variable != null) {
-            stringBuilder.append("[");
-            variable.accept(visitor);
-            stringBuilder.append("]");
         }
     }
 

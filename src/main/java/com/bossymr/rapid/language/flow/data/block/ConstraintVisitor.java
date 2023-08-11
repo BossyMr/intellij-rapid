@@ -1,14 +1,13 @@
 package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.constraint.BooleanConstraint;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
-import com.bossymr.rapid.language.flow.constraint.NumericConstraint;
-import com.bossymr.rapid.language.flow.constraint.Optionality;
+import com.bossymr.rapid.language.flow.constraint.*;
 import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -48,14 +47,28 @@ public class ConstraintVisitor extends ControlFlowVisitor {
         BinaryOperator operator = expression.operator();
         constraint = switch (operator) {
             case ADD, SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> {
+                if (expression.left().getType().isAssignable(RapidType.STRING) && expression.right().getType().isAssignable(RapidType.STRING)) {
+                    if(operator == BinaryOperator.ADD) {
+                        if(left instanceof StringConstraint leftConstraint && right instanceof StringConstraint rightConstraint) {
+                            Set<String> sequences = new HashSet<>();
+                            for (String leftString : leftConstraint.sequences()) {
+                                for (String rightString : rightConstraint.sequences()) {
+                                    sequences.add(leftString + rightString);
+                                }
+                            }
+                            yield new StringConstraint(Optionality.ANY_VALUE, sequences);
+                        }
+                    }
+                    yield new InverseStringConstraint(Optionality.ANY_VALUE, new HashSet<>());
+                }
                 if (!(left instanceof NumericConstraint leftRange) || !(right instanceof NumericConstraint rightRange)) {
-                    throw new IllegalStateException("Invalid expression: " + expression);
+                    yield new NumericConstraint(Optionality.ANY_VALUE);
                 }
                 yield getNumericBinaryConstraint(operator, leftRange, rightRange);
             }
             case LESS_THAN, GREATER_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL -> {
                 if (!(left instanceof NumericConstraint leftRange) || !(right instanceof NumericConstraint rightRange)) {
-                    throw new IllegalStateException("Invalid expression: " + expression);
+                    yield BooleanConstraint.any();
                 }
                 yield getMaxBooleanBinaryConstraint(operator, leftRange, rightRange);
             }
@@ -63,7 +76,7 @@ public class ConstraintVisitor extends ControlFlowVisitor {
             case NOT_EQUAL_TO -> isEqual(expression).negate();
             case AND, XOR, OR -> {
                 if (!(left instanceof BooleanConstraint leftConstant) || !(right instanceof BooleanConstraint rightConstant)) {
-                    throw new IllegalStateException("Invalid expression: " + expression);
+                    yield BooleanConstraint.any(Optionality.ANY_VALUE);
                 }
                 yield getLogicalBinaryConstraint(operator, leftConstant, rightConstant);
             }

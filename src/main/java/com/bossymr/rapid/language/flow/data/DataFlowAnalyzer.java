@@ -10,11 +10,13 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.ComponentValue;
+import com.bossymr.rapid.language.flow.value.ReferenceSnapshot;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.flow.value.VariableValue;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.RapidType;
+import com.intellij.openapi.progress.ProgressManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
@@ -73,6 +75,7 @@ public class DataFlowAnalyzer {
 
     public void process() {
         while (!(workList.isEmpty())) {
+            ProgressManager.checkCanceled();
             DataFlowBlock block = workList.removeFirst();
             Set<DataFlowEdge> beforeSuccessors = Set.copyOf(block.getSuccessors());
             List<DataFlowState> before = List.copyOf(block.getStates());
@@ -225,7 +228,10 @@ public class DataFlowAnalyzer {
 
     private void getArrayAssignments(@NotNull Map<List<Constraint>, Constraint> results, @NotNull List<Constraint> indexes, @NotNull DataFlowState state, @NotNull ReferenceValue variable) {
         if (variable.getType().getDimensions() > 0) {
-            ArraySnapshot arraySnapshot = (ArraySnapshot) state.getSnapshot(variable);
+            Optional<ReferenceSnapshot> snapshot = state.getSnapshot(variable);
+            if(snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
+                return;
+            }
             for (ArrayEntry entry : arraySnapshot.getAssignments(state, Constraint.any(RapidType.NUMBER))) {
                 if (entry instanceof ArrayEntry.DefaultValue defaultValue) {
                     List<Constraint> copy = new ArrayList<>(indexes);

@@ -59,12 +59,12 @@ public record StringConstraint(@NotNull Optionality optionality, @NotNull Set<St
             return constraint.or(this);
         }
         if (constraint instanceof InverseStringConstraint inverseStringCondition) {
-            InverseStringConstraint copy = new InverseStringConstraint(inverseStringCondition.getOptionality().or(constraint.getOptionality()), inverseStringCondition.sequences());
+            InverseStringConstraint copy = new InverseStringConstraint(inverseStringCondition.getOptionality().or(constraint.getOptionality()), new HashSet<>(inverseStringCondition.sequences()));
             copy.sequences().removeAll(sequences());
             return copy;
         }
         if (constraint instanceof StringConstraint stringCondition) {
-            StringConstraint copy = new StringConstraint(stringCondition.getOptionality().or(constraint.getOptionality()), stringCondition.sequences());
+            StringConstraint copy = new StringConstraint(stringCondition.getOptionality().or(constraint.getOptionality()), new HashSet<>(stringCondition.sequences()));
             copy.sequences().addAll(sequences());
             return copy;
         }

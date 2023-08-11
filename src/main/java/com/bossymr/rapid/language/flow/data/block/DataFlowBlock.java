@@ -73,11 +73,14 @@ public class DataFlowBlock {
     }
 
     private @NotNull List<DataFlowState> separate(@NotNull IndexValue indexValue) {
+        if(indexValue.variable() instanceof FieldValue) {
+            return List.copyOf(states);
+        }
         List<DataFlowState> results = new ArrayList<>();
         for (DataFlowState state : states) {
-            ReferenceValue snapshot = state.getSnapshot(indexValue.variable());
-            if (!(snapshot instanceof ArraySnapshot arraySnapshot)) {
-                throw new IllegalStateException();
+            Optional<ReferenceSnapshot> snapshot = state.getSnapshot(indexValue.variable());
+            if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
+                continue;
             }
             List<ArrayEntry> assignments = arraySnapshot.getAssignments(state, indexValue.index());
             if (assignments.size() == 1) {

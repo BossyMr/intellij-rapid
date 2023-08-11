@@ -120,6 +120,9 @@ public class NumericConstraint implements Constraint {
         ListIterator<Range> iterator = this.ranges.listIterator();
         while (iterator.hasNext()) {
             Range next = iterator.next();
+            if(next.contains(range)) {
+                return;
+            }
             if (next.intersects(range)) {
                 iterator.set(next.union(range));
                 return;

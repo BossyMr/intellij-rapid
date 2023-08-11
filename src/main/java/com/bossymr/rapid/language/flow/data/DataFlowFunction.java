@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
+import com.bossymr.rapid.language.flow.value.ReferenceSnapshot;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.flow.value.VariableValue;
 import com.bossymr.rapid.language.symbol.RapidType;
@@ -14,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -54,16 +56,16 @@ public interface DataFlowFunction {
             public static @NotNull Success create(@NotNull Block.FunctionBlock block, @NotNull Map<Argument, Constraint> constraints, @Nullable RapidType returnType, @Nullable Constraint returnConstraint) {
                 DataFlowState state = DataFlowState.createUnknownState(block);
                 for (Argument argument : constraints.keySet()) {
-                    ReferenceValue snapshot = state.createSnapshot(new VariableValue(argument));
-                    if (snapshot instanceof VariableSnapshot variableSnapshot) {
+                    Optional<ReferenceSnapshot> snapshot = state.createSnapshot(new VariableValue(argument));
+                    if (snapshot.isPresent() && snapshot.orElseThrow() instanceof VariableSnapshot variableSnapshot) {
                         state.add(variableSnapshot, constraints.get(argument));
                     }
                 }
                 ReferenceValue returnValue = null;
                 if (returnType != null && returnConstraint != null) {
                     returnValue = new VariableSnapshot(returnType);
-                    ReferenceValue snapshot = state.createSnapshot(returnValue);
-                    if (snapshot instanceof VariableSnapshot variableSnapshot) {
+                    Optional<ReferenceSnapshot> snapshot = state.createSnapshot(returnValue);
+                    if (snapshot.isPresent() && snapshot.orElseThrow() instanceof VariableSnapshot variableSnapshot) {
                         state.add(variableSnapshot, returnConstraint);
                     }
                 }
