@@ -189,11 +189,11 @@ public class ConstraintVisitor extends ControlFlowVisitor {
                     .or(() -> leftRange.isSmaller(rightRange))
                     .map(BooleanConstraint::equalTo)
                     .orElseGet(BooleanConstraint::any);
-            case GREATER_THAN -> rightRange.isSmaller(leftRange)
+            case GREATER_THAN -> leftRange.isLarger(rightRange)
                     .or(() -> rightRange.isEqual(leftRange))
                     .map(BooleanConstraint::equalTo)
                     .orElseGet(BooleanConstraint::any);
-            case GREATER_THAN_OR_EQUAL -> rightRange.isSmaller(leftRange)
+            case GREATER_THAN_OR_EQUAL -> leftRange.isLarger(rightRange)
                     .map(BooleanConstraint::equalTo)
                     .orElseGet(BooleanConstraint::any);
             default -> throw new IllegalStateException("Unexpected value: " + operator);

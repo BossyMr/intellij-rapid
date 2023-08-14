@@ -120,7 +120,7 @@ public class NumericConstraint implements Constraint {
         ListIterator<Range> iterator = this.ranges.listIterator();
         while (iterator.hasNext()) {
             Range next = iterator.next();
-            if(next.contains(range)) {
+            if (next.contains(range)) {
                 return;
             }
             if (next.intersects(range)) {
@@ -146,8 +146,9 @@ public class NumericConstraint implements Constraint {
         while (iterator.hasNext()) {
             Range next = iterator.next();
             List<Range> intersects = ranges.stream()
-                    .filter(range -> range.intersects(next))
                     .map(range -> range.intersect(next))
+                    .filter(Optional::isPresent)
+                    .map(Optional::orElseThrow)
                     .toList();
             iterator.remove();
             intersects.forEach(iterator::add);
@@ -270,6 +271,11 @@ public class NumericConstraint implements Constraint {
             }
         }
 
+        /**
+         * Returns the point which this range encompasses, if this range only encompasses a single point.
+         *
+         * @return the point which this range encompasses.
+         */
         public @NotNull Optional<Double> getPoint() {
             if (lower().value() == upper().value()) {
                 if (lower().isInclusive() && upper().isInclusive()) {
@@ -289,6 +295,12 @@ public class NumericConstraint implements Constraint {
             return contains(range.lower(), true) && contains(range.upper(), false);
         }
 
+        /**
+         * Checks whether the upper bound of this range is always smaller than the specified range.
+         *
+         * @param range the range.
+         * @return if the upper bound of this range is always smaller than the specified range.
+         */
         public @NotNull Optional<Boolean> isSmaller(@NotNull Range range) {
             if (intersects(range) || range.intersects(this)) {
                 return Optional.empty();
@@ -308,6 +320,22 @@ public class NumericConstraint implements Constraint {
             return Optional.empty();
         }
 
+        /**
+         * Checks whether the lower bound of this range is always larger than the specified range.
+         *
+         * @param range the range.
+         * @return if the lower bound of this range is always larger than the specified range.
+         */
+        public @NotNull Optional<Boolean> isLarger(@NotNull Range range) {
+            return isSmaller(range).map(value -> !(value));
+        }
+
+        /**
+         * Checks if the value of this range is always equal to the value of the specified range.
+         *
+         * @param range the range.
+         * @return if the value of this range is always equal to the value of the specified range.
+         */
         public @NotNull Optional<Boolean> isEqual(@NotNull Range range) {
             Optional<Double> point = getPoint();
             if (point.isEmpty()) {
@@ -318,16 +346,6 @@ public class NumericConstraint implements Constraint {
                 return Optional.empty();
             }
             return Optional.of(point.equals(otherPoint));
-        }
-
-        /**
-         * Checks whether this range intersects, shares any point, with the specified range.
-         *
-         * @param range the range.
-         * @return whether this range intersects the specified range.
-         */
-        public boolean intersects(@NotNull Range range) {
-            return contains(range.lower(), true) || contains(range.upper(), false) || range.contains(lower(), true) || range.contains(upper(), false);
         }
 
         private boolean contains(@NotNull Bound point, boolean isLower) {
@@ -343,18 +361,34 @@ public class NumericConstraint implements Constraint {
         }
 
         /**
+         * Checks whether this range intersects, shares any point, with the specified range.
+         *
+         * @param range the range.
+         * @return whether this range intersects the specified range.
+         */
+        public boolean intersects(@NotNull Range range) {
+            return intersect(range).isPresent();
+        }
+
+        /**
          * Creates a new range which encompasses the range which both this range and the specified range contain.
          *
          * @param range the range.
-         * @return a new range which encompasses the intersection of this range and the specified range.
+         * @return a new range which encompasses the intersection of this range and the specified range, or an empty
+         * optional if this range does not intersect with the specified range.
          */
-        public @NotNull Range intersect(@NotNull Range range) {
-            if (!(intersects(range))) {
-                throw new IllegalArgumentException();
-            }
+        public @NotNull Optional<Range> intersect(@NotNull Range range) {
             Bound lowerBound = getUpperbound(lower(), range.lower(), lower().isInclusive() && range.lower().isInclusive());
             Bound upperbound = getLowerBound(upper(), range.upper(), upper().isInclusive() && range.upper().isInclusive());
-            return new Range(lowerBound, upperbound);
+            if (lowerBound.value() > upperbound.value()) {
+                return Optional.empty();
+            }
+            if (lowerBound.value() == upperbound.value()) {
+                if (!(lowerBound.isInclusive() && upperbound.isInclusive())) {
+                    return Optional.empty();
+                }
+            }
+            return Optional.of(new Range(lowerBound, upperbound));
         }
 
         /**

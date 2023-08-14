@@ -132,6 +132,13 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 return new VariableValue(variable);
             }
         }
+        if(symbol instanceof RapidTargetVariable targetVariable) {
+            Variable variable = builder.findVariable(targetVariable.getName());
+            if(variable == null) {
+                return null;
+            }
+            return new VariableValue(variable);
+        }
         if (symbol instanceof RapidField) {
             return new FieldValue(type, null, name);
         }
@@ -158,18 +165,6 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     public static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, @NotNull String name, @Nullable FieldType fieldType, @NotNull RapidExpression expression) {
         VariableKey variableKey = VariableKey.createField(name, fieldType);
         return computeExpression(builder, variableKey, expression);
-    }
-
-    public static void computeExpression(@NotNull ControlFlowBuilder builder, @NotNull ReferenceValue variable, @NotNull RapidExpression expression) {
-        VariableKey variableKey = VariableKey.useVariable(variable);
-        ControlFlowExpressionVisitor visitor = new ControlFlowExpressionVisitor(builder, variableKey);
-        expression.accept(visitor);
-        ReferenceValue result = variableKey.retrieve();
-        if (result == null) {
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new ValueExpression(new ErrorValue())));
-        } else if (result != variable) {
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new ValueExpression(result)));
-        }
     }
 
     private static @NotNull ReferenceValue computeExpression(@NotNull ControlFlowBuilder builder, @NotNull VariableKey variableKey, @NotNull RapidExpression expression) {
