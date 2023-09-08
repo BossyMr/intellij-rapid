@@ -7,8 +7,8 @@ import org.jetbrains.annotations.Nullable;
 
 public record FieldValue(@NotNull RapidType type, @Nullable String moduleName, @NotNull String name) implements ReferenceValue {
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitFieldVariableValue(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitFieldVariableValue(this);
     }
 
     @Override

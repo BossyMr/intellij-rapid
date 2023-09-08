@@ -55,7 +55,7 @@ class ConditionTest {
     void doNotSolve() {
         VariableSnapshot variable = new VariableSnapshot(RapidType.NUMBER);
         VariableSnapshot left = new VariableSnapshot(RapidType.NUMBER);
-        Expression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, left, new ConstantValue(RapidType.NUMBER, 0));
+        Expression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, left, ConstantValue.of(RapidType.NUMBER, 0));
         Condition condition = new Condition(variable, ConditionType.EQUALITY, expression);
         List<Condition> variants = condition.getVariants();
         assertEquals(1, variants.size());

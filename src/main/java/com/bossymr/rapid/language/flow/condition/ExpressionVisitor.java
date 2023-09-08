@@ -6,103 +6,75 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public abstract class ExpressionVisitor extends ControlFlowVisitor {
+public abstract class ExpressionVisitor extends ControlFlowVisitor<Expression> {
 
     public static @NotNull Expression modify(@NotNull Expression expression, @NotNull Function<ReferenceValue, Value> mapper) {
-        AtomicReference<Expression> result = new AtomicReference<>(expression);
-        expression.accept(new ExpressionVisitor() {
+        return expression.accept(new ExpressionVisitor() {
             @Override
-            protected @NotNull Value process(@NotNull ReferenceValue value) {
+            protected @NotNull Value replace(@NotNull ReferenceValue value) {
                 return mapper.apply(value);
             }
 
-            @Override
-            protected void update(@NotNull Expression expression) {
-                result.set(expression);
-            }
         });
-        return Objects.requireNonNull(result.get());
     }
 
-    public static @NotNull ExpressionVisitor iterate(@NotNull Function<ReferenceValue, Value> mapper, @NotNull Consumer<Expression> consumer) {
-        return new ExpressionVisitor() {
+    public static void iterate(@NotNull Expression expression, @NotNull Consumer<ReferenceValue> consumer) {
+        expression.accept(new ExpressionVisitor() {
             @Override
-            protected @NotNull Value process(@NotNull ReferenceValue value) {
-                return Objects.requireNonNull(mapper.apply(value));
-            }
-
-            @Override
-            protected void update(@NotNull Expression expression) {
-                consumer.accept(expression);
-            }
-        };
-    }
-
-    public static @NotNull ExpressionVisitor visit(@NotNull Consumer<ReferenceValue> consumer) {
-        return new ExpressionVisitor() {
-            @Override
-            protected @NotNull Value process(@NotNull ReferenceValue value) {
+            protected @NotNull Value replace(@NotNull ReferenceValue value) {
                 consumer.accept(value);
                 return value;
             }
-
-            @Override
-            protected void update(@NotNull Expression expression) {
-                throw new UnsupportedOperationException();
-            }
-        };
+        });
     }
 
-    protected abstract @NotNull Value process(@NotNull ReferenceValue value);
-
-    protected abstract void update(@NotNull Expression expression);
-
-    @Override
-    public void visitValueExpression(@NotNull ValueExpression expression) {
-        Value value = computeValue(expression.value());
-        if (!value.equals(expression.value())) {
-            update(new ValueExpression(value));
-        }
-        super.visitValueExpression(expression);
-    }
-
-    @Override
-    public void visitAggregateExpression(@NotNull AggregateExpression expression) {
-        List<Value> values = expression.values().stream()
-                .map(this::computeValue).toList();
-        if (!values.equals(expression.values())) {
-            update(new AggregateExpression(values));
-        }
-        super.visitAggregateExpression(expression);
-    }
+    protected abstract @NotNull Value replace(@NotNull ReferenceValue value);
 
     private @NotNull Value computeValue(@NotNull Value value) {
         if (!(value instanceof ReferenceValue referenceValue)) {
             return value;
         }
-        return process(referenceValue);
+        return Objects.requireNonNull(replace(referenceValue));
     }
 
     @Override
-    public void visitBinaryExpression(@NotNull BinaryExpression expression) {
+    public @NotNull ValueExpression visitValueExpression(@NotNull ValueExpression expression) {
+        Value value = computeValue(expression.value());
+        if (!value.equals(expression.value())) {
+            return new ValueExpression(value);
+        }
+        return expression;
+    }
+
+    @Override
+    public @NotNull AggregateExpression visitAggregateExpression(@NotNull AggregateExpression expression) {
+        List<Value> values = expression.values().stream()
+                .map(this::computeValue).toList();
+        if (!values.equals(expression.values())) {
+            return new AggregateExpression(values);
+        }
+        return expression;
+    }
+
+    @Override
+    public @NotNull BinaryExpression visitBinaryExpression(@NotNull BinaryExpression expression) {
         Value left = computeValue(expression.left());
         Value right = computeValue(expression.right());
         if (!left.equals(expression.left()) || !right.equals(expression.right())) {
-            update(new BinaryExpression(expression.operator(), left, right));
+            return new BinaryExpression(expression.operator(), left, right);
         }
-        super.visitBinaryExpression(expression);
+        return expression;
     }
 
     @Override
-    public void visitUnaryExpression(@NotNull UnaryExpression expression) {
+    public @NotNull UnaryExpression visitUnaryExpression(@NotNull UnaryExpression expression) {
         Value value = computeValue(expression.value());
         if (!value.equals(expression.value())) {
-            update(new UnaryExpression(expression.operator(), value));
+            return new UnaryExpression(expression.operator(), value);
         }
-        super.visitUnaryExpression(expression);
+        return expression;
     }
 }

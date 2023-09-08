@@ -17,7 +17,7 @@ public record VariableValue(@NotNull Field field) implements ReferenceValue {
     }
 
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitLocalVariableValue(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitLocalVariableValue(this);
     }
 }

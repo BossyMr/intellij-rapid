@@ -52,7 +52,8 @@ public sealed abstract class BasicBlock {
         this.terminator = instruction;
     }
 
-    public void accept(@NotNull ControlFlowVisitor visitor) {
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return 
         visitor.visitBasicBlock(this);
     }
 
@@ -76,7 +77,8 @@ public sealed abstract class BasicBlock {
         @Override
         public String toString() {
             return "EntryBasicBlock{" +
-                    "scopeType=" + scopeType +
+                    "index=" + getIndex() +
+                    ", scopeType=" + scopeType +
                     '}';
         }
     }
@@ -102,7 +104,8 @@ public sealed abstract class BasicBlock {
         @Override
         public String toString() {
             return "ErrorBasicBlock{" +
-                    "exceptions=" + getExceptions() +
+                    "index=" + getIndex() +
+                    ", exceptions=" + getExceptions() +
                     '}';
         }
     }
@@ -120,7 +123,9 @@ public sealed abstract class BasicBlock {
 
         @Override
         public String toString() {
-            return "IntermediateBasicBlock{}";
+            return "IntermediateBasicBlock{" +
+                    "index=" + getIndex() +
+                    "}";
         }
     }
 }

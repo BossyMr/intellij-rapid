@@ -5,6 +5,17 @@ import org.jetbrains.annotations.NotNull;
 public enum ConditionType {
     EQUALITY, INEQUALITY, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL;
 
+    public @NotNull String getText() {
+        return switch (this) {
+            case EQUALITY -> "=";
+            case INEQUALITY -> "!=";
+            case LESS_THAN -> "<";
+            case LESS_THAN_OR_EQUAL -> "<=";
+            case GREATER_THAN -> ">";
+            case GREATER_THAN_OR_EQUAL -> ">=";
+        };
+    }
+
     public @NotNull ConditionType negate() {
         return switch (this) {
             case EQUALITY -> INEQUALITY;

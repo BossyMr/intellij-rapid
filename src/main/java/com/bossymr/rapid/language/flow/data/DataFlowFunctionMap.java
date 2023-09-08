@@ -30,8 +30,24 @@ public class DataFlowFunctionMap {
      */
     private final @NotNull Deque<DataFlowBlock> workList;
 
+    private final @NotNull Map<DataFlowBlock, Set<DataFlowFunction.Result>> usages = new HashMap<>();
+
+    /**
+     * A map of references between a caller block and its entry. If the return block for a caller has not yet been
+     * processed, it is added as a soft reference. Once the block has been processed, all its soft references are
+     * cleared and added to the work-list to be reprocessed. When reprocessed, it will find the correct return block and
+     * instead add the reference as a hard reference.
+     */
     private final @NotNull Map<DataFlowBlock, ResultEntry> softReferences = new HashMap<>();
+
+    /**
+     * A map of references between the return block and its usages.
+     */
     private final @NotNull Map<DataFlowBlock, DataFlowUsage> hardReferences = new HashMap<>();
+
+    /**
+     * A map of references between the result of a function and the block where it is returned.
+     */
     private final @NotNull Map<DataFlowFunction.Result, DataFlowBlock> exitPoints = new HashMap<>();
 
 
@@ -90,6 +106,10 @@ public class DataFlowFunctionMap {
         } else {
             softReferences.put(callerBlock, new ResultEntry(blockDescriptor, arguments));
         }
+    }
+
+    public @NotNull Set<DataFlowFunction.Result> getCalls(@NotNull DataFlowBlock block) {
+        return usages.getOrDefault(block, Set.of());
     }
 
     public @NotNull Optional<DataFlowFunction> get(@NotNull BlockDescriptor blockDescriptor) {
@@ -203,6 +223,7 @@ public class DataFlowFunctionMap {
             Map<Map<Argument, Constraint>, Map<DataFlowBlock, Result>> value = result.get();
             if (value != null) {
                 Set<Result> results = super.getOutput(callerBlock, arguments);
+                usages.put(callerBlock, Set.copyOf(results));
                 for (Result output : results) {
                     registerUsage(callerBlock, arguments, BlockDescriptor.getBlockKey(functionBlock), output);
                 }
@@ -215,8 +236,10 @@ public class DataFlowFunctionMap {
             RapidType returnType = functionBlock.getReturnType();
             Constraint returnConstraint = returnType != null ? Constraint.any(returnType) : null;
             Result output = Result.Success.create(functionBlock, constraints, returnType, returnConstraint);
+            Set<Result> result = Set.of(output);
+            usages.put(callerBlock, result);
             registerUsage(callerBlock, arguments, BlockDescriptor.getBlockKey(functionBlock), output);
-            return Set.of(output);
+            return result;
         }
     }
 }

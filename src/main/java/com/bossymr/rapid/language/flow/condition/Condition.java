@@ -48,10 +48,9 @@ public class Condition {
 
     @Contract(pure = true)
     public @NotNull List<Condition> getVariants() {
-        List<Condition> result = new ArrayList<>();
-        result.add(this);
-        expression.accept(new SolveVisitor(result));
-        return result;
+        ArrayList<Condition> conditions = new ArrayList<>(expression.accept(new SolveVisitor()));
+        conditions.add(this);
+        return conditions;
     }
 
     @Contract(pure = true)
@@ -78,20 +77,20 @@ public class Condition {
 
     public boolean contains(@NotNull ReferenceValue variable) {
         AtomicBoolean atomicBoolean = new AtomicBoolean();
-        expression.accept(ExpressionVisitor.visit(result -> atomicBoolean.set(atomicBoolean.get() || result.equals(variable))));
+        ExpressionVisitor.iterate(expression, result -> atomicBoolean.set(atomicBoolean.get() || result.equals(variable)));
         return atomicBoolean.get();
     }
 
     @Contract(pure = true)
-    public @NotNull Condition modify(@NotNull Function<ReferenceValue, Value> function) {
+    public @NotNull Condition modify(@NotNull Function<ReferenceValue, Value> mapper) {
         Condition condition = new Condition(getVariable(), getConditionType(), getExpression());
-        condition.getExpression().accept(ExpressionVisitor.iterate(function, condition::setExpression));
+        condition.setExpression(ExpressionVisitor.modify(condition.getExpression(), mapper));
         return condition;
     }
 
     public @NotNull List<ReferenceValue> getVariables() {
         List<ReferenceValue> variables = new ArrayList<>();
-        expression.accept(ExpressionVisitor.visit(variables::add));
+        ExpressionVisitor.iterate(expression, variables::add);
         return variables;
     }
 
@@ -117,81 +116,69 @@ public class Condition {
                 '}';
     }
 
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitCondition(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitCondition(this);
     }
 
-    private class SolveVisitor extends ControlFlowVisitor {
-
-        private final @NotNull List<Condition> conditions;
-
-        public SolveVisitor(@NotNull List<Condition> conditions) {
-            this.conditions = conditions;
-        }
+    private class SolveVisitor extends ControlFlowVisitor<List<Condition>> {
 
         @Override
-        public void visitValueExpression(@NotNull ValueExpression expression) {
+        public @NotNull List<Condition> visitValueExpression(@NotNull ValueExpression expression) {
             if (expression.value() instanceof ReferenceValue value) {
-                conditions.add(new Condition(value, conditionType.flip(), new ValueExpression(variable)));
+                return List.of(new Condition(value, conditionType.flip(), new ValueExpression(variable)));
             }
-            super.visitValueExpression(expression);
+            return List.of();
         }
 
         @Override
-        public void visitAggregateExpression(@NotNull AggregateExpression expression) {
+        public @NotNull List<Condition> visitAggregateExpression(@NotNull AggregateExpression expression) {
             List<Value> values = expression.values();
+            List<Condition> conditions = new ArrayList<>();
             for (int i = 0; i < values.size(); i++) {
                 if (values.get(i) instanceof ReferenceValue value) {
-                    IndexValue index = new IndexValue(variable, new ConstantValue(RapidType.NUMBER, i));
+                    IndexValue index = new IndexValue(variable, ConstantValue.of(RapidType.NUMBER, i));
                     conditions.add(new Condition(value, ConditionType.EQUALITY, new ValueExpression(index)));
                 }
             }
-            super.visitAggregateExpression(expression);
+            return conditions;
         }
 
         @Override
-        public void visitBinaryExpression(@NotNull BinaryExpression expression) {
+        public @NotNull List<Condition> visitBinaryExpression(@NotNull BinaryExpression expression) {
+            List<Condition> conditions = new ArrayList<>();
             if (expression.left() instanceof ReferenceValue value) {
-                Condition condition = switch (expression.operator()) {
-                    case ADD ->
-                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.SUBTRACT, variable, expression.right()));
-                    case SUBTRACT ->
-                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.ADD, variable, expression.right()));
-                    case MULTIPLY ->
-                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.DIVIDE, variable, expression.right()));
-                    case DIVIDE ->
-                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.MULTIPLY, variable, expression.right()));
+                BinaryExpression binaryExpression = switch (expression.operator()) {
+                    case ADD -> new BinaryExpression(BinaryOperator.SUBTRACT, variable, expression.right());
+                    case SUBTRACT -> new BinaryExpression(BinaryOperator.ADD, variable, expression.right());
+                    case MULTIPLY -> new BinaryExpression(BinaryOperator.DIVIDE, variable, expression.right());
+                    case DIVIDE -> new BinaryExpression(BinaryOperator.MULTIPLY, variable, expression.right());
                     default -> null;
                 };
-                if (condition != null) {
-                    conditions.add(condition);
+                if (binaryExpression != null) {
+                    conditions.add(new Condition(value, conditionType.flip(), binaryExpression));
                 }
             }
             if (expression.right() instanceof ReferenceValue value) {
-                Condition condition = switch (expression.operator()) {
-                    case ADD ->
-                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.SUBTRACT, variable, expression.left()));
-                    case SUBTRACT ->
-                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.ADD, expression.left(), variable));
-                    case MULTIPLY ->
-                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.DIVIDE, variable, expression.right()));
-                    case DIVIDE ->
-                            new Condition(value, conditionType.flip(), new BinaryExpression(BinaryOperator.DIVIDE, expression.left(), variable));
+                BinaryExpression binaryExpression = switch (expression.operator()) {
+                    case ADD -> new BinaryExpression(BinaryOperator.SUBTRACT, variable, expression.left());
+                    case SUBTRACT -> new BinaryExpression(BinaryOperator.ADD, expression.left(), variable);
+                    case MULTIPLY -> new BinaryExpression(BinaryOperator.DIVIDE, variable, expression.right());
+                    case DIVIDE -> new BinaryExpression(BinaryOperator.DIVIDE, expression.left(), variable);
                     default -> null;
                 };
-                if (condition != null) {
-                    conditions.add(condition);
+                if (binaryExpression != null) {
+                    conditions.add(new Condition(value, conditionType.flip(), binaryExpression));
                 }
             }
-            super.visitBinaryExpression(expression);
+            return conditions;
         }
 
         @Override
-        public void visitUnaryExpression(@NotNull UnaryExpression expression) {
+        public @NotNull List<Condition> visitUnaryExpression(@NotNull UnaryExpression expression) {
             if (expression.value() instanceof ReferenceValue value) {
-                conditions.add(new Condition(value, conditionType.flip(), new UnaryExpression(expression.operator(), variable)));
+                return List.of(new Condition(value, conditionType.flip(), new UnaryExpression(expression.operator(), variable)));
             }
-            super.visitUnaryExpression(expression);
+            return List.of();
         }
     }
 }

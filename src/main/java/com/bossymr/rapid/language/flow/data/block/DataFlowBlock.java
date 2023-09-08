@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.flow.constraint.BooleanConstraint;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.constraint.NumericConstraint;
 import com.bossymr.rapid.language.flow.constraint.StringConstraint;
+import com.bossymr.rapid.language.flow.data.BlockCycle;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
@@ -27,11 +28,47 @@ public class DataFlowBlock {
     private final @NotNull BasicBlock basicBlock;
     private final @NotNull List<DataFlowState> states = new ArrayList<>();
 
+    private final @NotNull Set<BlockCycle> cycles;
+
     private final @NotNull Set<DataFlowEdge> successors = new HashSet<>();
     private final @NotNull Set<DataFlowEdge> predecessors = new HashSet<>();
 
-    public DataFlowBlock(@NotNull BasicBlock basicBlock) {
+    public DataFlowBlock(@NotNull BasicBlock basicBlock, @NotNull Set<BlockCycle> cycles) {
         this.basicBlock = basicBlock;
+        this.cycles = cycles;
+    }
+
+    public @NotNull Set<BlockCycle> getCycles() {
+        return cycles;
+    }
+
+    public @NotNull Set<BlockCycle> getHeads() {
+        Set<BlockCycle> counters = new HashSet<>();
+        for (BlockCycle blockCycle : cycles) {
+            List<DataFlowBlock> sequence = blockCycle.getSequence();
+            if (sequence.isEmpty()) {
+                continue;
+            }
+            if (sequence.get(0).equals(this)) {
+                counters.add(blockCycle);
+            }
+        }
+        return Set.copyOf(counters);
+    }
+
+
+    public @NotNull Set<BlockCycle> getTails() {
+        Set<BlockCycle> counters = new HashSet<>();
+        for (BlockCycle blockCycle : cycles) {
+            List<DataFlowBlock> sequence = blockCycle.getSequence();
+            if (sequence.isEmpty()) {
+                continue;
+            }
+            if (sequence.get(sequence.size() - 1).equals(this)) {
+                counters.add(blockCycle);
+            }
+        }
+        return Set.copyOf(counters);
     }
 
     public @NotNull BasicBlock getBasicBlock() {
@@ -56,29 +93,93 @@ public class DataFlowBlock {
         }
         separate(condition);
         for (DataFlowState state : states) {
-            state.assign(condition, true);
-        }
-    }
-
-    private void separate(@NotNull Condition condition) {
-        List<ReferenceValue> variables = condition.getVariables();
-        for (ReferenceValue referenceValue : variables) {
-            List<IndexValue> indexValues = getIndexValues(referenceValue);
-            for (ListIterator<IndexValue> iterator = indexValues.listIterator(indexValues.size()); iterator.hasPrevious(); ) {
-                List<DataFlowState> results = separate(iterator.previous());
-                states.clear();
-                states.addAll(results);
+            if (isCyclic(state, condition)) {
+                /*
+                 * If the assignment is cyclic, we need to rewrite the assignment as a function of the index. If the
+                 * assignment cannot be rewritten, assume that the value can be anything. We need to do this, otherwise
+                 * we would need as many states as there might be iterations of the loop, which could be infinite.
+                 */
+                state.createSnapshot(condition.getVariable());
+            } else {
+                state.assign(condition, true);
             }
         }
     }
 
+    /**
+     * Checks if the specified condition is cyclic, for the specified state and condition. A condition is cyclic if
+     * this block is part of a cycle (loop) and the expression of the condition references the variable of the
+     * condition. If the expression references a previous snapshot of the variable, it is still counted as the same
+     * variable. The condition is recursively searched, so if the expression contains a variable which itself references
+     * the variable, it is still cyclic.
+     *
+     * @param state the state.
+     * @param condition the condition.
+     * @return if the specified condition is cyclic.
+     */
+    public boolean isCyclic(@NotNull DataFlowState state, @NotNull Condition condition) {
+        if (!(getStates().contains(state))) {
+            throw new IllegalArgumentException("State: " + state + " must be in block: " + this);
+        }
+        if (getCycles().isEmpty()) {
+            /*
+             * If this block is not part of a cycle, the variable would only be modified once.
+             */
+            return false;
+        }
+        return isCyclic(condition.getVariable(), condition, state, new HashSet<>());
+    }
+
+    private boolean isCyclic(@NotNull ReferenceValue variable, @NotNull Condition condition, @NotNull DataFlowState state, @NotNull Set<Condition> visited) {
+        if (!(visited.add(condition))) {
+            return false;
+        }
+        List<ReferenceValue> variables = condition.getVariables();
+        for (ReferenceValue referenceValue : variables) {
+            if (referenceValue instanceof ReferenceSnapshot snapshot) {
+                Optional<ReferenceValue> optional = state.getVariable(snapshot);
+                if (optional.isPresent()) {
+                    referenceValue = optional.orElseThrow();
+                }
+            }
+            if (referenceValue.equals(variable)) {
+                return true;
+            }
+            Set<Condition> conditions = state.findConditions(referenceValue);
+            for (Condition child : conditions) {
+                if (isCyclic(variable, child, state, visited)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void separate(@NotNull Condition condition) {
+        List<ReferenceValue> variables = condition.getVariables();
+        List<DataFlowState> copy = new ArrayList<>();
+        for (ReferenceValue referenceValue : variables) {
+            List<IndexValue> indexValues = getIndexValues(referenceValue);
+            for (ListIterator<IndexValue> iterator = indexValues.listIterator(indexValues.size()); iterator.hasPrevious(); ) {
+                List<DataFlowState> results = separate(iterator.previous());
+                copy.addAll(results);
+            }
+        }
+        if (copy.isEmpty()) {
+            return;
+        }
+        System.out.println("Separating on: " + condition + ": " + states.size() + " -> " + copy.size());
+        states.clear();
+        states.addAll(copy);
+    }
+
     private @NotNull List<DataFlowState> separate(@NotNull IndexValue indexValue) {
-        if(indexValue.variable() instanceof FieldValue) {
+        if (indexValue.variable() instanceof FieldValue) {
             return List.copyOf(states);
         }
         List<DataFlowState> results = new ArrayList<>();
         for (DataFlowState state : states) {
-            Optional<ReferenceSnapshot> snapshot = state.getSnapshot(indexValue.variable());
+            Optional<ReferenceSnapshot> snapshot = state.findSnapshot(indexValue.variable());
             if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
                 continue;
             }
@@ -138,13 +239,13 @@ public class DataFlowBlock {
         } else if (value instanceof ConstantValue constantValue) {
             RapidType type = constantValue.getType();
             if (type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE)) {
-                return NumericConstraint.equalTo((double) constantValue.value());
+                return NumericConstraint.equalTo((double) constantValue.getValue());
             }
             if (type.isAssignable(RapidType.STRING)) {
-                return StringConstraint.anyOf((String) constantValue.value());
+                return StringConstraint.anyOf((String) constantValue.getValue());
             }
             if (type.isAssignable(RapidType.BOOLEAN)) {
-                return BooleanConstraint.equalTo((boolean) constantValue.value());
+                return BooleanConstraint.equalTo((boolean) constantValue.getValue());
             }
         } else if (value instanceof ErrorValue) {
             return Constraint.any(value.getType());
@@ -161,7 +262,7 @@ public class DataFlowBlock {
     public @NotNull Constraint getHistoricConstraint(@NotNull ReferenceValue value, @NotNull LinearInstruction.AssignmentInstruction instruction) {
         List<Constraint> constraints = new ArrayList<>();
         for (DataFlowState state : states) {
-            for (Condition condition : state.getConditions(instruction.variable())) {
+            for (Condition condition : state.findConditions(instruction.variable())) {
                 Class<?> conditionClass = condition.getExpression().getClass();
                 Class<?> assignmentClass = instruction.value().getClass();
                 if (!(conditionClass.equals(assignmentClass))) {
@@ -191,8 +292,9 @@ public class DataFlowBlock {
     }
 
     public @NotNull List<DataFlowState> split(@NotNull DataFlowBlock successor, @NotNull Condition condition) {
-        return getStates().stream()
-                .filter(state -> state.intersects(condition))
+        List<DataFlowState> flowStates = getStates();
+        return flowStates.stream()
+                .filter(state -> state.contains(condition))
                 .map(state -> DataFlowState.createSuccessorState(successor, state))
                 .peek(state -> state.add(condition, true))
                 .toList();

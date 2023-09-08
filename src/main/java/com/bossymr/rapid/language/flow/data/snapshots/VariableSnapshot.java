@@ -39,8 +39,8 @@ public class VariableSnapshot implements ReferenceSnapshot {
     }
 
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitVariableSnapshot(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitVariableSnapshot(this);
     }
 
     @Override

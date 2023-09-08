@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.flow.condition.Condition;
+import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
@@ -10,143 +11,169 @@ import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import org.jetbrains.annotations.NotNull;
 
-public class ControlFlowVisitor {
+public class ControlFlowVisitor<R> {
 
-    public void visitControlFlow(@NotNull ControlFlow controlFlow) {}
-
-    public void visitFunctionBlock(@NotNull Block.FunctionBlock functionBlock) {
-        visitBlock(functionBlock);
+    public R visitControlFlow(@NotNull ControlFlow controlFlow) {
+        return null;
     }
 
-    public void visitFieldBlock(@NotNull Block.FieldBlock fieldBlock) {
-        visitBlock(fieldBlock);
+    public R visitFunctionBlock(@NotNull Block.FunctionBlock functionBlock) {
+        return visitBlock(functionBlock);
     }
 
-    public void visitBlock(@NotNull Block block) {}
-
-    public void visitBasicBlock(@NotNull BasicBlock basicBlock) {}
-
-    public void visitArgumentGroup(@NotNull ArgumentGroup argumentGroup) {}
-
-    public void visitArgument(@NotNull Argument argument) {}
-
-    public void visitVariable(@NotNull Variable variable) {}
-
-    public void visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
-        visitLinearInstruction(instruction);
+    public R visitFieldBlock(@NotNull Block.FieldBlock fieldBlock) {
+        return visitBlock(fieldBlock);
     }
 
-    public void visitConnectInstruction(@NotNull LinearInstruction.ConnectInstruction instruction) {
-        visitLinearInstruction(instruction);
+    public R visitBlock(@NotNull Block block) {
+        return null;
     }
 
-    public void visitLinearInstruction(@NotNull LinearInstruction instruction) {
-        visitInstruction(instruction);
+    public R visitBasicBlock(@NotNull BasicBlock basicBlock) {
+        return null;
     }
 
-    public void visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
-        visitBranchingInstruction(instruction);
+    public R visitArgumentGroup(@NotNull ArgumentGroup argumentGroup) {
+        return null;
     }
 
-    public void visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
-        visitBranchingInstruction(instruction);
+    public R visitArgument(@NotNull Argument argument) {
+        return null;
     }
 
-    public void visitRetryInstruction(@NotNull BranchingInstruction.RetryInstruction instruction) {
-        visitBranchingInstruction(instruction);
+    public R visitVariable(@NotNull Variable variable) {
+        return null;
     }
 
-    public void visitTryNextInstruction(@NotNull BranchingInstruction.TryNextInstruction instruction) {
-        visitBranchingInstruction(instruction);
+    public R visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
+        return visitLinearInstruction(instruction);
     }
 
-    public void visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
-        visitBranchingInstruction(instruction);
+    public R visitConnectInstruction(@NotNull LinearInstruction.ConnectInstruction instruction) {
+        return visitLinearInstruction(instruction);
     }
 
-    public void visitExitInstruction(@NotNull BranchingInstruction.ExitInstruction instruction) {
-        visitBranchingInstruction(instruction);
+    public R visitLinearInstruction(@NotNull LinearInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public void visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
-        visitBranchingInstruction(instruction);
+    public R visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
+        return visitBranchingInstruction(instruction);
     }
 
-    public void visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
-        visitBranchingInstruction(instruction);
+    public R visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
+        return visitBranchingInstruction(instruction);
     }
 
-    public void visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
-        visitBranchingInstruction(instruction);
+    public R visitRetryInstruction(@NotNull BranchingInstruction.RetryInstruction instruction) {
+        return visitBranchingInstruction(instruction);
     }
 
-    public void visitBranchingInstruction(@NotNull BranchingInstruction instruction) {
-        visitInstruction(instruction);
+    public R visitTryNextInstruction(@NotNull BranchingInstruction.TryNextInstruction instruction) {
+        return visitBranchingInstruction(instruction);
     }
 
-    public void visitInstruction(@NotNull Instruction instruction) {}
-
-    public void visitLocalVariableValue(@NotNull VariableValue value) {
-        visitReferenceValue(value);
+    public R visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
+        return visitBranchingInstruction(instruction);
     }
 
-    public void visitFieldVariableValue(@NotNull FieldValue value) {
-        visitReferenceValue(value);
+    public R visitExitInstruction(@NotNull BranchingInstruction.ExitInstruction instruction) {
+        return visitBranchingInstruction(instruction);
     }
 
-    public void visitComponentVariableValue(@NotNull ComponentValue component) {
-        visitReferenceValue(component);
+    public R visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
+        return visitBranchingInstruction(instruction);
     }
 
-    public void visitIndexValue(@NotNull IndexValue value) {
-        visitReferenceValue(value);
+    public R visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
+        return visitBranchingInstruction(instruction);
     }
 
-    public void visitReferenceValue(@NotNull ReferenceValue value) {
-        visitValue(value);
+    public R visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
+        return visitBranchingInstruction(instruction);
     }
 
-    public void visitConstantValue(@NotNull ConstantValue value) {
-        visitValue(value);
+    public R visitBranchingInstruction(@NotNull BranchingInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public void visitErrorValue(@NotNull ErrorValue value) {
-        visitValue(value);
+    public R visitInstruction(@NotNull Instruction instruction) {
+        return null;
     }
 
-    public void visitValue(@NotNull Value value) {}
-
-    public void visitValueExpression(@NotNull ValueExpression expression) {
-        visitExpression(expression);
+    public R visitLocalVariableValue(@NotNull VariableValue value) {
+        return visitReferenceValue(value);
     }
 
-    public void visitAggregateExpression(@NotNull AggregateExpression expression) {
-        visitExpression(expression);
+    public R visitFieldVariableValue(@NotNull FieldValue value) {
+        return visitReferenceValue(value);
     }
 
-    public void visitBinaryExpression(@NotNull BinaryExpression expression) {
-        visitExpression(expression);
+    public R visitComponentVariableValue(@NotNull ComponentValue component) {
+        return visitReferenceValue(component);
     }
 
-    public void visitUnaryExpression(@NotNull UnaryExpression expression) {
-        visitExpression(expression);
+    public R visitIndexValue(@NotNull IndexValue value) {
+        return visitReferenceValue(value);
     }
 
-    public void visitExpression(@NotNull Expression expression) {}
-
-    public void visitCondition(@NotNull Condition condition) {}
-
-    public void visitArraySnapshot(@NotNull ArraySnapshot snapshot) {
-        visitSnapshot(snapshot);
+    public R visitReferenceValue(@NotNull ReferenceValue value) {
+        return visitValue(value);
     }
 
-    public void visitRecordSnapshot(@NotNull RecordSnapshot snapshot) {
-        visitSnapshot(snapshot);
+    public R visitConstantValue(@NotNull ConstantValue value) {
+        return visitValue(value);
     }
 
-    public void visitVariableSnapshot(VariableSnapshot snapshot) {
-        visitSnapshot(snapshot);
+    public R visitErrorValue(@NotNull ErrorValue value) {
+        return visitValue(value);
     }
 
-    public void visitSnapshot(@NotNull ReferenceSnapshot snapshot) {}
+    public R visitValue(@NotNull Value value) {
+        return null;
+    }
+
+    public R visitValueExpression(@NotNull ValueExpression expression) {
+        return visitExpression(expression);
+    }
+
+    public R visitAggregateExpression(@NotNull AggregateExpression expression) {
+        return visitExpression(expression);
+    }
+
+    public R visitBinaryExpression(@NotNull BinaryExpression expression) {
+        return visitExpression(expression);
+    }
+
+    public R visitUnaryExpression(@NotNull UnaryExpression expression) {
+        return visitExpression(expression);
+    }
+
+    public R visitExpression(@NotNull Expression expression) {
+        return null;
+    }
+
+    public R visitCondition(@NotNull Condition condition) {
+        return null;
+    }
+
+    public R visitArraySnapshot(@NotNull ArraySnapshot snapshot) {
+        return visitSnapshot(snapshot);
+    }
+
+    public R visitRecordSnapshot(@NotNull RecordSnapshot snapshot) {
+        return visitSnapshot(snapshot);
+    }
+
+    public R visitVariableSnapshot(VariableSnapshot snapshot) {
+        return visitSnapshot(snapshot);
+    }
+
+    public R visitSnapshot(@NotNull ReferenceSnapshot snapshot) {
+        return null;
+    }
+
+    public R visitPathCounter(@NotNull PathCounter pathCounter) {
+        return visitSnapshot(pathCounter);
+    }
 }

@@ -71,6 +71,9 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 if (instruction instanceof LinearInstruction.AssignmentInstruction assignmentInstruction) {
                     ReferenceValue variable = assignmentInstruction.variable();
                     DataFlowBlock block = dataFlow.getBlock(basicBlock);
+                    if (block == null) {
+                        return;
+                    }
                     Constraint constraint = block.getConstraint(variable);
                     Expression operation = assignmentInstruction.value();
                     Set<VariableSymbol> values = new HashSet<>(2, 1);

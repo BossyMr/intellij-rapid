@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.condition.ConditionType;
-import com.bossymr.rapid.language.flow.constraint.BooleanConstraint;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.constraint.StringConstraint;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
@@ -37,6 +36,17 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         this.functionMap = functionMap;
     }
 
+    static boolean isPredecessorInCycle(@NotNull BlockCycle cycle, @NotNull DataFlowState state) {
+        if (state.getPredecessor().isPresent()) {
+            DataFlowState predecessor = state.getPredecessor().orElseThrow();
+            if (predecessor.getBlock().isPresent()) {
+                DataFlowBlock predecessorBlock = predecessor.getBlock().orElseThrow();
+                return predecessorBlock.getCycles().contains(cycle);
+            }
+        }
+        return false;
+    }
+
     @Override
     public void visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
         block.assign(new Condition(instruction.variable(), ConditionType.EQUALITY, instruction.value()));
@@ -48,15 +58,84 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
     @Override
     public void visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
         ReferenceValue value = instruction.value();
-        Constraint constraint = block.getConstraint(value);
-        if (constraint.contains(BooleanConstraint.alwaysTrue())) {
-            Condition condition = new Condition(value, ConditionType.EQUALITY, Expression.of(true));
-            block.addSuccessor(blocks.get(instruction.onSuccess()), condition);
+        visitBranch(instruction.onSuccess(), new Condition(value, ConditionType.EQUALITY, Expression.of(true)));
+        visitBranch(instruction.onFailure(), new Condition(value, ConditionType.EQUALITY, Expression.of(false)));
+    }
+
+    private void visitBranch(@NotNull BasicBlock successor, @NotNull Condition condition) {
+        DataFlowBlock dataFlowBlock = blocks.get(successor);
+        if (block.getHeads().isEmpty()) {
+            block.addSuccessor(dataFlowBlock, condition);
+            return;
         }
-        if (constraint.contains(BooleanConstraint.alwaysFalse())) {
-            Condition condition = new Condition(value, ConditionType.EQUALITY, Expression.of(false));
-            block.addSuccessor(blocks.get(instruction.onFailure()), condition);
+        List<DataFlowState> states = block.getStates();
+        List<DataFlowState> successors = new ArrayList<>(states.size());
+        for (DataFlowState state : states) {
+            if (!(state.contains(condition))) {
+                continue;
+            }
+            for (BlockCycle blockCycle : block.getHeads()) {
+                Optional<DataFlowState> previousCycle = getPreviousCycle(state, blockCycle);
+                if (previousCycle.isEmpty()) {
+                    // First iteration
+                    DataFlowState successorState = DataFlowState.createSuccessorState(dataFlowBlock, state);
+                    successorState.add(condition, true);
+                    successors.add(successorState);
+                    continue;
+                }
+                Optional<DataFlowState> thirdCycle = getPreviousCycle(previousCycle.orElseThrow(), blockCycle);
+                if (thirdCycle.isEmpty()) {
+                    // Second iteration
+                    DataFlowState successorState = DataFlowState.createSuccessorState(dataFlowBlock, state);
+                    successorState.add(condition, true);
+                    successors.add(successorState);
+                    continue;
+                }
+                // Third iteration
+                if (isBlockCycle(dataFlowBlock, blockCycle)) {
+                    continue;
+                }
+                DataFlowState successorState = DataFlowState.createSuccessorState(dataFlowBlock, state);
+                successorState.add(condition, true);
+                successors.add(successorState);
+            }
         }
+        if (!(successors.isEmpty())) {
+            block.addSuccessor(dataFlowBlock, successors);
+        }
+    }
+
+    private @NotNull Optional<DataFlowState> getPreviousCycle(@NotNull DataFlowState state, @NotNull BlockCycle blockCycle) {
+        Optional<DataFlowBlock> originBlock = state.getBlock();
+        if (originBlock.isEmpty()) {
+            return Optional.empty();
+        }
+        do {
+            Optional<DataFlowState> predecessor = state.getPredecessor();
+            if (predecessor.isEmpty()) {
+                return Optional.empty();
+            }
+            state = predecessor.orElseThrow();
+            Optional<DataFlowBlock> currentBlock = state.getBlock();
+            if (currentBlock.isEmpty()) {
+                return Optional.empty();
+            }
+            if (currentBlock.equals(originBlock)) {
+                return Optional.of(state);
+            }
+        } while (isBlockCycle(state, blockCycle));
+        return Optional.empty();
+    }
+
+    private boolean isBlockCycle(@NotNull DataFlowState state, @NotNull BlockCycle blockCycle) {
+        return state.getBlock()
+                .map(block -> isBlockCycle(block, blockCycle))
+                .orElse(false);
+
+    }
+
+    private boolean isBlockCycle(@NotNull DataFlowBlock block, @NotNull BlockCycle blockCycle) {
+        return blockCycle.getSequence().contains(block);
     }
 
     @Override
@@ -282,7 +361,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         values.forEach((index, value) -> {
             Argument argument;
             if (index instanceof ArgumentDescriptor.Required required) {
-                if(required.index() >= arguments.size()) {
+                if (required.index() >= arguments.size()) {
                     return;
                 } else {
                     argument = arguments.get(required.index());

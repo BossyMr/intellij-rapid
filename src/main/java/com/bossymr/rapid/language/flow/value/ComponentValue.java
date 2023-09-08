@@ -6,8 +6,8 @@ import org.jetbrains.annotations.NotNull;
 
 public record ComponentValue(@NotNull RapidType type, @NotNull ReferenceValue variable, @NotNull String name) implements ReferenceValue {
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitComponentVariableValue(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitComponentVariableValue(this);
     }
 
     @Override

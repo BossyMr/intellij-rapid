@@ -1,17 +1,20 @@
 package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.constraint.*;
+import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
+import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 
+@Deprecated(forRemoval = true)
 public class ConstraintVisitor extends ControlFlowVisitor {
 
     private final @NotNull DataFlowState state;
@@ -28,21 +31,22 @@ public class ConstraintVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitValueExpression(@NotNull ValueExpression expression) {
+    public Void visitValueExpression(@NotNull ValueExpression expression) {
         constraint = state.getConstraint(expression.value(), visited).orElse(null);
+        return null;
     }
 
     @Override
-    public void visitAggregateExpression(@NotNull AggregateExpression expression) {
+    public Void visitAggregateExpression(@NotNull AggregateExpression expression) {
         throw new UnsupportedOperationException("Cannot visit: " + expression);
     }
 
     @Override
-    public void visitBinaryExpression(@NotNull BinaryExpression expression) {
+    public Void visitBinaryExpression(@NotNull BinaryExpression expression) {
         Constraint left = state.getConstraint(expression.left(), visited).orElse(null);
         Constraint right = state.getConstraint(expression.right(), visited).orElse(null);
         if (left == null || right == null) {
-            return;
+            return null;
         }
         BinaryOperator operator = expression.operator();
         constraint = switch (operator) {
@@ -81,9 +85,50 @@ public class ConstraintVisitor extends ControlFlowVisitor {
                 yield getLogicalBinaryConstraint(operator, leftConstant, rightConstant);
             }
         };
+        return null;
+    }
+
+    private @NotNull BooleanConstraint isEqual(@NotNull ReferenceValue left, @NotNull ReferenceValue right, @NotNull Set<Condition> visited) {
+        for (Condition condition : state.findConditions(left)) {
+            if (!(visited.add(condition))) {
+                continue;
+            }
+        }
+        return null;
     }
 
     private @NotNull BooleanConstraint isEqual(@NotNull BinaryExpression binaryExpression) {
+        // TODO: 2023-09-02 We need to search all conditions outward from the left value, to find if it is equal to the right value. It might take multiple steps,
+        //  and it should be able to support multiple steps (a := b * 2 && b := c / 2 -> a := (c / 2) * 2 -> a := c)
+        if (binaryExpression.left() instanceof ArraySnapshot left && binaryExpression.right() instanceof ArraySnapshot right) {
+            if (!(left.getType().isAssignable(right.getType()))) {
+                return BooleanConstraint.alwaysFalse();
+            }
+            for (ArrayEntry leftEntry : left.getAssignments(state, NumericConstraint.any())) {
+                List<ArrayEntry> entries = leftEntry instanceof ArrayEntry.Assignment assignment ?
+                        right.getAssignments(state, assignment.value()) :
+                        right.getAssignments(state, NumericConstraint.any());
+                for (ArrayEntry rightEntry : entries) {
+                    BooleanConstraint equality = isEqual(new BinaryExpression(BinaryOperator.EQUAL_TO, leftEntry.getValue(), rightEntry.getValue()));
+                    if (!(equality.equals(BooleanConstraint.alwaysTrue()))) {
+                        return equality;
+                    }
+                }
+            }
+            return BooleanConstraint.alwaysTrue();
+        }
+        if (binaryExpression.left() instanceof RecordSnapshot left && binaryExpression.right() instanceof RecordSnapshot right) {
+            if (!(left.getType().isAssignable(right.getType()))) {
+                return BooleanConstraint.alwaysFalse();
+            }
+            for (Map.Entry<String, Value> entry : left.getSnapshots().entrySet()) {
+                BooleanConstraint equality = isEqual(new BinaryExpression(BinaryOperator.EQUAL_TO, entry.getValue(), right.getValue(entry.getKey())));
+                if (!(equality.equals(BooleanConstraint.alwaysTrue()))) {
+                    return equality;
+                }
+            }
+            return BooleanConstraint.alwaysTrue();
+        }
         if (binaryExpression.left().equals(binaryExpression.right())) {
             return BooleanConstraint.alwaysTrue();
         }
@@ -201,10 +246,10 @@ public class ConstraintVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitUnaryExpression(@NotNull UnaryExpression expression) {
+    public Void visitUnaryExpression(@NotNull UnaryExpression expression) {
         Constraint value = state.getConstraint(expression.value(), visited).orElse(null);
         if (value == null) {
-            return;
+            return null;
         }
         switch (expression.operator()) {
             case NOT -> {
@@ -225,5 +270,6 @@ public class ConstraintVisitor extends ControlFlowVisitor {
                         }).toList());
             }
         }
+        return null;
     }
 }

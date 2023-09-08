@@ -18,7 +18,6 @@ import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
-import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.RapidType;
 import com.intellij.execution.ExecutionException;
@@ -44,17 +43,13 @@ import com.intellij.openapi.util.SystemInfo;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.HtmlChunk;
 import com.intellij.openapi.vfs.VirtualFileWrapper;
-import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public class DataFlowGraphService extends AnAction {
 
@@ -162,12 +157,17 @@ public class DataFlowGraphService extends AnAction {
                 continue;
             }
             DataFlowBlock entryFlowBlock = dataFlow.getBlock(entryBlock);
-            for (DataFlowState state : entryFlowBlock.getStates()) {
-                stringBuilder.append(getEntryBlockIndex(block)).append(" -> ").append(getStateIndex(entryFlowBlock, states, state)).append(";").append("\n");
+            if (entryFlowBlock != null) {
+                for (DataFlowState state : entryFlowBlock.getStates()) {
+                    stringBuilder.append(getEntryBlockIndex(block)).append(" -> ").append(getStateIndex(entryFlowBlock, states, state)).append(";").append("\n");
+                }
             }
         }
         for (BasicBlock basicBlock : block.getBasicBlocks()) {
             DataFlowBlock dataFlowBlock = dataFlow.getBlock(basicBlock);
+            if (dataFlowBlock == null) {
+                continue;
+            }
             stringBuilder.append("subgraph ").append(getBasicBlockClusterName(basicBlock)).append(" {\n");
             stringBuilder.append("label=<");
             stringBuilder.append("<table BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">");
@@ -179,10 +179,19 @@ public class DataFlowGraphService extends AnAction {
             }
             writeInstruction(stringBuilder, index, basicBlock.getTerminator());
             stringBuilder.append("</table>>;");
-            for (DataFlowState state : states.getAll(dataFlowBlock)) {
+            Collection<DataFlowState> currentStates = states.getAll(dataFlowBlock);
+            for (DataFlowState state : currentStates) {
                 writeState(stringBuilder, states, dataFlowBlock, state);
             }
             stringBuilder.append("};\n");
+            if (currentStates.isEmpty()) {
+                for (DataFlowEdge predecessor : dataFlowBlock.getPredecessors()) {
+                    DataFlowBlock source = predecessor.getSource();
+                    stringBuilder.append(getStateIndex(source, 0)).append(" -> ").append(getStateIndex(dataFlowBlock, 0));
+                    stringBuilder.append("[ltail=").append(getBasicBlockClusterName(source.getBasicBlock())).append(" lhead=").append(getBasicBlockClusterName(basicBlock));
+                    stringBuilder.append("]\n");
+                }
+            }
             for (DataFlowState state : states.getAll(dataFlowBlock)) {
                 writePredecessor(stringBuilder, states, state, dataFlowBlock);
             }
@@ -236,24 +245,13 @@ public class DataFlowGraphService extends AnAction {
         for (Condition condition : state.getConditions()) {
             stringBuilder.append("<tr>");
             stringBuilder.append("<td>");
-            StringBuilder temporaryBuilder = new StringBuilder();
-            condition.getVariable().accept(new ControlFlowFormatVisitor(temporaryBuilder));
-            stringBuilder.append(HtmlChunk.text(temporaryBuilder.toString()));
+            stringBuilder.append(HtmlChunk.text(condition.getVariable().accept(new ControlFlowFormatVisitor())));
             stringBuilder.append("</td>");
             stringBuilder.append("<td>");
-            stringBuilder.append(HtmlChunk.text(switch (condition.getConditionType()) {
-                case EQUALITY -> "=";
-                case INEQUALITY -> "!=";
-                case LESS_THAN -> "<";
-                case LESS_THAN_OR_EQUAL -> "<=";
-                case GREATER_THAN -> ">";
-                case GREATER_THAN_OR_EQUAL -> ">=";
-            }));
+            stringBuilder.append(HtmlChunk.text(condition.getConditionType().getText()));
             stringBuilder.append("</td>");
             stringBuilder.append("<td align=\"left\">");
-            temporaryBuilder = new StringBuilder();
-            condition.getExpression().accept(new ControlFlowFormatVisitor(temporaryBuilder));
-            stringBuilder.append(HtmlChunk.text(temporaryBuilder.toString()));
+            stringBuilder.append(HtmlChunk.text(condition.getExpression().accept(new ControlFlowFormatVisitor())));
             stringBuilder.append("</td>");
             stringBuilder.append("</tr>\n");
         }
@@ -261,7 +259,7 @@ public class DataFlowGraphService extends AnAction {
         for (var entry : state.getConstraints().entrySet()) {
             stringBuilder.append("<tr>");
             stringBuilder.append("<td>");
-            entry.getKey().accept(new ControlFlowFormatVisitor(stringBuilder));
+            stringBuilder.append(entry.getKey().accept(new ControlFlowFormatVisitor()));
             stringBuilder.append("</td>");
             stringBuilder.append("<td align=\"left\">");
             stringBuilder.append(entry.getValue().getPresentableText());
@@ -283,10 +281,10 @@ public class DataFlowGraphService extends AnAction {
         if(!(snapshots.add(snapshot))) {
             return;
         }
-        ControlFlowFormatVisitor visitor = new ControlFlowFormatVisitor(stringBuilder);
+        ControlFlowFormatVisitor visitor = new ControlFlowFormatVisitor();
         stringBuilder.append("<tr>");
         stringBuilder.append("<td>");
-        variable.accept(visitor);
+        stringBuilder.append(variable.accept(visitor));
         if(variable instanceof VariableValue variableValue && variableValue.field().name() != null) {
             stringBuilder.append("[");
             stringBuilder.append(variableValue.field().name());
@@ -294,7 +292,7 @@ public class DataFlowGraphService extends AnAction {
         }
         stringBuilder.append("</td>");
         stringBuilder.append("<td COLSPAN=\"2\" align=\"left\">");
-        snapshot.accept(visitor);
+        stringBuilder.append(snapshot.accept(visitor));
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");
         if (snapshot instanceof RecordSnapshot recordSnapshot) {
@@ -390,13 +388,11 @@ public class DataFlowGraphService extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         Project project = e.getProject();
-        PsiFile file = e.getData(CommonDataKeys.PSI_FILE);
-        e.getPresentation().setEnabled(project != null && file instanceof RapidFile);
+        e.getPresentation().setEnabled(project != null);
     }
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        PsiFile file = e.getRequiredData(CommonDataKeys.PSI_FILE);
         Project project = e.getRequiredData(CommonDataKeys.PROJECT);
         FileSaverDescriptor descriptor = new FileSaverDescriptor(RapidBundle.message("data.flow.save.graph"), "", "svg", "txt");
         FileSaverDialog dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project);

@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
@@ -34,10 +35,7 @@ public class DataFlow {
         return usages;
     }
 
-    public @NotNull DataFlowBlock getBlock(@NotNull BasicBlock block) {
-        if (!(map.containsKey(block))) {
-            throw new IllegalArgumentException("Could not find block: " + block);
-        }
+    public @Nullable DataFlowBlock getBlock(@NotNull BasicBlock block) {
         return map.get(block);
     }
 

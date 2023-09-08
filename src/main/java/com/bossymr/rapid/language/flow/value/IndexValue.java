@@ -6,8 +6,8 @@ import org.jetbrains.annotations.NotNull;
 
 public record IndexValue(@NotNull ReferenceValue variable, @NotNull Value index) implements ReferenceValue {
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitIndexValue(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitIndexValue(this);
     }
 
     @Override

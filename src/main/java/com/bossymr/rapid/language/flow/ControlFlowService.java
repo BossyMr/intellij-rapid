@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
+import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import com.bossymr.rapid.language.flow.parser.ControlFlowElementVisitor;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
@@ -23,6 +24,7 @@ import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 /**
@@ -45,12 +47,12 @@ public final class ControlFlowService {
     public @NotNull DataFlow getDataFlow(@NotNull Project project) {
         return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
             ControlFlow controlFlow = calculateControlFlow(project);
-            return CachedValueProvider.Result.createSingleDependency(getDataFlow(controlFlow), PsiModificationTracker.MODIFICATION_COUNT);
+            return CachedValueProvider.Result.createSingleDependency(getDataFlow(controlFlow, (dataFlow, block) -> true), PsiModificationTracker.MODIFICATION_COUNT);
         });
     }
 
     @RequiresReadLock
-    public @NotNull DataFlow getDataFlow(@NotNull ControlFlow controlFlow) {
+    public @NotNull DataFlow getDataFlow(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer) {
         Map<BasicBlock, DataFlowBlock> dataFlow = new HashMap<>();
         Collection<Block> blocks = controlFlow.getBlocks();
         Map<BlockDescriptor, Block.FunctionBlock> descriptorMap = blocks.stream()
@@ -63,13 +65,25 @@ public final class ControlFlowService {
             if (!(block instanceof Block.FunctionBlock functionBlock)) {
                 continue;
             }
-            Map<BasicBlock, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap);
+            Map<BasicBlock, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap, (returnValue, value) -> {
+                Map<BasicBlock, DataFlowBlock> copyMap = new HashMap<>(Map.copyOf(dataFlow));
+                copyMap.putAll(returnValue);
+                return consumer.test(createDataFlow(controlFlow, copyMap, functionMap.getUsages()), value);
+            });
             dataFlow.putAll(result);
         }
         for (DataFlowBlock entry : workList) {
-            DataFlowAnalyzer.reanalyze(entry, functionMap, dataFlow);
+            DataFlowAnalyzer.reanalyze(entry, functionMap, dataFlow, (returnValue, value) -> {
+                Map<BasicBlock, DataFlowBlock> copyMap = new HashMap<>(Map.copyOf(dataFlow));
+                copyMap.putAll(returnValue);
+                return consumer.test(createDataFlow(controlFlow, copyMap, functionMap.getUsages()), value);
+            });
         }
-        return new DataFlow(controlFlow, dataFlow, functionMap.getUsages());
+        return createDataFlow(controlFlow, dataFlow, functionMap.getUsages());
+    }
+
+    private @NotNull DataFlow createDataFlow(@NotNull ControlFlow controlFlow, @NotNull Map<BasicBlock, DataFlowBlock> blocks, @NotNull Map<DataFlowBlock, DataFlowUsage> usages) {
+        return new DataFlow(controlFlow, blocks, usages);
     }
 
     /**
@@ -90,7 +104,7 @@ public final class ControlFlowService {
     /**
      * Analyzes the {@code ControlFlow} for the specified module.
      *
-     * @param module the module to analyze.
+     * @param project the project to analyze.
      * @return the control flow graph for the specified element.
      */
     @RequiresReadLock

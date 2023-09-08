@@ -1,88 +1,134 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.rapid.language.flow.*;
+import com.bossymr.rapid.language.flow.BasicBlock;
+import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.condition.Condition;
+import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowEdge;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
-import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
-import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.ComponentValue;
-import com.bossymr.rapid.language.flow.value.ReferenceSnapshot;
-import com.bossymr.rapid.language.flow.value.ReferenceValue;
-import com.bossymr.rapid.language.flow.value.VariableValue;
-import com.bossymr.rapid.language.symbol.RapidComponent;
-import com.bossymr.rapid.language.symbol.RapidRecord;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.flow.value.*;
 import com.intellij.openapi.progress.ProgressManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
+/**
+ * A {@code DataFlowAnalyzer} is an analyzer which analyzes a block.
+ */
 public class DataFlowAnalyzer {
 
     private final @NotNull Block.FunctionBlock functionBlock;
-    private final @NotNull List<ReferenceValue> variables;
 
     private final @NotNull Map<BasicBlock, DataFlowBlock> blocks;
     private final @NotNull DataFlowFunctionMap functionMap;
     private final @NotNull Deque<DataFlowBlock> workList;
 
-    public DataFlowAnalyzer(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull Map<BasicBlock, DataFlowBlock> blocks, @NotNull Deque<DataFlowBlock> workList) {
+    private final @NotNull BiPredicate<Map<BasicBlock, DataFlowBlock>, DataFlowBlock> consumer;
+
+    public DataFlowAnalyzer(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull Map<BasicBlock, DataFlowBlock> blocks, @NotNull Deque<DataFlowBlock> workList, @NotNull BiPredicate<Map<BasicBlock, DataFlowBlock>, DataFlowBlock> consumer) {
         this.functionBlock = functionBlock;
         this.functionMap = functionMap;
-        this.variables = getVariables(functionBlock);
         this.workList = workList;
         this.blocks = blocks;
+        this.consumer = consumer;
     }
 
-    public static @NotNull Map<BasicBlock, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap) {
+    public static @NotNull Map<BasicBlock, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull BiPredicate<Map<BasicBlock, DataFlowBlock>, DataFlowBlock> consumer) {
         List<BasicBlock> basicBlocks = functionBlock.getBasicBlocks();
-        Map<BasicBlock, DataFlowBlock> blocks = basicBlocks.stream().collect(Collectors.toMap(block -> block, DataFlowBlock::new));
+        Set<List<BasicBlock>> cycles = getCycles(functionBlock);
+        Map<BasicBlock, DataFlowBlock> blocks = basicBlocks.stream().collect(Collectors.toMap(block -> block, block -> new DataFlowBlock(block, new HashSet<>())));
+        for (List<BasicBlock> cycle : cycles) {
+            BlockCycle blockCycle = new BlockCycle(cycle.stream()
+                    .map(blocks::get)
+                    .toList());
+            for (BasicBlock basicBlock : cycle) {
+                DataFlowBlock block = blocks.get(basicBlock);
+                if (block == null) {
+                    continue;
+                }
+                block.getCycles().add(blockCycle);
+            }
+        }
         Deque<DataFlowBlock> workList = new ArrayDeque<>(basicBlocks.size());
         for (BasicBlock basicBlock : basicBlocks) {
             workList.add(blocks.get(basicBlock));
         }
-        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(functionBlock, functionMap, blocks, workList);
+        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(functionBlock, functionMap, blocks, workList, consumer);
         analyzer.process();
         return blocks;
     }
 
-    public static void reanalyze(@NotNull DataFlowBlock block, @NotNull DataFlowFunctionMap functionMap, @NotNull Map<BasicBlock, DataFlowBlock> blocks) {
+    private static @NotNull @Unmodifiable Set<List<BasicBlock>> getCycles(@NotNull Block.FunctionBlock functionBlock) {
+        Set<List<BasicBlock>> blockPaths = new HashSet<>();
+        Map<BasicBlock, List<BasicBlock>> trails = new HashMap<>();
+        Deque<BasicBlock> queue = new ArrayDeque<>(functionBlock.getEntryBlocks());
+        queue:
+        while (!(queue.isEmpty())) {
+            BasicBlock basicBlock = queue.removeFirst();
+            List<BasicBlock> trail = trails.getOrDefault(basicBlock, List.of(basicBlock));
+            trails.remove(basicBlock);
+            for (BasicBlock successor : getSuccessors(basicBlock)) {
+                if (trail.contains(successor)) {
+                    List<BasicBlock> actual = trail.subList(trail.indexOf(successor), trail.size());
+                    blockPaths.add(List.copyOf(actual));
+                    continue queue;
+                }
+                List<BasicBlock> copy = new ArrayList<>(trail);
+                copy.add(successor);
+                trails.put(successor, copy);
+                queue.addLast(successor);
+            }
+        }
+        return Set.copyOf(blockPaths);
+    }
+
+    private static @NotNull Set<BasicBlock> getSuccessors(@NotNull BasicBlock block) {
+        BranchingInstruction terminator = block.getTerminator();
+        if (terminator instanceof BranchingInstruction.ConditionalBranchingInstruction instruction) {
+            return Set.of(instruction.onFailure(), instruction.onSuccess());
+        }
+        if (terminator instanceof BranchingInstruction.UnconditionalBranchingInstruction instruction) {
+            return Set.of(instruction.next());
+        }
+        if (terminator instanceof BranchingInstruction.ErrorInstruction instruction) {
+            if (instruction.next() == null) {
+                return Set.of();
+            }
+            return Set.of(instruction.next());
+        }
+        if (terminator instanceof BranchingInstruction.CallInstruction instruction) {
+            return Set.of(instruction.next());
+        }
+        return Set.of();
+    }
+
+    public static void reanalyze(@NotNull DataFlowBlock block, @NotNull DataFlowFunctionMap functionMap, @NotNull Map<BasicBlock, DataFlowBlock> blocks, @NotNull BiPredicate<Map<BasicBlock, DataFlowBlock>, DataFlowBlock> consumer) {
         Deque<DataFlowBlock> deque = new ArrayDeque<>();
         deque.addLast(block);
         Block.FunctionBlock functionBlock = (Block.FunctionBlock) block.getBasicBlock().getBlock();
-        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(functionBlock, functionMap, blocks, deque);
+        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(functionBlock, functionMap, blocks, deque, consumer);
         analyzer.process();
     }
 
-    private static @NotNull @Unmodifiable List<ReferenceValue> getVariables(@NotNull Block.FunctionBlock functionBlock) {
-        List<ReferenceValue> variables = new ArrayList<>();
-        for (ArgumentGroup argumentGroup : functionBlock.getArgumentGroups()) {
-            for (Argument argument : argumentGroup.arguments()) {
-                variables.add(new VariableValue(argument));
-            }
-        }
-        for (Variable variable : functionBlock.getVariables()) {
-            variables.add(new VariableValue(variable));
-        }
-        return List.copyOf(variables);
+    private static @NotNull Constraint getConstraint(@NotNull List<DataFlowState> states, @NotNull ReferenceValue variable) {
+        return states.stream()
+                .map(state -> state.getConstraint(variable))
+                .collect(Constraint.or(variable.getType()));
     }
 
     public void process() {
         while (!(workList.isEmpty())) {
             ProgressManager.checkCanceled();
             DataFlowBlock block = workList.removeFirst();
-            Set<DataFlowEdge> beforeSuccessors = Set.copyOf(block.getSuccessors());
-            List<DataFlowState> before = List.copyOf(block.getStates());
             process(block);
-            Set<DataFlowEdge> afterSuccessors = Set.copyOf(block.getSuccessors());
-            boolean modified = isModified(before, block.getStates()) || isModified(beforeSuccessors, afterSuccessors);
-            if (modified) {
+            if (consumer.test(blocks, block)) {
                 for (DataFlowEdge successor : block.getSuccessors()) {
                     DataFlowBlock successorBlock = successor.getDestination();
                     if (workList.contains(successorBlock)) {
@@ -120,6 +166,22 @@ public class DataFlowAnalyzer {
         for (LinearInstruction instruction : basicBlock.getInstructions()) {
             instruction.accept(visitor);
         }
+        for (DataFlowState state : block.getStates()) {
+            for (PathCounter pathCounter : state.getPathCounters()) {
+                for (BlockCycle blockCycle : pathCounter.getResetPath()) {
+                    if (blockCycle.getSequence().contains(block)) {
+                        state.assign(new Condition(pathCounter, ConditionType.EQUALITY, Expression.of(0)), false);
+                        break;
+                    }
+                }
+                for (BlockCycle blockCycle : pathCounter.getIncrementPath()) {
+                    if (blockCycle.getSequence().contains(block)) {
+                        state.assign(new Condition(pathCounter, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.ADD, pathCounter, ConstantValue.of(1))), false);
+                        break;
+                    }
+                }
+            }
+        }
         BranchingInstruction terminator = basicBlock.getTerminator();
         terminator.accept(visitor);
         for (DataFlowEdge successor : block.getSuccessors()) {
@@ -127,142 +189,25 @@ public class DataFlowAnalyzer {
         }
     }
 
-    private boolean isModified(@NotNull Set<DataFlowEdge> before, @NotNull Set<DataFlowEdge> after) {
-        if (before.size() != after.size()) {
+    private boolean isModified(@NotNull DataFlowBlock block, @NotNull Set<DataFlowFunction.Result> previousUsages, @NotNull Set<DataFlowFunction.Result> afterUsages, @NotNull List<DataFlowState> before, @NotNull List<DataFlowState> after) {
+        if (before.isEmpty() && !(after.isEmpty())) {
+            /*
+             * The block was initialized and must as a result be modified.
+             */
             return true;
         }
-        if (before.equals(after)) {
+        BranchingInstruction terminator = block.getBasicBlock().getTerminator();
+        if (!(terminator instanceof BranchingInstruction.CallInstruction) && !(terminator instanceof BranchingInstruction.ConditionalBranchingInstruction)) {
             return false;
         }
-        List<DataFlowEdge> beforeList = List.copyOf(before);
-        List<DataFlowEdge> afterList = List.copyOf(after);
-        for (int i = 0; i < beforeList.size(); i++) {
-            DataFlowEdge beforeEdge = beforeList.get(i);
-            DataFlowEdge afterEdge = afterList.get(i);
-            if (isModified(beforeEdge, afterEdge)) {
-                return true;
-            }
+        if (terminator instanceof BranchingInstruction.CallInstruction) {
+            return !(previousUsages.equals(afterUsages));
         }
-        return false;
-    }
-
-    private boolean isModified(@NotNull DataFlowEdge beforeEdge, @NotNull DataFlowEdge afterEdge) {
-        if (!(beforeEdge.getSource().equals(afterEdge.getSource()))) {
-            return true;
-        }
-        if (!(beforeEdge.getDestination().equals(afterEdge.getDestination()))) {
-            return true;
-        }
-        return isModified(beforeEdge.getStates(), afterEdge.getStates());
-    }
-
-    private boolean isModified(@NotNull List<DataFlowState> before, @NotNull List<DataFlowState> after) {
-        if (before.equals(after)) {
-            return false;
-        }
-        if (before.isEmpty() || after.isEmpty()) {
-            return true;
-        }
-        for (ReferenceValue variable : variables) {
-            RapidType type = variable.getType();
-            if (type.getDimensions() > 0) {
-                if (isArrayModified(before, after, variable)) {
-                    return true;
-                }
-            } else if (type.getTargetStructure() instanceof RapidRecord record) {
-                for (RapidComponent component : record.getComponents()) {
-                    String name = component.getName();
-                    RapidType componentType = component.getType();
-                    if (componentType == null || name == null) {
-                        continue;
-                    }
-                    ComponentValue componentValue = new ComponentValue(componentType, variable, name);
-                    if (isModified(before, after, componentValue)) {
-                        return true;
-                    }
-                }
-            } else {
-                if (isModified(before, after, variable)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean isArrayModified(@NotNull List<DataFlowState> before, @NotNull List<DataFlowState> after, @NotNull ReferenceValue variable) {
-        Map<List<Constraint>, Constraint> beforeConstraints = getArrayAssignments(before, variable);
-        Map<List<Constraint>, Constraint> afterConstraints = getArrayAssignments(after, variable);
-        for (List<Constraint> beforeIndexes : beforeConstraints.keySet()) {
-            for (List<Constraint> afterIndexes : afterConstraints.keySet()) {
-                if (contains(beforeIndexes, afterIndexes)) {
-                    Constraint beforeResult = beforeConstraints.get(beforeIndexes);
-                    Constraint afterResult = afterConstraints.get(afterIndexes);
-                    if (!(beforeResult.contains(afterResult))) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
-    }
-
-    private boolean contains(@NotNull List<Constraint> before, @NotNull List<Constraint> after) {
-        for (int i = 0; i < before.size(); i++) {
-            Constraint beforeConstraint = before.get(i);
-            Constraint afterConstraint = after.get(i);
-            if (!(beforeConstraint.intersects(afterConstraint))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private @NotNull Map<List<Constraint>, Constraint> getArrayAssignments(@NotNull List<DataFlowState> states, @NotNull ReferenceValue variable) {
-        Map<List<Constraint>, Constraint> results = new HashMap<>();
-        for (DataFlowState state : states) {
-            getArrayAssignments(results, new ArrayList<>(), state, variable);
-        }
-        return results;
-    }
-
-    private void getArrayAssignments(@NotNull Map<List<Constraint>, Constraint> results, @NotNull List<Constraint> indexes, @NotNull DataFlowState state, @NotNull ReferenceValue variable) {
-        if (variable.getType().getDimensions() > 0) {
-            Optional<ReferenceSnapshot> snapshot = state.getSnapshot(variable);
-            if(snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
-                return;
-            }
-            for (ArrayEntry entry : arraySnapshot.getAssignments(state, Constraint.any(RapidType.NUMBER))) {
-                if (entry instanceof ArrayEntry.DefaultValue defaultValue) {
-                    List<Constraint> copy = new ArrayList<>(indexes);
-                    copy.add(Constraint.any(RapidType.NUMBER));
-                    Constraint result = state.getConstraint(defaultValue.defaultValue());
-                    putArrayAssignment(results, copy, result);
-                } else if (entry instanceof ArrayEntry.Assignment assignment) {
-                    List<Constraint> copy = new ArrayList<>(indexes);
-                    copy.add(state.getConstraint(assignment.index()));
-                    Constraint result = state.getConstraint(assignment.value());
-                    putArrayAssignment(results, copy, result);
-                }
-            }
-        } else {
-            Constraint result = state.getConstraint(variable);
-            putArrayAssignment(results, indexes, result);
-        }
-    }
-
-    private void putArrayAssignment(@NotNull Map<List<Constraint>, Constraint> results, @NotNull List<Constraint> indexes, @NotNull Constraint result) {
-        if (results.containsKey(indexes)) {
-            Constraint previousResult = results.get(indexes);
-            results.put(indexes, result.or(previousResult));
-        } else {
-            results.put(indexes, result);
-        }
-    }
-
-    private boolean isModified(@NotNull List<DataFlowState> before, @NotNull List<DataFlowState> after, @NotNull ReferenceValue variable) {
-        Constraint beforeConstraint = before.stream().map(state -> state.getConstraint(variable)).collect(Constraint.or(variable.getType()));
-        Constraint afterConstraint = after.stream().map(state -> state.getConstraint(variable)).collect(Constraint.or(variable.getType()));
+        BranchingInstruction.ConditionalBranchingInstruction instruction = (BranchingInstruction.ConditionalBranchingInstruction) terminator;
+        ReferenceValue value = instruction.value();
+        Constraint beforeConstraint = getConstraint(before, value);
+        Constraint afterConstraint = getConstraint(after, value);
         return !(beforeConstraint.equals(afterConstraint));
     }
+
 }

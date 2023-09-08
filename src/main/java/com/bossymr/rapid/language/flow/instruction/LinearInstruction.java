@@ -20,8 +20,8 @@ public sealed interface LinearInstruction extends Instruction {
      */
     record AssignmentInstruction(@NotNull PsiElement element, @NotNull ReferenceValue variable, @NotNull Expression value) implements LinearInstruction {
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitAssignmentInstruction(this);
+        public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+            return visitor.visitAssignmentInstruction(this);
         }
     }
 
@@ -33,8 +33,8 @@ public sealed interface LinearInstruction extends Instruction {
      */
     record ConnectInstruction(@NotNull PsiElement element, @NotNull ReferenceValue variable, @NotNull Value routine) implements LinearInstruction {
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
-            visitor.visitConnectInstruction(this);
+        public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+            return visitor.visitConnectInstruction(this);
         }
     }
 }

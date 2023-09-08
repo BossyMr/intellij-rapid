@@ -287,10 +287,10 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             BasicBlock descending = builder.createBasicBlock();
             builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, directionVariable, ascending, descending));
             builder.enterBasicBlock(ascending);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ValueExpression(new ConstantValue(RapidType.NUMBER, 1))));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ValueExpression(ConstantValue.of(1))));
             builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, loopBasicBlock));
             builder.enterBasicBlock(descending);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ValueExpression(new ConstantValue(RapidType.NUMBER, -1))));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ValueExpression(ConstantValue.of(-1))));
             builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, loopBasicBlock));
         }
         builder.enterBasicBlock(loopBasicBlock);
@@ -361,7 +361,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         ReferenceValue value = ControlFlowExpressionVisitor.computeExpression(builder, condition);
         if (!(value.getType().isAssignable(RapidType.BOOLEAN))) {
             value = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(condition, value, new ValueExpression(new ErrorValue())));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(condition, value, new ValueExpression(ErrorValue.getInstance())));
         }
         builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, value, thenBasicBlock, elseBasicBlock));
         builder.enterBasicBlock(thenBasicBlock);
@@ -410,15 +410,15 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
     private @NotNull Value getFunctionValue(@NotNull RapidProcedureCallStatement statement) {
         RapidExpression expression = statement.getReferenceExpression();
         if (!(expression instanceof RapidReferenceExpression referenceExpression)) {
-            return new ErrorValue();
+            return ErrorValue.getInstance();
         }
         RapidSymbol symbol = referenceExpression.getSymbol();
         if (!(symbol instanceof RapidRoutine routine) || routine.getName() == null) {
-            return new ConstantValue(RapidType.STRING, referenceExpression.getCanonicalText());
+            return ConstantValue.of(RapidType.STRING, referenceExpression.getCanonicalText());
         }
         String moduleName = routine instanceof PhysicalRoutine physicalRoutine ? ControlFlowElementVisitor.getModuleName(physicalRoutine) : null;
         String name = (moduleName != null ? moduleName + ":" : "") + routine.getName();
-        return new ConstantValue(RapidType.STRING, name);
+        return ConstantValue.of(RapidType.STRING, name);
     }
 
     @Override
@@ -438,7 +438,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         }
         String routineName = routine.getName();
         String name = getModuleName(routine) + ":" + routineName;
-        builder.continueScope(new LinearInstruction.ConnectInstruction(statement, variable, new ConstantValue(RapidType.ANYTYPE, name)));
+        builder.continueScope(new LinearInstruction.ConnectInstruction(statement, variable, ConstantValue.of(RapidType.ANYTYPE, name)));
     }
 
     @Override

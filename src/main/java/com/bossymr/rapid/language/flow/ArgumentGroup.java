@@ -15,7 +15,8 @@ public record ArgumentGroup(
         @NotNull List<Argument> arguments
 ) {
 
-    public void accept(@NotNull ControlFlowVisitor visitor) {
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return 
         visitor.visitArgumentGroup(this);
     }
 

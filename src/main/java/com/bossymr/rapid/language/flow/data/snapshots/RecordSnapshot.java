@@ -87,8 +87,8 @@ public class RecordSnapshot implements ReferenceSnapshot {
     }
 
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitRecordSnapshot(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitRecordSnapshot(this);
     }
 
     @Override

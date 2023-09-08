@@ -5,8 +5,20 @@ import org.jetbrains.annotations.NotNull;
 
 public sealed interface ArrayEntry {
 
-    record Assignment(@NotNull Value index, @NotNull Value value) implements ArrayEntry {}
+    @NotNull Value getValue();
 
-    record DefaultValue(@NotNull Value defaultValue) implements ArrayEntry {}
+    record Assignment(@NotNull Value index, @NotNull Value value) implements ArrayEntry {
+        @Override
+        public @NotNull Value getValue() {
+            return value;
+        }
+    }
+
+    record DefaultValue(@NotNull Value defaultValue) implements ArrayEntry {
+        @Override
+        public @NotNull Value getValue() {
+            return defaultValue;
+        }
+    }
 
 }

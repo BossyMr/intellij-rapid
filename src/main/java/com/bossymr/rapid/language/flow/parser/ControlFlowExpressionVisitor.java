@@ -47,33 +47,33 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         if (expression instanceof RapidLiteralExpression literalExpression) {
             Object value = literalExpression.getValue();
             if (value == null) {
-                return new ErrorValue();
+                return ErrorValue.getInstance();
             }
-            return new ConstantValue(type, value);
+            return ConstantValue.of(type, value);
         }
         if (expression instanceof RapidUnaryExpression unaryExpression) {
             if (unaryExpression.getExpression() instanceof RapidLiteralExpression literalExpression) {
                 Object object = literalExpression.getValue();
                 if (object == null) {
-                    return new ErrorValue();
+                    return ErrorValue.getInstance();
                 }
                 IElementType elementType = unaryExpression.getSign().getNode().getElementType();
                 if (object instanceof Boolean value) {
                     if (elementType != RapidTokenTypes.NOT_KEYWORD) {
-                        return new ErrorValue();
+                        return ErrorValue.getInstance();
                     }
-                    return new ConstantValue(type, !value);
+                    return ConstantValue.of(!(value));
                 }
                 if (elementType != RapidTokenTypes.MINUS) {
-                    return new ErrorValue();
+                    return ErrorValue.getInstance();
                 }
                 if (object instanceof Long value) {
-                    return new ConstantValue(type, -value);
+                    return ConstantValue.of(-value);
                 }
                 if (object instanceof Double value) {
-                    return new ConstantValue(type, -value);
+                    return ConstantValue.of(-value);
                 }
-                return new ErrorValue();
+                return ErrorValue.getInstance();
             }
         }
         if (expression instanceof RapidIndexExpression indexExpression) {
@@ -89,12 +89,12 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 String moduleName = routine instanceof PhysicalVisibleSymbol physicalSymbol ? ControlFlowElementVisitor.getModuleName(physicalSymbol) : null;
                 String name = routine.getName();
                 if (name == null) {
-                    return new ErrorValue();
+                    return ErrorValue.getInstance();
                 }
-                return new ConstantValue(RapidType.STRING, (moduleName != null ? moduleName + ":" : "") + name);
+                return ConstantValue.of(RapidType.STRING, (moduleName != null ? moduleName + ":" : "") + name);
             }
             ReferenceValue variable = computeVariable(builder, referenceExpression);
-            return variable != null ? variable : new ErrorValue();
+            return variable != null ? variable : ErrorValue.getInstance();
         }
         return computeExpression(builder, VariableKey.createVariable(), expression);
     }
@@ -173,7 +173,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         ReferenceValue result = variableKey.retrieve();
         if (result == null) {
             ReferenceValue variable = builder.createVariable(variableKey, RapidType.ANYTYPE);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new ValueExpression(new ErrorValue())));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new ValueExpression(ErrorValue.getInstance())));
             return variable;
         }
         return result;
@@ -204,7 +204,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             }
             ReferenceValue presentReturnVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
             BasicBlock ifBlock = builder.createBasicBlock();
-            ConstantValue presentRoutine = new ConstantValue(RapidType.STRING, ":Present");
+            ConstantValue presentRoutine = ConstantValue.of(":Present");
             Argument argument = builder.findArgument(conditional.name());
             Objects.requireNonNull(argument);
             Map<ArgumentDescriptor, Value> presentArguments = Map.of(new ArgumentDescriptor.Required(0), new VariableValue(argument));
@@ -385,13 +385,13 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     public void visitFunctionCallExpression(@NotNull RapidFunctionCallExpression expression) {
         RapidType type = getType(expression.getType());
         RapidSymbol symbol = expression.getReferenceExpression().getSymbol();
-        ConstantValue routineValue;
+        Value routineValue;
         if (!(symbol instanceof RapidRoutine routine) || routine.getName() == null) {
-            routineValue = new ConstantValue(RapidType.STRING, expression.getReferenceExpression().getCanonicalText());
+            routineValue = ConstantValue.of(RapidType.STRING, expression.getReferenceExpression().getCanonicalText());
         } else {
             String moduleName = routine instanceof PhysicalRoutine physicalRoutine ? ControlFlowElementVisitor.getModuleName(physicalRoutine) : null;
             String name = (moduleName != null ? moduleName + ":" : "") + routine.getName();
-            routineValue = new ConstantValue(RapidType.STRING, name);
+            routineValue = ConstantValue.of(RapidType.STRING, name);
         }
         BasicBlock nextBlock = builder.createBasicBlock();
         List<RapidArgument> arguments = expression.getArgumentList().getArguments();
@@ -443,6 +443,6 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         ReferenceValue referenceValue = popVariable(type);
-        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, referenceValue, new ValueExpression(new ConstantValue(type, initialValue))));
+        builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, referenceValue, new ValueExpression(ConstantValue.of(type, initialValue))));
     }
 }

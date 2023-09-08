@@ -99,9 +99,9 @@ public class ArraySnapshot implements ReferenceSnapshot {
                 continue;
             }
             for (ArrayEntry value : values) {
-                if(value instanceof ArrayEntry.Assignment assignmentEntry) {
+                if (value instanceof ArrayEntry.Assignment assignmentEntry) {
                     Constraint comparisonConstraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignmentEntry.index(), assignment.index()));
-                    if(comparisonConstraint.equals(BooleanConstraint.alwaysTrue())) {
+                    if (comparisonConstraint.equals(BooleanConstraint.alwaysTrue())) {
                         break;
                     }
                 }
@@ -126,8 +126,8 @@ public class ArraySnapshot implements ReferenceSnapshot {
     }
 
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitArraySnapshot(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitArraySnapshot(this);
     }
 
     @Override

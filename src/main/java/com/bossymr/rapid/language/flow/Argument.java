@@ -21,7 +21,8 @@ public record Argument(
         @NotNull String name
 ) implements Field {
 
-    public void accept(@NotNull ControlFlowVisitor visitor) {
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return 
         visitor.visitArgument(this);
     }
 

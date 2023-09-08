@@ -4,10 +4,19 @@ import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
-public record ErrorValue() implements Value {
+public final class ErrorValue implements Value {
+
+    private static final @NotNull ErrorValue INSTANCE = new ErrorValue();
+
+    private ErrorValue() {}
+
+    public static @NotNull ErrorValue getInstance() {
+        return INSTANCE;
+    }
+
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitErrorValue(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitErrorValue(this);
     }
 
     @Override

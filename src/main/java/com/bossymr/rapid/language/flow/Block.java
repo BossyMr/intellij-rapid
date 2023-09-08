@@ -57,6 +57,10 @@ public sealed abstract class Block {
         return entryBlocks.get(scopeType);
     }
 
+    public @NotNull Set<BasicBlock> getEntryBlocks() {
+        return Set.copyOf(entryBlocks.values());
+    }
+
     public @NotNull List<ArgumentGroup> getArgumentGroups() {
         return List.of();
     }
@@ -115,7 +119,7 @@ public sealed abstract class Block {
                 .sum() + getVariables().size();
     }
 
-    public abstract void accept(@NotNull ControlFlowVisitor visitor);
+    public abstract <R> R accept(@NotNull ControlFlowVisitor<R> visitor);
 
     @Override
     public boolean equals(Object o) {
@@ -181,7 +185,8 @@ public sealed abstract class Block {
         }
 
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
+        public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+            return
             visitor.visitFunctionBlock(this);
         }
 
@@ -219,7 +224,8 @@ public sealed abstract class Block {
         }
 
         @Override
-        public void accept(@NotNull ControlFlowVisitor visitor) {
+        public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+            return
             visitor.visitFieldBlock(this);
         }
 

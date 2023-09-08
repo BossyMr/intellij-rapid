@@ -4,39 +4,111 @@ import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.symbol.RapidType;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 /**
  * A {@code ConstantValue} represents a constant value.
- *
- * @param type the type.
- * @param value the value.
  */
-public record ConstantValue(@NotNull RapidType type, @NotNull Object value) implements Value {
+public final class ConstantValue implements Value {
 
-    public ConstantValue {
-        assert !(type.isAssignable(RapidType.DOUBLE) || type.isAssignable(RapidType.NUMBER)) || value instanceof Number : "Cannot create constant value of type: " + type + " with value: " + value;
-        assert !(type.isAssignable(RapidType.STRING)) || value instanceof String : "Cannot create constant value of type: " + type + " with value: " + value;
-        assert !(type.isAssignable(RapidType.BOOLEAN)) || value instanceof Boolean : "Cannot create constant value of type: " + type + " with value: " + value;
+    private static final @NotNull ConstantValue TRUE = new ConstantValue(RapidType.BOOLEAN, true);
+    private static final @NotNull ConstantValue FALSE = new ConstantValue(RapidType.BOOLEAN, false);
+    private static final @NotNull ConstantValue ZERO = new ConstantValue(RapidType.NUMBER, 0);
+    private static final @NotNull ConstantValue ONE = new ConstantValue(RapidType.NUMBER, 1);
+    private static final @NotNull ConstantValue EMPTY_STRING = new ConstantValue(RapidType.BOOLEAN, "");
+
+    private final @NotNull RapidType type;
+    private final @NotNull Object value;
+
+    private ConstantValue(@NotNull RapidType type, @NotNull Object value) {
+        this.type = type;
+        this.value = value;
+    }
+
+    public static @NotNull Value of(@NotNull RapidType type, double object) {
+        return of(type, (Object) object);
+    }
+
+    public static @NotNull Value of(@NotNull RapidType type, boolean object) {
+        return of(type, (Object) object);
+    }
+
+
+    public static @NotNull Value of(@NotNull RapidType type, @NotNull Object object) {
+        if (object instanceof Boolean value) {
+            if (!(type.isAssignable(RapidType.BOOLEAN))) {
+                return ErrorValue.getInstance();
+            }
+            return of(value);
+        }
+        if (object instanceof Number value) {
+            if (!(type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE))) {
+                return ErrorValue.getInstance();
+            }
+            return of(value.doubleValue());
+        }
+        if (object instanceof String value) {
+            if (!(type.isAssignable(RapidType.STRING))) {
+                return ErrorValue.getInstance();
+            }
+            return of(value);
+        }
+        return ErrorValue.getInstance();
     }
 
     public static @NotNull ConstantValue of(boolean value) {
-        return new ConstantValue(RapidType.BOOLEAN, value);
+        return value ? TRUE : FALSE;
     }
 
     public static @NotNull ConstantValue of(double value) {
+        if (value == 0) {
+            return ZERO;
+        }
+        if (value == 1) {
+            return ONE;
+        }
         return new ConstantValue(RapidType.NUMBER, value);
     }
 
     public static @NotNull ConstantValue of(@NotNull String value) {
+        if (value.isEmpty()) {
+            return EMPTY_STRING;
+        }
         return new ConstantValue(RapidType.STRING, value);
     }
 
     @Override
-    public void accept(@NotNull ControlFlowVisitor visitor) {
-        visitor.visitConstantValue(this);
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return visitor.visitConstantValue(this);
     }
 
     @Override
     public @NotNull RapidType getType() {
-        return type();
+        return type;
+    }
+
+    public @NotNull Object getValue() {
+        return value;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+        ConstantValue that = (ConstantValue) object;
+        return Objects.equals(type, that.type) && Objects.equals(value, that.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, value);
+    }
+
+    @Override
+    public String toString() {
+        return "ConstantValue{" +
+                "type=" + type +
+                ", value=" + value +
+                '}';
     }
 }

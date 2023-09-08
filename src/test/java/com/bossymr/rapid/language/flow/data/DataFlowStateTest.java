@@ -32,6 +32,10 @@ class DataFlowStateTest {
         assertEquals(constraint, state.getConstraint(snapshot));
     }
 
+    public static @NotNull Block.FunctionBlock getEmptyFunctionBlock() {
+        return new Block.FunctionBlock(new VirtualRoutine(RoutineType.PROCEDURE, "bar", null, List.of()), "foo");
+    }
+
     @Test
     void getConstraintFromCondition() {
         DataFlowState state = DataFlowState.createState(getEmptyFunctionBlock());
@@ -39,7 +43,7 @@ class DataFlowStateTest {
         state.assign(new Condition(snapshot, ConditionType.EQUALITY, Expression.of(0)), true);
         assertEquals(NumericConstraint.equalTo(0), state.getConstraint(snapshot));
         snapshot = new VariableSnapshot(RapidType.NUMBER);
-        state.assign(new Condition(snapshot, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.MULTIPLY, new ConstantValue(RapidType.NUMBER, 5), new ConstantValue(RapidType.NUMBER, 10))), true);
+        state.assign(new Condition(snapshot, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.MULTIPLY, ConstantValue.of(RapidType.NUMBER, 5), ConstantValue.of(RapidType.NUMBER, 10))), true);
         assertEquals(NumericConstraint.equalTo(50), state.getConstraint(snapshot));
     }
 
@@ -49,11 +53,7 @@ class DataFlowStateTest {
         VariableSnapshot reference = new VariableSnapshot(RapidType.NUMBER);
         state.assign(reference, new NumericConstraint(Optionality.PRESENT, new NumericConstraint.Bound(true, 0), new NumericConstraint.Bound(true, 10)));
         VariableSnapshot snapshot = new VariableSnapshot(RapidType.NUMBER);
-        state.assign(new Condition(snapshot, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.MULTIPLY, new ConstantValue(RapidType.NUMBER, 5), reference)), true);
+        state.assign(new Condition(snapshot, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.MULTIPLY, ConstantValue.of(RapidType.NUMBER, 5), reference)), true);
         assertEquals(new NumericConstraint(Optionality.PRESENT, new NumericConstraint.Bound(true, 0), new NumericConstraint.Bound(true, 50)), state.getConstraint(snapshot));
-    }
-
-    private @NotNull Block.FunctionBlock getEmptyFunctionBlock() {
-        return new Block.FunctionBlock(new VirtualRoutine(RoutineType.PROCEDURE, "bar", null, List.of()), "foo");
     }
 }

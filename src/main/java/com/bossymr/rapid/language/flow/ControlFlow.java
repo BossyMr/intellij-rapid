@@ -28,7 +28,8 @@ public class ControlFlow {
         return project;
     }
 
-    public void accept(@NotNull ControlFlowVisitor visitor) {
+    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+        return 
         visitor.visitControlFlow(this);
     }
 

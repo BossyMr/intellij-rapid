@@ -152,7 +152,7 @@ public class BooleanConstraint implements Constraint {
         ANY_VALUE,
         ALWAYS_TRUE;
 
-        public static @NotNull BooleanValue withValue(boolean value) {
+        public static @NotNull BooleanValue of(boolean value) {
             return value ? ALWAYS_TRUE : ALWAYS_FALSE;
         }
 
