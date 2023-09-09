@@ -5,7 +5,7 @@ import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.flow.value.Value;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,7 +30,7 @@ public sealed interface BranchingInstruction extends Instruction {
                                            @NotNull BasicBlock onFailure) implements BranchingInstruction {
 
         public ConditionalBranchingInstruction {
-            assert value.getType().isAssignable(RapidType.BOOLEAN) : "Cannot branch on value: " + value;
+            assert value.getType().isAssignable(RapidPrimitiveType.BOOLEAN) : "Cannot branch on value: " + value;
         }
 
         @Override
@@ -140,7 +140,7 @@ public sealed interface BranchingInstruction extends Instruction {
                            @Nullable ReferenceValue returnValue, @NotNull BasicBlock next) implements BranchingInstruction {
 
         public CallInstruction {
-            assert routine.getType().isAssignable(RapidType.STRING) : "Cannot invoke: " + routine;
+            assert routine.getType().isAssignable(RapidPrimitiveType.STRING) : "Cannot invoke: " + routine;
         }
 
         @Override

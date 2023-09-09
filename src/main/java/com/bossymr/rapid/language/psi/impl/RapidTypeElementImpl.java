@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.psi.impl;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.util.CachedValuesManager;
 import org.jetbrains.annotations.NotNull;

@@ -1,4 +1,4 @@
-package com.bossymr.rapid.language.flow.constraint;
+package com.bossymr.rapid.language.flow;
 
 import org.jetbrains.annotations.NotNull;
 

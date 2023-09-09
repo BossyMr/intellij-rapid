@@ -6,7 +6,7 @@ import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.ParameterType;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameter;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;

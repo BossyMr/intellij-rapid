@@ -1,7 +1,8 @@
 package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -11,11 +12,11 @@ import java.util.Objects;
  */
 public final class ConstantValue implements Value {
 
-    private static final @NotNull ConstantValue TRUE = new ConstantValue(RapidType.BOOLEAN, true);
-    private static final @NotNull ConstantValue FALSE = new ConstantValue(RapidType.BOOLEAN, false);
-    private static final @NotNull ConstantValue ZERO = new ConstantValue(RapidType.NUMBER, 0);
-    private static final @NotNull ConstantValue ONE = new ConstantValue(RapidType.NUMBER, 1);
-    private static final @NotNull ConstantValue EMPTY_STRING = new ConstantValue(RapidType.BOOLEAN, "");
+    private static final @NotNull ConstantValue TRUE = new ConstantValue(RapidPrimitiveType.BOOLEAN, true);
+    private static final @NotNull ConstantValue FALSE = new ConstantValue(RapidPrimitiveType.BOOLEAN, false);
+    private static final @NotNull ConstantValue ZERO = new ConstantValue(RapidPrimitiveType.NUMBER, 0);
+    private static final @NotNull ConstantValue ONE = new ConstantValue(RapidPrimitiveType.NUMBER, 1);
+    private static final @NotNull ConstantValue EMPTY_STRING = new ConstantValue(RapidPrimitiveType.BOOLEAN, "");
 
     private final @NotNull RapidType type;
     private final @NotNull Object value;
@@ -36,19 +37,19 @@ public final class ConstantValue implements Value {
 
     public static @NotNull Value of(@NotNull RapidType type, @NotNull Object object) {
         if (object instanceof Boolean value) {
-            if (!(type.isAssignable(RapidType.BOOLEAN))) {
+            if (!(type.isAssignable(RapidPrimitiveType.BOOLEAN))) {
                 return ErrorValue.getInstance();
             }
             return of(value);
         }
         if (object instanceof Number value) {
-            if (!(type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE))) {
+            if (!(type.isAssignable(RapidPrimitiveType.NUMBER) || type.isAssignable(RapidPrimitiveType.DOUBLE))) {
                 return ErrorValue.getInstance();
             }
             return of(value.doubleValue());
         }
         if (object instanceof String value) {
-            if (!(type.isAssignable(RapidType.STRING))) {
+            if (!(type.isAssignable(RapidPrimitiveType.STRING))) {
                 return ErrorValue.getInstance();
             }
             return of(value);
@@ -67,14 +68,14 @@ public final class ConstantValue implements Value {
         if (value == 1) {
             return ONE;
         }
-        return new ConstantValue(RapidType.NUMBER, value);
+        return new ConstantValue(RapidPrimitiveType.NUMBER, value);
     }
 
     public static @NotNull ConstantValue of(@NotNull String value) {
         if (value.isEmpty()) {
             return EMPTY_STRING;
         }
-        return new ConstantValue(RapidType.STRING, value);
+        return new ConstantValue(RapidPrimitiveType.STRING, value);
     }
 
     @Override

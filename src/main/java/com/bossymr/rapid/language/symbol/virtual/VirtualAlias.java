@@ -1,13 +1,13 @@
 package com.bossymr.rapid.language.symbol.virtual;
 
 import com.bossymr.rapid.language.symbol.RapidAlias;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.Visibility;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-public class VirtualAlias implements RapidAlias, VirtualSymbol {
+public class VirtualAlias implements RapidAlias, VirtualStructure {
 
     private final @NotNull String name;
     private final @NotNull RapidType type;

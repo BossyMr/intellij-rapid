@@ -1,5 +1,7 @@
 package com.bossymr.rapid.language.symbol;
 
+import com.bossymr.rapid.language.type.RapidType;
+
 /**
  * A {@code ValueType} is used to classify a structure.
  *
@@ -40,5 +42,10 @@ public enum ValueType {
      * ...
      * }</pre>
      */
-    SEMI_VALUE_TYPE
+    SEMI_VALUE_TYPE,
+
+    /**
+     * An unknown value type represents a value which was not successfully resolved.
+     */
+    UNKNOWN;
 }

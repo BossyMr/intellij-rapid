@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.symbol.virtual;
 
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidParameter;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;

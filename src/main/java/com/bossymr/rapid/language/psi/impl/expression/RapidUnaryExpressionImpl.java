@@ -2,7 +2,8 @@ package com.bossymr.rapid.language.psi.impl.expression;
 
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
@@ -29,9 +30,9 @@ public class RapidUnaryExpressionImpl extends RapidExpressionImpl implements Rap
             IElementType sign = getSign().getNode().getElementType();
             if (rapidType == null) return null;
             if (TokenSet.create(RapidTokenTypes.PLUS, RapidTokenTypes.MINUS).contains(sign)) {
-                return RapidType.NUMBER.isAssignable(rapidType) || RapidType.DOUBLE.isAssignable(rapidType) ? rapidType : null;
+                return RapidPrimitiveType.NUMBER.isAssignable(rapidType) || RapidPrimitiveType.DOUBLE.isAssignable(rapidType) ? rapidType : null;
             } else if (RapidTokenTypes.NOT_KEYWORD.equals(sign)) {
-                return RapidType.BOOLEAN.isAssignable(rapidType) ? rapidType : null;
+                return RapidPrimitiveType.BOOLEAN.isAssignable(rapidType) ? rapidType : null;
             }
             throw new RuntimeException();
         } else {

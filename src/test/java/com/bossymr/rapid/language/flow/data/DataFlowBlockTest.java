@@ -8,7 +8,7 @@ import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.StatementListType;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import org.jetbrains.annotations.NotNull;
@@ -27,7 +27,7 @@ class DataFlowBlockTest {
          */
         DataFlowBlock block = createBlock();
         Block functionBlock = block.getBasicBlock().getBlock();
-        VariableValue variable = new VariableValue(functionBlock.createVariable(null, null, RapidType.NUMBER));
+        VariableValue variable = new VariableValue(functionBlock.createVariable(null, null, RapidPrimitiveType.NUMBER));
         DataFlowState state = DataFlowState.createState(block);
         block.getStates().add(state);
         Assertions.assertTrue(block.isCyclic(state, new Condition(variable, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.ADD, variable, ConstantValue.of(1)))));
@@ -41,8 +41,8 @@ class DataFlowBlockTest {
          */
         DataFlowBlock block = createBlock();
         Block functionBlock = block.getBasicBlock().getBlock();
-        VariableValue variableA = new VariableValue(functionBlock.createVariable(null, null, RapidType.NUMBER));
-        VariableValue variableB = new VariableValue(functionBlock.createVariable(null, null, RapidType.NUMBER));
+        VariableValue variableA = new VariableValue(functionBlock.createVariable(null, null, RapidPrimitiveType.NUMBER));
+        VariableValue variableB = new VariableValue(functionBlock.createVariable(null, null, RapidPrimitiveType.NUMBER));
         DataFlowState state = DataFlowState.createState(block);
         block.getStates().add(state);
         state.assign(new Condition(variableA, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.ADD, variableB, ConstantValue.of(1))), true);

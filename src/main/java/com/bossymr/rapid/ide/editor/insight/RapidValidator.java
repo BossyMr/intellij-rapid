@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.*;
 import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
@@ -194,7 +195,7 @@ public class RapidValidator {
                             .create();
                     continue;
                 }
-                checkCompatibleType(RapidType.NUMBER, dimension);
+                checkCompatibleType(RapidPrimitiveType.NUMBER, dimension);
             }
         }
     }
@@ -266,7 +267,7 @@ public class RapidValidator {
     }
 
     public void checkConnectLeft(@NotNull RapidExpression expression) {
-        checkCompatibleType(RapidType.NUMBER, expression);
+        checkCompatibleType(RapidPrimitiveType.NUMBER, expression);
         if (expression instanceof RapidIndexExpression indexExpression) {
             expression = indexExpression.getExpression();
         }

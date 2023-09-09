@@ -7,7 +7,7 @@ import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.flow.value.Value;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -25,7 +25,7 @@ public class RecordSnapshot implements ReferenceSnapshot {
 
     public RecordSnapshot(@NotNull ReferenceValue variable) {
         this.variable = variable;
-        if (!(variable.getType().getTargetStructure() instanceof RapidRecord record)) {
+        if (!(variable.getType().getActualStructure() instanceof RapidRecord record)) {
             throw new IllegalArgumentException();
         }
         this.components = new HashMap<>();

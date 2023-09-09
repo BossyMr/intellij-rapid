@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Consumer;
 
-public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
+public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
 
     private final @NotNull Block.FunctionBlock functionBlock;
     private final @NotNull DataFlowBlock block;
@@ -36,30 +36,23 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
         this.functionMap = functionMap;
     }
 
-    static boolean isPredecessorInCycle(@NotNull BlockCycle cycle, @NotNull DataFlowState state) {
-        if (state.getPredecessor().isPresent()) {
-            DataFlowState predecessor = state.getPredecessor().orElseThrow();
-            if (predecessor.getBlock().isPresent()) {
-                DataFlowBlock predecessorBlock = predecessor.getBlock().orElseThrow();
-                return predecessorBlock.getCycles().contains(cycle);
-            }
-        }
-        return false;
-    }
-
     @Override
-    public void visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
+    public Void visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
         block.assign(new Condition(instruction.variable(), ConditionType.EQUALITY, instruction.value()));
+        return null;
     }
 
     @Override
-    public void visitConnectInstruction(@NotNull LinearInstruction.ConnectInstruction instruction) {}
+    public Void visitConnectInstruction(@NotNull LinearInstruction.ConnectInstruction instruction) {
+        return null;
+    }
 
     @Override
-    public void visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
+    public Void visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
         ReferenceValue value = instruction.value();
         visitBranch(instruction.onSuccess(), new Condition(value, ConditionType.EQUALITY, Expression.of(true)));
         visitBranch(instruction.onFailure(), new Condition(value, ConditionType.EQUALITY, Expression.of(false)));
+        return null;
     }
 
     private void visitBranch(@NotNull BasicBlock successor, @NotNull Condition condition) {
@@ -139,41 +132,47 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
+    public Void visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
         block.addSuccessor(blocks.get(instruction.next()));
+        return null;
     }
 
     @Override
-    public void visitRetryInstruction(@NotNull BranchingInstruction.RetryInstruction instruction) {
+    public Void visitRetryInstruction(@NotNull BranchingInstruction.RetryInstruction instruction) {
         super.visitRetryInstruction(instruction);
+        return null;
     }
 
     @Override
-    public void visitTryNextInstruction(@NotNull BranchingInstruction.TryNextInstruction instruction) {
+    public Void visitTryNextInstruction(@NotNull BranchingInstruction.TryNextInstruction instruction) {
         super.visitTryNextInstruction(instruction);
+        return null;
     }
 
     @Override
-    public void visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
+    public Void visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
         Map<Argument, Constraint> arguments = getArguments();
         ReferenceValue referenceValue = getReferenceValue(instruction.value());
         List<DataFlowState> states = block.getStates().stream()
                 .map(DataFlowState::copy)
                 .toList();
         functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, arguments, new DataFlowFunction.Result.Success(states, referenceValue));
+        return null;
     }
 
     @Override
-    public void visitExitInstruction(@NotNull BranchingInstruction.ExitInstruction instruction) {
+    public Void visitExitInstruction(@NotNull BranchingInstruction.ExitInstruction instruction) {
         Map<Argument, Constraint> arguments = getArguments();
         functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, arguments, new DataFlowFunction.Result.Exit());
+        return null;
     }
 
     @Override
-    public void visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
+    public Void visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
         Map<Argument, Constraint> arguments = getArguments();
         ReferenceValue referenceValue = getReferenceValue(instruction.exception());
         functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, arguments, new DataFlowFunction.Result.Error(block.getStates(), referenceValue));
+        return null;
     }
 
     private @Nullable ReferenceValue getReferenceValue(@Nullable Value variable) {
@@ -192,15 +191,16 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
     }
 
     @Override
-    public void visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
+    public Void visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
         DataFlowBlock successor = blocks.get(instruction.next());
         if (successor != null) {
             block.addSuccessor(successor);
         }
+        return null;
     }
 
     @Override
-    public void visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
+    public Void visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
         if (!(block.getConstraint(instruction.routine()) instanceof StringConstraint constraint)) {
             visitAnyCallInstruction(instruction);
         } else {
@@ -235,6 +235,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor {
                 processResult(instruction, states, function.orElseThrow(), getArguments(function.orElseThrow().getBlock(), instruction.arguments()));
             }
         }
+        return null;
     }
 
     private void visitAnyCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction, @NotNull RapidRoutine routine) {

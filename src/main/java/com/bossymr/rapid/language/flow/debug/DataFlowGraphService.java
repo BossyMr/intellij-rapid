@@ -19,7 +19,7 @@ import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.StatementListType;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.configurations.PathEnvironmentVariableUtil;
@@ -256,7 +256,7 @@ public class DataFlowGraphService extends AnAction {
             stringBuilder.append("</tr>\n");
         }
         stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Constraints").append("</td></tr>\n");
-        for (var entry : state.getConstraints().entrySet()) {
+        for (var entry : state.getOptionality().entrySet()) {
             stringBuilder.append("<tr>");
             stringBuilder.append("<td>");
             stringBuilder.append(entry.getKey().accept(new ControlFlowFormatVisitor()));
@@ -313,7 +313,7 @@ public class DataFlowGraphService extends AnAction {
                 }
             }
         } else if (snapshot instanceof ArraySnapshot arraySnapshot) {
-            for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments(state, Constraint.any(RapidType.NUMBER))) {
+            for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments(state, Constraint.any(RapidPrimitiveType.NUMBER))) {
                 if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
                     stringBuilder.append("<tr>");
                     stringBuilder.append("<td COLSPAN=\"2\">");
@@ -334,7 +334,7 @@ public class DataFlowGraphService extends AnAction {
                     stringBuilder.append("</tr>\n");
                 }
             }
-            for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments(state, Constraint.any(RapidType.NUMBER))) {
+            for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments(state, Constraint.any(RapidPrimitiveType.NUMBER))) {
                 if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
                     if (assignment.value() instanceof ReferenceSnapshot referenceValue) {
                         writeSnapshot(stringBuilder, state, new IndexValue(arraySnapshot, assignment.index()), referenceValue, snapshots);
@@ -352,9 +352,7 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("<tr>");
         stringBuilder.append("<td>").append(index).append("</td>");
         stringBuilder.append("<td COLSPAN=\"2\" align=\"left\" CELLPADDING=\"4\">");
-        StringBuilder temporaryBuilder = new StringBuilder();
-        instruction.accept(new ControlFlowFormatVisitor(temporaryBuilder));
-        stringBuilder.append(HtmlChunk.text(temporaryBuilder.toString()));
+        stringBuilder.append(HtmlChunk.text(instruction.accept(new ControlFlowFormatVisitor())));
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");
     }

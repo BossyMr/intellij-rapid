@@ -7,6 +7,8 @@ import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.components.Service;
@@ -86,7 +88,7 @@ public final class RapidResolveService {
         if (dataType == null) {
             return null;
         }
-        RapidStructure structure = dataType.getTargetStructure();
+        RapidStructure structure = dataType.getActualStructure();
         if (!(structure instanceof RapidRecord record)) {
             return null;
         }
@@ -148,13 +150,13 @@ public final class RapidResolveService {
             return element;
         } catch (IllegalArgumentException ignored) {}
         return switch (sections[1]) {
-            case "num" -> RapidType.NUMBER.getStructure();
-            case "dnum" -> RapidType.DOUBLE.getStructure();
-            case "string" -> RapidType.STRING.getStructure();
-            case "bool" -> RapidType.BOOLEAN.getStructure();
-            case "pose" -> RapidType.POSE.getStructure();
-            case "orient" -> RapidType.ORIENTATION.getStructure();
-            case "pos" -> RapidType.POSITION.getStructure();
+            case "num" -> RapidPrimitiveType.NUMBER.getStructure();
+            case "dnum" -> RapidPrimitiveType.DOUBLE.getStructure();
+            case "string" -> RapidPrimitiveType.STRING.getStructure();
+            case "bool" -> RapidPrimitiveType.BOOLEAN.getStructure();
+            case "pose" -> RapidPrimitiveType.POSE.getStructure();
+            case "orient" -> RapidPrimitiveType.ORIENTATION.getStructure();
+            case "pos" -> RapidPrimitiveType.POSITION.getStructure();
             default -> null;
         };
     }

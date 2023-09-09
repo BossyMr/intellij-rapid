@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.symbol.virtual;
 
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.Visibility;
 import com.intellij.openapi.util.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class VirtualRecord implements RapidRecord, VirtualSymbol {
+public class VirtualRecord implements RapidRecord, VirtualStructure {
 
     private final @NotNull String name;
     private final @NotNull List<RapidComponent> components;

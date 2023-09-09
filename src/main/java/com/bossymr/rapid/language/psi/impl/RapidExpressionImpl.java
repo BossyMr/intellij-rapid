@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.psi.impl;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTFactory;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
@@ -86,7 +86,7 @@ public abstract class RapidExpressionImpl extends PhysicalElement implements Rap
     @Override
     public boolean isConditional() {
         RapidType type = getType();
-        return type != null && RapidType.BOOLEAN.isAssignable(type);
+        return type != null && RapidPrimitiveType.BOOLEAN.isAssignable(type);
     }
 
 

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.psi;
 
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 

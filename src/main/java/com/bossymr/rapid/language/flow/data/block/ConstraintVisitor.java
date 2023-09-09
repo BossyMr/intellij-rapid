@@ -1,13 +1,14 @@
 package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.constraint.*;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,7 +52,7 @@ public class ConstraintVisitor extends ControlFlowVisitor {
         BinaryOperator operator = expression.operator();
         constraint = switch (operator) {
             case ADD, SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> {
-                if (expression.left().getType().isAssignable(RapidType.STRING) && expression.right().getType().isAssignable(RapidType.STRING)) {
+                if (expression.left().getType().isAssignable(RapidPrimitiveType.STRING) && expression.right().getType().isAssignable(RapidPrimitiveType.STRING)) {
                     if(operator == BinaryOperator.ADD) {
                         if(left instanceof StringConstraint leftConstraint && right instanceof StringConstraint rightConstraint) {
                             Set<String> sequences = new HashSet<>();

@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.flow.condition;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -136,7 +136,7 @@ public class Condition {
             List<Condition> conditions = new ArrayList<>();
             for (int i = 0; i < values.size(); i++) {
                 if (values.get(i) instanceof ReferenceValue value) {
-                    IndexValue index = new IndexValue(variable, ConstantValue.of(RapidType.NUMBER, i));
+                    IndexValue index = new IndexValue(variable, ConstantValue.of(RapidPrimitiveType.NUMBER, i));
                     conditions.add(new Condition(value, ConditionType.EQUALITY, new ValueExpression(index)));
                 }
             }

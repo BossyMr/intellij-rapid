@@ -13,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 public record BinaryExpression(@NotNull BinaryOperator operator, @NotNull Value left, @NotNull Value right) implements Expression {
     @Override
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return 
-        visitor.visitBinaryExpression(this);
+        return visitor.visitBinaryExpression(this);
     }
 }

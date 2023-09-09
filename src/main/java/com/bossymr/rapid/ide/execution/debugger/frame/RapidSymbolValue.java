@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
@@ -80,7 +81,7 @@ public class RapidSymbolValue extends XNamedValue {
         try {
             String value = getValue();
             RapidType dataType = symbol.getType();
-            boolean hasChildren = dataType != null && dataType.getTargetStructure() instanceof RapidRecord record && record.getComponents().size() > 0;
+            boolean hasChildren = dataType != null && dataType.getActualStructure() instanceof RapidRecord record && record.getComponents().size() > 0;
             node.setPresentation(symbol.getTargetPresentation().getIcon(), new RapidValuePresentation(dataType, value), hasChildren);
         } catch (IOException e) {
             node.setPresentation(null, new XErrorValuePresentation(e.getLocalizedMessage()), false);
@@ -133,7 +134,7 @@ public class RapidSymbolValue extends XNamedValue {
 
     @Override
     public void computeChildren(@NotNull XCompositeNode node) {
-        if (symbol.getType() != null && symbol.getType().getTargetStructure() instanceof RapidRecord record) {
+        if (symbol.getType() != null && symbol.getType().getActualStructure() instanceof RapidRecord record) {
             XValueChildrenList childrenList = new XValueChildrenList();
             List<RapidComponent> components = record.getComponents();
             for (int i = 0; i < components.size(); i++) {

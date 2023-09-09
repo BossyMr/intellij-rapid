@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.symbol;
 
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
 /**

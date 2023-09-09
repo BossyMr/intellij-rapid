@@ -13,7 +13,6 @@ public record ValueExpression(@NotNull Value value) implements Expression {
 
     @Override
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return 
-        visitor.visitValueExpression(this);
+        return visitor.visitValueExpression(this);
     }
 }

@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.flow.data.block;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.condition.ConditionType;
-import com.bossymr.rapid.language.flow.constraint.*;
 import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
@@ -13,7 +12,8 @@ import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -69,9 +69,9 @@ public class DataFlowState {
     /**
      * The constraints for all variables.
      */
-    private final @NotNull Map<VariableSnapshot, Constraint> constraints;
+    private final @NotNull Map<VariableSnapshot, Optionality> optionality;
 
-    public DataFlowState(@NotNull DataFlowBlock block, @Nullable DataFlowState predecessor) {
+    private DataFlowState(@NotNull DataFlowBlock block, @Nullable DataFlowState predecessor) {
         this(block, block.getBasicBlock().getBlock(), predecessor);
     }
 
@@ -79,13 +79,13 @@ public class DataFlowState {
         this(null, functionBlock, predecessor);
     }
 
-    public DataFlowState(@Nullable DataFlowBlock block, @NotNull Block functionBlock, @Nullable DataFlowState predecessor) {
+    private DataFlowState(@Nullable DataFlowBlock block, @NotNull Block functionBlock, @Nullable DataFlowState predecessor) {
         this.predecessor = predecessor;
         this.block = block;
         this.functionBlock = functionBlock;
         this.conditions = new HashSet<>();
         this.snapshots = new HashMap<>();
-        this.constraints = new HashMap<>();
+        this.optionality = new HashMap<>();
     }
 
     private DataFlowState(@NotNull DataFlowState state) {
@@ -101,9 +101,9 @@ public class DataFlowState {
         for (Condition condition : state.conditions) {
             conditions.add(Condition.create(condition, value -> mapSnapshot(value, remapping)));
         }
-        this.constraints = new HashMap<>();
-        for (var entry : state.constraints.entrySet()) {
-            constraints.put((VariableSnapshot) mapSnapshot(entry.getKey(), remapping), entry.getValue());
+        this.optionality = new HashMap<>();
+        for (var entry : state.optionality.entrySet()) {
+            optionality.put((VariableSnapshot) mapSnapshot(entry.getKey(), remapping), entry.getValue());
         }
     }
 
@@ -239,7 +239,7 @@ public class DataFlowState {
             VariableSnapshot defaultValue = new VariableSnapshot(elementType);
             add(defaultValue, assignmentType.getConstraint(optionality, elementType));
             return new ArraySnapshot(defaultValue, variable);
-        } else if (type.getTargetStructure() instanceof RapidRecord record) {
+        } else if (type.getActualStructure() instanceof RapidRecord record) {
             RecordSnapshot snapshot = new RecordSnapshot(variable);
             for (RapidComponent component : record.getComponents()) {
                 /*
@@ -384,7 +384,7 @@ public class DataFlowState {
             return;
         }
         checkOptionality(variable, constraint.getOptionality());
-        constraints.put(variableSnapshot, constraint);
+        optionality.put(variableSnapshot, constraint);
     }
 
     public void add(@NotNull ReferenceValue variable, @NotNull Constraint constraint) {
@@ -397,7 +397,7 @@ public class DataFlowState {
         if (previous.isPresent()) {
             constraint = previous.orElseThrow().and(constraint);
         }
-        constraints.put(snapshot, constraint);
+        optionality.put(snapshot, constraint);
     }
 
     private void insert(@NotNull Condition condition, boolean addVariants) {
@@ -412,7 +412,7 @@ public class DataFlowState {
                     assign(new Condition(new IndexValue(variable, ConstantValue.of(i + 1)), ConditionType.EQUALITY, new ValueExpression(value)), addVariants);
                 }
                 return;
-            } else if (type.getTargetStructure() instanceof RapidRecord record) {
+            } else if (type.getActualStructure() instanceof RapidRecord record) {
                 List<RapidComponent> components = record.getComponents();
                 for (int i = 0; i < components.size(); i++) {
                     RapidComponent component = components.get(i);
@@ -481,7 +481,7 @@ public class DataFlowState {
         }
         Set<ReferenceValue> dependentVariables = getDependentVariables(state, variables);
         state.conditions.removeIf(condition -> !(dependentVariables.contains(condition.getVariable())) && condition.getVariables().stream().noneMatch(dependentVariables::contains));
-        state.constraints.keySet().removeIf(variable -> !(dependentVariables.contains(variable)));
+        state.optionality.keySet().removeIf(variable -> !(dependentVariables.contains(variable)));
         for (var entry : arguments.entrySet()) {
             if (!(entry.getValue() instanceof ReferenceValue referenceValue)) {
                 continue;
@@ -497,17 +497,17 @@ public class DataFlowState {
             condition = condition.modify(variable -> getModifiedSnapshot(variable, modifications, remapped));
             conditions.add(condition);
         }
-        for (VariableSnapshot snapshot : state.constraints.keySet()) {
-            Constraint constraint = state.constraints.get(snapshot);
+        for (VariableSnapshot snapshot : state.optionality.keySet()) {
+            Constraint constraint = state.optionality.get(snapshot);
             VariableSnapshot modifiedSnapshot = (VariableSnapshot) getModifiedSnapshot(snapshot, modifications, remapped);
-            if (snapshot.getType().equals(RapidType.ANYTYPE)) {
+            if (snapshot.getType().equals(RapidPrimitiveType.ANYTYPE)) {
                 if (constraint instanceof OpenConstraint) {
                     constraint = Constraint.any(modifiedSnapshot.getType(), constraint.getOptionality());
                 } else if (constraint instanceof ClosedConstraint) {
                     constraint = Constraint.any(modifiedSnapshot.getType(), constraint.getOptionality()).negate();
                 }
             }
-            constraints.put(modifiedSnapshot, constraint);
+            optionality.put(modifiedSnapshot, constraint);
         }
         for (Argument argument : arguments.keySet()) {
             VariableValue value = new VariableValue(argument);
@@ -621,7 +621,7 @@ public class DataFlowState {
             if (optional.isEmpty() || !(optional.orElseThrow() instanceof VariableSnapshot variableSnapshot)) {
                 continue;
             }
-            constraints.put(variableSnapshot, getConstraint(variableSnapshot).setOptionality(Optionality.MISSING));
+            optionality.put(variableSnapshot, getConstraint(variableSnapshot).setOptionality(Optionality.MISSING));
         }
     }
 
@@ -670,12 +670,25 @@ public class DataFlowState {
         return conditions;
     }
 
+    public @NotNull Set<Condition> getAllConditions() {
+        Set<Condition> conditions = new HashSet<>();
+        getAllConditions(conditions);
+        return conditions;
+    }
+
+    private void getAllConditions(@NotNull Set<Condition> result) {
+        result.addAll(conditions);
+        if(predecessor != null) {
+            predecessor.getAllConditions(result);
+        }
+    }
+
     public @NotNull Map<VariableValue, ReferenceSnapshot> getSnapshots() {
         return snapshots;
     }
 
-    public @NotNull Map<VariableSnapshot, Constraint> getConstraints() {
-        return constraints;
+    public @NotNull Map<VariableSnapshot, Constraint> getOptionality() {
+        return optionality;
     }
 
     public @NotNull Constraint getConstraint(@NotNull Value value) {
@@ -697,9 +710,9 @@ public class DataFlowState {
         if (expression instanceof BinaryExpression binaryExpression) {
             return switch (binaryExpression.operator()) {
                 case ADD -> Constraint.any(binaryExpression.left().getType());
-                case SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> Constraint.any(RapidType.NUMBER);
+                case SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> Constraint.any(RapidPrimitiveType.NUMBER);
                 case AND, XOR, OR, EQUAL_TO, NOT_EQUAL_TO, GREATER_THAN, GREATER_THAN_OR_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL ->
-                        Constraint.any(RapidType.BOOLEAN);
+                        Constraint.any(RapidPrimitiveType.BOOLEAN);
             };
         }
         if (expression instanceof AggregateExpression) {
@@ -724,13 +737,13 @@ public class DataFlowState {
         }
         if (value instanceof ConstantValue constant) {
             Object object = constant.getValue();
-            if (value.getType().isAssignable(RapidType.STRING)) {
+            if (value.getType().isAssignable(RapidPrimitiveType.STRING)) {
                 return Optional.of(new StringConstraint(Optionality.PRESENT, Set.of(object.toString())));
             }
-            if (value.getType().isAssignable(RapidType.NUMBER)) {
+            if (value.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
                 return Optional.of(NumericConstraint.equalTo(((Number) object).doubleValue()));
             }
-            if (value.getType().isAssignable(RapidType.BOOLEAN)) {
+            if (value.getType().isAssignable(RapidPrimitiveType.BOOLEAN)) {
                 BooleanConstraint.BooleanValue booleanValue = BooleanConstraint.BooleanValue.of((boolean) object);
                 return Optional.of(new BooleanConstraint(Optionality.PRESENT, booleanValue));
             }
@@ -790,8 +803,8 @@ public class DataFlowState {
         if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof VariableSnapshot variableSnapshot)) {
             return Optional.empty();
         }
-        if (constraints.containsKey(variableSnapshot)) {
-            return Optional.of(constraints.get(variableSnapshot));
+        if (optionality.containsKey(variableSnapshot)) {
+            return Optional.of(optionality.get(variableSnapshot));
         }
         if (predecessor != null) {
             return predecessor.getPrecomputedConstraint(variableSnapshot);
@@ -846,7 +859,7 @@ public class DataFlowState {
         RapidType type = referenceValue.getType();
         ReferenceSnapshot snapshot;
         if (type.getDimensions() > 0) {
-            VariableSnapshot anySnapshot = new VariableSnapshot(RapidType.NUMBER);
+            VariableSnapshot anySnapshot = new VariableSnapshot(RapidPrimitiveType.NUMBER);
             add(anySnapshot, NumericConstraint.any());
             IndexValue indexValue = new IndexValue(referenceValue, anySnapshot);
             for (int i = 1; i < type.getDimensions(); i++) {
@@ -854,7 +867,7 @@ public class DataFlowState {
             }
             ReferenceSnapshot defaultValue = initializeSnapshot(indexValue);
             snapshot = new ArraySnapshot(defaultValue, referenceValue);
-        } else if (type.getTargetStructure() instanceof RapidRecord record) {
+        } else if (type.getActualStructure() instanceof RapidRecord record) {
             RecordSnapshot recordSnapshot = new RecordSnapshot(referenceValue);
             snapshot = recordSnapshot;
             for (RapidComponent component : record.getComponents()) {
@@ -1115,8 +1128,8 @@ public class DataFlowState {
         if (!(snapshot instanceof VariableSnapshot variableSnapshot)) {
             return Optional.empty();
         }
-        if (constraints.containsKey(variableSnapshot)) {
-            return Optional.ofNullable(constraints.get(variableSnapshot));
+        if (optionality.containsKey(variableSnapshot)) {
+            return Optional.ofNullable(optionality.get(variableSnapshot));
         }
         if (snapshots.containsValue(variableSnapshot)) {
             return Optional.empty();
@@ -1138,7 +1151,7 @@ public class DataFlowState {
             @Override
             public Void visitValueExpression(@NotNull ValueExpression expression) {
                 Value value = expression.value();
-                if (!(value.getType().isAssignable(RapidType.BOOLEAN))) {
+                if (!(value.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
                     /*
                      * The purpose of this method is to simplify the side effects of a conditional jump, where the condition
                      * must be a boolean value.
@@ -1229,7 +1242,7 @@ public class DataFlowState {
         if (!(valueExpression.value() instanceof ConstantValue constantValue)) {
             return;
         }
-        if (!(constantValue.getType().isAssignable(RapidType.BOOLEAN))) {
+        if (!(constantValue.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             return;
         }
         boolean value = (boolean) constantValue.getValue();
@@ -1247,7 +1260,7 @@ public class DataFlowState {
         return "DataFlowState{" +
                 "name=" + functionBlock.getModuleName() + ":" + functionBlock.getName() +
                 ", conditions=" + conditions.size() +
-                ", constraints=" + constraints.size() +
+                ", constraints=" + optionality.size() +
                 '}';
     }
 
@@ -1256,13 +1269,13 @@ public class DataFlowState {
             @Override
             public @NotNull Constraint getConstraint(@NotNull Optionality optionality, @NotNull RapidType type) {
                 Constraint constraint;
-                if (type.equals(RapidType.ANYTYPE)) {
+                if (type.equals(RapidPrimitiveType.ANYTYPE)) {
                     constraint = new OpenConstraint(optionality);
-                } else if (type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE)) {
+                } else if (type.isAssignable(RapidPrimitiveType.NUMBER) || type.isAssignable(RapidPrimitiveType.DOUBLE)) {
                     constraint = NumericConstraint.equalTo(0);
-                } else if (type.isAssignable(RapidType.STRING)) {
+                } else if (type.isAssignable(RapidPrimitiveType.STRING)) {
                     constraint = StringConstraint.anyOf("");
-                } else if (type.isAssignable(RapidType.BOOLEAN)) {
+                } else if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
                     constraint = BooleanConstraint.alwaysFalse();
                 } else {
                     constraint = new OpenConstraint(optionality);

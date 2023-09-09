@@ -5,7 +5,8 @@ import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.ValueType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
@@ -46,43 +47,43 @@ public class RapidBinaryExpressionImpl extends RapidExpressionImpl implements Ra
         IElementType sign = getSign().getNode().getElementType();
         if (left == null || right == null) return null;
         if (left.getDimensions() == 0 && right.getDimensions() == 0 && List.of(OR_KEYWORD, XOR_KEYWORD, AND_KEYWORD, LT, LE, GT, GE).contains(sign)) {
-            return RapidType.BOOLEAN;
+            return RapidPrimitiveType.BOOLEAN;
         }
         if (sign == LTGT) {
-            return RapidType.BOOLEAN;
+            return RapidPrimitiveType.BOOLEAN;
         }
         if (sign == EQ) {
             if (left.isAssignable(right) && left.getValueType() == ValueType.VALUE_TYPE) {
-                return RapidType.BOOLEAN;
+                return RapidPrimitiveType.BOOLEAN;
             }
         }
-        if (left.isAssignable(RapidType.NUMBER) && right.isAssignable(RapidType.NUMBER))
-            return RapidType.NUMBER;
-        if (left.isAssignable(RapidType.DOUBLE) && right.isAssignable(RapidType.DOUBLE))
-            return RapidType.DOUBLE;
+        if (left.isAssignable(RapidPrimitiveType.NUMBER) && right.isAssignable(RapidPrimitiveType.NUMBER))
+            return RapidPrimitiveType.NUMBER;
+        if (left.isAssignable(RapidPrimitiveType.DOUBLE) && right.isAssignable(RapidPrimitiveType.DOUBLE))
+            return RapidPrimitiveType.DOUBLE;
         if (sign == ASTERISK) {
-            if ((left.isAssignable(RapidType.NUMBER) && right.isAssignable(RapidType.POSITION)))
-                return RapidType.POSITION;
-            if ((left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.NUMBER)))
-                return RapidType.POSITION;
-            if (left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.POSITION))
-                return RapidType.POSITION;
-            if (left.isAssignable(RapidType.ORIENTATION) && right.isAssignable(RapidType.ORIENTATION))
-                return RapidType.ORIENTATION;
+            if ((left.isAssignable(RapidPrimitiveType.NUMBER) && right.isAssignable(RapidPrimitiveType.POSITION)))
+                return RapidPrimitiveType.POSITION;
+            if ((left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.NUMBER)))
+                return RapidPrimitiveType.POSITION;
+            if (left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.POSITION))
+                return RapidPrimitiveType.POSITION;
+            if (left.isAssignable(RapidPrimitiveType.ORIENTATION) && right.isAssignable(RapidPrimitiveType.ORIENTATION))
+                return RapidPrimitiveType.ORIENTATION;
         }
         if (sign == BACKSLASH) {
-            if (left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.NUMBER))
-                return RapidType.POSITION;
+            if (left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.NUMBER))
+                return RapidPrimitiveType.POSITION;
         }
         if (sign == PLUS) {
-            if (left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.POSITION))
-                return RapidType.POSITION;
-            if (left.isAssignable(RapidType.STRING) && right.isAssignable(RapidType.STRING))
-                return RapidType.STRING;
+            if (left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.POSITION))
+                return RapidPrimitiveType.POSITION;
+            if (left.isAssignable(RapidPrimitiveType.STRING) && right.isAssignable(RapidPrimitiveType.STRING))
+                return RapidPrimitiveType.STRING;
         }
         if (sign == MINUS) {
-            if (left.isAssignable(RapidType.POSITION) && right.isAssignable(RapidType.POSITION))
-                return RapidType.POSITION;
+            if (left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.POSITION))
+                return RapidPrimitiveType.POSITION;
         }
         return null;
     }

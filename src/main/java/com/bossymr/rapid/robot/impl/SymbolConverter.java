@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.*;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

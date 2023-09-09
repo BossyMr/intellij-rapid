@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.symbol.virtual;
 import com.bossymr.rapid.language.psi.RapidStatement;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.Visibility;
 import org.jetbrains.annotations.NotNull;

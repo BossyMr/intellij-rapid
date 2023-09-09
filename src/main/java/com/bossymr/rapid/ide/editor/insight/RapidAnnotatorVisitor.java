@@ -4,6 +4,7 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.*;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.annotation.AnnotationHolder;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
@@ -169,7 +170,7 @@ public class RapidAnnotatorVisitor extends RapidElementVisitor {
                 validator.checkRoutineCall(routine, statement.getArgumentList());
             }
         } else {
-            validator.checkCompatibleType(RapidType.STRING, expression);
+            validator.checkCompatibleType(RapidPrimitiveType.STRING, expression);
         }
         super.visitProcedureCallStatement(statement);
     }
@@ -192,7 +193,7 @@ public class RapidAnnotatorVisitor extends RapidElementVisitor {
     @Override
     public void visitRaiseStatement(@NotNull RapidRaiseStatement statement) {
         if (statement.getExpression() != null) {
-            validator.checkCompatibleType(RapidType.NUMBER, statement.getExpression());
+            validator.checkCompatibleType(RapidPrimitiveType.NUMBER, statement.getExpression());
             validator.checkOutsideErrorHandler(statement, RapidBundle.message("annotation.raise.inside.error.clause"));
         } else {
             validator.checkInsideErrorHandler(statement, RapidBundle.message("annotation.raise.outside.error.clause"));
@@ -216,22 +217,22 @@ public class RapidAnnotatorVisitor extends RapidElementVisitor {
     public void visitIfStatement(@NotNull RapidIfStatement statement) {
         RapidExpression condition = statement.getCondition();
         if (condition != null) {
-            validator.checkCompatibleType(RapidType.BOOLEAN, condition);
+            validator.checkCompatibleType(RapidPrimitiveType.BOOLEAN, condition);
         }
         super.visitIfStatement(statement);
     }
 
     @Override
     public void visitForStatement(@NotNull RapidForStatement statement) {
-        validator.checkCompatibleType(RapidType.NUMBER, statement.getFromExpression());
-        validator.checkCompatibleType(RapidType.NUMBER, statement.getToExpression());
-        validator.checkCompatibleType(RapidType.NUMBER, statement.getStepExpression());
+        validator.checkCompatibleType(RapidPrimitiveType.NUMBER, statement.getFromExpression());
+        validator.checkCompatibleType(RapidPrimitiveType.NUMBER, statement.getToExpression());
+        validator.checkCompatibleType(RapidPrimitiveType.NUMBER, statement.getStepExpression());
         super.visitForStatement(statement);
     }
 
     @Override
     public void visitWhileStatement(@NotNull RapidWhileStatement statement) {
-        validator.checkCompatibleType(RapidType.BOOLEAN, statement.getCondition());
+        validator.checkCompatibleType(RapidPrimitiveType.BOOLEAN, statement.getCondition());
         super.visitWhileStatement(statement);
     }
 

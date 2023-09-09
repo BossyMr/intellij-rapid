@@ -7,7 +7,7 @@ import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidComponentStub;
 import com.bossymr.rapid.language.symbol.RapidComponent;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;

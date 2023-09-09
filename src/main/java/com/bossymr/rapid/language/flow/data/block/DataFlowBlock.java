@@ -13,7 +13,8 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -238,13 +239,13 @@ public class DataFlowBlock {
             return getConstraint(referenceValue);
         } else if (value instanceof ConstantValue constantValue) {
             RapidType type = constantValue.getType();
-            if (type.isAssignable(RapidType.NUMBER) || type.isAssignable(RapidType.DOUBLE)) {
+            if (type.isAssignable(RapidPrimitiveType.NUMBER) || type.isAssignable(RapidPrimitiveType.DOUBLE)) {
                 return NumericConstraint.equalTo((double) constantValue.getValue());
             }
-            if (type.isAssignable(RapidType.STRING)) {
+            if (type.isAssignable(RapidPrimitiveType.STRING)) {
                 return StringConstraint.anyOf((String) constantValue.getValue());
             }
-            if (type.isAssignable(RapidType.BOOLEAN)) {
+            if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
                 return BooleanConstraint.equalTo((boolean) constantValue.getValue());
             }
         } else if (value instanceof ErrorValue) {

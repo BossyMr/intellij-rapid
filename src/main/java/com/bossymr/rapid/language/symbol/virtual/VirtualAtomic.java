@@ -1,14 +1,14 @@
 package com.bossymr.rapid.language.symbol.virtual;
 
 import com.bossymr.rapid.language.symbol.RapidAtomic;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.Visibility;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class VirtualAtomic implements RapidAtomic, VirtualSymbol {
+public class VirtualAtomic implements RapidAtomic, VirtualStructure {
 
     private final @NotNull String name;
     private final @Nullable RapidType type;

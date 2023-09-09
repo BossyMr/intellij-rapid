@@ -12,6 +12,7 @@ import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalVisibleSymbol;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
@@ -91,7 +92,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 if (name == null) {
                     return ErrorValue.getInstance();
                 }
-                return ConstantValue.of(RapidType.STRING, (moduleName != null ? moduleName + ":" : "") + name);
+                return ConstantValue.of(RapidPrimitiveType.STRING, (moduleName != null ? moduleName + ":" : "") + name);
             }
             ReferenceValue variable = computeVariable(builder, referenceExpression);
             return variable != null ? variable : ErrorValue.getInstance();
@@ -172,7 +173,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         expression.accept(visitor);
         ReferenceValue result = variableKey.retrieve();
         if (result == null) {
-            ReferenceValue variable = builder.createVariable(variableKey, RapidType.ANYTYPE);
+            ReferenceValue variable = builder.createVariable(variableKey, RapidPrimitiveType.ANYTYPE);
             builder.continueScope(new LinearInstruction.AssignmentInstruction(expression, variable, new ValueExpression(ErrorValue.getInstance())));
             return variable;
         }
@@ -180,11 +181,11 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     }
 
     private static @NotNull RapidType getType(@Nullable RapidType type) {
-        return type != null ? type : RapidType.ANYTYPE;
+        return type != null ? type : RapidPrimitiveType.ANYTYPE;
     }
 
     public static void buildFunctionCall(@NotNull PsiElement element, @NotNull ControlFlowBuilder builder, @NotNull List<RapidArgument> arguments, @NotNull Value routineValue, @Nullable ReferenceValue returnVariable, @NotNull BasicBlock nextBlock) {
-        if (!(routineValue.getType().isAssignable(RapidType.STRING))) {
+        if (!(routineValue.getType().isAssignable(RapidPrimitiveType.STRING))) {
             throw new IllegalArgumentException("Cannot invoke: " + routineValue);
         }
         buildFunctionCall(element, builder, routineValue, nextBlock, returnVariable, getArguments(arguments));
@@ -202,7 +203,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             if (!(value instanceof ArgumentDescriptor.Conditional conditional)) {
                 throw new IllegalStateException();
             }
-            ReferenceValue presentReturnVariable = builder.createVariable(VariableKey.createVariable(), RapidType.BOOLEAN);
+            ReferenceValue presentReturnVariable = builder.createVariable(VariableKey.createVariable(), RapidPrimitiveType.BOOLEAN);
             BasicBlock ifBlock = builder.createBasicBlock();
             ConstantValue presentRoutine = ConstantValue.of(":Present");
             Argument argument = builder.findArgument(conditional.name());
@@ -264,7 +265,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     @Override
     public void visitAggregateExpression(@NotNull RapidAggregateExpression expression) {
         List<RapidExpression> expressions = expression.getExpressions();
-        if (expression.getType() == null || expression.getType().getDimensions() <= 0 && !(expression.getType().getTargetStructure() instanceof RapidRecord)) {
+        if (expression.getType() == null || expression.getType().getDimensions() <= 0 && !(expression.getType().getActualStructure() instanceof RapidRecord)) {
             targetVariable.removeLast();
             return;
         }
@@ -318,13 +319,13 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         IElementType elementType = expression.getSign().getNode().getElementType();
-        if (NUMBER_TOKEN_SET.contains(elementType) && !(type.isAssignable(RapidType.NUMBER))) {
-            if (STRING_TOKEN_SET.contains(elementType) && !(type.isAssignable(RapidType.STRING))) {
+        if (NUMBER_TOKEN_SET.contains(elementType) && !(type.isAssignable(RapidPrimitiveType.NUMBER))) {
+            if (STRING_TOKEN_SET.contains(elementType) && !(type.isAssignable(RapidPrimitiveType.STRING))) {
                 targetVariable.removeLast();
                 return;
             }
         }
-        if (BOOLEAN_TOKEN_SET.contains(elementType) && !(type.isAssignable(RapidType.BOOLEAN))) {
+        if (BOOLEAN_TOKEN_SET.contains(elementType) && !(type.isAssignable(RapidPrimitiveType.BOOLEAN))) {
             targetVariable.removeLast();
             return;
         }
@@ -387,11 +388,11 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         RapidSymbol symbol = expression.getReferenceExpression().getSymbol();
         Value routineValue;
         if (!(symbol instanceof RapidRoutine routine) || routine.getName() == null) {
-            routineValue = ConstantValue.of(RapidType.STRING, expression.getReferenceExpression().getCanonicalText());
+            routineValue = ConstantValue.of(RapidPrimitiveType.STRING, expression.getReferenceExpression().getCanonicalText());
         } else {
             String moduleName = routine instanceof PhysicalRoutine physicalRoutine ? ControlFlowElementVisitor.getModuleName(physicalRoutine) : null;
             String name = (moduleName != null ? moduleName + ":" : "") + routine.getName();
-            routineValue = ConstantValue.of(RapidType.STRING, name);
+            routineValue = ConstantValue.of(RapidPrimitiveType.STRING, name);
         }
         BasicBlock nextBlock = builder.createBasicBlock();
         List<RapidArgument> arguments = expression.getArgumentList().getArguments();

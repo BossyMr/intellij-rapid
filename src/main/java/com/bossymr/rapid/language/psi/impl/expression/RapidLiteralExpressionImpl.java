@@ -4,7 +4,7 @@ import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidLiteralExpression;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
@@ -25,13 +25,13 @@ public class RapidLiteralExpressionImpl extends RapidExpressionImpl implements R
     public @Nullable RapidType getType() {
         IElementType elementType = getNode().getFirstChildNode().getElementType();
         if (RapidTokenTypes.TRUE_KEYWORD.equals(elementType) || RapidTokenTypes.FALSE_KEYWORD.equals(elementType)) {
-            return RapidType.BOOLEAN;
+            return RapidPrimitiveType.BOOLEAN;
         }
         if (RapidTokenTypes.INTEGER_LITERAL.equals(elementType)) {
-            return RapidType.NUMBER;
+            return RapidPrimitiveType.NUMBER;
         }
         if (RapidTokenTypes.STRING_LITERAL.equals(elementType)) {
-            return RapidType.STRING;
+            return RapidPrimitiveType.STRING;
         }
         return null;
     }

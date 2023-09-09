@@ -6,7 +6,7 @@ import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidRecord;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -64,7 +64,7 @@ public class ArraySnapshot implements ReferenceSnapshot {
         IndexValue indexValue = new IndexValue(variable, index);
         if (elementType.getDimensions() > 0) {
             return new ArraySnapshot(defaultValue, indexValue);
-        } else if (elementType.getTargetStructure() instanceof RapidRecord) {
+        } else if (elementType.getActualStructure() instanceof RapidRecord) {
             return new RecordSnapshot(indexValue);
         } else {
             return new VariableSnapshot(indexValue);

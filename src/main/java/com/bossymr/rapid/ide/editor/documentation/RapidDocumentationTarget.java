@@ -4,6 +4,7 @@ import com.bossymr.rapid.ide.editor.highlight.RapidColor;
 import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.codeInsight.daemon.impl.HighlightInfoType;
 import com.intellij.codeInsight.documentation.DocumentationManagerUtil;
 import com.intellij.lang.documentation.DocumentationMarkup;

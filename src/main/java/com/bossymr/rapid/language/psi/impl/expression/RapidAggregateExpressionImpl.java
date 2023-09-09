@@ -5,7 +5,7 @@ import com.bossymr.rapid.language.psi.RapidAssignmentStatement;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
-import com.bossymr.rapid.language.symbol.RapidType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.RapidVariable;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.util.PsiTreeUtil;
