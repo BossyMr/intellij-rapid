@@ -46,6 +46,26 @@ public class RapidRecordType implements RapidType {
 
     @Override
     public @NotNull String getText() {
-        return Objects.requireNonNullElse(record.getName(), RapidPrimitiveType.getDefaultText());
+        return Objects.requireNonNullElse(record.getName(), RapidType.getDefaultText());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RapidRecordType that = (RapidRecordType) o;
+        return Objects.equals(record, that.record);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(record);
+    }
+
+    @Override
+    public String toString() {
+        return "RapidRecordType{" +
+                "record=" + record +
+                '}';
     }
 }

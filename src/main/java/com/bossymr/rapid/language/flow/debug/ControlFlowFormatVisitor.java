@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
@@ -285,7 +284,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     }
 
     @Override
-    public @NotNull String visitSnapshot(@NotNull ReferenceSnapshot snapshot) {
+    public @NotNull String visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
         return "=" + snapshot.hashCode();
     }
 

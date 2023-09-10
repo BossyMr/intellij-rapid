@@ -1,8 +1,8 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.Optionality;
+import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,7 +26,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
     private boolean contains(@NotNull Map<Argument, Constraint> results, @NotNull Map<Argument, Constraint> arguments) {
         for (Argument argument : results.keySet()) {
             Constraint constraint = results.get(argument);
-            Constraint argumentConstraint = arguments.containsKey(argument) ? arguments.get(argument) : Constraint.any(argument.type(), Optionality.MISSING);
+            Constraint argumentConstraint = arguments.containsKey(argument) ? arguments.get(argument) : Constraint.any(argument.getType(), Optionality.MISSING);
             if (!(constraint.intersects(argumentConstraint))) {
                 return false;
             }

@@ -2,13 +2,11 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.StatementListType;
-import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import org.jetbrains.annotations.NotNull;

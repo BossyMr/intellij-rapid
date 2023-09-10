@@ -3,27 +3,44 @@ package com.bossymr.rapid.language.flow;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-/**
- * A {@code Argument} represents an argument in a routine.
- *
- * @param index the index of the variable in the routine.
- * @param parameterType the parameter type.
- * @param type the value type.
- * @param name the name of the parameter.
- */
-public record Argument(
-        int index,
-        @NotNull ParameterType parameterType,
-        @NotNull RapidType type,
-        @NotNull String name
-) implements Field {
+public class Argument implements Field {
+    private final int index;
+    private final @NotNull ParameterType parameterType;
+    private final @NotNull RapidType type;
+    private final @NotNull String name;
+
+    public Argument(int index, @NotNull ParameterType parameterType, @NotNull RapidType type, @NotNull String name) {
+        this.index = index;
+        this.parameterType = parameterType;
+        this.type = type;
+        this.name = name;
+    }
+
+    @Override
+    public int getIndex() {
+        return index;
+    }
+
+    public @NotNull ParameterType getParameterType() {
+        return parameterType;
+    }
+
+    @Override
+    public @NotNull RapidType getType() {
+        return type;
+    }
+
+    @Override
+    public @NotNull String getName() {
+        return name;
+    }
 
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return 
-        visitor.visitArgument(this);
+        return visitor.visitArgument(this);
     }
 
     @Override
@@ -37,5 +54,15 @@ public record Argument(
     @Override
     public int hashCode() {
         return Objects.hash(index, parameterType, type, name);
+    }
+
+    @Override
+    public String toString() {
+        return "Argument{" +
+                "index=" + index +
+                ", parameterType=" + parameterType +
+                ", type=" + type +
+                ", name='" + name + '\'' +
+                '}';
     }
 }

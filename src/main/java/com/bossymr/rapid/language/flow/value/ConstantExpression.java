@@ -4,21 +4,20 @@ import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
 import java.util.Objects;
 
-public class AggregateExpression implements Expression {
+public class ConstantExpression implements Expression {
 
     private final @NotNull RapidType type;
-    private final @NotNull List<Expression> expressions;
+    private final @NotNull Object value;
 
-    public AggregateExpression(@NotNull RapidType type, @NotNull List<Expression> expressions) {
+    public ConstantExpression(@NotNull RapidType type, @NotNull Object value) {
         this.type = type;
-        this.expressions = expressions;
+        this.value = value;
     }
 
-    public @NotNull List<Expression> getComponents() {
-        return expressions;
+    public @NotNull Object getValue() {
+        return value;
     }
 
     @Override
@@ -28,27 +27,27 @@ public class AggregateExpression implements Expression {
 
     @Override
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return visitor.visitAggregateExpression(this);
+        return visitor.visitConstantExpression(this);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        AggregateExpression that = (AggregateExpression) o;
-        return Objects.equals(type, that.type) && Objects.equals(expressions, that.expressions);
+        ConstantExpression that = (ConstantExpression) o;
+        return Objects.equals(type, that.type) && Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, expressions);
+        return Objects.hash(type, value);
     }
 
     @Override
     public String toString() {
-        return "AggregateExpression{" +
+        return "ConstantExpression{" +
                 "type=" + type +
-                ", expressions=" + expressions +
+                ", value=" + value +
                 '}';
     }
 }

@@ -1,8 +1,9 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.value.ReferenceSnapshot;
-import com.bossymr.rapid.language.flow.value.ReferenceValue;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.SnapshotExpression;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -10,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 import java.util.Set;
 
-public class PathCounter implements ReferenceSnapshot {
+public class PathCounter implements SnapshotExpression {
 
     private final @NotNull Set<BlockCycle> incrementPath;
     private final @NotNull Set<BlockCycle> resetPath;
@@ -34,13 +35,13 @@ public class PathCounter implements ReferenceSnapshot {
     }
 
     @Override
-    public @Nullable ReferenceValue getVariable() {
+    public @Nullable ReferenceExpression getUnderlyingVariable() {
         return null;
     }
 
     @Override
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return visitor.visitPathCounter(this);
+        return visitor.visitPathCounterExpression(this);
     }
 
     @Override
@@ -66,7 +67,7 @@ public class PathCounter implements ReferenceSnapshot {
         return "PathCounter{" +
                 "update=" + incrementPath +
                 ", kill=" + resetPath +
-                ", variable=" + getVariable() +
+                ", variable=" + getUnderlyingVariable() +
                 ", type=" + getType() +
                 '}';
     }

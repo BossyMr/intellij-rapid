@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
@@ -9,14 +8,15 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
-import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
+import com.microsoft.z3.Status;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.sql.Ref;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -59,17 +59,17 @@ public class DataFlowState {
     /**
      * The conditions for all variables.
      */
-    private final @NotNull Set<Condition> conditions;
+    private final @NotNull Set<Expression> conditions;
 
     /**
      * The latest snapshot of each variable. The latest snapshot for a given variable also represents the variable.
      */
-    private final @NotNull Map<VariableValue, ReferenceSnapshot> snapshots;
+    private final @NotNull Map<Field, SnapshotExpression> snapshots;
 
     /**
      * The constraints for all variables.
      */
-    private final @NotNull Map<VariableSnapshot, Optionality> optionality;
+    private final @NotNull Map<SnapshotExpression, Optionality> optionality;
 
     private DataFlowState(@NotNull DataFlowBlock block, @Nullable DataFlowState predecessor) {
         this(block, block.getBasicBlock().getBlock(), predecessor);
@@ -93,9 +93,9 @@ public class DataFlowState {
         this.predecessor = state.predecessor;
         this.functionBlock = state.functionBlock;
         this.snapshots = new HashMap<>();
-        Map<ReferenceSnapshot, ReferenceSnapshot> remapping = new HashMap<>();
+        Map<SnapshotExpression, SnapshotExpression> remapping = new HashMap<>();
         for (var entry : state.snapshots.entrySet()) {
-            snapshots.put(entry.getKey(), (ReferenceSnapshot) mapSnapshot(entry.getValue(), remapping));
+            snapshots.put(entry.getKey(), (SnapshotExpression) mapSnapshot(entry.getValue(), remapping));
         }
         this.conditions = new HashSet<>();
         for (Condition condition : state.conditions) {
@@ -160,11 +160,15 @@ public class DataFlowState {
         return new DataFlowState(block, predecessor);
     }
 
+    public static @NotNull DataFlowState createSuccessorState(@NotNull Block block, @NotNull DataFlowState predecessor) {
+        return new DataFlowState(block, predecessor);
+    }
+
     public @NotNull Optional<DataFlowState> getPredecessor() {
         return Optional.ofNullable(predecessor);
     }
 
-    private @NotNull Value mapSnapshot(@NotNull Value previous, @NotNull Map<ReferenceSnapshot, ReferenceSnapshot> remapping) {
+    private @NotNull Value mapSnapshot(@NotNull Value previous, @NotNull Map<SnapshotExpression, SnapshotExpression> remapping) {
         if (!(previous instanceof ReferenceValue referenceValue)) {
             return previous;
         }
@@ -175,7 +179,7 @@ public class DataFlowState {
         return Optional.ofNullable(block);
     }
 
-    private @NotNull ReferenceValue mapSnapshot(@NotNull ReferenceValue previous, @NotNull Map<ReferenceSnapshot, ReferenceSnapshot> remapping) {
+    private @NotNull ReferenceValue mapSnapshot(@NotNull ReferenceValue previous, @NotNull Map<SnapshotExpression, SnapshotExpression> remapping) {
         if (previous instanceof FieldValue || previous instanceof VariableValue) {
             return previous;
         }
@@ -191,14 +195,14 @@ public class DataFlowState {
             }
             return new ComponentValue(componentValue.getType(), mapSnapshot(componentValue.variable(), remapping), componentValue.name());
         }
-        if (!(previous instanceof ReferenceSnapshot snapshot)) {
+        if (!(previous instanceof SnapshotExpression snapshot)) {
             throw new AssertionError();
         }
         if (remapping.containsKey(snapshot)) {
             return remapping.get(snapshot);
         }
         if (previous instanceof RecordSnapshot recordSnapshot) {
-            RecordSnapshot copy = new RecordSnapshot(mapSnapshot(recordSnapshot.getVariable(), remapping));
+            RecordSnapshot copy = new RecordSnapshot(mapSnapshot(recordSnapshot.getUnderlyingVariable(), remapping));
             remapping.put(snapshot, copy);
             for (var entry : recordSnapshot.getSnapshots().entrySet()) {
                 copy.assign(entry.getKey(), mapSnapshot(entry.getValue(), remapping));
@@ -206,7 +210,7 @@ public class DataFlowState {
             return copy;
         }
         if (previous instanceof ArraySnapshot arraySnapshot) {
-            ArraySnapshot copy = new ArraySnapshot(mapSnapshot(arraySnapshot.getDefaultValue(), remapping), mapSnapshot(arraySnapshot.getVariable(), remapping));
+            ArraySnapshot copy = new ArraySnapshot(mapSnapshot(arraySnapshot.getDefaultValue(), remapping), mapSnapshot(arraySnapshot.getUnderlyingVariable(), remapping));
             remapping.put(snapshot, copy);
             for (ArrayEntry.Assignment assignment : arraySnapshot.getAssignments()) {
                 copy.assign(mapSnapshot(assignment.index(), remapping), mapSnapshot(assignment.value(), remapping));
@@ -232,7 +236,7 @@ public class DataFlowState {
         }
     }
 
-    public @NotNull ReferenceSnapshot initialize(@NotNull ReferenceValue variable, @NotNull Optionality optionality, @NotNull AssignmentType assignmentType) {
+    public @NotNull SnapshotExpression initialize(@NotNull ReferenceValue variable, @NotNull Optionality optionality, @NotNull AssignmentType assignmentType) {
         RapidType type = variable.getType();
         if (type.getDimensions() > 0) {
             RapidType elementType = type.createArrayType(0);
@@ -268,12 +272,10 @@ public class DataFlowState {
     }
 
     private void getPathCounters(@NotNull Set<PathCounter> counters) {
-        for (Condition condition : conditions) {
-            if (condition.getVariable() instanceof PathCounter pathCounter) {
-                counters.add(pathCounter);
-            }
-            for (ReferenceValue variable : condition.getVariables()) {
-                if (variable instanceof PathCounter pathCounter) {
+        for (Expression condition : conditions) {
+            Collection<Expression> components = condition.getAllComponents();
+            for (Expression component : components) {
+                if(component instanceof PathCounter pathCounter) {
                     counters.add(pathCounter);
                 }
             }
@@ -283,124 +285,39 @@ public class DataFlowState {
         }
     }
 
-    public void assign(@NotNull Condition condition, boolean addVariants) {
-        if (condition.getVariable() instanceof VariableValue variableValue) {
-            if (condition.getExpression() instanceof ValueExpression valueExpression) {
-                if (valueExpression.value() instanceof ReferenceValue referenceValue) {
-                    Optional<ReferenceSnapshot> variable = findSnapshot(referenceValue);
-                    if (variable.isPresent()) {
-                        snapshots.put(variableValue, variable.orElseThrow());
-                        return;
-                    }
-                }
-            }
-        }
-        if (condition.getVariable() instanceof IndexValue indexValue && condition.getConditionType() == ConditionType.EQUALITY) {
-            Optional<ReferenceSnapshot> optional = findSnapshot(indexValue.variable());
-            if (optional.isPresent() && optional.orElseThrow() instanceof ArraySnapshot snapshot) {
-                Value value;
-                Expression expression = condition.getExpression();
-                if (expression instanceof ValueExpression valueExpression) {
-                    value = getSnapshot(valueExpression.value());
-                } else {
-                    VariableSnapshot variableSnapshot = new VariableSnapshot(indexValue.getType());
-                    add(new Condition(variableSnapshot, condition.getConditionType(), expression), addVariants);
-                    value = variableSnapshot;
-                }
-                snapshot.assign(getSnapshot(indexValue.index()), value);
-                Optional<ReferenceSnapshot> indexOptional = findSnapshot(indexValue);
-                if (indexOptional.isPresent() && value instanceof ReferenceValue referenceValue) {
-                    conditions.add(new Condition(referenceValue, ConditionType.EQUALITY, new ValueExpression(indexOptional.orElseThrow())));
-                }
+    public void assign(@NotNull ReferenceExpression variable, @NotNull Expression expression) {
+        if (variable instanceof VariableExpression leftValue && expression instanceof VariableExpression rightValue) {
+            Optional<SnapshotExpression> snapshot = getSnapshot(rightValue);
+            if (snapshot.isPresent()) {
+                snapshots.put(leftValue.getField(), snapshot.orElseThrow());
                 return;
             }
         }
-        Optional<Condition> optional = getCondition(this::createSnapshot, condition);
-        if (optional.isEmpty()) {
+        Optional<SnapshotExpression> snapshot = createSnapshot(variable);
+        if(snapshot.isEmpty()) {
             return;
         }
-        insert(optional.orElseThrow(), addVariants);
+        expression = expression.replace(this::getSnapshot);
+        insert(new BinaryExpression(BinaryOperator.EQUAL_TO, RapidPrimitiveType.BOOLEAN, snapshot.orElseThrow(), expression));
     }
 
-    private @NotNull Optional<Condition> getCondition(@NotNull Function<ReferenceValue, Optional<? extends ReferenceValue>> variable, @NotNull Condition condition) {
-        Optional<? extends ReferenceValue> optional = variable.apply(condition.getVariable());
-        if (optional.isEmpty()) {
-            return Optional.empty();
-        }
-        AtomicBoolean skip = new AtomicBoolean();
-        Condition result = Condition.create(condition, referenceValue -> optional.orElseThrow(), referenceValue -> {
-            Optional<ReferenceSnapshot> snapshot = findSnapshot(referenceValue);
-            if (snapshot.isEmpty()) {
-                skip.set(true);
-                return referenceValue;
-            } else {
-                return snapshot.orElseThrow();
-            }
-        });
-        if (skip.get()) {
-            return Optional.empty();
-        }
-        return Optional.of(result);
+    public void add(@NotNull Expression expression) {
+        expression = expression.replace(this::getSnapshot);
+        insert(expression);
     }
 
-    public void add(@NotNull Condition condition, boolean addVariants) {
-        if (condition.getVariable() instanceof IndexValue indexValue) {
-            Optional<ReferenceSnapshot> optional = findSnapshot(indexValue.variable());
-            if (optional.isPresent() && optional.orElseThrow() instanceof ArraySnapshot snapshot) {
-                List<ArrayEntry> assignments = snapshot.getAssignments(this, indexValue.index());
-                if (assignments.size() != 1) {
-                    throw new IllegalStateException();
-                }
-                ArrayEntry arrayEntry = assignments.get(0);
-                if (arrayEntry instanceof ArrayEntry.Assignment assignment) {
-                    Value value = assignment.value();
-                    if (value instanceof ReferenceValue referenceValue) {
-                        Optional<Condition> result = getCondition(unused -> Optional.of(referenceValue), condition);
-                        if (result.isPresent()) {
-                            condition = result.orElseThrow();
-                            insert(condition, addVariants);
-                            inferSideEffect(condition);
-                            return;
-                        }
-                    }
-                }
-            }
+    private void insert(@NotNull Expression expression) {
+        if (!(expression.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
+            throw new IllegalArgumentException("Cannot add expression: " + expression);
         }
-        Optional<Condition> optional = getCondition(this::findSnapshot, condition);
-        if (optional.isEmpty()) {
-            return;
+        for (Expression component : expression.getAllComponents()) {
+            // Find all components in the expression (including for example the index and variable in for example an
+            // index expression) and check if they are of type optional unknown or missing.
+            // If they are, create a new snapshot of the expression and make it present or no value (if it was already
+            // missing) - and add previousSnapshot := newSnapshot.
+            // TODO: Rework getAllComponents() to optionally return all expressions, even those inside IndexExpression (but not inside ReferenceSnapshot)
         }
-        condition = optional.orElseThrow();
-        insert(condition, addVariants);
-        inferSideEffect(condition);
-    }
-
-    public void assign(@NotNull ReferenceValue variable, @NotNull Constraint constraint) {
-        if (variable instanceof FieldValue) {
-            return;
-        }
-        Optional<ReferenceSnapshot> snapshot = createSnapshot(variable);
-        if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof VariableSnapshot variableSnapshot)) {
-            return;
-        }
-        checkOptionality(variable, constraint.getOptionality());
-        optionality.put(variableSnapshot, constraint);
-    }
-
-    public void add(@NotNull ReferenceValue variable, @NotNull Constraint constraint) {
-        Optional<ReferenceSnapshot> optional = findSnapshot(variable);
-        if (optional.isEmpty() || !(optional.orElseThrow() instanceof VariableSnapshot snapshot)) {
-            return;
-        }
-        checkOptionality(variable, constraint.getOptionality());
-        Optional<Constraint> previous = getPrecomputedConstraint(snapshot);
-        if (previous.isPresent()) {
-            constraint = previous.orElseThrow().and(constraint);
-        }
-        optionality.put(snapshot, constraint);
-    }
-
-    private void insert(@NotNull Condition condition, boolean addVariants) {
+        // TODO: Rework below:
         ReferenceValue variable = condition.getVariable();
         checkOptionality(variable, Optionality.PRESENT);
         RapidType type = variable.getType();
@@ -431,444 +348,88 @@ public class DataFlowState {
         }
     }
 
-    /**
-     * If applicable, updates the optionality for mutually exclusive arguments of the specified variable. For example,
-     * if
-     * an argument group consists of two arguments, and one of the arguments is now known to be present, the other is
-     * known to be missing.
-     *
-     * @param referenceValue the variable which is changed.
-     * @param optionality the new optionality of the specified variable.
-     */
-    private void checkOptionality(@NotNull ReferenceValue referenceValue, @NotNull Optionality optionality) {
-        if (getOptionality(referenceValue) == Optionality.UNKNOWN) {
-            if (optionality == Optionality.PRESENT) {
-                handleMutuallyExclusiveArguments(referenceValue);
-            }
+    public @NotNull Optionality getOptionality(@NotNull ReferenceExpression expression) {
+        Optional<SnapshotExpression> snapshot = getSnapshot(expression);
+        if(snapshot.isPresent()) {
+            return optionality.getOrDefault(snapshot.orElseThrow(), Optionality.PRESENT);
         }
+        return Optionality.PRESENT;
     }
 
-    public void merge(@NotNull DataFlowState state, @NotNull Map<Argument, Value> arguments, @Nullable ReferenceValue returnValue, @Nullable ReferenceValue returnTarget) {
-        Set<ReferenceValue> variables = new HashSet<>();
-        /*
-         * If this map contains the entry x -> y, snapshots referring to x will be replaced by a snapshot referring to y.
-         * Alternatively, if y is already a snapshot, the variable will simply be replaced by y.
-         */
-        Map<ReferenceValue, ReferenceValue> modifications = new HashMap<>();
-        /*
-         * If a snapshot is replaced, all other occurrences of the snapshot also need to be replaced by the same snapshot.
-         */
-        Map<ReferenceSnapshot, ReferenceSnapshot> remapped = new HashMap<>();
-        for (Argument argument : arguments.keySet()) {
-            variables.add(new VariableValue(argument));
-            Optional<ReferenceSnapshot> snapshot = state.findSnapshot(new VariableValue(argument));
-            if (snapshot.isEmpty()) {
-                continue;
-            }
-            Value value = arguments.get(argument);
-            if (!(value instanceof ReferenceValue referenceValue)) {
-                continue;
-            }
-            Optional<ReferenceSnapshot> optional = findSnapshot(referenceValue);
-            if (optional.isEmpty()) {
-                continue;
-            }
-            modifications.put(new VariableValue(argument), referenceValue);
-            remapped.put(snapshot.orElseThrow(), optional.orElseThrow());
-        }
-        if (returnValue != null) {
-            variables.add(returnValue);
-        }
-        Set<ReferenceValue> dependentVariables = getDependentVariables(state, variables);
-        state.conditions.removeIf(condition -> !(dependentVariables.contains(condition.getVariable())) && condition.getVariables().stream().noneMatch(dependentVariables::contains));
-        state.optionality.keySet().removeIf(variable -> !(dependentVariables.contains(variable)));
-        for (var entry : arguments.entrySet()) {
-            if (!(entry.getValue() instanceof ReferenceValue referenceValue)) {
-                continue;
-            }
-            Optional<Argument> argument = getArgument(referenceValue);
-            if (argument.isPresent()) {
-                Constraint constraint = state.getConstraint(new VariableValue(entry.getKey()));
-                checkOptionality(referenceValue, constraint.getOptionality());
-            }
-        }
-        for (Condition condition : state.conditions) {
-            condition = new Condition(getModifiedSnapshot(condition.getVariable(), modifications, remapped), condition.getConditionType(), condition.getExpression());
-            condition = condition.modify(variable -> getModifiedSnapshot(variable, modifications, remapped));
-            conditions.add(condition);
-        }
-        for (VariableSnapshot snapshot : state.optionality.keySet()) {
-            Constraint constraint = state.optionality.get(snapshot);
-            VariableSnapshot modifiedSnapshot = (VariableSnapshot) getModifiedSnapshot(snapshot, modifications, remapped);
-            if (snapshot.getType().equals(RapidPrimitiveType.ANYTYPE)) {
-                if (constraint instanceof OpenConstraint) {
-                    constraint = Constraint.any(modifiedSnapshot.getType(), constraint.getOptionality());
-                } else if (constraint instanceof ClosedConstraint) {
-                    constraint = Constraint.any(modifiedSnapshot.getType(), constraint.getOptionality()).negate();
-                }
-            }
-            optionality.put(modifiedSnapshot, constraint);
-        }
-        for (Argument argument : arguments.keySet()) {
-            VariableValue value = new VariableValue(argument);
-            Optional<ReferenceSnapshot> optional = state.findSnapshot(value);
-            if (optional.isEmpty()) {
-                continue;
-            }
-            ReferenceSnapshot snapshot = optional.orElseThrow();
-            if (remapped.containsKey(snapshot)) {
-                snapshot = remapped.get(snapshot);
-            }
-            if (!(arguments.get(argument) instanceof ReferenceValue)) {
-                add(new Condition(snapshot, ConditionType.EQUALITY, new ValueExpression(arguments.get(argument))), true);
-            }
-            if (argument.parameterType() != ParameterType.INPUT) {
-                if (arguments.get(argument) instanceof ReferenceValue variable) {
-                    /*
-                     * The argument which was passed to the function now reflects any potential modifications made by the function.
-                     */
-                    assign(new Condition(variable, ConditionType.EQUALITY, new ValueExpression(snapshot)), false);
-                }
-            }
-        }
-        if (returnValue != null) {
-            if (returnTarget == null) {
-                throw new IllegalArgumentException();
-            }
-            Optional<ReferenceSnapshot> optional = state.findSnapshot(returnValue);
-            if (optional.isPresent()) {
-                ReferenceSnapshot snapshot = remapped.get(optional.orElseThrow());
-                Objects.requireNonNull(snapshot);
-                assign(new Condition(returnTarget, ConditionType.EQUALITY, new ValueExpression(snapshot)), false);
-            }
-        }
-    }
-
-    private @NotNull ReferenceValue getModifiedSnapshot(@NotNull ReferenceValue previous, @NotNull Map<ReferenceValue, ReferenceValue> modifications, @NotNull Map<ReferenceSnapshot, ReferenceSnapshot> remapped) {
-        if (!(previous instanceof ReferenceSnapshot previousSnapshot)) {
-            return previous;
-        }
-        if (remapped.containsKey(previousSnapshot)) {
-            return remapped.get(previousSnapshot);
-        }
-        ReferenceValue referenceValue = previousSnapshot.getVariable();
-        if (referenceValue == null) {
-            remapped.put(previousSnapshot, previousSnapshot);
-            return previousSnapshot;
-        }
-        if (modifications.containsKey(referenceValue)) {
-            ReferenceValue value = modifications.get(referenceValue);
-            if (value instanceof VariableSnapshot snapshot) {
-                remapped.put(previousSnapshot, snapshot);
-                return snapshot;
-            }
-            VariableSnapshot snapshot = new VariableSnapshot(value);
-            remapped.put(previousSnapshot, snapshot);
-            return snapshot;
-        }
-        VariableSnapshot snapshot = new VariableSnapshot(previousSnapshot.getType());
-        remapped.put(previousSnapshot, snapshot);
-        return snapshot;
-    }
-
-    private @NotNull Set<ReferenceValue> getDependentVariables(@NotNull DataFlowState state, @NotNull Set<ReferenceValue> variables) {
-        Deque<ReferenceValue> workList = new ArrayDeque<>();
-        for (ReferenceValue value : variables) {
-            Optional<ReferenceSnapshot> snapshot = state.findSnapshot(value);
-            snapshot.ifPresent(workList::add);
-        }
-        Set<ReferenceValue> referenceValues = new HashSet<>();
-        while (!(workList.isEmpty())) {
-            ReferenceValue referenceValue = workList.removeFirst();
-            referenceValues.add(referenceValue);
-            Set<Condition> conditions = state.findConditions(referenceValue);
-            for (Condition condition : conditions) {
-                for (ReferenceValue variable : condition.getVariables()) {
-                    if (referenceValues.contains(variable)) {
-                        continue;
-                    }
-                    workList.add(variable);
-                }
-            }
-        }
-        return referenceValues;
-    }
-
-    private @NotNull Optionality getOptionality(@NotNull ReferenceValue referenceValue) {
-        return getConstraint(referenceValue).getOptionality();
-    }
-
-    private void handleMutuallyExclusiveArguments(@NotNull ReferenceValue referenceValue) {
-        Optional<Argument> optionalArgument = getArgument(referenceValue);
-        if (optionalArgument.isEmpty()) {
-            return;
-        }
-        Argument argument = optionalArgument.orElseThrow();
-        Optional<ArgumentGroup> groupOptional = functionBlock.getArgumentGroups().stream()
-                .filter(argumentGroup -> argumentGroup.arguments().contains(argument))
-                .findFirst();
-        if (groupOptional.isEmpty()) {
-            throw new IllegalArgumentException();
-        }
-        ArgumentGroup group = groupOptional.orElseThrow();
-        assert group.isOptional();
-        for (Argument sibling : group.arguments()) {
-            if (sibling.equals(argument)) {
-                continue;
-            }
-            VariableValue variableValue = new VariableValue(sibling);
-            Optional<ReferenceSnapshot> optional = findSnapshot(variableValue);
-            if (optional.isEmpty() || !(optional.orElseThrow() instanceof VariableSnapshot variableSnapshot)) {
-                continue;
-            }
-            optionality.put(variableSnapshot, getConstraint(variableSnapshot).setOptionality(Optionality.MISSING));
-        }
-    }
-
-    private @NotNull Optional<Argument> getArgument(@NotNull ReferenceValue referenceValue) {
-        ReferenceValue rawValue = getRawValue(referenceValue);
-        if (!(rawValue instanceof VariableValue variableValue)) {
-            return Optional.empty();
-        }
-        Field field = variableValue.field();
-        if (!(field instanceof Argument argument)) {
-            return Optional.empty();
-        }
-        return Optional.of(argument);
-    }
-
-    private @NotNull ReferenceValue getRawValue(@NotNull ReferenceValue referenceValue) {
-        if (referenceValue instanceof VariableSnapshot snapshot) {
-            Optional<VariableValue> value = snapshots.entrySet().stream()
-                    .filter(entry -> entry.getValue().equals(snapshot))
-                    .map(Map.Entry::getKey)
-                    .findFirst();
-            if (value.isEmpty()) {
-                throw new IllegalArgumentException();
-            }
-            referenceValue = value.orElseThrow();
-        }
-        if (referenceValue instanceof ComponentValue componentValue) {
-            return getRawValue(componentValue.variable());
-        }
-        return referenceValue;
-    }
-
-    public boolean contains(@NotNull Condition condition) {
-        Optional<Constraint> optional = getConstraint(condition, new HashSet<>());
-        if (optional.isEmpty()) {
-            return true;
-        }
-        return getConstraint(condition.getVariable()).intersects(optional.orElseThrow());
-    }
-
-    public @NotNull Block getFunctionBlock() {
-        return functionBlock;
-    }
-
-    public @NotNull Set<Condition> getConditions() {
+    public @NotNull Set<Expression> getExpressions() {
         return conditions;
     }
 
-    public @NotNull Set<Condition> getAllConditions() {
-        Set<Condition> conditions = new HashSet<>();
-        getAllConditions(conditions);
-        return conditions;
-    }
-
-    private void getAllConditions(@NotNull Set<Condition> result) {
-        result.addAll(conditions);
-        if(predecessor != null) {
-            predecessor.getAllConditions(result);
-        }
-    }
-
-    public @NotNull Map<VariableValue, ReferenceSnapshot> getSnapshots() {
+    public @NotNull Map<Field, SnapshotExpression> getSnapshots() {
         return snapshots;
     }
 
-    public @NotNull Map<VariableSnapshot, Constraint> getOptionality() {
+    public @NotNull Map<VariableSnapshot, Optionality> getOptionality() {
         return optionality;
     }
 
-    public @NotNull Constraint getConstraint(@NotNull Value value) {
-        return getConstraint(value, new HashSet<>())
-                .orElseGet(() -> Constraint.any(value.getType()));
-    }
-
-    public @NotNull Constraint getConstraint(@NotNull Expression expression) {
-        Optional<Constraint> optional = getConstraint(expression, new HashSet<>());
-        if (optional.isPresent()) {
-            return optional.orElseThrow();
+    public @NotNull BooleanValue getConstraint(@NotNull Expression expression) {
+        if (!(expression.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
+            throw new IllegalArgumentException("Cannot calculate constraint for expression: " + expression);
         }
-        if (expression instanceof ValueExpression valueExpression) {
-            return Constraint.any(valueExpression.value().getType());
-        }
-        if (expression instanceof UnaryExpression unaryExpression) {
-            return Constraint.any(unaryExpression.value().getType());
-        }
-        if (expression instanceof BinaryExpression binaryExpression) {
-            return switch (binaryExpression.operator()) {
-                case ADD -> Constraint.any(binaryExpression.left().getType());
-                case SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> Constraint.any(RapidPrimitiveType.NUMBER);
-                case AND, XOR, OR, EQUAL_TO, NOT_EQUAL_TO, GREATER_THAN, GREATER_THAN_OR_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL ->
-                        Constraint.any(RapidPrimitiveType.BOOLEAN);
-            };
-        }
-        if (expression instanceof AggregateExpression) {
-            throw new IllegalArgumentException();
-        }
-        throw new AssertionError();
-    }
-
-    /**
-     * Attempts to calculate the constraint of the specified value.
-     *
-     * @param value the value.
-     * @param visited the variables which have already been visited.
-     * @return the constraint of the value, or an empty optional if the constraint could not be calculated.
-     */
-    @NotNull Optional<Constraint> getConstraint(@NotNull Value value, @NotNull Set<ReferenceValue> visited) {
-        if (value instanceof ReferenceValue variable) {
-            return getConstraint(variable, visited);
-        }
-        if (value instanceof ErrorValue) {
-            return Optional.of(Constraint.any(value.getType()));
-        }
-        if (value instanceof ConstantValue constant) {
-            Object object = constant.getValue();
-            if (value.getType().isAssignable(RapidPrimitiveType.STRING)) {
-                return Optional.of(new StringConstraint(Optionality.PRESENT, Set.of(object.toString())));
-            }
-            if (value.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
-                return Optional.of(NumericConstraint.equalTo(((Number) object).doubleValue()));
-            }
-            if (value.getType().isAssignable(RapidPrimitiveType.BOOLEAN)) {
-                BooleanConstraint.BooleanValue booleanValue = BooleanConstraint.BooleanValue.of((boolean) object);
-                return Optional.of(new BooleanConstraint(Optionality.PRESENT, booleanValue));
-            }
-        }
-        throw new AssertionError();
-    }
-
-    /**
-     * Attempts to calculate the constraint of the specified variable.
-     *
-     * @param variable the variable.
-     * @param visited the variables which have already been visited.
-     * @return the constraint of the variable, or an empty optional if the constraint could not be calculated.
-     */
-    private @NotNull Optional<Constraint> getConstraint(@NotNull ReferenceValue variable, @NotNull Set<ReferenceValue> visited) {
-        if (variable instanceof PathCounter) {
-            // TODO: Technically, it is also always an integer, which needs to be handled as-well.
-            //  It might also zero or one.
-            return Optional.of(NumericConstraint.greaterThanOrEqual(1));
-        }
-        Optional<ReferenceSnapshot> optional = findSnapshot(variable);
-        if (optional.isEmpty()) {
-            return Optional.of(Constraint.any(variable.getType()));
-        }
-        ReferenceSnapshot snapshot = optional.orElseThrow();
-        List<Constraint> constraints = findConditions(snapshot).stream()
-                .filter(condition -> condition.getVariables().stream().noneMatch(snapshot::equals))
-                .filter(condition -> condition.getVariables().stream().noneMatch(visited::contains))
-                .map(condition -> {
-                    Set<ReferenceValue> copy = new HashSet<>(visited);
-                    copy.add(condition.getVariable());
-                    return getConstraint(condition, copy);
-                })
-                .filter(Optional::isPresent)
-                .map(Optional::orElseThrow)
-                .toList();
-        if (constraints.isEmpty()) {
-            return getPrecomputedConstraint(variable);
-        }
-        Constraint constraint = Constraint.and(constraints);
-        if (constraint.getOptionality() == Optionality.ANY_VALUE) {
-            constraint = constraint.setOptionality(Optionality.PRESENT);
-        }
-        Optional<Constraint> precomputed = getPrecomputedConstraint(variable);
-        if (precomputed.isPresent()) {
-            if (precomputed.orElseThrow().getOptionality() != constraint.getOptionality()) {
-                constraint = constraint.setOptionality(Optionality.UNKNOWN);
-            }
-            return Optional.of(constraint.and(precomputed.orElseThrow()));
+        DataFlowState successor;
+        if (block != null) {
+            successor = createSuccessorState(block, this);
         } else {
-            return Optional.of(constraint);
+            successor = createSuccessorState(functionBlock, this);
         }
+        successor.add(expression);
+        return null;
     }
 
-    private @NotNull Optional<Constraint> getPrecomputedConstraint(@NotNull ReferenceValue variable) {
-        Optional<ReferenceSnapshot> snapshot = findSnapshot(variable);
-        if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof VariableSnapshot variableSnapshot)) {
+    public @NotNull Status isSatisfiable() {
+        return null;
+    }
+
+    public @NotNull Optional<SnapshotExpression> createSnapshot(@NotNull ReferenceExpression expression) {
+        if(expression instanceof SnapshotExpression snapshot) {
+            expression = snapshot.getUnderlyingVariable();
+            if(expression == null) {
+                return Optional.of(snapshot);
+            }
+        }
+        if(expression instanceof FieldExpression) {
             return Optional.empty();
         }
-        if (optionality.containsKey(variableSnapshot)) {
-            return Optional.of(optionality.get(variableSnapshot));
-        }
-        if (predecessor != null) {
-            return predecessor.getPrecomputedConstraint(variableSnapshot);
-        }
-        return Optional.empty();
-    }
-
-    private @NotNull Optional<Constraint> getConstraint(@NotNull Condition condition, @NotNull Set<ReferenceValue> visited) {
-        visited.add(condition.getVariable());
-        Optional<Constraint> expression = getConstraint(condition.getExpression(), visited);
-        return expression.map(constraint -> getConstraint(condition, constraint));
-    }
-
-    private @NotNull Optional<Constraint> getConstraint(@NotNull Expression expression, @NotNull Set<ReferenceValue> visited) {
-        ConstraintVisitor visitor = new ConstraintVisitor(this, visited);
-        expression.accept(visitor);
-        return visitor.getResult();
-    }
-
-
-    public @NotNull Optional<ReferenceSnapshot> createSnapshot(@NotNull ReferenceValue referenceValue) {
-        if (referenceValue instanceof ReferenceSnapshot snapshot) {
-            return Optional.of(snapshot);
-        }
-        if (referenceValue instanceof FieldValue) {
-            return Optional.empty();
-        }
-        if (referenceValue instanceof IndexValue indexValue) {
-            Optional<ReferenceSnapshot> snapshot = findSnapshot(indexValue.variable());
-            if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
+        if(expression instanceof IndexExpression indexExpression) {
+            Optional<SnapshotExpression> optional = getSnapshot(indexExpression.getVariable());
+            if(optional.isEmpty() || !(optional.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
                 return Optional.empty();
             }
-            Value index = getSnapshot(indexValue.index());
-            return Optional.of(arraySnapshot.createSnapshot(index));
+            Expression indexSnapshot = getSnapshot(indexExpression.getIndex());
+            IndexExpression underlyingExpression = new IndexExpression(arraySnapshot, indexSnapshot);
+            SnapshotExpression variableSnapshot = createSnapshot(indexExpression.getType(), underlyingExpression);
+            arraySnapshot.assign(indexSnapshot, variableSnapshot);
+            return Optional.of(variableSnapshot);
         }
-        if (referenceValue instanceof VariableValue variableValue) {
-            return Optional.of(initializeSnapshot(variableValue));
-        }
-        if (referenceValue instanceof ComponentValue componentValue) {
-            Optional<ReferenceSnapshot> snapshot = findSnapshot(componentValue.variable());
+        if(expression instanceof ComponentExpression componentExpression) {
+            Optional<SnapshotExpression> snapshot = getSnapshot(componentExpression.getVariable());
             if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof RecordSnapshot recordSnapshot)) {
                 return Optional.empty();
             }
-            VariableSnapshot componentSnapshot = new VariableSnapshot(componentValue.getType());
-            recordSnapshot.assign(componentValue.name(), componentSnapshot);
-            return Optional.of(componentSnapshot);
+            ComponentExpression underlyingExpression = new ComponentExpression(componentExpression.getType(), recordSnapshot, componentExpression.getComponent());
+            SnapshotExpression variableSnapshot = createSnapshot(componentExpression.getType(), underlyingExpression);
+            recordSnapshot.assign(componentExpression.getComponent(), variableSnapshot);
+            return Optional.of(variableSnapshot);
         }
-        throw new IllegalArgumentException();
+        return Optional.of(createSnapshot(expression.getType(), expression));
     }
 
-    private @NotNull ReferenceSnapshot initializeSnapshot(@NotNull ReferenceValue referenceValue) {
-        RapidType type = referenceValue.getType();
-        ReferenceSnapshot snapshot;
-        if (type.getDimensions() > 0) {
-            VariableSnapshot anySnapshot = new VariableSnapshot(RapidPrimitiveType.NUMBER);
-            add(anySnapshot, NumericConstraint.any());
-            IndexValue indexValue = new IndexValue(referenceValue, anySnapshot);
-            for (int i = 1; i < type.getDimensions(); i++) {
-                indexValue = new IndexValue(indexValue, anySnapshot);
-            }
-            ReferenceSnapshot defaultValue = initializeSnapshot(indexValue);
-            snapshot = new ArraySnapshot(defaultValue, referenceValue);
-        } else if (type.getActualStructure() instanceof RapidRecord record) {
-            RecordSnapshot recordSnapshot = new RecordSnapshot(referenceValue);
+    private @NotNull SnapshotExpression createSnapshot(@NotNull RapidType snapshotType, @NotNull ReferenceExpression underlyingExpression) {
+        SnapshotExpression snapshot;
+        if (snapshotType.getDimensions() > 0) {
+            snapshot = new ArraySnapshot((arraySnapshot) -> {
+                VariableSnapshot indexSnapshot = new VariableSnapshot(RapidPrimitiveType.NUMBER);
+                IndexExpression indexExpression = new IndexExpression(arraySnapshot, indexSnapshot);
+                return createSnapshot(indexExpression).orElseThrow();
+            }, underlyingExpression);
+        } else if (snapshotType.getActualStructure() instanceof RapidRecord record) {
+            RecordSnapshot recordSnapshot = new RecordSnapshot(underlyingExpression);
             snapshot = recordSnapshot;
             for (RapidComponent component : record.getComponents()) {
                 String componentName = component.getName();
@@ -876,22 +437,22 @@ public class DataFlowState {
                 if (componentName == null || componentType == null) {
                     continue;
                 }
-                ReferenceSnapshot componentSnapshot = initializeSnapshot(new ComponentValue(componentType, referenceValue, componentName));
+                ComponentExpression componentExpression = new ComponentExpression(componentType, underlyingExpression, componentName);
+                SnapshotExpression componentSnapshot = createSnapshot(componentExpression).orElseThrow();
                 recordSnapshot.assign(componentName, componentSnapshot);
             }
         } else {
-            snapshot = new VariableSnapshot(referenceValue);
-            add(snapshot, Constraint.any(snapshot.getType()));
+            snapshot = new VariableSnapshot(underlyingExpression);
         }
-        if (referenceValue instanceof VariableValue variableValue) {
-            snapshots.put(variableValue, snapshot);
+        if (underlyingExpression instanceof VariableExpression variableValue) {
+            snapshots.put(variableValue.getField(), snapshot);
         }
         return snapshot;
     }
 
-    public @NotNull Value getSnapshot(@NotNull Value value) {
-        if (value instanceof ReferenceValue referenceValue) {
-            Optional<ReferenceSnapshot> snapshot = findSnapshot(referenceValue);
+    public @NotNull Expression getSnapshot(@NotNull Expression value) {
+        if (value instanceof ReferenceExpression referenceValue) {
+            Optional<SnapshotExpression> snapshot = getSnapshot(referenceValue);
             if (snapshot.isPresent()) {
                 return snapshot.orElseThrow();
             }
@@ -899,360 +460,82 @@ public class DataFlowState {
         return value;
     }
 
-    public @NotNull Optional<ReferenceValue> getVariable(@NotNull ReferenceSnapshot snapshot) {
-        if (snapshots.containsValue(snapshot)) {
-            for (Map.Entry<VariableValue, ReferenceSnapshot> entry : snapshots.entrySet()) {
-                if (entry.getValue().equals(snapshot)) {
-                    return Optional.ofNullable(entry.getKey());
-                }
-            }
-        }
-        if (predecessor != null) {
-            return predecessor.getVariable(snapshot);
-        }
-        return Optional.empty();
-    }
-
-    private @NotNull Optional<ReferenceSnapshot> copy(@NotNull ReferenceValue referenceValue) {
-        if (!(referenceValue instanceof ReferenceSnapshot snapshot)) {
-            /*
-             * If the variable was modified since the array was initialized, the default value of the array is lost.
-             */
-            return Optional.empty();
-        }
-        if (snapshot instanceof VariableSnapshot variableSnapshot) {
-            ReferenceValue variable = variableSnapshot.getVariable();
-            VariableSnapshot copy = variable != null ? new VariableSnapshot(variable) : new VariableSnapshot(variableSnapshot.getType());
-            add(new Condition(copy, ConditionType.EQUALITY, new ValueExpression(variableSnapshot)), false);
-            return Optional.of(copy);
-        }
-        if (snapshot instanceof RecordSnapshot recordSnapshot) {
-            RecordSnapshot copy = new RecordSnapshot(recordSnapshot.getVariable());
-            copy.getSnapshots().putAll(recordSnapshot.getSnapshots());
-            return Optional.of(copy);
-        }
-        if (snapshot instanceof ArraySnapshot arraySnapshot) {
-            ArraySnapshot copy = new ArraySnapshot(arraySnapshot.getDefaultValue(), arraySnapshot.getVariable());
-            copy.getAssignments().addAll(arraySnapshot.getAssignments());
-            return Optional.of(arraySnapshot);
-        }
-        throw new IllegalArgumentException();
-    }
-
-    private @NotNull Constraint getConstraint(@NotNull Condition condition, @NotNull Constraint constraint) {
-        return switch (condition.getConditionType()) {
-            case EQUALITY -> constraint;
-            case INEQUALITY -> {
-                if (constraint instanceof NumericConstraint numericConstraint) {
-                    Optional<Double> point = numericConstraint.getPoint();
-                    if (point.isPresent()) {
-                        yield numericConstraint.negate();
-                    }
-                    yield NumericConstraint.any();
-                }
-                if (constraint instanceof BooleanConstraint booleanConstraint) {
-                    yield booleanConstraint.negate();
-                }
-                if (constraint instanceof StringConstraint stringConstraint) {
-                    if (stringConstraint.sequences().size() == 1) {
-                        yield stringConstraint.negate();
-                    } else {
-                        yield new InverseStringConstraint(Optionality.PRESENT, Set.of());
-                    }
-                }
-                if (constraint instanceof InverseStringConstraint) {
-                    yield new InverseStringConstraint(Optionality.PRESENT, Set.of());
-                }
-                if (constraint instanceof OpenConstraint) {
-                    yield new OpenConstraint(Optionality.PRESENT);
-                }
-                throw new AssertionError();
-            }
-            case LESS_THAN -> {
-                if (!(constraint instanceof NumericConstraint numericConstraint)) {
-                    throw new IllegalStateException();
-                }
-                yield numericConstraint.getMaximum()
-                        .map(maximum -> NumericConstraint.lessThan(maximum.value()))
-                        .orElse(NumericConstraint.any());
-            }
-            case LESS_THAN_OR_EQUAL -> {
-                if (!(constraint instanceof NumericConstraint numericConstraint)) {
-                    throw new IllegalStateException();
-                }
-                yield numericConstraint.getMaximum()
-                        .map(maximum -> NumericConstraint.lessThanOrEqual(maximum.value()))
-                        .orElse(NumericConstraint.any());
-            }
-            case GREATER_THAN -> {
-                if (!(constraint instanceof NumericConstraint numericConstraint)) {
-                    throw new IllegalStateException();
-                }
-                yield numericConstraint.getMinimum()
-                        .map(minimum -> NumericConstraint.greaterThan(minimum.value()))
-                        .orElse(NumericConstraint.any());
-            }
-            case GREATER_THAN_OR_EQUAL -> {
-                if (!(constraint instanceof NumericConstraint numericConstraint)) {
-                    throw new IllegalStateException();
-                }
-                yield numericConstraint.getMinimum()
-                        .map(minimum -> NumericConstraint.greaterThanOrEqual(minimum.value()))
-                        .orElse(NumericConstraint.any());
-            }
-        };
-    }
-
     /**
      * Attempts to retrieve the latest snapshot for the specified variable. If this state does not modify the variable,
      * the predecessors of this state are recursively queried until the latest snapshot is found. If this state or its
      * predecessors has no reference to this variable, or if the variable is a field, an empty optional is returned.
      *
-     * @param referenceValue the variable.
+     * @param expression the variable.
      * @return the latest snapshot for the variable, or an empty optional if no reference to this variable was found.
      */
-    public @NotNull Optional<ReferenceSnapshot> findSnapshot(@NotNull ReferenceValue referenceValue) {
-        if (referenceValue instanceof FieldValue) {
+    public @NotNull Optional<SnapshotExpression> getSnapshot(@NotNull ReferenceExpression expression) {
+        if (expression instanceof FieldExpression) {
             return Optional.empty();
         }
-        if (referenceValue instanceof ReferenceSnapshot snapshot) {
+        if (expression instanceof SnapshotExpression snapshot) {
             return Optional.of(snapshot);
         }
-        if (referenceValue instanceof VariableValue variable) {
-            if (snapshots.containsKey(variable)) {
-                return Optional.of(snapshots.get(variable));
+        if (expression instanceof VariableExpression variable) {
+            Field field = variable.getField();
+            if (snapshots.containsKey(field)) {
+                return Optional.of(snapshots.get(field));
             } else if (predecessor != null) {
-                return predecessor.findSnapshot(referenceValue);
+                return predecessor.getSnapshot(expression);
             } else {
                 return Optional.empty();
             }
         }
-        if (referenceValue instanceof IndexValue indexValue) {
-            Optional<ReferenceSnapshot> snapshot = findSnapshot(indexValue.variable());
+        if (expression instanceof IndexExpression indexValue) {
+            Optional<SnapshotExpression> snapshot = getSnapshot(indexValue.getVariable());
             if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
                 return Optional.empty();
             }
-            Value indexSnapshot = getSnapshot(indexValue.index());
+            Expression indexSnapshot = getSnapshot(indexValue.getIndex());
             List<ArrayEntry> assignments = arraySnapshot.getAssignments(this, indexSnapshot);
             if (assignments.size() > 1) {
-                StringBuilder message = new StringBuilder();
-                message.append("Array with assignments: ");
-                StringJoiner joiner = new StringJoiner(", ", "{", "}");
-                for (ArrayEntry.Assignment assignment : arraySnapshot.getAssignments()) {
-                    String string = getConstraint(assignment.index()).getPresentableText() + " -> " + assignment.value();
-                    joiner.add(string);
-                }
-                message.append(joiner);
-                message.append(" [").append(arraySnapshot.getDefaultValue()).append("] ");
-                List<Value> list = new ArrayList<>();
-                for (ArrayEntry assignment : assignments) {
-                    Value value = assignment.getValue();
-                    list.add(value);
-                }
-                message.append(" returned multiple assignments: ").append(list);
-                message.append(" for index: ").append(getConstraint(indexSnapshot).getPresentableText());
-                throw new IllegalStateException(message.toString());
+                throw new IllegalStateException("Array: " + arraySnapshot + " provided " + assignments.size() + " assignments for index " + indexSnapshot);
             } else if (assignments.isEmpty()) {
                 throw new IllegalStateException("Array: " + arraySnapshot + " provided no assignments for index " + indexSnapshot);
             }
             ArrayEntry arrayEntry = assignments.get(0);
             if (arrayEntry instanceof ArrayEntry.DefaultValue defaultAssignment) {
-                Value value = defaultAssignment.defaultValue();
-                if (!(value instanceof ReferenceValue defaultValue)) {
+                Expression value = defaultAssignment.defaultValue();
+                if (!(value instanceof ReferenceExpression defaultValue)) {
                     VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
-                    add(new Condition(variableSnapshot, ConditionType.EQUALITY, new ValueExpression(value)), false);
+                    add(new BinaryExpression(BinaryOperator.EQUAL_TO, RapidPrimitiveType.BOOLEAN, variableSnapshot, value));
                     return Optional.of(variableSnapshot);
                 }
-                Optional<ReferenceSnapshot> referenceSnapshot = copy(defaultValue).or(() -> createSnapshot(defaultValue));
-                if (referenceSnapshot.isPresent()) {
-                    getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, referenceSnapshot.orElseThrow(), defaultValue));
+                Optional<SnapshotExpression> defaultSnapshot = getSnapshot(defaultValue);
+                if(defaultSnapshot.isPresent()) {
+                    arraySnapshot.assign(indexSnapshot, defaultSnapshot.orElseThrow());
                 }
-                referenceSnapshot.ifPresent(variable -> arraySnapshot.assign(indexSnapshot, variable));
-                return referenceSnapshot;
+                return defaultSnapshot;
             }
             if (arrayEntry instanceof ArrayEntry.Assignment assignment) {
-                Value value = assignment.value();
-                if (!(value instanceof ReferenceValue assignmentValue)) {
+                Expression value = assignment.value();
+                if (!(value instanceof ReferenceExpression assignmentValue)) {
                     VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
-                    add(new Condition(variableSnapshot, ConditionType.EQUALITY, new ValueExpression(value)), false);
+                    add(new BinaryExpression(BinaryOperator.EQUAL_TO, RapidPrimitiveType.BOOLEAN, variableSnapshot, value));
                     return Optional.of(variableSnapshot);
                 }
-                return findSnapshot(assignmentValue);
+                return getSnapshot(assignmentValue);
             }
         }
-        if (referenceValue instanceof ComponentValue componentValue) {
-            Optional<ReferenceSnapshot> snapshot = findSnapshot(componentValue.variable());
+        if (expression instanceof ComponentExpression componentValue) {
+            Optional<SnapshotExpression> snapshot = getSnapshot(componentValue.getVariable());
             if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof RecordSnapshot recordSnapshot)) {
                 return Optional.empty();
             }
-            Value value = recordSnapshot.getValue(componentValue.name());
-            if (value instanceof ReferenceValue variable) {
-                return findSnapshot(variable);
+            Expression value = recordSnapshot.getValue(componentValue.getComponent());
+            if (value instanceof ReferenceExpression variable) {
+                return getSnapshot(variable);
             } else {
                 VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
-                add(new Condition(variableSnapshot, ConditionType.EQUALITY, new ValueExpression(value)), false);
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, RapidPrimitiveType.BOOLEAN, variableSnapshot, value));
                 return Optional.of(variableSnapshot);
             }
         }
         throw new IllegalArgumentException();
-    }
-
-    public @NotNull Set<Condition> findConditions(@NotNull ReferenceValue referenceValue) {
-        Optional<ReferenceSnapshot> optional = findSnapshot(referenceValue);
-        if (optional.isEmpty()) {
-            return Set.of();
-        }
-        ReferenceSnapshot snapshot = optional.orElseThrow();
-        Set<Condition> result = new HashSet<>();
-        for (Condition condition : conditions) {
-            if (condition.getVariable().equals(snapshot)) {
-                result.add(condition);
-            }
-        }
-        if (snapshots.containsValue(snapshot)) {
-            return result;
-        }
-        if (predecessor == null) {
-            return result;
-        }
-        result.addAll(predecessor.findConditions(snapshot));
-        return result;
-    }
-
-    public @NotNull Optional<Constraint> findConstraint(@NotNull ReferenceValue referenceValue) {
-        Optional<ReferenceSnapshot> optional = findSnapshot(referenceValue);
-        if (optional.isEmpty()) {
-            return Optional.empty();
-        }
-        ReferenceSnapshot snapshot = optional.orElseThrow();
-        if (!(snapshot instanceof VariableSnapshot variableSnapshot)) {
-            return Optional.empty();
-        }
-        if (optionality.containsKey(variableSnapshot)) {
-            return Optional.ofNullable(optionality.get(variableSnapshot));
-        }
-        if (snapshots.containsValue(variableSnapshot)) {
-            return Optional.empty();
-        }
-        if (predecessor == null) {
-            return Optional.empty();
-        }
-        return predecessor.findConstraint(snapshot);
-    }
-
-    /**
-     * Simplifies the side effect of the specified condition.
-     *
-     * @param expression the expression.
-     * @param result the value which the specified expression should evaluate to.
-     */
-    private void inferSideEffect(@NotNull Expression expression, @NotNull Set<ReferenceValue> visited, boolean result) {
-        expression.accept(new ControlFlowVisitor<Void>() {
-            @Override
-            public Void visitValueExpression(@NotNull ValueExpression expression) {
-                Value value = expression.value();
-                if (!(value.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
-                    /*
-                     * The purpose of this method is to simplify the side effects of a conditional jump, where the condition
-                     * must be a boolean value.
-                     */
-                    return null;
-                }
-                if (!(value instanceof ReferenceValue referenceValue)) {
-                    /*
-                     * The variable is not a variable, which means that the value is an error, in which case no side
-                     * effects can be inferred; or the value is a boolean constant.
-                     */
-                    return null;
-                }
-                if (!(visited.add(referenceValue))) {
-                    return null;
-                }
-                Condition condition = new Condition(referenceValue, ConditionType.EQUALITY, new ValueExpression(ConstantValue.of(result)));
-                conditions.add(condition);
-                Set<Condition> variants = findConditions(referenceValue);
-                for (Condition variant : variants) {
-                    if (variant.equals(condition)) {
-                        continue;
-                    }
-                    ConditionType conditionType = variant.getConditionType();
-                    if (conditionType != ConditionType.EQUALITY && conditionType != ConditionType.INEQUALITY) {
-                        throw new IllegalStateException();
-                    }
-                    inferSideEffect(variant.getExpression(), visited, (conditionType == ConditionType.INEQUALITY) != result);
-                }
-                return null;
-            }
-
-            @Override
-            public Void visitBinaryExpression(@NotNull BinaryExpression expression) {
-                Value left = expression.left();
-                if (!(left instanceof ReferenceValue referenceValue)) {
-                    return null;
-                }
-                switch (expression.operator()) {
-                    case LESS_THAN ->
-                            addCondition(new Condition(referenceValue, ConditionType.LESS_THAN, new ValueExpression(expression.right())), result);
-                    case LESS_THAN_OR_EQUAL ->
-                            addCondition(new Condition(referenceValue, ConditionType.LESS_THAN_OR_EQUAL, new ValueExpression(expression.right())), result);
-                    case EQUAL_TO ->
-                            addCondition(new Condition(referenceValue, ConditionType.EQUALITY, new ValueExpression(expression.right())), result);
-                    case NOT_EQUAL_TO ->
-                            addCondition(new Condition(referenceValue, ConditionType.INEQUALITY, new ValueExpression(expression.right())), result);
-                    case GREATER_THAN ->
-                            addCondition(new Condition(referenceValue, ConditionType.GREATER_THAN, new ValueExpression(expression.right())), result);
-                    case GREATER_THAN_OR_EQUAL ->
-                            addCondition(new Condition(referenceValue, ConditionType.GREATER_THAN_OR_EQUAL, new ValueExpression(expression.right())), result);
-                    case AND -> {
-                        if (result) {
-                            conditions.add(new Condition(referenceValue, ConditionType.EQUALITY, new ValueExpression(ConstantValue.of(true))));
-                            if (expression.right() instanceof ReferenceValue right) {
-                                conditions.add(new Condition(right, ConditionType.EQUALITY, new ValueExpression(ConstantValue.of(true))));
-                            }
-                        }
-                    }
-                }
-                return null;
-            }
-
-            @Override
-            public Void visitUnaryExpression(@NotNull UnaryExpression expression) {
-                if (expression.operator() == UnaryOperator.NOT) {
-                    ValueExpression temporary = new ValueExpression(ConstantValue.of(!(result)));
-                    inferSideEffect(temporary, visited, !(result));
-                }
-                return null;
-            }
-        });
-    }
-
-    /**
-     * Simplify the side effect of a condition.
-     * <p>
-     * For example, if the condition {@code x := true} is added, and {@code x := y > 0}, the condition {@code y > 0} can
-     * be inferred.
-     *
-     * @param condition the condition which was added.
-     */
-    private void inferSideEffect(@NotNull Condition condition) {
-        Expression expression = condition.getExpression();
-        if (!(expression instanceof ValueExpression valueExpression)) {
-            return;
-        }
-        if (!(valueExpression.value() instanceof ConstantValue constantValue)) {
-            return;
-        }
-        if (!(constantValue.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
-            return;
-        }
-        boolean value = (boolean) constantValue.getValue();
-        Expression temporary = new ValueExpression(condition.getVariable());
-        inferSideEffect(temporary, new HashSet<>(), value);
-    }
-
-    private void addCondition(@NotNull Condition condition, boolean normal) {
-        Condition value = normal ? condition : condition.negate();
-        conditions.add(value);
     }
 
     @Override
@@ -1262,37 +545,5 @@ public class DataFlowState {
                 ", conditions=" + conditions.size() +
                 ", constraints=" + optionality.size() +
                 '}';
-    }
-
-    public enum AssignmentType {
-        INITIALIZE {
-            @Override
-            public @NotNull Constraint getConstraint(@NotNull Optionality optionality, @NotNull RapidType type) {
-                Constraint constraint;
-                if (type.equals(RapidPrimitiveType.ANYTYPE)) {
-                    constraint = new OpenConstraint(optionality);
-                } else if (type.isAssignable(RapidPrimitiveType.NUMBER) || type.isAssignable(RapidPrimitiveType.DOUBLE)) {
-                    constraint = NumericConstraint.equalTo(0);
-                } else if (type.isAssignable(RapidPrimitiveType.STRING)) {
-                    constraint = StringConstraint.anyOf("");
-                } else if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
-                    constraint = BooleanConstraint.alwaysFalse();
-                } else {
-                    constraint = new OpenConstraint(optionality);
-                }
-                if (optionality != constraint.getOptionality()) {
-                    constraint = constraint.setOptionality(optionality);
-                }
-                return constraint;
-            }
-        },
-        UNKNOWN {
-            @Override
-            public @NotNull Constraint getConstraint(@NotNull Optionality optionality, @NotNull RapidType type) {
-                return Constraint.any(type, optionality);
-            }
-        };
-
-        public abstract @NotNull Constraint getConstraint(@NotNull Optionality optionality, @NotNull RapidType type);
     }
 }

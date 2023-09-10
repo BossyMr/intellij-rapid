@@ -1,8 +1,7 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.rapid.language.flow.Constraint;
+import com.bossymr.rapid.language.flow.BooleanValue;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
@@ -16,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ConditionAnalyzer extends ControlFlowVisitor<Constraint> {
+public class ConditionAnalyzer extends ControlFlowVisitor<BooleanValue> {
 
     private final @NotNull DataFlowState state;
 
@@ -26,12 +25,13 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Constraint> {
 
     @SuppressWarnings("rawtypes")
     @Override
-    public @NotNull Constraint visitCondition(@NotNull Condition condition) {
+    public @NotNull BooleanValue visitExpression(@NotNull Condition condition) {
         try (Context context = new Context()) {
             Solver solver = context.mkSolver();
             Map<ReferenceValue, Symbol> symbols = new HashMap<>();
-            List<ReferenceSnapshot> snapshots = new ArrayList<>();
-            for (Condition relation : state.getAllConditions()) {
+            List<SnapshotExpression> snapshots = new ArrayList<>();
+            // TODO: 2023-09-10 The order must be oldest-newest
+            for (Condition relation : state.getAllExpressions()) {
                 Expr expr = createCondition(context, relation, symbols, snapshots);
                 if(expr == null) {
                     continue;
@@ -40,32 +40,32 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Constraint> {
             }
             Expr expr = createCondition(context, condition, symbols, snapshots);
             if(expr == null) {
-                return Constraint.ANY_VALUE;
+                return BooleanValue.ANY_VALUE;
             }
             solver.add(expr);
             Expr<?> symbol = getSymbol(context, condition.getVariable(), symbols, snapshots);
             Status isTrue = solver.check(context.mkEq(symbol, context.mkBool(true)));
             Status isFalse = solver.check(context.mkEq(symbol, context.mkBool(false)));
             if (isTrue == Status.UNKNOWN || isFalse == Status.UNKNOWN) {
-                return Constraint.ANY_VALUE;
+                return BooleanValue.ANY_VALUE;
             }
             boolean mightBeTrue = isTrue == Status.SATISFIABLE;
             boolean mightBeFalse = isFalse != Status.SATISFIABLE;
             if (mightBeTrue && mightBeFalse) {
-                return Constraint.ANY_VALUE;
+                return BooleanValue.ANY_VALUE;
             }
             if (mightBeTrue) {
-                return Constraint.ALWAYS_TRUE;
+                return BooleanValue.ALWAYS_TRUE;
             }
             if (mightBeFalse) {
-                return Constraint.ALWAYS_FALSE;
+                return BooleanValue.ALWAYS_FALSE;
             }
-            return Constraint.NO_VALUE;
+            return BooleanValue.NO_VALUE;
         }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private @Nullable Expr createCondition(@NotNull Context context, @NotNull Condition condition, @NotNull Map<ReferenceValue, Symbol> symbols, @NotNull List<ReferenceSnapshot> snapshots) {
+    private @Nullable Expr createCondition(@NotNull Context context, @NotNull Condition condition, @NotNull Map<ReferenceValue, Symbol> symbols, @NotNull List<SnapshotExpression> snapshots) {
         ReferenceValue variable = condition.getVariable();
         Expression expression = condition.getExpression();
         Expr expr = createExpression(context, expression, symbols, snapshots);
@@ -83,7 +83,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Constraint> {
         };
     }
 
-    private @Nullable Expr<?> createExpression(@NotNull Context context, @NotNull Expression expression, @NotNull Map<ReferenceValue, Symbol> symbols, @NotNull List<ReferenceSnapshot> snapshots) {
+    private @Nullable Expr<?> createExpression(@NotNull Context context, @NotNull Expression expression, @NotNull Map<ReferenceValue, Symbol> symbols, @NotNull List<SnapshotExpression> snapshots) {
         return expression.accept(new ControlFlowVisitor<>() {
             @Override
             public Expr<?> visitValueExpression(@NotNull ValueExpression expression) {
@@ -138,7 +138,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Constraint> {
         });
     }
 
-    private @Nullable Expr<?> getSymbol(@NotNull Context context, @NotNull Value value, @NotNull Map<ReferenceValue, Symbol> symbols, @NotNull List<ReferenceSnapshot> snapshots) {
+    private @Nullable Expr<?> getSymbol(@NotNull Context context, @NotNull Value value, @NotNull Map<ReferenceValue, Symbol> symbols, @NotNull List<SnapshotExpression> snapshots) {
         if (value instanceof ReferenceValue variable) {
             Symbol symbol = symbols.containsKey(variable) ? symbols.get(variable) : createSymbol(context, variable, snapshots);
             symbols.put(variable, symbol);
@@ -179,8 +179,8 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Constraint> {
         throw new IllegalArgumentException("Unexpected value: " + value);
     }
 
-    private @NotNull Symbol createSymbol(@NotNull Context context, @NotNull ReferenceValue variable, @NotNull List<ReferenceSnapshot> snapshots) {
-        if (!(variable instanceof ReferenceSnapshot snapshot)) {
+    private @NotNull Symbol createSymbol(@NotNull Context context, @NotNull ReferenceValue variable, @NotNull List<SnapshotExpression> snapshots) {
+        if (!(variable instanceof SnapshotExpression snapshot)) {
             throw new IllegalArgumentException();
         }
         if (snapshots.contains(snapshot)) {
@@ -191,7 +191,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Constraint> {
     }
 
     @Override
-    public @NotNull Constraint visitReferenceValue(@NotNull ReferenceValue value) {
+    public @NotNull BooleanValue visitReferenceValue(@NotNull ReferenceValue value) {
         if (!(value.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             throw new IllegalArgumentException("Cannot calculate constraint for: " + value);
         }
@@ -199,24 +199,24 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Constraint> {
     }
 
     @Override
-    public @NotNull Constraint visitErrorValue(@NotNull ErrorValue value) {
+    public @NotNull BooleanValue visitErrorValue(@NotNull ErrorValue value) {
         if (!(value.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             throw new IllegalArgumentException("Cannot calculate constraint for: " + value);
         }
-        return Constraint.ANY_VALUE;
+        return BooleanValue.ANY_VALUE;
     }
 
     @Override
-    public @NotNull Constraint visitConstantValue(@NotNull ConstantValue constantValue) {
+    public @NotNull BooleanValue visitConstantValue(@NotNull ConstantValue constantValue) {
         Object object = constantValue.getValue();
         if (!(object instanceof Boolean value)) {
             throw new IllegalArgumentException("Cannot calculate constraint for: " + constantValue);
         }
-        return Constraint.of(value);
+        return BooleanValue.of(value);
     }
 
     @Override
-    public @NotNull Constraint visitValueExpression(@NotNull ValueExpression expression) {
+    public @NotNull BooleanValue visitValueExpression(@NotNull ValueExpression expression) {
         Value value = expression.value();
         return value.accept(this);
     }

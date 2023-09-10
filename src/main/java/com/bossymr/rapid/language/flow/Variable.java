@@ -7,24 +7,38 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-/**
- * A {@code ReferenceValue} represents a variable.
- *
- * @param index the index of the variable.
- * @param fieldType the type of the variable, or {@code null} if this variable is an intermediate variable.
- * @param type the value type of the variable.
- * @param name the name of the variable, or {@code null} if this variable is an intermediate variable.
- */
-public record Variable(
-        int index,
-        @Nullable FieldType fieldType,
-        @NotNull RapidType type,
-        @Nullable String name
-) implements Field {
+public class Variable implements Field {
+
+    private final int index;
+    private final @Nullable FieldType fieldType;
+    private final @NotNull RapidType type;
+    private final @Nullable String name;
+
+    public Variable(int index, @Nullable FieldType fieldType, @NotNull RapidType type, @Nullable String name) {
+        this.index = index;
+        this.fieldType = fieldType;
+        this.type = type;
+        this.name = name;
+    }
+
+    public int getIndex() {
+        return index;
+    }
+
+    public @Nullable FieldType getFieldType() {
+        return fieldType;
+    }
+
+    public @NotNull RapidType getType() {
+        return type;
+    }
+
+    public @Nullable String getName() {
+        return name;
+    }
 
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return 
-        visitor.visitVariable(this);
+        return visitor.visitVariable(this);
     }
 
     @Override
@@ -32,11 +46,21 @@ public record Variable(
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Variable variable = (Variable) o;
-        return index == variable.index;
+        return index == variable.index && fieldType == variable.fieldType && Objects.equals(type, variable.type) && Objects.equals(name, variable.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index);
+        return Objects.hash(index, fieldType, type, name);
+    }
+
+    @Override
+    public String toString() {
+        return "Variable{" +
+                "index=" + index +
+                ", fieldType=" + fieldType +
+                ", type=" + type +
+                ", name='" + name + '\'' +
+                '}';
     }
 }

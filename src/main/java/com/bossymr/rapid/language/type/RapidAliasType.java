@@ -6,6 +6,8 @@ import com.bossymr.rapid.language.symbol.ValueType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 public class RapidAliasType implements RapidType {
 
     private final @NotNull RapidAlias alias;
@@ -51,5 +53,25 @@ public class RapidAliasType implements RapidType {
         } else {
             return RapidType.getDefaultText();
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RapidAliasType that = (RapidAliasType) o;
+        return Objects.equals(alias, that.alias);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(alias);
+    }
+
+    @Override
+    public String toString() {
+        return "RapidAliasType{" +
+                "alias=" + alias +
+                '}';
     }
 }

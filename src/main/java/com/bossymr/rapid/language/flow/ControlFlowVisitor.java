@@ -1,6 +1,5 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
@@ -101,42 +100,6 @@ public class ControlFlowVisitor<R> {
         return null;
     }
 
-    public R visitLocalVariableValue(@NotNull VariableValue value) {
-        return visitReferenceValue(value);
-    }
-
-    public R visitFieldVariableValue(@NotNull FieldValue value) {
-        return visitReferenceValue(value);
-    }
-
-    public R visitComponentVariableValue(@NotNull ComponentValue component) {
-        return visitReferenceValue(component);
-    }
-
-    public R visitIndexValue(@NotNull IndexValue value) {
-        return visitReferenceValue(value);
-    }
-
-    public R visitReferenceValue(@NotNull ReferenceValue value) {
-        return visitValue(value);
-    }
-
-    public R visitConstantValue(@NotNull ConstantValue value) {
-        return visitValue(value);
-    }
-
-    public R visitErrorValue(@NotNull ErrorValue value) {
-        return visitValue(value);
-    }
-
-    public R visitValue(@NotNull Value value) {
-        return null;
-    }
-
-    public R visitValueExpression(@NotNull ValueExpression expression) {
-        return visitExpression(expression);
-    }
-
     public R visitAggregateExpression(@NotNull AggregateExpression expression) {
         return visitExpression(expression);
     }
@@ -153,27 +116,47 @@ public class ControlFlowVisitor<R> {
         return null;
     }
 
-    public R visitCondition(@NotNull Condition condition) {
-        return null;
+    public R visitArraySnapshotExpression(@NotNull ArraySnapshot snapshot) {
+        return visitSnapshotExpression(snapshot);
     }
 
-    public R visitArraySnapshot(@NotNull ArraySnapshot snapshot) {
-        return visitSnapshot(snapshot);
+    public R visitRecordSnapshotExpression(@NotNull RecordSnapshot snapshot) {
+        return visitSnapshotExpression(snapshot);
     }
 
-    public R visitRecordSnapshot(@NotNull RecordSnapshot snapshot) {
-        return visitSnapshot(snapshot);
+    public R visitVariableSnapshotExpression(VariableSnapshot snapshot) {
+        return visitSnapshotExpression(snapshot);
     }
 
-    public R visitVariableSnapshot(VariableSnapshot snapshot) {
-        return visitSnapshot(snapshot);
+    public R visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
+        return visitReferenceExpression(snapshot);
     }
 
-    public R visitSnapshot(@NotNull ReferenceSnapshot snapshot) {
-        return null;
+    public R visitPathCounterExpression(@NotNull PathCounter pathCounter) {
+        return visitSnapshotExpression(pathCounter);
     }
 
-    public R visitPathCounter(@NotNull PathCounter pathCounter) {
-        return visitSnapshot(pathCounter);
+    public R visitConstantExpression(@NotNull ConstantExpression expression) {
+        return visitExpression(expression);
+    }
+
+    public R visitIndexExpression(@NotNull IndexExpression expression) {
+        return visitReferenceExpression(expression);
+    }
+
+    public R visitComponentExpression(@NotNull ComponentExpression expression) {
+        return visitReferenceExpression(expression);
+    }
+
+    public R visitVariableExpression(@NotNull VariableExpression expression) {
+        return visitReferenceExpression(expression);
+    }
+
+    public R visitFieldExpression(@NotNull FieldExpression expression) {
+        return visitReferenceExpression(expression);
+    }
+
+    public R visitReferenceExpression(@NotNull ReferenceExpression expression) {
+        return visitExpression(expression);
     }
 }

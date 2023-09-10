@@ -1,22 +1,22 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
-import com.bossymr.rapid.language.flow.value.Value;
+import com.bossymr.rapid.language.flow.value.Expression;
 import org.jetbrains.annotations.NotNull;
 
 public sealed interface ArrayEntry {
 
-    @NotNull Value getValue();
+    @NotNull Expression getValue();
 
-    record Assignment(@NotNull Value index, @NotNull Value value) implements ArrayEntry {
+    record Assignment(@NotNull Expression index, @NotNull Expression value) implements ArrayEntry {
         @Override
-        public @NotNull Value getValue() {
+        public @NotNull Expression getValue() {
             return value;
         }
     }
 
-    record DefaultValue(@NotNull Value defaultValue) implements ArrayEntry {
+    record DefaultValue(@NotNull Expression defaultValue) implements ArrayEntry {
         @Override
-        public @NotNull Value getValue() {
+        public @NotNull Expression getValue() {
             return defaultValue;
         }
     }

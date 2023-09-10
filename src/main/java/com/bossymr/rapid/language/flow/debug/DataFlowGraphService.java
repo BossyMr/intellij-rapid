@@ -6,7 +6,6 @@ import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.ControlFlowService;
-import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
@@ -19,7 +18,6 @@ import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.StatementListType;
-import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.configurations.PathEnvironmentVariableUtil;
@@ -237,12 +235,12 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("[shape=plain,label=<").append("<table BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">");
         stringBuilder.append("<tr><td COLSPAN=\"3\">").append("State #").append(new ArrayList<>(states.getAll(block)).indexOf(state)).append("</td></tr>\n");
         stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Snapshots").append("</td></tr>\n");
-        Set<ReferenceSnapshot> snapshots = new HashSet<>();
+        Set<SnapshotExpression> snapshots = new HashSet<>();
         for (var entry : state.getSnapshots().entrySet()) {
             writeSnapshot(stringBuilder, state, entry.getKey(), entry.getValue(), snapshots);
         }
         stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Conditions").append("</td></tr>\n");
-        for (Condition condition : state.getConditions()) {
+        for (Condition condition : state.getExpressions()) {
             stringBuilder.append("<tr>");
             stringBuilder.append("<td>");
             stringBuilder.append(HtmlChunk.text(condition.getVariable().accept(new ControlFlowFormatVisitor())));
@@ -277,7 +275,7 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("</table>>];\n");
     }
 
-    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceValue variable, @NotNull ReferenceSnapshot snapshot, @NotNull Set<ReferenceSnapshot> snapshots) {
+    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceValue variable, @NotNull SnapshotExpression snapshot, @NotNull Set<SnapshotExpression> snapshots) {
         if(!(snapshots.add(snapshot))) {
             return;
         }
@@ -308,7 +306,7 @@ public class DataFlowGraphService extends AnAction {
                 stringBuilder.append("</tr>\n");
             }
             for (var entry : recordSnapshot.getSnapshots().entrySet()) {
-                if (entry.getValue() instanceof ReferenceSnapshot componentSnapshot) {
+                if (entry.getValue() instanceof SnapshotExpression componentSnapshot) {
                     writeSnapshot(stringBuilder, state, new ComponentValue(componentSnapshot.getType(), recordSnapshot, entry.getKey()), componentSnapshot, snapshots);
                 }
             }
@@ -336,11 +334,11 @@ public class DataFlowGraphService extends AnAction {
             }
             for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments(state, Constraint.any(RapidPrimitiveType.NUMBER))) {
                 if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
-                    if (assignment.value() instanceof ReferenceSnapshot referenceValue) {
+                    if (assignment.value() instanceof SnapshotExpression referenceValue) {
                         writeSnapshot(stringBuilder, state, new IndexValue(arraySnapshot, assignment.index()), referenceValue, snapshots);
                     }
                 } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
-                    if (defaultValue.defaultValue() instanceof ReferenceSnapshot referenceValue) {
+                    if (defaultValue.defaultValue() instanceof SnapshotExpression referenceValue) {
                         writeSnapshot(stringBuilder, state, new IndexValue(arraySnapshot, ConstantValue.of("default")), referenceValue, snapshots);
                     }
                 }

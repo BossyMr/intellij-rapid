@@ -6,10 +6,10 @@ import org.jetbrains.annotations.Nullable;
 
 public interface Field {
 
-    int index();
+    int getIndex();
 
-    @NotNull RapidType type();
+    @NotNull RapidType getType();
 
-    @Nullable String name();
+    @Nullable String getName();
 
 }

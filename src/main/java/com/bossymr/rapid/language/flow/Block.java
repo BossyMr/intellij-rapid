@@ -72,7 +72,7 @@ public sealed abstract class Block {
 
     public @Nullable Variable findVariable(@NotNull String name) {
         for (Variable variable : getVariables()) {
-            if (name.equals(variable.name())) {
+            if (name.equals(variable.getName())) {
                 return variable;
             }
         }

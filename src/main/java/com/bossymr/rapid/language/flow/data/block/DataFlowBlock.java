@@ -1,20 +1,13 @@
 package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.BasicBlock;
-import com.bossymr.rapid.language.flow.condition.Condition;
-import com.bossymr.rapid.language.flow.condition.ConditionType;
-import com.bossymr.rapid.language.flow.constraint.BooleanConstraint;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
-import com.bossymr.rapid.language.flow.constraint.NumericConstraint;
-import com.bossymr.rapid.language.flow.constraint.StringConstraint;
+import com.bossymr.rapid.language.flow.BooleanValue;
+import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.BlockCycle;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
-import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
-import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
-import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -88,80 +81,38 @@ public class DataFlowBlock {
         return predecessors;
     }
 
-    public void assign(@NotNull Condition condition) {
-        if (condition.getVariable() instanceof FieldValue) {
-            return;
+    public void add(@NotNull Expression expression) {
+        if (!(expression.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
+            throw new IllegalArgumentException("Cannot assign expression: " + expression);
         }
-        separate(condition);
+        separate(expression);
         for (DataFlowState state : states) {
-            if (isCyclic(state, condition)) {
-                /*
-                 * If the assignment is cyclic, we need to rewrite the assignment as a function of the index. If the
-                 * assignment cannot be rewritten, assume that the value can be anything. We need to do this, otherwise
-                 * we would need as many states as there might be iterations of the loop, which could be infinite.
-                 */
-                state.createSnapshot(condition.getVariable());
-            } else {
-                state.assign(condition, true);
-            }
+            // TODO: Check whether this assignment is cyclic, and if so, handle it correctly by using a relevant path counter.
+            state.add(expression);
         }
     }
 
-    /**
-     * Checks if the specified condition is cyclic, for the specified state and condition. A condition is cyclic if
-     * this block is part of a cycle (loop) and the expression of the condition references the variable of the
-     * condition. If the expression references a previous snapshot of the variable, it is still counted as the same
-     * variable. The condition is recursively searched, so if the expression contains a variable which itself references
-     * the variable, it is still cyclic.
-     *
-     * @param state the state.
-     * @param condition the condition.
-     * @return if the specified condition is cyclic.
-     */
-    public boolean isCyclic(@NotNull DataFlowState state, @NotNull Condition condition) {
-        if (!(getStates().contains(state))) {
-            throw new IllegalArgumentException("State: " + state + " must be in block: " + this);
+    public void assign(@NotNull ReferenceExpression variable, @NotNull Expression expression) {
+        if (!(variable.getType().isAssignable(expression.getType()))) {
+            throw new IllegalArgumentException("Cannot assign expression: " + expression);
         }
-        if (getCycles().isEmpty()) {
-            /*
-             * If this block is not part of a cycle, the variable would only be modified once.
-             */
-            return false;
+        separate(new BinaryExpression(BinaryOperator.EQUAL_TO, RapidPrimitiveType.BOOLEAN, variable, expression));
+        for (DataFlowState state : states) {
+            // TODO: Check whether this assignment is cyclic, and if so, handle it correctly by using a relevant path counter.
+            state.assign(variable, expression);
         }
-        return isCyclic(condition.getVariable(), condition, state, new HashSet<>());
     }
 
-    private boolean isCyclic(@NotNull ReferenceValue variable, @NotNull Condition condition, @NotNull DataFlowState state, @NotNull Set<Condition> visited) {
-        if (!(visited.add(condition))) {
-            return false;
-        }
-        List<ReferenceValue> variables = condition.getVariables();
-        for (ReferenceValue referenceValue : variables) {
-            if (referenceValue instanceof ReferenceSnapshot snapshot) {
-                Optional<ReferenceValue> optional = state.getVariable(snapshot);
-                if (optional.isPresent()) {
-                    referenceValue = optional.orElseThrow();
-                }
-            }
-            if (referenceValue.equals(variable)) {
-                return true;
-            }
-            Set<Condition> conditions = state.findConditions(referenceValue);
-            for (Condition child : conditions) {
-                if (isCyclic(variable, child, state, visited)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private void separate(@NotNull Condition condition) {
-        List<ReferenceValue> variables = condition.getVariables();
+    private void separate(@NotNull Expression expression) {
+        // TODO: 2023-09-10 This entire algorithm seems a bit overly complicated
+        Collection<Expression> components = expression.getAllComponents();
         List<DataFlowState> copy = new ArrayList<>();
-        for (ReferenceValue referenceValue : variables) {
-            List<IndexValue> indexValues = getIndexValues(referenceValue);
-            for (ListIterator<IndexValue> iterator = indexValues.listIterator(indexValues.size()); iterator.hasPrevious(); ) {
+        for (Expression component : components) {
+            if (!(component instanceof ReferenceExpression referenceExpression)) {
+                continue;
+            }
+            List<IndexExpression> indexExpressions = getIndexExpressions(referenceExpression);
+            for (ListIterator<IndexExpression> iterator = indexExpressions.listIterator(indexExpressions.size()); iterator.hasPrevious(); ) {
                 List<DataFlowState> results = separate(iterator.previous());
                 copy.addAll(results);
             }
@@ -169,22 +120,21 @@ public class DataFlowBlock {
         if (copy.isEmpty()) {
             return;
         }
-        System.out.println("Separating on: " + condition + ": " + states.size() + " -> " + copy.size());
         states.clear();
         states.addAll(copy);
     }
 
-    private @NotNull List<DataFlowState> separate(@NotNull IndexValue indexValue) {
-        if (indexValue.variable() instanceof FieldValue) {
+    private @NotNull List<DataFlowState> separate(@NotNull IndexExpression indexValue) {
+        if (indexValue.getVariable() instanceof FieldExpression) {
             return List.copyOf(states);
         }
         List<DataFlowState> results = new ArrayList<>();
         for (DataFlowState state : states) {
-            Optional<ReferenceSnapshot> snapshot = state.findSnapshot(indexValue.variable());
+            Optional<SnapshotExpression> snapshot = state.getSnapshot(indexValue.getVariable());
             if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
                 continue;
             }
-            List<ArrayEntry> assignments = arraySnapshot.getAssignments(state, indexValue.index());
+            List<ArrayEntry> assignments = arraySnapshot.getAssignments(state, indexValue.getIndex());
             if (assignments.size() == 1) {
                 results.add(state);
                 continue;
@@ -192,9 +142,9 @@ public class DataFlowBlock {
             for (int i = 0; i < assignments.size(); i++) {
                 ArrayEntry assignment = assignments.get(i);
                 DataFlowState copy = DataFlowState.copy(state);
-                assignAssignment(copy, indexValue, ConditionType.EQUALITY, assignment);
+                assignAssignment(copy, indexValue, BinaryOperator.EQUAL_TO, assignment);
                 for (int j = 0; j < i; j++) {
-                    assignAssignment(copy, indexValue, ConditionType.INEQUALITY, assignments.get(j));
+                    assignAssignment(copy, indexValue, BinaryOperator.NOT_EQUAL_TO, assignments.get(j));
                 }
                 results.add(copy);
             }
@@ -202,97 +152,67 @@ public class DataFlowBlock {
         return results;
     }
 
-    private void assignAssignment(@NotNull DataFlowState state, @NotNull IndexValue indexValue, @NotNull ConditionType conditionType, @NotNull ArrayEntry entry) {
+    private void assignAssignment(@NotNull DataFlowState state, @NotNull IndexExpression indexValue, @NotNull BinaryOperator operator, @NotNull ArrayEntry entry) {
         if (!(entry instanceof ArrayEntry.Assignment assignment)) {
             return;
         }
-        if (assignment.index() instanceof ReferenceValue referenceValue) {
+        if (assignment.index() instanceof ReferenceExpression referenceValue) {
             /*
              * For this assignment to occur, the index for the assignment must match the specified index.
              */
-            state.add(new Condition(referenceValue, conditionType, new ValueExpression(indexValue.index())), true);
-        } else if (indexValue.index() instanceof ReferenceValue referenceValue) {
+            state.add(new BinaryExpression(operator, RapidPrimitiveType.BOOLEAN, referenceValue, indexValue.getIndex()));
+        } else if (indexValue.getIndex() instanceof ReferenceExpression referenceValue) {
             /*
              * Likewise, for the assignment to occur, the specified index must match the index for the assignment.
              * If the index for the assignment is not a variable, the above condition will not be added - so it must be
-             * added now. However, if the above condition is added, the condition will be solved, and this condition
-             * will be added automatically.
+             * added now.
              */
-            state.add(new Condition(referenceValue, conditionType, new ValueExpression(assignment.index())), true);
+            state.add(new BinaryExpression(operator, RapidPrimitiveType.BOOLEAN, referenceValue, assignment.index()));
         }
     }
 
-    private @NotNull List<IndexValue> getIndexValues(@NotNull ReferenceValue referenceValue) {
-        if (!(referenceValue instanceof IndexValue)) {
+    private @NotNull List<IndexExpression> getIndexExpressions(@NotNull ReferenceExpression referenceValue) {
+        if (!(referenceValue instanceof IndexExpression)) {
             return List.of();
         }
-        List<IndexValue> indexValues = new ArrayList<>();
-        while (referenceValue instanceof IndexValue indexValue) {
+        List<IndexExpression> indexValues = new ArrayList<>();
+        while (referenceValue instanceof IndexExpression indexValue) {
             indexValues.add(indexValue);
-            referenceValue = indexValue.variable();
+            referenceValue = indexValue.getVariable();
         }
         return indexValues;
     }
 
-    public @NotNull Constraint getConstraint(@NotNull Value value) {
-        if (value instanceof ReferenceValue referenceValue) {
-            return getConstraint(referenceValue);
-        } else if (value instanceof ConstantValue constantValue) {
-            RapidType type = constantValue.getType();
-            if (type.isAssignable(RapidPrimitiveType.NUMBER) || type.isAssignable(RapidPrimitiveType.DOUBLE)) {
-                return NumericConstraint.equalTo((double) constantValue.getValue());
-            }
-            if (type.isAssignable(RapidPrimitiveType.STRING)) {
-                return StringConstraint.anyOf((String) constantValue.getValue());
-            }
-            if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
-                return BooleanConstraint.equalTo((boolean) constantValue.getValue());
-            }
-        } else if (value instanceof ErrorValue) {
-            return Constraint.any(value.getType());
-        }
-        throw new IllegalArgumentException("Invalid value: " + value);
-    }
-
-    private @NotNull Constraint getConstraint(@NotNull ReferenceValue referenceValue) {
-        return states.stream()
-                .map(state -> state.getConstraint(referenceValue))
-                .collect(Constraint.or(referenceValue.getType()));
-    }
-
-    public @NotNull Constraint getHistoricConstraint(@NotNull ReferenceValue value, @NotNull LinearInstruction.AssignmentInstruction instruction) {
-        List<Constraint> constraints = new ArrayList<>();
+    public @NotNull Optionality getOptionality(@NotNull ReferenceExpression expression) {
+        Optionality optionality = null;
         for (DataFlowState state : states) {
-            for (Condition condition : state.findConditions(instruction.variable())) {
-                Class<?> conditionClass = condition.getExpression().getClass();
-                Class<?> assignmentClass = instruction.value().getClass();
-                if (!(conditionClass.equals(assignmentClass))) {
-                    continue;
-                }
-                for (ReferenceValue variable : condition.getVariables()) {
-                    if (!(variable instanceof VariableSnapshot snapshot)) {
-                        continue;
-                    }
-                    if (!(Objects.equals(snapshot.getVariable(), value))) {
-                        continue;
-                    }
-                    Constraint constraint = state.getConstraint(snapshot);
-                    constraints.add(constraint);
-                }
+            if(optionality == null) {
+                optionality = state.getOptionality(expression);
+            } else {
+                optionality = optionality.or(state.getOptionality(expression));
             }
         }
-        if (constraints.isEmpty()) {
-            return Constraint.any(value.getType());
+        if(optionality == null) {
+            throw new IllegalStateException("Invalid block: " + this);
         }
-        return Constraint.or(constraints);
+        return optionality;
     }
 
-    public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull Condition condition) {
+    public @NotNull BooleanValue getConstraint(@NotNull Expression expression) {
+        BooleanValue booleanValue = BooleanValue.NO_VALUE;
+        for (DataFlowState state : states) {
+            booleanValue = booleanValue.or(state.getConstraint(expression));
+        }
+        return booleanValue;
+    }
+
+    // TODO: 2023-09-10 All successor methods need to be reworked, instead of #contains(...) check if it is still satisfiable with the added condition...
+    public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull Expression condition) {
         List<DataFlowState> states = split(successor, condition);
         successors.add(new DataFlowEdge(this, successor, states));
     }
 
-    public @NotNull List<DataFlowState> split(@NotNull DataFlowBlock successor, @NotNull Condition condition) {
+    public @NotNull List<DataFlowState> split(@NotNull DataFlowBlock successor, @NotNull Expression condition) {
         List<DataFlowState> flowStates = getStates();
         return flowStates.stream()
                 .filter(state -> state.contains(condition))

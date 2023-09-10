@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.flow.instruction;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
-import com.bossymr.rapid.language.flow.value.Value;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 

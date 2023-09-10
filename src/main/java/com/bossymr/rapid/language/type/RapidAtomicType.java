@@ -6,6 +6,8 @@ import com.bossymr.rapid.language.symbol.ValueType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 /**
  * A {@code RapidAtomicType} represents an atomic type.
  */
@@ -48,5 +50,25 @@ public class RapidAtomicType implements RapidType {
     @Override
     public @NotNull String getText() {
         return atomic.getName();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RapidAtomicType that = (RapidAtomicType) o;
+        return Objects.equals(atomic, that.atomic);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(atomic);
+    }
+
+    @Override
+    public String toString() {
+        return "RapidAtomicType{" +
+                "atomic=" + atomic +
+                '}';
     }
 }

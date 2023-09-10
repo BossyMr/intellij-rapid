@@ -93,9 +93,5 @@ public class VirtualRecord implements RapidRecord, VirtualStructure {
             }
             return record;
         }
-
-        public @NotNull RapidType asType() {
-            return new RapidType(build());
-        }
     }
 }

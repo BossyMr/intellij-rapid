@@ -3,21 +3,22 @@ package com.bossymr.rapid.language.flow.data.hardcode;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.ArgumentGroup;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.Optionality;
+import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.AbstractDataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction.Result;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.ReferenceValue;
-import com.bossymr.rapid.language.flow.value.VariableValue;
+import com.bossymr.rapid.language.flow.value.VariableExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
-import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualParameter;
 import com.bossymr.rapid.language.symbol.virtual.VirtualParameterGroup;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,7 +66,7 @@ public class ContractBuilder {
 
         private final @NotNull Map<Argument, Constraint> constraints = new HashMap<>();
         private final @NotNull DataFlowState state = DataFlowState.createState(functionBlock);
-        private final @Nullable ReferenceValue output;
+        private final @Nullable ReferenceExpression output;
 
         public FunctionContractBuilder() {
             for (ArgumentGroup argumentGroup : functionBlock.getArgumentGroups()) {
@@ -104,7 +105,7 @@ public class ContractBuilder {
         private @NotNull Argument findArgument(@NotNull String name) {
             return functionBlock.getArgumentGroups().stream()
                     .flatMap(argumentGroup -> argumentGroup.arguments().stream())
-                    .filter(value -> value.name().equalsIgnoreCase(name))
+                    .filter(value -> value.getName().equalsIgnoreCase(name))
                     .findFirst().orElseThrow();
         }
 
@@ -126,9 +127,9 @@ public class ContractBuilder {
             if (functionBlock.getReturnType() == null) {
                 throw new IllegalStateException();
             }
-            ReferenceValue snapshot = Objects.requireNonNull(output);
+            ReferenceExpression snapshot = Objects.requireNonNull(output);
             for (Argument argument : constraints.keySet()) {
-                state.assign(new VariableValue(argument), constraints.get(argument));
+                state.assign(new VariableExpression(argument), constraints.get(argument));
             }
             state.assign(snapshot, constraint);
             results.computeIfAbsent(constraints, value -> new HashSet<>(1));
@@ -138,11 +139,11 @@ public class ContractBuilder {
 
         public class VariableMap {
 
-            public @NotNull ReferenceValue getArgument(@NotNull String name) {
-                return new VariableValue(findArgument(name));
+            public @NotNull ReferenceExpression getArgument(@NotNull String name) {
+                return new VariableExpression(findArgument(name));
             }
 
-            public @NotNull ReferenceValue getOutput() {
+            public @NotNull ReferenceExpression getOutput() {
                 return Objects.requireNonNull(output);
             }
 

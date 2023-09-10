@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.condition.Condition;
 import com.bossymr.rapid.language.flow.condition.ConditionType;
 import com.bossymr.rapid.language.flow.constraint.NumericConstraint;
 import com.bossymr.rapid.language.flow.Optionality;
@@ -11,7 +10,6 @@ import com.bossymr.rapid.language.flow.value.BinaryExpression;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.ConstantValue;
 import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import org.jetbrains.annotations.NotNull;

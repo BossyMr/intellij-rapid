@@ -62,4 +62,11 @@ public enum RapidPrimitiveType implements RapidType {
     public @NotNull String getText() {
         return getStructure().getName();
     }
+
+    @Override
+    public String toString() {
+        return "RapidPrimitiveType{" +
+                "symbol=" + symbol +
+                '}';
+    }
 }

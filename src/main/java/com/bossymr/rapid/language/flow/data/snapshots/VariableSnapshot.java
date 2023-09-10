@@ -1,8 +1,8 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.value.ReferenceSnapshot;
-import com.bossymr.rapid.language.flow.value.ReferenceValue;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -19,33 +19,43 @@ import org.jetbrains.annotations.Nullable;
  * 3: x = 10                                // x2 = 10
  * }
  */
-public class VariableSnapshot implements ReferenceSnapshot {
+public class VariableSnapshot implements SnapshotExpression {
 
-    private final @Nullable ReferenceValue referenceValue;
+    private final @Nullable ReferenceExpression underlyingVariable;
     private final @NotNull RapidType type;
 
     public VariableSnapshot(@NotNull RapidType type) {
-        this.referenceValue = null;
+        this.underlyingVariable = null;
         this.type = type;
     }
 
-    public VariableSnapshot(@NotNull ReferenceValue referenceValue) {
-        this.referenceValue = referenceValue;
-        this.type = referenceValue.getType();
+    public VariableSnapshot(@NotNull ReferenceExpression underlyingVariable) {
+        this.underlyingVariable = underlyingVariable;
+        this.type = underlyingVariable.getType();
     }
 
-    public @Nullable ReferenceValue getVariable() {
-        return referenceValue;
+    public @Nullable ReferenceExpression getUnderlyingVariable() {
+        return underlyingVariable;
     }
 
     @Override
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return visitor.visitVariableSnapshot(this);
+        return visitor.visitVariableSnapshotExpression(this);
     }
 
     @Override
     public @NotNull RapidType getType() {
         return type;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return super.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
     }
 
     @Override
