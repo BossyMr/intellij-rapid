@@ -2,14 +2,15 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.condition.ConditionType;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowEdge;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.flow.value.BinaryExpression;
+import com.bossymr.rapid.language.flow.value.BinaryOperator;
+import com.bossymr.rapid.language.flow.value.ConstantExpression;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.openapi.progress.ProgressManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
@@ -116,12 +117,6 @@ public class DataFlowAnalyzer {
         analyzer.process();
     }
 
-    private static @NotNull Constraint getConstraint(@NotNull List<DataFlowState> states, @NotNull ReferenceValue variable) {
-        return states.stream()
-                .map(state -> state.getConstraint(variable))
-                .collect(Constraint.or(variable.getType()));
-    }
-
     public void process() {
         while (!(workList.isEmpty())) {
             ProgressManager.checkCanceled();
@@ -146,7 +141,7 @@ public class DataFlowAnalyzer {
         }
         block.getSuccessors().clear();
         for (DataFlowEdge predecessors : block.getPredecessors()) {
-            block.getStates().addAll(predecessors.getStates());
+            block.getStates().addAll(predecessors.getState());
         }
         BasicBlock basicBlock = block.getBasicBlock();
         DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(functionBlock, block, blocks, functionMap);
@@ -169,13 +164,14 @@ public class DataFlowAnalyzer {
             for (PathCounter pathCounter : state.getPathCounters()) {
                 for (BlockCycle blockCycle : pathCounter.getResetPath()) {
                     if (blockCycle.getSequence().contains(block)) {
-                        state.assign(new Condition(pathCounter, ConditionType.EQUALITY, Expression.of(0)), false);
+                        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, pathCounter, new ConstantExpression(RapidPrimitiveType.NUMBER, 0)));
                         break;
                     }
                 }
                 for (BlockCycle blockCycle : pathCounter.getIncrementPath()) {
                     if (blockCycle.getSequence().contains(block)) {
-                        state.assign(new Condition(pathCounter, ConditionType.EQUALITY, new BinaryExpression(BinaryOperator.ADD, pathCounter, ConstantValue.of(1))), false);
+                        BinaryExpression binaryExpression = new BinaryExpression(BinaryOperator.ADD, pathCounter, new ConstantExpression(RapidPrimitiveType.NUMBER, 1));
+                        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, pathCounter, binaryExpression));
                         break;
                     }
                 }
@@ -187,26 +183,4 @@ public class DataFlowAnalyzer {
             successor.getDestination().getPredecessors().add(successor);
         }
     }
-
-    private boolean isModified(@NotNull DataFlowBlock block, @NotNull Set<DataFlowFunction.Result> previousUsages, @NotNull Set<DataFlowFunction.Result> afterUsages, @NotNull List<DataFlowState> before, @NotNull List<DataFlowState> after) {
-        if (before.isEmpty() && !(after.isEmpty())) {
-            /*
-             * The block was initialized and must as a result be modified.
-             */
-            return true;
-        }
-        BranchingInstruction terminator = block.getBasicBlock().getTerminator();
-        if (!(terminator instanceof BranchingInstruction.CallInstruction) && !(terminator instanceof BranchingInstruction.ConditionalBranchingInstruction)) {
-            return false;
-        }
-        if (terminator instanceof BranchingInstruction.CallInstruction) {
-            return !(previousUsages.equals(afterUsages));
-        }
-        BranchingInstruction.ConditionalBranchingInstruction instruction = (BranchingInstruction.ConditionalBranchingInstruction) terminator;
-        ReferenceValue value = instruction.value();
-        Constraint beforeConstraint = getConstraint(before, value);
-        Constraint afterConstraint = getConstraint(after, value);
-        return !(beforeConstraint.equals(afterConstraint));
-    }
-
 }

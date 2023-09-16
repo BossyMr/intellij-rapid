@@ -3,10 +3,11 @@ package com.bossymr.rapid.language.flow.parser;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.ReferenceValue;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.VariableExpression;
 import com.bossymr.rapid.language.psi.StatementListType;
+import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.ParameterType;
-import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameter;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
@@ -15,6 +16,7 @@ import com.bossymr.rapid.language.symbol.virtual.VirtualField;
 import com.bossymr.rapid.language.symbol.virtual.VirtualParameter;
 import com.bossymr.rapid.language.symbol.virtual.VirtualParameterGroup;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
@@ -99,11 +101,16 @@ public class ControlFlowBuilder {
         this.currentBasicBlock = currentBlock.setErrorClause(exceptions);
     }
 
-    public @NotNull ReferenceValue createVariable(@NotNull VariableKey variableKey, @NotNull RapidType type) {
+    public @NotNull ReferenceExpression createVariable(@NotNull RapidType type) {
+        return createVariable(null, null, type);
+    }
+
+    public @NotNull ReferenceExpression createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
         if (currentBlock == null) {
             throw new IllegalStateException("Cannot create variable as no block is currently active");
         }
-        return variableKey.create(currentBlock, type);
+        Variable variable = currentBlock.createVariable(name, fieldType, type);
+        return new VariableExpression(variable);
     }
 
     public void enterBasicBlock(@NotNull BasicBlock basicBlock) {

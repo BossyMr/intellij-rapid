@@ -2,12 +2,15 @@ package com.bossymr.rapid.language.flow.condition;
 
 import com.bossymr.rapid.language.flow.constraint.NumericConstraint;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
-import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.flow.value.BinaryExpression;
+import com.bossymr.rapid.language.flow.value.BinaryOperator;
+import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ConditionTest {
 
@@ -18,7 +21,7 @@ class ConditionTest {
         VariableSnapshot right = new VariableSnapshot(RapidPrimitiveType.NUMBER);
         Expression expression = new BinaryExpression(BinaryOperator.ADD, left, right);
         Condition condition = new Condition(variable, ConditionType.EQUALITY, expression);
-        List<ReferenceValue> variables = condition.getVariables();
+        List<ReferenceExpression> variables = condition.getVariables();
         assertEquals(2, variables.size());
         assertEquals(left, variables.get(0));
         assertEquals(right, variables.get(1));

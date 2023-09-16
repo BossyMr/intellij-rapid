@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow.data.block;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -13,13 +12,13 @@ public final class DataFlowEdge {
     private final @NotNull DataFlowBlock source;
     private final @NotNull DataFlowBlock destination;
 
-    private List<DataFlowState> states;
-    private List<DataFlowState> latest;
+    private DataFlowState state;
+    private DataFlowState copy;
 
-    public DataFlowEdge(@NotNull DataFlowBlock source, @NotNull DataFlowBlock destination, @NotNull List<DataFlowState> states) {
+    public DataFlowEdge(@NotNull DataFlowBlock source, @NotNull DataFlowBlock destination, @NotNull DataFlowState state) {
         this.source = source;
         this.destination = destination;
-        this.states = states;
+        this.state = state;
     }
 
     public @NotNull DataFlowBlock getSource() {
@@ -30,19 +29,17 @@ public final class DataFlowEdge {
         return destination;
     }
 
-    public @NotNull List<DataFlowState> getStates() {
-        latest = states.stream()
-                .map(DataFlowState::copy)
-                .toList();
-        return latest;
+    public @NotNull DataFlowState getState() {
+        copy = DataFlowState.copy(state);
+        return copy;
     }
 
-    public List<DataFlowState> getLatest() {
-        return latest;
+    public void setState(@NotNull DataFlowState state) {
+        this.state = state;
     }
 
-    public void setStates(@NotNull List<DataFlowState> states) {
-        this.states = states;
+    public DataFlowState getCopy() {
+        return copy;
     }
 
     @Override
@@ -52,12 +49,12 @@ public final class DataFlowEdge {
         var that = (DataFlowEdge) obj;
         return Objects.equals(this.source, that.source) &&
                 Objects.equals(this.destination, that.destination) &&
-                Objects.equals(this.states, that.states);
+                Objects.equals(this.state, that.state);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(source, destination, states);
+        return Objects.hash(source, destination, state);
     }
 
     @Override
@@ -65,6 +62,6 @@ public final class DataFlowEdge {
         return "DataFlowEdge[" +
                 "source=" + source + ", " +
                 "destination=" + destination + ", " +
-                "states=" + states + ']';
+                "states=" + state + ']';
     }
 }

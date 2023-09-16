@@ -1,36 +1,74 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.Optionality;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
-import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
+import com.bossymr.rapid.language.flow.ArgumentDescriptor;
+import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.VariableExpression;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
 public abstract class AbstractDataFlowFunction implements DataFlowFunction {
 
-    protected abstract @NotNull Map<Map<Argument, Constraint>, Set<DataFlowFunction.Result>> getResults();
+    protected abstract @NotNull Set<DataFlowFunction.Result> getResults();
 
     @Override
-    public @NotNull Set<Result> getOutput(@NotNull DataFlowBlock callingBlock, @NotNull Map<Argument, Constraint> arguments) {
-        Map<Map<Argument, Constraint>, Set<Result>> results = getResults();
-        return results.keySet().stream()
-                .filter(constraints -> contains(constraints, arguments))
-                .flatMap(constraints -> results.get(constraints).stream())
-                .collect(Collectors.toSet());
-    }
-
-    private boolean contains(@NotNull Map<Argument, Constraint> results, @NotNull Map<Argument, Constraint> arguments) {
-        for (Argument argument : results.keySet()) {
-            Constraint constraint = results.get(argument);
-            Constraint argumentConstraint = arguments.containsKey(argument) ? arguments.get(argument) : Constraint.any(argument.getType(), Optionality.MISSING);
-            if (!(constraint.intersects(argumentConstraint))) {
-                return false;
+    public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull BranchingInstruction.CallInstruction instruction) {
+        Set<DataFlowFunction.Result> output = new HashSet<>();
+        for (Result result : getResults()) {
+            Map<ReferenceExpression, ReferenceExpression> variableMap = new HashMap<>();
+            if (result.variable() != null && instruction.returnValue() != null) {
+                variableMap.put(result.variable(), instruction.returnValue());
+            }
+            Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.arguments());
+            for (Argument argument : arguments.keySet()) {
+                ReferenceExpression expression = arguments.get(argument);
+                variableMap.put(new VariableExpression(argument), expression);
+            }
+            DataFlowState successorState = DataFlowState.copy(result.state(), state)
+                    .modify(variableMap);
+            if (!(successorState.isSatisfiable())) {
+                continue;
+            }
+            if (result instanceof Result.Exit) {
+                output.add(new Result.Exit(successorState));
+            }
+            if (result instanceof Result.Success) {
+                output.add(new Result.Success(successorState, variableMap.getOrDefault(result.variable(), result.variable())));
+            }
+            if (result instanceof Result.Error) {
+                output.add(new Result.Success(successorState, variableMap.getOrDefault(result.variable(), result.variable())));
             }
         }
-        return true;
+        return output;
+    }
+
+    private <T> @NotNull Map<Argument, T> getArguments(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<ArgumentDescriptor, T> values) {
+        List<Argument> arguments = functionBlock.getArgumentGroups().stream()
+                .flatMap(argumentGroup -> argumentGroup.arguments().stream())
+                .toList();
+        Map<Argument, T> result = new HashMap<>();
+        values.forEach((index, value) -> {
+            Argument argument;
+            if (index instanceof ArgumentDescriptor.Required required) {
+                if (required.index() >= arguments.size()) {
+                    return;
+                } else {
+                    argument = arguments.get(required.index());
+                }
+            } else if (index instanceof ArgumentDescriptor.Optional optional) {
+                argument = arguments.stream()
+                        .filter(element -> element.getName().equals(optional.name()))
+                        .findFirst()
+                        .orElseThrow();
+            } else {
+                throw new AssertionError();
+            }
+            result.put(argument, value);
+        });
+        return result;
     }
 }

@@ -1,10 +1,15 @@
 package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -21,75 +26,63 @@ public interface Expression {
 
     <R> R accept(@NotNull ControlFlowVisitor<R> visitor);
 
+    @Nullable RapidExpression getElement();
+
     default @NotNull Expression replace(@NotNull Function<Expression, Expression> mapper) {
         return accept(new ControlFlowVisitor<>() {
             @Override
             public Expression visitAggregateExpression(@NotNull AggregateExpression expression) {
-                return mapper.apply(new AggregateExpression(expression.getType(), expression.getComponents().stream().map(mapper).toList()));
+                List<Expression> expressions = expression.getComponents().stream()
+                        .map(component -> component.accept(this))
+                        .toList();
+                AggregateExpression aggregateExpression = new AggregateExpression(expression.getType(), expressions);
+                return mapper.apply(aggregateExpression);
             }
 
             @Override
             public Expression visitBinaryExpression(@NotNull BinaryExpression expression) {
-                return mapper.apply(new BinaryExpression(expression.getOperator(), expression.getType(), mapper.apply(expression.getLeft()), mapper.apply(expression.getRight())));
+                Expression left = expression.getLeft().accept(this);
+                Expression right = expression.getRight().accept(this);
+                BinaryExpression binaryExpression = new BinaryExpression(expression.getOperator(), left, right);
+                return mapper.apply(binaryExpression);
             }
 
             @Override
             public Expression visitUnaryExpression(@NotNull UnaryExpression expression) {
-                return mapper.apply(expression.replace(mapper));
+                Expression component = expression.accept(this);
+                UnaryExpression unaryExpression = new UnaryExpression(expression.getType(), expression.getOperator(), component);
+                return mapper.apply(unaryExpression);
             }
 
             @Override
-            public Expression visitReferenceExpression(@NotNull ReferenceExpression expression) {
-                return mapper.apply(expression);
+            public Expression visitComponentExpression(@NotNull ComponentExpression expression) {
+                ReferenceExpression variable = (ReferenceExpression) expression.getVariable().accept(this);
+                ComponentExpression componentExpression = new ComponentExpression(expression.getType(), variable, expression.getComponent());
+                return super.visitComponentExpression(componentExpression);
+            }
+
+            @Override
+            public Expression visitIndexExpression(@NotNull IndexExpression expression) {
+                ReferenceExpression variable = (ReferenceExpression) expression.getVariable().accept(this);
+                Expression index = expression.getIndex().accept(this);
+                IndexExpression indexExpression = new IndexExpression(variable, index);
+                return super.visitIndexExpression(indexExpression);
             }
 
             @Override
             public Expression visitExpression(@NotNull Expression expression) {
-                throw new UnsupportedOperationException();
+                return mapper.apply(expression);
             }
         });
-    }
-
-    default @NotNull Collection<Expression> getAllComponents() {
-        Set<Expression> visited = new HashSet<>();
-        Deque<Expression> queue = new ArrayDeque<>(getComponents());
-        while (!(queue.isEmpty())) {
-            Expression expression = queue.removeFirst();
-            if (!(visited.add(expression))) {
-                continue;
-            }
-            queue.addAll(expression.getComponents());
-        }
-        return visited;
     }
 
     default @NotNull Collection<Expression> getComponents() {
-        return accept(new ControlFlowVisitor<>() {
-            @Override
-            public Collection<Expression> visitAggregateExpression(@NotNull AggregateExpression expression) {
-                return expression.getComponents();
-            }
-
-            @Override
-            public Collection<Expression> visitBinaryExpression(@NotNull BinaryExpression expression) {
-                return List.of(expression.getLeft(), expression.getRight());
-            }
-
-            @Override
-            public Collection<Expression> visitUnaryExpression(@NotNull UnaryExpression expression) {
-                return List.of(expression.getExpression());
-            }
-
-            @Override
-            public Collection<Expression> visitReferenceExpression(@NotNull ReferenceExpression expression) {
-                return List.of(expression);
-            }
-
-            @Override
-            public Collection<Expression> visitExpression(@NotNull Expression expression) {
-                throw new UnsupportedOperationException();
-            }
+        Set<Expression> expressions = new HashSet<>();
+        replace(expression -> {
+            expressions.add(expression);
+            return expression;
         });
+        return expressions;
     }
 
 }

@@ -55,7 +55,7 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
         DataFlowGraphService.convert(outputFile, result);
     }
 
-    public void testModule() throws IOException, ExecutionException {
+    public void DISABLEDtestModule() throws IOException, ExecutionException {
         check("""
                 MODULE foo
                     

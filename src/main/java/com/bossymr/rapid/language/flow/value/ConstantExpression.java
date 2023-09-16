@@ -1,17 +1,27 @@
 package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.type.RapidType;
+import com.intellij.psi.SmartPointerManager;
+import com.intellij.psi.SmartPsiElementPointer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
 public class ConstantExpression implements Expression {
 
+    private final @Nullable SmartPsiElementPointer<RapidExpression> expression;
     private final @NotNull RapidType type;
     private final @NotNull Object value;
 
     public ConstantExpression(@NotNull RapidType type, @NotNull Object value) {
+        this(null, type, value);
+    }
+
+    public ConstantExpression(@Nullable RapidExpression expression, @NotNull RapidType type, @NotNull Object value) {
+        this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
         this.type = type;
         this.value = value;
     }
@@ -23,6 +33,11 @@ public class ConstantExpression implements Expression {
     @Override
     public @NotNull RapidType getType() {
         return type;
+    }
+
+    @Override
+    public @Nullable RapidExpression getElement() {
+        return expression != null ? expression.getElement() : null;
     }
 
     @Override

@@ -96,7 +96,7 @@ public class DataFlowBlock {
         if (!(variable.getType().isAssignable(expression.getType()))) {
             throw new IllegalArgumentException("Cannot assign expression: " + expression);
         }
-        separate(new BinaryExpression(BinaryOperator.EQUAL_TO, RapidPrimitiveType.BOOLEAN, variable, expression));
+        separate(new BinaryExpression(BinaryOperator.EQUAL_TO, variable, expression));
         for (DataFlowState state : states) {
             // TODO: Check whether this assignment is cyclic, and if so, handle it correctly by using a relevant path counter.
             state.assign(variable, expression);
@@ -105,7 +105,7 @@ public class DataFlowBlock {
 
     private void separate(@NotNull Expression expression) {
         // TODO: 2023-09-10 This entire algorithm seems a bit overly complicated
-        Collection<Expression> components = expression.getAllComponents();
+        Collection<Expression> components = expression.getComponents();
         List<DataFlowState> copy = new ArrayList<>();
         for (Expression component : components) {
             if (!(component instanceof ReferenceExpression referenceExpression)) {
@@ -160,14 +160,14 @@ public class DataFlowBlock {
             /*
              * For this assignment to occur, the index for the assignment must match the specified index.
              */
-            state.add(new BinaryExpression(operator, RapidPrimitiveType.BOOLEAN, referenceValue, indexValue.getIndex()));
+            state.add(new BinaryExpression(operator, referenceValue, indexValue.getIndex()));
         } else if (indexValue.getIndex() instanceof ReferenceExpression referenceValue) {
             /*
              * Likewise, for the assignment to occur, the specified index must match the index for the assignment.
              * If the index for the assignment is not a variable, the above condition will not be added - so it must be
              * added now.
              */
-            state.add(new BinaryExpression(operator, RapidPrimitiveType.BOOLEAN, referenceValue, assignment.index()));
+            state.add(new BinaryExpression(operator, referenceValue, assignment.index()));
         }
     }
 
@@ -206,30 +206,18 @@ public class DataFlowBlock {
         return booleanValue;
     }
 
-    // TODO: 2023-09-10 All successor methods need to be reworked, instead of #contains(...) check if it is still satisfiable with the added condition...
-    public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull Expression condition) {
-        List<DataFlowState> states = split(successor, condition);
-        successors.add(new DataFlowEdge(this, successor, states));
-    }
-
-    public @NotNull List<DataFlowState> split(@NotNull DataFlowBlock successor, @NotNull Expression condition) {
-        List<DataFlowState> flowStates = getStates();
-        return flowStates.stream()
-                .filter(state -> state.contains(condition))
-                .map(state -> DataFlowState.createSuccessorState(successor, state))
-                .peek(state -> state.add(condition, true))
-                .toList();
+    public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull DataFlowState state) {
+        DataFlowEdge edge = new DataFlowEdge(this, successor, state);
+        successors.add(edge);
     }
 
     public void addSuccessor(@NotNull DataFlowBlock successor) {
         List<DataFlowState> states = getStates().stream()
                 .map(state -> DataFlowState.createSuccessorState(successor, state))
                 .toList();
-        successors.add(new DataFlowEdge(this, successor, states));
-    }
-
-    public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull List<DataFlowState> states) {
-        successors.add(new DataFlowEdge(this, successor, states));
+        for (DataFlowState state : states) {
+            successors.add(new DataFlowEdge(this, successor, state));
+        }
     }
 
     @Override

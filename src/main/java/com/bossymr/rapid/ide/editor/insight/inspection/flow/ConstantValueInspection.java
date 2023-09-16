@@ -1,21 +1,20 @@
 package com.bossymr.rapid.ide.editor.insight.inspection.flow;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.flow.BasicBlock;
-import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.ControlFlow;
-import com.bossymr.rapid.language.flow.ControlFlowService;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
-import com.bossymr.rapid.language.flow.Optionality;
+import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.*;
-import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.symbol.RapidSymbol;
+import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.psi.RapidBinaryExpression;
+import com.bossymr.rapid.language.psi.RapidElementVisitor;
+import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.RapidReferenceExpression;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.codeInspection.LocalInspectionTool;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.PsiElement;
@@ -23,11 +22,7 @@ import com.intellij.psi.PsiElementVisitor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.math.BigDecimal;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 
 public class ConstantValueInspection extends LocalInspectionTool {
 
@@ -69,38 +64,36 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 }
                 Instruction instruction = Objects.requireNonNull(getInstruction(expression, basicBlock));
                 if (instruction instanceof LinearInstruction.AssignmentInstruction assignmentInstruction) {
-                    ReferenceValue variable = assignmentInstruction.variable();
+                    ReferenceExpression variable = assignmentInstruction.variable();
                     DataFlowBlock block = dataFlow.getBlock(basicBlock);
                     if (block == null) {
                         return;
                     }
-                    Constraint constraint = block.getConstraint(variable);
                     Expression operation = assignmentInstruction.value();
-                    Set<VariableSymbol> values = new HashSet<>(2, 1);
-                    if (expression instanceof RapidUnaryExpression element && operation instanceof UnaryExpression unaryExpression) {
-                        VariableSymbol.add(values, element.getExpression(), unaryExpression.value());
-                    } else if (expression instanceof RapidBinaryExpression element && operation instanceof BinaryExpression binaryExpression) {
-                        VariableSymbol.add(values, element.getLeft(), binaryExpression.left());
-                        VariableSymbol.add(values, element.getRight(), binaryExpression.right());
-                    }
-                    for (VariableSymbol value : values) {
-                        Constraint variableConstraint = block.getHistoricConstraint(value.referenceValue(), assignmentInstruction);
-                        String name = value.name();
-                        if (variableConstraint.getOptionality() == Optionality.MISSING) {
-                            holder.registerProblem(value.element(), RapidBundle.message("inspection.message.missing.variable", name));
-                        }
-                        if (variableConstraint.getOptionality() == Optionality.UNKNOWN) {
-                            holder.registerProblem(value.element(), RapidBundle.message("inspection.message.unknown.variable", name));
+                    for (Expression component : operation.getComponents()) {
+                        if (component instanceof ReferenceExpression referenceExpression) {
+                            RapidExpression element = referenceExpression.getElement();
+                            if (!(element instanceof RapidReferenceExpression expr)) {
+                                continue;
+                            }
+                            Optionality optionality = block.getOptionality(referenceExpression);
+                            if (optionality == Optionality.MISSING) {
+                                holder.registerProblem(instruction.element(), RapidBundle.message("inspection.message.missing.variable", expr.getCanonicalText()));
+                            }
+                            if (optionality == Optionality.UNKNOWN) {
+                                holder.registerProblem(instruction.element(), RapidBundle.message("inspection.message.unknown.variable", expr.getCanonicalText()));
+                            }
                         }
                     }
-                    Optional<?> value = constraint.getValue();
-                    if (value.isPresent()) {
-                        Object object = value.orElseThrow();
-                        String string = object instanceof Double ? BigDecimal.valueOf((Double) object).stripTrailingZeros().toPlainString() : String.valueOf(object);
+                    if (!(variable.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
+                        return;
+                    }
+                    BooleanValue constraint = block.getConstraint(variable);
+                    if (constraint == BooleanValue.ALWAYS_TRUE || constraint == BooleanValue.ALWAYS_FALSE) {
+                        String string = constraint == BooleanValue.ALWAYS_TRUE ? "true" : "false";
                         holder.registerProblem(expression, RapidBundle.message("inspection.message.constant.expression", string));
                     }
                 }
-
             }
         };
     }
@@ -125,27 +118,5 @@ public class ConstantValueInspection extends LocalInspectionTool {
             }
         }
         return null;
-    }
-
-    private record VariableSymbol(@NotNull PsiElement element, @NotNull String name, @NotNull ReferenceValue referenceValue) {
-
-        public static void add(@NotNull Set<VariableSymbol> symbols, @Nullable RapidExpression expression, @NotNull Value value) {
-            if (!(expression instanceof RapidReferenceExpression referenceExpression)) {
-                return;
-            }
-            if (!(value instanceof ReferenceValue referenceValue)) {
-                return;
-            }
-            RapidSymbol symbol = referenceExpression.getSymbol();
-            if (symbol == null) {
-                return;
-            }
-            String name = symbol.getName();
-            if (name == null) {
-                return;
-            }
-            symbols.add(new VariableSymbol(expression, name, referenceValue));
-        }
-
     }
 }

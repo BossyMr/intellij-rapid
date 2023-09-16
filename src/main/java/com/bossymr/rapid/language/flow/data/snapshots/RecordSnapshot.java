@@ -8,21 +8,25 @@ import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * A snapshot based on a record, which itself has snapshots for each component of the record.
  */
 public class RecordSnapshot implements SnapshotExpression {
 
-    private final @NotNull ReferenceExpression underlyingVariable;
+    private final @NotNull RapidType type;
+    private final @Nullable ReferenceExpression underlyingVariable;
 
     private final @NotNull Map<String, RapidType> components;
     private final @NotNull Map<String, Expression> snapshots;
 
-    public RecordSnapshot(@NotNull ReferenceExpression underlyingVariable) {
+    public RecordSnapshot(@NotNull RapidType type, @Nullable ReferenceExpression underlyingVariable) {
+        this.type = type;
         this.underlyingVariable = underlyingVariable;
         if (!(underlyingVariable.getType().getActualStructure() instanceof RapidRecord record)) {
             throw new IllegalArgumentException();
@@ -64,7 +68,7 @@ public class RecordSnapshot implements SnapshotExpression {
     }
 
     @Override
-    public @NotNull ReferenceExpression getUnderlyingVariable() {
+    public @Nullable ReferenceExpression getUnderlyingVariable() {
         return underlyingVariable;
     }
 
@@ -75,6 +79,29 @@ public class RecordSnapshot implements SnapshotExpression {
 
     @Override
     public @NotNull RapidType getType() {
-        return underlyingVariable.getType();
+        return type;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+        RecordSnapshot that = (RecordSnapshot) object;
+        return Objects.equals(type, that.type) && Objects.equals(underlyingVariable, that.underlyingVariable) && Objects.equals(components, that.components) && Objects.equals(snapshots, that.snapshots);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, underlyingVariable, components, snapshots);
+    }
+
+    @Override
+    public String toString() {
+        return "RecordSnapshot{" +
+                "type=" + type +
+                ", underlyingVariable=" + underlyingVariable +
+                ", components=" + components +
+                ", snapshots=" + snapshots +
+                '}';
     }
 }

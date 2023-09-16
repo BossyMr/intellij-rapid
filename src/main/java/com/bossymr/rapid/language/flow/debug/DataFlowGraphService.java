@@ -16,7 +16,8 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
@@ -275,7 +276,7 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("</table>>];\n");
     }
 
-    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceValue variable, @NotNull SnapshotExpression snapshot, @NotNull Set<SnapshotExpression> snapshots) {
+    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceExpression variable, @NotNull SnapshotExpression snapshot, @NotNull Set<SnapshotExpression> snapshots) {
         if(!(snapshots.add(snapshot))) {
             return;
         }

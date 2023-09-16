@@ -34,6 +34,11 @@ public class VariableSnapshot implements SnapshotExpression {
         this.type = underlyingVariable.getType();
     }
 
+    public VariableSnapshot(@NotNull RapidType type, @Nullable ReferenceExpression underlyingVariable) {
+        this.underlyingVariable = underlyingVariable;
+        this.type = type;
+    }
+
     public @Nullable ReferenceExpression getUnderlyingVariable() {
         return underlyingVariable;
     }

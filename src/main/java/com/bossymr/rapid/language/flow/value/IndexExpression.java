@@ -1,19 +1,29 @@
 package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.type.RapidArrayType;
 import com.bossymr.rapid.language.type.RapidType;
+import com.intellij.psi.SmartPointerManager;
+import com.intellij.psi.SmartPsiElementPointer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
 public class IndexExpression implements ReferenceExpression {
 
+    private final @Nullable SmartPsiElementPointer<RapidExpression> expression;
     private final @NotNull RapidType type;
     private final @NotNull ReferenceExpression variable;
     private final @NotNull Expression index;
 
     public IndexExpression(@NotNull ReferenceExpression variable, @NotNull Expression index) {
+        this(null, variable, index);
+    }
+
+    public IndexExpression(@Nullable RapidExpression expression, @NotNull ReferenceExpression variable, @NotNull Expression index) {
+        this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
         RapidType variableType = variable.getType();
         this.type = variableType instanceof RapidArrayType arrayType ? arrayType.getUnderlyingType() : variableType;
         this.variable = variable;
@@ -31,6 +41,11 @@ public class IndexExpression implements ReferenceExpression {
     @Override
     public @NotNull RapidType getType() {
         return type;
+    }
+
+    @Override
+    public @Nullable RapidExpression getElement() {
+        return expression != null ? expression.getElement() : null;
     }
 
     @Override

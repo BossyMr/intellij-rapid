@@ -3,15 +3,12 @@ package com.bossymr.rapid.language.flow.data.hardcode;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.ArgumentGroup;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.Optionality;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.AbstractDataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction.Result;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
-import com.bossymr.rapid.language.flow.value.ReferenceValue;
 import com.bossymr.rapid.language.flow.value.VariableExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RoutineType;
@@ -28,7 +25,7 @@ import java.util.function.BiConsumer;
 public class ContractBuilder {
 
     private final @NotNull Block.FunctionBlock functionBlock;
-    private final @NotNull Map<Map<Argument, Constraint>, Set<Result>> results = new HashMap<>();
+    private final @NotNull Set<Result> results = new HashSet<>();
 
     public ContractBuilder(@NotNull String name, @NotNull RapidType type) {
         VirtualRoutine virtualRoutine = new VirtualRoutine(RoutineType.FUNCTION, name, type, new ArrayList<>());
@@ -51,55 +48,28 @@ public class ContractBuilder {
     public @NotNull DataFlowFunction build() {
         return new AbstractDataFlowFunction() {
             @Override
-            protected @NotNull Map<Map<Argument, Constraint>, Set<Result>> getResults() {
-                return results;
+            public @NotNull Block.FunctionBlock getBlock() {
+                return functionBlock;
             }
 
             @Override
-            public @NotNull Block.FunctionBlock getBlock() {
-                return functionBlock;
+            protected @NotNull Set<Result> getResults() {
+                return results;
             }
         };
     }
 
     public class FunctionContractBuilder {
 
-        private final @NotNull Map<Argument, Constraint> constraints = new HashMap<>();
         private final @NotNull DataFlowState state = DataFlowState.createState(functionBlock);
         private final @Nullable ReferenceExpression output;
 
         public FunctionContractBuilder() {
-            for (ArgumentGroup argumentGroup : functionBlock.getArgumentGroups()) {
-                for (Argument argument : argumentGroup.arguments()) {
-                    Optionality optionality = argumentGroup.isOptional() ? Optionality.UNKNOWN : Optionality.PRESENT;
-                    constraints.put(argument, Constraint.any(argument.type(), optionality));
-                }
-            }
             if (functionBlock.getReturnType() != null) {
                 output = new VariableSnapshot(functionBlock.getReturnType());
             } else {
                 output = null;
             }
-        }
-
-        public @NotNull FunctionContractBuilder whereArgument(@NotNull String name, @NotNull Constraint constraint) {
-            Argument argument = findArgument(name);
-            ArgumentGroup argumentGroup = functionBlock.getArgumentGroups().stream()
-                    .filter(group -> group.arguments().contains(argument))
-                    .findFirst().orElseThrow();
-            constraints.put(argument, constraint);
-            if (constraint.getOptionality() == Optionality.PRESENT) {
-                if (argumentGroup.arguments().stream().filter(value -> !(value.equals(argument))).anyMatch(value -> constraints.get(value).getOptionality() == Optionality.PRESENT)) {
-                    throw new IllegalArgumentException();
-                }
-                for (Argument value : argumentGroup.arguments()) {
-                    if (value == argument) {
-                        continue;
-                    }
-                    constraints.put(value, constraints.get(value).and(Constraint.any(value.type(), Optionality.MISSING)));
-                }
-            }
-            return this;
         }
 
         private @NotNull Argument findArgument(@NotNull String name) {
@@ -118,22 +88,7 @@ public class ContractBuilder {
             if (functionBlock.getReturnType() != null) {
                 throw new IllegalStateException();
             }
-            results.computeIfAbsent(constraints, value -> new HashSet<>(1));
-            results.get(constraints).add(new Result.Success(List.of(), null));
-            return ContractBuilder.this;
-        }
-
-        public @NotNull ContractBuilder withSuccess(@NotNull Constraint constraint) {
-            if (functionBlock.getReturnType() == null) {
-                throw new IllegalStateException();
-            }
-            ReferenceExpression snapshot = Objects.requireNonNull(output);
-            for (Argument argument : constraints.keySet()) {
-                state.assign(new VariableExpression(argument), constraints.get(argument));
-            }
-            state.assign(snapshot, constraint);
-            results.computeIfAbsent(constraints, value -> new HashSet<>(1));
-            results.get(constraints).add(new Result.Success(List.of(state), snapshot));
+            results.add(new Result.Success(state, output));
             return ContractBuilder.this;
         }
 

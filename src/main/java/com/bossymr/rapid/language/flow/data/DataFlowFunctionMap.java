@@ -5,8 +5,10 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
+import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
+import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
@@ -91,7 +93,7 @@ public class DataFlowFunctionMap {
         }
     }
 
-    private void registerUsage(@NotNull DataFlowBlock callerBlock, @NotNull Map<Argument, Constraint> arguments, @NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowFunction.Result result) {
+    private void registerUsage(@NotNull DataFlowBlock callerBlock, @NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowFunction.Result result) {
         if (exitPoints.containsKey(result)) {
             softReferences.remove(callerBlock);
             DataFlowBlock returnBlock = exitPoints.get(result);
@@ -104,7 +106,7 @@ public class DataFlowFunctionMap {
                 hardReferences.put(returnBlock, usage);
             }
         } else {
-            softReferences.put(callerBlock, new ResultEntry(blockDescriptor, arguments));
+            softReferences.put(callerBlock, new ResultEntry(blockDescriptor));
         }
     }
 
@@ -123,7 +125,7 @@ public class DataFlowFunctionMap {
         return Optional.of(new PhysicalDataFlowFunction(functionBlock));
     }
 
-    public void set(@NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowBlock returnBlock, @NotNull Map<Argument, Constraint> arguments, @NotNull DataFlowFunction.Result result) {
+    public void set(@NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowBlock returnBlock, @NotNull DataFlowFunction.Result result) {
         if (functionMap.containsKey(blockDescriptor)) {
             /*
              * The function has already been created. It should be modified to provide the specified result.
@@ -179,29 +181,27 @@ public class DataFlowFunctionMap {
     private final class PhysicalDataFlowFunction extends AbstractDataFlowFunction {
 
         private final @NotNull Block.FunctionBlock functionBlock;
-        private final @NotNull AtomicReference<Map<Map<Argument, Constraint>, Map<DataFlowBlock, Result>>> result = new AtomicReference<>();
+        private final @NotNull AtomicReference<Map<DataFlowBlock, Result>> result = new AtomicReference<>();
 
         public PhysicalDataFlowFunction(@NotNull Block.FunctionBlock functionBlock) {
             this.functionBlock = functionBlock;
         }
 
-        public void setResult(@NotNull Map<Map<Argument, Constraint>, Map<DataFlowBlock, Result>> result) {
+        public void setResult(@NotNull Map<DataFlowBlock, Result> result) {
             this.result.set(result);
         }
 
-        public void addResult(@NotNull DataFlowBlock returnBlock, @NotNull Map<Argument, Constraint> constraints, @NotNull DataFlowFunction.Result value) {
-            Map<Map<Argument, Constraint>, Map<DataFlowBlock, Result>> map = result.get();
+        public void addResult(@NotNull DataFlowBlock returnBlock, @NotNull DataFlowFunction.Result value) {
+            Map<DataFlowBlock, Result> map = result.get();
             if (map == null) {
-                Map<Map<Argument, Constraint>, Map<DataFlowBlock, Result>> data = new HashMap<>();
-                data.put(constraints, new HashMap<>());
-                data.get(constraints).put(returnBlock, value);
+                Map<DataFlowBlock, Result> data = new HashMap<>();
+                data.put(returnBlock, value);
                 setResult(data);
             } else {
-                map.computeIfAbsent(constraints, (k) -> new HashMap<>());
-                Map<DataFlowBlock, Result> entries = map.get(constraints);
-                entries.put(returnBlock, value);
+                map.put(returnBlock, value);
             }
         }
+
 
         @Override
         public @NotNull Block.FunctionBlock getBlock() {
@@ -209,23 +209,25 @@ public class DataFlowFunctionMap {
         }
 
         @Override
-        protected @NotNull Map<Map<Argument, Constraint>, Set<Result>> getResults() {
-            Map<Map<Argument, Constraint>, Set<Result>> map = new HashMap<>(result.get().size(), 1);
-            result.get().forEach((arguments, results) -> {
-                map.computeIfAbsent(arguments, value -> new HashSet<>(1));
-                map.get(arguments).addAll(results.values());
-            });
-            return map;
+        protected @NotNull Set<Result> getResults() {
+            Map<DataFlowBlock, Result> value = result.get();
+            if (value != null) {
+                return new HashSet<>(value.values());
+            }
+            return Set.of();
         }
 
         @Override
-        public @NotNull Set<Result> getOutput(@NotNull DataFlowBlock callerBlock, @NotNull Map<Argument, Constraint> arguments) {
-            Map<Map<Argument, Constraint>, Map<DataFlowBlock, Result>> value = result.get();
+        public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull BranchingInstruction.CallInstruction instruction) {
+            Map<DataFlowBlock, Result> value = result.get();
             if (value != null) {
-                Set<Result> results = super.getOutput(callerBlock, arguments);
-                usages.put(callerBlock, Set.copyOf(results));
-                for (Result output : results) {
-                    registerUsage(callerBlock, arguments, BlockDescriptor.getBlockKey(functionBlock), output);
+                Set<Result> results = super.getOutput(state, instruction);
+                Optional<DataFlowBlock> block = state.getBlock();
+                if (block.isPresent()) {
+                    usages.put(block.orElseThrow(), Set.copyOf(results));
+                    for (Result output : results) {
+                        registerUsage(block.orElseThrow(), BlockDescriptor.getBlockKey(functionBlock), output);
+                    }
                 }
                 return results;
             }
