@@ -1,6 +1,10 @@
 package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.language.flow.*;
+import com.bossymr.rapid.language.flow.data.PathCounter;
+import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
@@ -149,22 +153,22 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
 
     @Override
     public @NotNull String visitArgument(@NotNull Argument argument) {
-        String parameterType = argument.parameterType().getText().toLowerCase();
-        String type = argument.type().getPresentableText();
-        return parameterType + " " + type + " " + "_" + argument.index() + " [" + argument.name() + "]";
+        String parameterType = argument.getParameterType().getText().toLowerCase();
+        String type = argument.getType().getPresentableText();
+        return parameterType + " " + type + " " + "_" + argument.getIndex() + " [" + argument.getName() + "]";
     }
 
     @Override
     public @NotNull String visitVariable(@NotNull Variable variable) {
         StringBuilder stringBuilder = new StringBuilder();
-        if (variable.fieldType() != null) {
-            stringBuilder.append(variable.fieldType().getText().toLowerCase());
+        if (variable.getFieldType() != null) {
+            stringBuilder.append(variable.getFieldType().getText().toLowerCase());
             stringBuilder.append(" ");
         }
-        stringBuilder.append(variable.type().getPresentableText()).append(" ");
-        stringBuilder.append("_").append(variable.index());
-        if (variable.name() != null) {
-            stringBuilder.append(" [").append(variable.name()).append("]");
+        stringBuilder.append(variable.getType().getPresentableText()).append(" ");
+        stringBuilder.append("_").append(variable.getIndex());
+        if (variable.getName() != null) {
+            stringBuilder.append(" [").append(variable.getName()).append("]");
         }
         stringBuilder.append(";");
         return stringBuilder.toString();
@@ -235,20 +239,20 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
             stringBuilder.append(instruction.returnValue().accept(this));
             stringBuilder.append(" := ");
         }
-        Value routine = instruction.routine();
-        if (routine instanceof ConstantValue constant && constant.getValue() instanceof String) {
+        Expression routine = instruction.routine();
+        if (routine instanceof ConstantExpression constant && constant.getValue() instanceof String) {
             stringBuilder.append(constant.getValue());
         } else {
             stringBuilder.append(routine.accept(this));
         }
         stringBuilder.append("(");
-        List<Map.Entry<ArgumentDescriptor, Value>> arguments = new ArrayList<>(instruction.arguments().entrySet());
+        List<Map.Entry<ArgumentDescriptor, ReferenceExpression>> arguments = new ArrayList<>(instruction.arguments().entrySet());
         arguments.sort(Comparator.comparing(entry -> getDescriptorName(entry.getKey())));
         for (int i = 0; i < arguments.size(); i++) {
             if (i > 0) {
                 stringBuilder.append(", ");
             }
-            Map.Entry<ArgumentDescriptor, Value> entry = arguments.get(i);
+            Map.Entry<ArgumentDescriptor, ReferenceExpression> entry = arguments.get(i);
             String key = getDescriptorName(entry.getKey());
             stringBuilder.append("_").append(key);
             if (entry.getValue() != null) {
@@ -274,13 +278,55 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     }
 
     @Override
-    public @NotNull String visitLocalVariableValue(@NotNull VariableValue value) {
-        return "_" + value.field().index();
+    public String visitArraySnapshotExpression(@NotNull ArraySnapshot snapshot) {
+        return super.visitArraySnapshotExpression(snapshot);
     }
 
     @Override
-    public @NotNull String visitFieldVariableValue(@NotNull FieldValue value) {
-        return (value.moduleName() != null ? value.moduleName() + ":" : "") + value.name();
+    public String visitRecordSnapshotExpression(@NotNull RecordSnapshot snapshot) {
+        return super.visitRecordSnapshotExpression(snapshot);
+    }
+
+    @Override
+    public String visitVariableSnapshotExpression(VariableSnapshot snapshot) {
+        return super.visitVariableSnapshotExpression(snapshot);
+    }
+
+    @Override
+    public String visitPathCounterExpression(@NotNull PathCounter pathCounter) {
+        return super.visitPathCounterExpression(pathCounter);
+    }
+
+    @Override
+    public String visitConstantExpression(@NotNull ConstantExpression expression) {
+        if (expression.getValue() instanceof String) {
+            return "\"" + expression.getValue() + "\"";
+        } else {
+            return expression.getValue().toString();
+        }
+    }
+
+    @Override
+    public String visitIndexExpression(@NotNull IndexExpression expression) {
+        String variableText = expression.getVariable().accept(this);
+        String indexText = expression.getIndex().accept(this);
+        return variableText + "[" + indexText + "]";
+    }
+
+    @Override
+    public String visitComponentExpression(@NotNull ComponentExpression expression) {
+        String variableText = expression.getVariable().accept(this);
+        return variableText + "." + expression.getComponent();
+    }
+
+    @Override
+    public String visitVariableExpression(@NotNull VariableExpression expression) {
+        return "_" + expression.getField().getIndex();
+    }
+
+    @Override
+    public String visitFieldExpression(@NotNull FieldExpression expression) {
+        return expression.getModuleName() + ":" + expression.getName();
     }
 
     @Override
@@ -289,46 +335,14 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     }
 
     @Override
-    public @NotNull String visitComponentVariableValue(@NotNull ComponentValue value) {
-        String variableText = value.variable().accept(this);
-        return variableText + "." + value.name();
-    }
-
-    @Override
-    public @NotNull String visitIndexValue(@NotNull IndexValue value) {
-        String variableText = value.variable().accept(this);
-        String indexText = value.index().accept(this);
-        return variableText + "[" + indexText + "]";
-    }
-
-    @Override
-    public @NotNull String visitConstantValue(@NotNull ConstantValue value) {
-        if (value.getValue() instanceof String) {
-            return "\"" + value.getValue() + "\"";
-        } else {
-            return value.getValue().toString();
-        }
-    }
-
-    @Override
-    public @NotNull String visitErrorValue(@NotNull ErrorValue value) {
-        return "error";
-    }
-
-    @Override
-    public @NotNull String visitValueExpression(@NotNull ValueExpression expression) {
-        return expression.value().accept(this);
-    }
-
-    @Override
     public @NotNull String visitAggregateExpression(@NotNull AggregateExpression expression) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("[");
-        for (int i = 0; i < expression.values().size(); i++) {
+        for (int i = 0; i < expression.getComponents().size(); i++) {
             if (i > 0) {
                 stringBuilder.append(", ");
             }
-            stringBuilder.append(expression.values().get(i).accept(this));
+            stringBuilder.append(expression.getComponents().get(i).accept(this));
         }
         stringBuilder.append("]");
         return stringBuilder.toString();
@@ -336,9 +350,9 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
 
     @Override
     public @NotNull String visitBinaryExpression(@NotNull BinaryExpression expression) {
-        String leftValue = expression.left().accept(this);
-        String rightValue = expression.right().accept(this);
-        return leftValue + " " + switch (expression.operator()) {
+        String leftValue = expression.getLeft().accept(this);
+        String rightValue = expression.getRight().accept(this);
+        return leftValue + " " + switch (expression.getOperator()) {
             case ADD -> "+";
             case SUBTRACT -> "-";
             case MULTIPLY -> "*";
@@ -359,16 +373,9 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
 
     @Override
     public @NotNull String visitUnaryExpression(@NotNull UnaryExpression expression) {
-        return switch (expression.operator()) {
+        return switch (expression.getOperator()) {
             case NOT -> "NOT ";
             case NEGATE -> "-";
-        } + expression.value().accept(this);
-    }
-
-    @Override
-    public @NotNull String visitCondition(@NotNull Condition condition) {
-        String variableText = condition.getVariable().accept(this);
-        String expressionText = condition.getExpression().accept(this);
-        return variableText + " " + condition.getConditionType().getText() + " " + expressionText;
+        } + expression.getExpression().accept(this);
     }
 }

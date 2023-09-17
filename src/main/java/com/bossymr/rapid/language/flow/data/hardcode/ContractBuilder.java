@@ -85,9 +85,6 @@ public class ContractBuilder {
         }
 
         public @NotNull ContractBuilder withSuccess() {
-            if (functionBlock.getReturnType() != null) {
-                throw new IllegalStateException();
-            }
             results.add(new Result.Success(state, output));
             return ContractBuilder.this;
         }

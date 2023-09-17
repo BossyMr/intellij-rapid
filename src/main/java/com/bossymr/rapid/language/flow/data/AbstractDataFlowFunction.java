@@ -19,6 +19,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
     public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull BranchingInstruction.CallInstruction instruction) {
         Set<DataFlowFunction.Result> output = new HashSet<>();
         for (Result result : getResults()) {
+            // TODO: 2023-09-17 The snapshots for parameters aren't being forwarded to the snapshots for the arguments passed to the function (if it isn't an INPUT parameter)
             Map<ReferenceExpression, ReferenceExpression> variableMap = new HashMap<>();
             if (result.variable() != null && instruction.returnValue() != null) {
                 variableMap.put(result.variable(), instruction.returnValue());

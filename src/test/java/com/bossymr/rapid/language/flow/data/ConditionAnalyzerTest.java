@@ -12,6 +12,7 @@ import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -24,13 +25,18 @@ class ConditionAnalyzerTest {
 
     @Test
     void testCondition() {
+        /*
+         * x := 0
+         * z := x == 0
+         * z -> true
+         */
         DataFlowState state = DataFlowState.createState(getEmptyFunctionBlock());
-        VariableSnapshot integerSnapshot = new VariableSnapshot(RapidPrimitiveType.NUMBER);
-        VariableSnapshot booleanSnapshot = new VariableSnapshot(RapidPrimitiveType.BOOLEAN);
-        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, integerSnapshot, new ConstantExpression(RapidPrimitiveType.NUMBER, 0)));
-        BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, integerSnapshot, new ConstantExpression(RapidPrimitiveType.NUMBER, 0));
-        Expression condition = new BinaryExpression(BinaryOperator.EQUAL_TO, booleanSnapshot, expression);
+        VariableSnapshot x = new VariableSnapshot(RapidPrimitiveType.NUMBER);
+        VariableSnapshot z = new VariableSnapshot(RapidPrimitiveType.BOOLEAN);
+        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, x, new ConstantExpression(RapidPrimitiveType.NUMBER, 0)));
+        BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, x, new ConstantExpression(RapidPrimitiveType.NUMBER, 0));
+        Expression condition = new BinaryExpression(BinaryOperator.EQUAL_TO, z, expression);
         BooleanValue value = state.getConstraint(condition);
-        System.out.println(value);
+        Assertions.assertEquals(BooleanValue.ALWAYS_TRUE, value);
     }
 }

@@ -1,6 +1,8 @@
 package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.RapidIcons;
+import com.bossymr.rapid.language.type.RapidAliasType;
+import com.bossymr.rapid.language.type.RapidAtomicType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.navigation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
@@ -14,6 +16,11 @@ public interface RapidAtomic extends RapidStructure {
 
     @Override
     @NotNull String getName();
+
+    @Override
+    default @NotNull RapidType createType() {
+        return new RapidAtomicType(this);
+    }
 
     /**
      * If this type is a {@link ValueType#SEMI_VALUE_TYPE semi-value} type, returns the associated type which should be

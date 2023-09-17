@@ -25,16 +25,6 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
         myFixture.checkHighlighting(true, true, true, true);
     }
 
-    public void testSimple() {
-        doTest("""
-                MODULE foo
-                    PROC bar()
-                        VAR num variable := <warning descr="Value of expression is always 8">2 * 4</warning>;
-                    ENDPROC
-                ENDMODULE
-                """);
-    }
-
     public void testFunctionCall() {
         doTest("""
                 MODULE foo
@@ -81,24 +71,13 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testVariableAssignment() {
-        doTest("""
-                MODULE foo
-                    PROC bar()
-                        VAR num variable := 2;
-                        variable := <warning descr="Value of expression is always 8">2 * 4</warning>;
-                    ENDPROC
-                ENDMODULE
-                """);
-    }
-
     public void testConditionJump() {
         doTest("""
                 MODULE foo
                     PROC bar(num x)
                         VAR num variable := 2;
                         IF x = 2 THEN
-                            variable := <warning descr="Value of expression is always 4">variable * 2</warning>;
+                            variable := variable * 2;
                             IF <warning descr="Value of expression is always true">x > 0</warning> THEN
                             ENDIF
                         ENDIF
@@ -112,7 +91,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 MODULE foo
                     PROC bar(num x)
                         VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];
-                        variable{1, x} := <warning descr="Value of expression is always 8">variable{1, 3} * variable{2, 2}</warning>;
+                        IF <warning descr="Value of expression is always true">(variable{1, 3} * variable{2, 2}) = 8</warning> THEN
+                        ENDIF
                     ENDPROC
                 ENDMODULE
                 """);
@@ -135,7 +115,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testMutuallyExlusiveArgument() {
+    public void testMutuallyExclusiveArgument() {
         doTest("""
                 MODULE foo
                     PROC bar(\\num x | num y)
@@ -150,7 +130,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testLargeMutuallyExlusiveArguments() {
+    public void testLargeMutuallyExclusiveArguments() {
         doTest("""
                 MODULE foo
                     PROC bar(\\num x | num y | num z)

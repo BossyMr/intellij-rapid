@@ -6,7 +6,6 @@ import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.ControlFlowService;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowEdge;
@@ -16,9 +15,9 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
-import com.bossymr.rapid.language.flow.value.ReferenceExpression;
-import com.bossymr.rapid.language.flow.value.SnapshotExpression;
+import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.StatementListType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.configurations.PathEnvironmentVariableUtil;
@@ -234,44 +233,37 @@ public class DataFlowGraphService extends AnAction {
     private static void writeState(@NotNull StringBuilder stringBuilder, @NotNull MultiMap<DataFlowBlock, DataFlowState> states, @NotNull DataFlowBlock block, @NotNull DataFlowState state) {
         stringBuilder.append(getStateIndex(block, states, state));
         stringBuilder.append("[shape=plain,label=<").append("<table BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">");
-        stringBuilder.append("<tr><td COLSPAN=\"3\">").append("State #").append(new ArrayList<>(states.getAll(block)).indexOf(state)).append("</td></tr>\n");
-        stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Snapshots").append("</td></tr>\n");
+        stringBuilder.append("<tr><td COLSPAN=\"2\">").append("State #").append(new ArrayList<>(states.getAll(block)).indexOf(state)).append("</td></tr>\n");
+        stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Snapshots").append("</td></tr>\n");
         Set<SnapshotExpression> snapshots = new HashSet<>();
         for (var entry : state.getSnapshots().entrySet()) {
-            writeSnapshot(stringBuilder, state, entry.getKey(), entry.getValue(), snapshots);
+            writeSnapshot(stringBuilder, state, new VariableExpression(entry.getKey()), entry.getValue(), snapshots);
         }
-        stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Conditions").append("</td></tr>\n");
-        for (Condition condition : state.getExpressions()) {
+        stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Expressions").append("</td></tr>\n");
+        for (Expression condition : state.getExpressions()) {
             stringBuilder.append("<tr>");
-            stringBuilder.append("<td>");
-            stringBuilder.append(HtmlChunk.text(condition.getVariable().accept(new ControlFlowFormatVisitor())));
-            stringBuilder.append("</td>");
-            stringBuilder.append("<td>");
-            stringBuilder.append(HtmlChunk.text(condition.getConditionType().getText()));
-            stringBuilder.append("</td>");
-            stringBuilder.append("<td align=\"left\">");
-            stringBuilder.append(HtmlChunk.text(condition.getExpression().accept(new ControlFlowFormatVisitor())));
+            stringBuilder.append("<td COLSPAN=\"2\" align=\"left\">");
+            stringBuilder.append(HtmlChunk.text(condition.accept(new ControlFlowFormatVisitor())));
             stringBuilder.append("</td>");
             stringBuilder.append("</tr>\n");
         }
-        stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Constraints").append("</td></tr>\n");
-        for (var entry : state.getOptionality().entrySet()) {
-            stringBuilder.append("<tr>");
-            stringBuilder.append("<td>");
-            stringBuilder.append(entry.getKey().accept(new ControlFlowFormatVisitor()));
-            stringBuilder.append("</td>");
-            stringBuilder.append("<td align=\"left\">");
-            stringBuilder.append(entry.getValue().getPresentableText());
-            stringBuilder.append("</td>");
-            stringBuilder.append("<td align=\"left\">");
-            stringBuilder.append(switch (entry.getValue().getOptionality()) {
-                case PRESENT -> "[present]";
-                case UNKNOWN -> "[present, missing]";
-                case MISSING -> "[missing]";
-                case NO_VALUE, ANY_VALUE -> "[]";
-            });
-            stringBuilder.append("</td>");
-            stringBuilder.append("</tr>\n");
+        if(!(state.getOptionality().isEmpty())) {
+            stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Optionality").append("</td></tr>\n");
+            for (var entry : state.getOptionality().entrySet()) {
+                stringBuilder.append("<tr>");
+                stringBuilder.append("<td>");
+                stringBuilder.append(entry.getKey().accept(new ControlFlowFormatVisitor()));
+                stringBuilder.append("</td>");
+                stringBuilder.append("<td align=\"left\">");
+                stringBuilder.append(switch (entry.getValue()) {
+                    case PRESENT -> "[present]";
+                    case UNKNOWN -> "[present, missing]";
+                    case MISSING -> "[missing]";
+                    case NO_VALUE, ANY_VALUE -> "[]";
+                });
+                stringBuilder.append("</td>");
+                stringBuilder.append("</tr>\n");
+            }
         }
         stringBuilder.append("</table>>];\n");
     }
@@ -284,13 +276,13 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("<tr>");
         stringBuilder.append("<td>");
         stringBuilder.append(variable.accept(visitor));
-        if(variable instanceof VariableValue variableValue && variableValue.field().name() != null) {
+        if(variable instanceof VariableExpression variableValue && variableValue.getField().getName() != null) {
             stringBuilder.append("[");
-            stringBuilder.append(variableValue.field().name());
+            stringBuilder.append(variableValue.getField().getName());
             stringBuilder.append("]");
         }
         stringBuilder.append("</td>");
-        stringBuilder.append("<td COLSPAN=\"2\" align=\"left\">");
+        stringBuilder.append("<td align=\"left\">");
         stringBuilder.append(snapshot.accept(visitor));
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");
@@ -308,14 +300,14 @@ public class DataFlowGraphService extends AnAction {
             }
             for (var entry : recordSnapshot.getSnapshots().entrySet()) {
                 if (entry.getValue() instanceof SnapshotExpression componentSnapshot) {
-                    writeSnapshot(stringBuilder, state, new ComponentValue(componentSnapshot.getType(), recordSnapshot, entry.getKey()), componentSnapshot, snapshots);
+                    writeSnapshot(stringBuilder, state, new ComponentExpression(componentSnapshot.getType(), recordSnapshot, entry.getKey()), componentSnapshot, snapshots);
                 }
             }
         } else if (snapshot instanceof ArraySnapshot arraySnapshot) {
-            for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments(state, Constraint.any(RapidPrimitiveType.NUMBER))) {
+            for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments()) {
                 if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
                     stringBuilder.append("<tr>");
-                    stringBuilder.append("<td COLSPAN=\"2\">");
+                    stringBuilder.append("<td>");
                     assignment.index().accept(visitor);
                     stringBuilder.append("</td>");
                     stringBuilder.append("<td align=\"left\">");
@@ -324,7 +316,6 @@ public class DataFlowGraphService extends AnAction {
                     stringBuilder.append("</tr>\n");
                 } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
                     stringBuilder.append("<tr>");
-                    stringBuilder.append("<td COLSPAN=\"2\">");
                     stringBuilder.append("[default]");
                     stringBuilder.append("</td>");
                     stringBuilder.append("<td align=\"left\">");
@@ -333,14 +324,14 @@ public class DataFlowGraphService extends AnAction {
                     stringBuilder.append("</tr>\n");
                 }
             }
-            for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments(state, Constraint.any(RapidPrimitiveType.NUMBER))) {
+            for (ArrayEntry assignmentEntry : arraySnapshot.getAllAssignments(state)) {
                 if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
                     if (assignment.value() instanceof SnapshotExpression referenceValue) {
-                        writeSnapshot(stringBuilder, state, new IndexValue(arraySnapshot, assignment.index()), referenceValue, snapshots);
+                        writeSnapshot(stringBuilder, state, new IndexExpression(arraySnapshot, assignment.index()), referenceValue, snapshots);
                     }
                 } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
                     if (defaultValue.defaultValue() instanceof SnapshotExpression referenceValue) {
-                        writeSnapshot(stringBuilder, state, new IndexValue(arraySnapshot, ConstantValue.of("default")), referenceValue, snapshots);
+                        writeSnapshot(stringBuilder, state, new IndexExpression(arraySnapshot, new ConstantExpression(RapidPrimitiveType.ANYTYPE, "[default]")), referenceValue, snapshots);
                     }
                 }
             }
@@ -350,7 +341,7 @@ public class DataFlowGraphService extends AnAction {
     private static void writeInstruction(@NotNull StringBuilder stringBuilder, int index, @NotNull Instruction instruction) {
         stringBuilder.append("<tr>");
         stringBuilder.append("<td>").append(index).append("</td>");
-        stringBuilder.append("<td COLSPAN=\"2\" align=\"left\" CELLPADDING=\"4\">");
+        stringBuilder.append("<td align=\"left\" CELLPADDING=\"4\">");
         stringBuilder.append(HtmlChunk.text(instruction.accept(new ControlFlowFormatVisitor())));
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");

@@ -13,18 +13,10 @@ public interface RapidStructure extends RapidSymbol, RapidVisibleSymbol {
      *
      * @return a new type of this structure.
      */
-    default @NotNull RapidType createType() {
-        return new RapidType(this);
-    }
+    @NotNull RapidType createType();
 
-    /**
-     * Creates a new array with the specified dimensions of this structure.
-     *
-     * @param dimensions the dimensions.
-     * @return a new type of this structure.
-     */
     default @NotNull RapidType createType(int dimensions) {
-        return new RapidType(this, dimensions);
+        return createType().createArrayType(dimensions);
     }
 
 }

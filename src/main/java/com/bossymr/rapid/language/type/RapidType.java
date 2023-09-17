@@ -40,10 +40,13 @@ public interface RapidType {
      *
      * @param dimensions the degree of the array.
      * @return a new type which represents an array of this type.
-     * @throws IllegalArgumentException if the specified degree is negative or equal to zero.
+     * @throws IllegalArgumentException if the specified degree is negative.
      */
     default @NotNull RapidType createArrayType(int dimensions) {
-        if(dimensions <= 0) {
+        if(dimensions == 0) {
+            return this;
+        }
+        if(dimensions < 0) {
             throw new IllegalArgumentException("Cannot create array type with degree: " + dimensions);
         }
         RapidType type = new RapidArrayType(this);

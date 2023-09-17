@@ -51,40 +51,28 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
-                	bool _1;
-                	num _2;
-                	bool _3;
-                	num _4;
-                	num _5;
-                	num _6;
                                 
                 	entry 0 {
                 		_0 := 2.0 * 3.0;
-                		_1 := _0 > 4.0;
-                		if(_1) -> [true: 1, false: 2]
+                		if(_0 > 4.0) -> [true: 1, false: 2]
                 	}
                                 
                 	block 1 {
-                		_2 := _0 + 1.0;
-                		_0 := _2;
+                		_0 := _0 + 1.0;
                 		goto -> 5;
                 	}
                                 
                 	block 2 {
-                		_3 := _0 > 2.0;
-                		if(_3) -> [true: 3, false: 4]
+                		if(_0 > 2.0) -> [true: 3, false: 4]
                 	}
                                 
                 	block 3 {
-                		_4 := _0 - 1.0;
-                		_0 := _4;
+                		_0 := _0 - 1.0;
                 		goto -> 5;
                 	}
                                 
                 	block 4 {
-                		_5 := _0 * 2.0;
-                		_6 := _5 + 2.0;
-                		_0 := _6;
+                		_0 := _0 * 2.0 + 2.0;
                 		goto -> 5;
                 	}
                                 
@@ -109,8 +97,6 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
-                	bool _1;
-                	num _2;
                                 
                 	entry 0 {
                 		_0 := 2.0 * 3.0;
@@ -118,13 +104,11 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	}
                                 
                 	block 1 {
-                		_1 := _0 > 0.0;
-                		if(_1) -> [true: 2, false: 3]
+                		if(_0 > 0.0) -> [true: 2, false: 3]
                 	}
                                 
                 	block 2 {
-                		_2 := _0 - 1.0;
-                		_0 := _2;
+                		_0 := _0 - 1.0;
                 		goto -> 1;
                 	}
                                 
@@ -146,16 +130,12 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 func num foo:bar() {
-                	num{*} _0;
-                	num{*} _1;
-                	var num{*,*} _2 [value];
+                	var num{*,*} _0 [value];
                                 
                 	entry 0 {
-                		_0 := [1.0, 2.0, 3.0];
-                		_1 := [3.0, 4.0, 5.0];
-                		_2 := [_0, _1];
-                		_2[2.0][3.0] := 6.0;
-                		return _2[0.0][2.0];
+                		_0 := [[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
+                		_0[2.0][3.0] := 6.0;
+                		return _0[0.0][2.0];
                 	}
                 }
                 """);
@@ -203,15 +183,11 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	var num _0 [value];
                 	num _1 [i];
                 	num _2;
-                	bool _3;
-                	num _4;
-                	bool _5;
                                 
                 	entry 0 {
                 		_0 := 0.0;
                 		_1 := 0.0;
-                		_3 := _1 < 10.0;
-                		if(_3) -> [true: 1, false: 2]
+                		if(_1 < 10.0) -> [true: 1, false: 2]
                 	}
                                 
                 	block 1 {
@@ -225,11 +201,9 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	}
                                 
                 	block 3 {
-                		_4 := _0 + 1.0;
-                		_0 := _4;
+                		_0 := _0 + 1.0;
                 		_1 := _1 + _2;
-                		_5 := _1 = 10.0;
-                		if(_5) -> [true: 4, false: 3]
+                		if(_1 = 10.0) -> [true: 4, false: 3]
                 	}
                                 
                 	block 4 {
@@ -254,21 +228,17 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 func num foo:bar() {
                 	var num _0 [value];
                 	num _1 [i];
-                	num _2;
-                	bool _3;
                                 
                 	entry 0 {
-                	    _0 := 0.0;
-                        _1 := 0.0;
+                		_0 := 0.0;
+                		_1 := 0.0;
                 		goto -> 1;
                 	}
                                 
                 	block 1 {
-                		_2 := _0 + 1.0;
-                		_0 := _2;
+                		_0 := _0 + 1.0;
                 		_1 := _1 + 5.0;
-                		_3 := _1 = 10.0;
-                		if(_3) -> [true: 2, false: 1]
+                		if(_1 = 10.0) -> [true: 2, false: 1]
                 	}
                                 
                 	block 2 {
@@ -376,12 +346,8 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 func num foo:Abs(input num _0 [value]) {
-                	bool _1;
-                	num _2;
-                                
                 	entry 0 {
-                		_1 := _0 >= 0.0;
-                		if(_1) -> [true: 1, false: 2]
+                		if(_0 >= 0.0) -> [true: 1, false: 2]
                 	}
                                 
                 	block 1 {
@@ -389,8 +355,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	}
                                 
                 	block 2 {
-                		_2 := -_0;
-                		return _2;
+                		return -_0;
                 	}
                 }
                                 
@@ -400,7 +365,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                                 
                 	entry 0 {
                 		_0 := -1.0;
-                		_1 := foo:Abs(_0 := -1.0) -> 1;
+                		_1 := foo:Abs(_0) -> 1;
                 	}
                                 
                 	block 1 {

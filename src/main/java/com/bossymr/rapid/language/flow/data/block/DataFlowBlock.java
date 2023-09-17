@@ -207,6 +207,11 @@ public class DataFlowBlock {
     }
 
     public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull DataFlowState state) {
+        if (state.getBlock().isPresent()) {
+            if(state.getBlock().orElseThrow() != successor) {
+                state = DataFlowState.createSuccessorState(successor, state);
+            }
+        }
         DataFlowEdge edge = new DataFlowEdge(this, successor, state);
         successors.add(edge);
     }

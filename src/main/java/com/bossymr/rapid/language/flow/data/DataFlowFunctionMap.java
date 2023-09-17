@@ -1,14 +1,15 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
-import com.bossymr.rapid.language.flow.constraint.Constraint;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
+import com.bossymr.rapid.language.flow.value.BinaryExpression;
+import com.bossymr.rapid.language.flow.value.BinaryOperator;
+import com.bossymr.rapid.language.flow.value.VariableExpression;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
@@ -70,10 +71,10 @@ public class DataFlowFunctionMap {
         return hardReferences;
     }
 
-    private void registerExit(@NotNull DataFlowBlock returnBlock, @NotNull Map<Argument, Constraint> arguments, @NotNull DataFlowFunction.Result result) {
+    private void registerExit(@NotNull DataFlowBlock returnBlock, @NotNull DataFlowFunction.Result result) {
         Block block = returnBlock.getBasicBlock().getBlock();
         BlockDescriptor blockDescriptor = BlockDescriptor.getBlockKey(block);
-        ResultEntry outputEntry = new ResultEntry(blockDescriptor, arguments);
+        ResultEntry outputEntry = new ResultEntry(blockDescriptor, result.state());
         exitPoints.put(result, returnBlock);
         for (DataFlowBlock callerBlock : softReferences.keySet()) {
             ResultEntry resultEntry = softReferences.get(callerBlock);
@@ -106,7 +107,7 @@ public class DataFlowFunctionMap {
                 hardReferences.put(returnBlock, usage);
             }
         } else {
-            softReferences.put(callerBlock, new ResultEntry(blockDescriptor));
+            softReferences.put(callerBlock, new ResultEntry(blockDescriptor, result.state()));
         }
     }
 
@@ -133,16 +134,16 @@ public class DataFlowFunctionMap {
             if (!(functionMap.get(blockDescriptor) instanceof PhysicalDataFlowFunction function)) {
                 throw new IllegalStateException();
             }
-            function.addResult(returnBlock, arguments, result);
+            function.addResult(returnBlock, result);
         } else {
             /*
              * The function has not been processed, and must be created.
              */
             PhysicalDataFlowFunction function = new PhysicalDataFlowFunction(descriptorMap.get(blockDescriptor));
-            function.addResult(returnBlock, arguments, result);
+            function.addResult(returnBlock, result);
             functionMap.put(blockDescriptor, function);
         }
-        registerExit(returnBlock, arguments, result);
+        registerExit(returnBlock, result);
     }
 
     private @NotNull DataFlowUsage.DataFlowUsageType getUsageType(DataFlowFunction.@NotNull Result result) {
@@ -157,24 +158,17 @@ public class DataFlowFunctionMap {
         }
     }
 
-    public record ResultEntry(@NotNull BlockDescriptor blockDescriptor, @NotNull Map<Argument, Constraint> arguments) {
+    public record ResultEntry(@NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowState state) {
 
         public boolean isSimilar(@NotNull ResultEntry entry) {
             if (!(blockDescriptor().equals(entry.blockDescriptor()))) {
                 return false;
             }
-            if (arguments().size() != entry.arguments().size()) {
-                return false;
-            }
-            for (Argument argument : arguments.keySet()) {
-                if (!(entry.arguments().containsKey(argument))) {
-                    return false;
-                }
-                if (!(arguments().get(argument).intersects(entry.arguments().get(argument)))) {
-                    return false;
-                }
-            }
-            return true;
+            DataFlowState copy = DataFlowState.copy(state);
+            entry.state().getExpressions().forEach(copy::add);
+            entry.state().getOptionality().forEach(copy::setOptionality);
+            entry.state().getSnapshots().forEach((field, snapshot) -> copy.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new VariableExpression(field), snapshot)));
+            return copy.isSatisfiable();
         }
     }
 
@@ -220,27 +214,26 @@ public class DataFlowFunctionMap {
         @Override
         public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull BranchingInstruction.CallInstruction instruction) {
             Map<DataFlowBlock, Result> value = result.get();
+            BlockDescriptor blockDescriptor = BlockDescriptor.getBlockKey(functionBlock);
             if (value != null) {
                 Set<Result> results = super.getOutput(state, instruction);
                 Optional<DataFlowBlock> block = state.getBlock();
                 if (block.isPresent()) {
                     usages.put(block.orElseThrow(), Set.copyOf(results));
                     for (Result output : results) {
-                        registerUsage(block.orElseThrow(), BlockDescriptor.getBlockKey(functionBlock), output);
+                        registerUsage(block.orElseThrow(), blockDescriptor, output);
                     }
                 }
                 return results;
             }
-            Map<Argument, Constraint> constraints = new HashMap<>();
-            for (Argument argument : arguments.keySet()) {
-                constraints.put(argument, Constraint.any(argument.type()));
-            }
             RapidType returnType = functionBlock.getReturnType();
-            Constraint returnConstraint = returnType != null ? Constraint.any(returnType) : null;
-            Result output = Result.Success.create(functionBlock, constraints, returnType, returnConstraint);
+            DataFlowState simpleState = DataFlowState.createUnknownState(getBlock());
+            Result output = new Result.Success(simpleState, returnType != null ? state.createSnapshot(returnType, null) : null);
             Set<Result> result = Set.of(output);
-            usages.put(callerBlock, result);
-            registerUsage(callerBlock, arguments, BlockDescriptor.getBlockKey(functionBlock), output);
+            state.getBlock().ifPresent(callerBlock -> {
+                usages.put(callerBlock, result);
+                registerUsage(callerBlock, blockDescriptor, output);
+            });
             return result;
         }
     }

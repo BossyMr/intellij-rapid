@@ -4,6 +4,7 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.*;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.lang.annotation.AnnotationHolder;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;

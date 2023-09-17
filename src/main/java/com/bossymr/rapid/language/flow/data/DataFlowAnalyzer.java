@@ -141,7 +141,7 @@ public class DataFlowAnalyzer {
         }
         block.getSuccessors().clear();
         for (DataFlowEdge predecessors : block.getPredecessors()) {
-            block.getStates().addAll(predecessors.getState());
+            block.getStates().add(predecessors.getState());
         }
         BasicBlock basicBlock = block.getBasicBlock();
         DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(functionBlock, block, blocks, functionMap);

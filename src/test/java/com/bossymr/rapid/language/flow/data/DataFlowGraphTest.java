@@ -55,23 +55,19 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
         DataFlowGraphService.convert(outputFile, result);
     }
 
-    public void DISABLEDtestModule() throws IOException, ExecutionException {
+    public void testModule() throws IOException, ExecutionException {
         check("""
                 MODULE foo
-                    
-                    PROC bar(num n, num{*} A, num x)
-                        VAR num k := 0;
-                        VAR num i := 0;
-                        WHILE i < n THEN
-                            IF A{i} = x THEN
-                                k := k + 1;
-                            ENDIF
-                            i := i + 1;
-                        ENDWHILE
-                        IF k = 3 THEN
+                    PROC bar(\\num x)
+                        VAR num y := 5;
+                        VAR num z := 0;
+                        IF Present(x) THEN
+                            y := y + x;
+                        ELSE
+                            y := y - x;
+                            z := x;
                         ENDIF
                     ENDPROC
-                    
                 ENDMODULE
                 """);
     }

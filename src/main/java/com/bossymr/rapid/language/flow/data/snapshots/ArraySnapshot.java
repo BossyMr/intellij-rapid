@@ -56,9 +56,27 @@ public class ArraySnapshot implements SnapshotExpression {
         assignments.add(new ArrayEntry.Assignment(index, value));
     }
 
-    public @NotNull List<ArrayEntry> getAssignments(@NotNull DataFlowState state, @NotNull Expression index) {
+    public @NotNull List<ArrayEntry> getAllAssignments(@NotNull DataFlowState state) {
         List<ArrayEntry> values = new ArrayList<>();
         loop:
+        for (ListIterator<ArrayEntry.Assignment> iterator = assignments.listIterator(assignments.size()); iterator.hasPrevious(); ) {
+            ArrayEntry.Assignment assignment = iterator.previous();
+            if(isEqualToPrevious(values, assignment, state)) {
+                continue;
+            }
+            values.add(assignment);
+            if (!(iterator.hasPrevious())) {
+                values.add(new ArrayEntry.DefaultValue(defaultValue.apply(this)));
+            }
+        }
+        if (values.isEmpty()) {
+            values.add(new ArrayEntry.DefaultValue(defaultValue.apply(this)));
+        }
+        return values;
+    }
+
+    public @NotNull List<ArrayEntry> getAssignments(@NotNull DataFlowState state, @NotNull Expression index) {
+        List<ArrayEntry> values = new ArrayList<>();
         for (ListIterator<ArrayEntry.Assignment> iterator = assignments.listIterator(assignments.size()); iterator.hasPrevious(); ) {
             ArrayEntry.Assignment assignment = iterator.previous();
             BooleanValue constraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignment.index(), index));
@@ -66,14 +84,8 @@ public class ArraySnapshot implements SnapshotExpression {
                 // The specified index cannot be equal to the current assignment, as such, this assignment should not be considered.
                 continue;
             }
-            for (ArrayEntry previousEntry : values) {
-                if (previousEntry instanceof ArrayEntry.Assignment assignmentEntry) {
-                    BooleanValue comparisonConstraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignmentEntry.index(), assignment.index()));
-                    if (comparisonConstraint == BooleanValue.ALWAYS_TRUE) {
-                        // The index of the current assignment is always equal to the index of an assignment already considered, as a result, that entry would always replace this entry.
-                        continue loop;
-                    }
-                }
+            if(isEqualToPrevious(values, assignment, state)) {
+                continue;
             }
             values.add(assignment);
             if (constraint == BooleanValue.ALWAYS_TRUE) {
@@ -88,6 +100,19 @@ public class ArraySnapshot implements SnapshotExpression {
             values.add(new ArrayEntry.DefaultValue(defaultValue.apply(this)));
         }
         return values;
+    }
+
+    private boolean isEqualToPrevious(@NotNull List<ArrayEntry> entries, @NotNull ArrayEntry.Assignment entry,  @NotNull DataFlowState state) {
+        for (ArrayEntry previousEntry : entries) {
+            if (previousEntry instanceof ArrayEntry.Assignment assignmentEntry) {
+                BooleanValue comparisonConstraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignmentEntry.index(), entry.index()));
+                if (comparisonConstraint == BooleanValue.ALWAYS_TRUE) {
+                    // The index of the current assignment is always equal to the index of an assignment already considered, as a result, that entry would always replace this entry.
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override

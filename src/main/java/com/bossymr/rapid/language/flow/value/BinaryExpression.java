@@ -34,6 +34,11 @@ public class BinaryExpression implements Expression {
     private static @Nullable RapidType getType(@NotNull BinaryOperator operator, @NotNull Expression left, @NotNull Expression right) {
         return switch (operator) {
             case ADD, SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> {
+                if(operator == BinaryOperator.AND) {
+                    if (left.getType().isAssignable(RapidPrimitiveType.STRING) && left.getType().isAssignable(RapidPrimitiveType.STRING)) {
+                        yield RapidPrimitiveType.STRING;
+                    }
+                }
                 if (!(left.getType().isAssignable(RapidPrimitiveType.NUMBER) || left.getType().isAssignable(RapidPrimitiveType.DOUBLE))) {
                     yield null;
                 }
@@ -44,15 +49,6 @@ public class BinaryExpression implements Expression {
                     yield RapidPrimitiveType.DOUBLE;
                 }
                 yield RapidPrimitiveType.NUMBER;
-            }
-            case CONCAT -> {
-                if (!(left.getType().isAssignable(RapidPrimitiveType.STRING))) {
-                    yield null;
-                }
-                if (!(right.getType().isAssignable(RapidPrimitiveType.STRING))) {
-                    yield null;
-                }
-                yield RapidPrimitiveType.STRING;
             }
             case LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL -> {
                 if (!(left.getType().isAssignable(RapidPrimitiveType.NUMBER) || left.getType().isAssignable(RapidPrimitiveType.DOUBLE))) {

@@ -11,6 +11,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
 import com.bossymr.rapid.language.type.RapidType;
+import com.bossymr.rapid.language.type.RapidUnknownType;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
@@ -95,9 +96,12 @@ public final class SymbolUtil {
             String name = stub.getType();
             if (name == null) return null;
             List<RapidSymbol> symbols = RapidResolveService.getInstance(element.getProject()).findSymbols(element, name);
-            RapidSymbol symbol = symbols.size() > 0 ? symbols.get(0) : null;
+            RapidSymbol symbol = !(symbols.isEmpty()) ? symbols.get(0) : null;
             RapidStructure structure = symbol instanceof RapidStructure result ? result : null;
-            return new RapidType(structure, name, stub.getDimensions());
+            if(structure != null) {
+                return structure.createType(stub.getDimensions());
+            }
+            return new RapidUnknownType(name).createArrayType(stub.getDimensions());
         } else {
             RapidTypeElement typeElement = PsiTreeUtil.getChildOfType(element, RapidTypeElement.class);
             RapidType type = typeElement != null ? typeElement.getType() : null;

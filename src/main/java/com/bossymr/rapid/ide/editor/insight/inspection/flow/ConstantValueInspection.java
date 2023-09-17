@@ -5,7 +5,6 @@ import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
-import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
@@ -22,23 +21,89 @@ import com.intellij.psi.PsiElementVisitor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
 import java.util.Objects;
 
 public class ConstantValueInspection extends LocalInspectionTool {
 
-    private static @Nullable Instruction getInstruction(@NotNull RapidExpression expression, @NotNull BasicBlock basicBlock) {
+    private static @Nullable Expression getExpression(@NotNull RapidExpression expression, @NotNull BasicBlock basicBlock) {
+        ExpressionControlFlowVisitor visitor = new ExpressionControlFlowVisitor(expression);
         for (LinearInstruction instruction : basicBlock.getInstructions()) {
-            PsiElement element = instruction.element();
-            if (element != null && element.isEquivalentTo(expression)) {
-                return instruction;
+            Expression output = instruction.accept(visitor);
+            if(output != null) {
+                return output;
             }
         }
         BranchingInstruction terminator = basicBlock.getTerminator();
-        PsiElement element = terminator.element();
-        if (element != null && element.isEquivalentTo(expression)) {
-            return terminator;
+        return terminator.accept(visitor);
+    }
+
+    private static class ExpressionControlFlowVisitor extends ControlFlowVisitor<Expression> {
+
+        private final @NotNull PsiElement element;
+
+        public ExpressionControlFlowVisitor(@NotNull PsiElement element) {
+            this.element = element;
         }
-        return null;
+
+        private boolean isEquivalent(@Nullable Expression expression) {
+            if(expression == null) {
+                return false;
+            }
+            RapidExpression expressionElement = expression.getElement();
+            return expressionElement != null && expressionElement.isEquivalentTo(element);
+        }
+
+        private Expression getEquivalent(@Nullable Expression @Nullable... expressions) {
+            if(expressions == null) {
+                return null;
+            }
+            for (Expression expression : expressions) {
+                if(isEquivalent(expression)) {
+                    return expression;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public Expression visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
+            if(isEquivalent(instruction.variable())) {
+                return instruction.variable();
+            }
+            Expression[] expressions = instruction.value().getComponents().toArray(Expression[]::new);
+            return getEquivalent(expressions);
+        }
+
+        @Override
+        public Expression visitConnectInstruction(@NotNull LinearInstruction.ConnectInstruction instruction) {
+            return getEquivalent(instruction.variable(), instruction.routine());
+        }
+
+        @Override
+        public Expression visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
+            return getEquivalent(instruction.value());
+        }
+
+        @Override
+        public Expression visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
+            return getEquivalent(instruction.value());
+        }
+
+        @Override
+        public Expression visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
+            return getEquivalent(instruction.exception());
+        }
+
+        @Override
+        public Expression visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
+            Expression equivalent = getEquivalent(instruction.routine(), instruction.returnValue());
+            if(equivalent != null) {
+                return equivalent;
+            }
+            Expression[] expressions = instruction.arguments().values().toArray(Expression[]::new);
+            return getEquivalent(expressions);
+        }
     }
 
     @Override
@@ -46,9 +111,6 @@ public class ConstantValueInspection extends LocalInspectionTool {
         return new RapidElementVisitor() {
             @Override
             public void visitExpression(@NotNull RapidExpression expression) {
-                if (!(expression instanceof RapidBinaryExpression || expression instanceof RapidReferenceExpression)) {
-                    return;
-                }
                 PhysicalRoutine routine = PhysicalRoutine.getRoutine(expression);
                 if (routine == null) {
                     return;
@@ -58,51 +120,43 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 if (functionBlock == null) {
                     return;
                 }
-                BasicBlock basicBlock = getBasicBlock(functionBlock, expression);
-                if (basicBlock == null) {
+                Map.Entry<BasicBlock, Expression> entry = getBasicBlock(functionBlock, expression);
+                if (entry == null) {
                     return;
                 }
-                Instruction instruction = Objects.requireNonNull(getInstruction(expression, basicBlock));
-                if (instruction instanceof LinearInstruction.AssignmentInstruction assignmentInstruction) {
-                    ReferenceExpression variable = assignmentInstruction.variable();
-                    DataFlowBlock block = dataFlow.getBlock(basicBlock);
-                    if (block == null) {
-                        return;
-                    }
-                    Expression operation = assignmentInstruction.value();
-                    for (Expression component : operation.getComponents()) {
-                        if (component instanceof ReferenceExpression referenceExpression) {
-                            RapidExpression element = referenceExpression.getElement();
-                            if (!(element instanceof RapidReferenceExpression expr)) {
-                                continue;
-                            }
-                            Optionality optionality = block.getOptionality(referenceExpression);
-                            if (optionality == Optionality.MISSING) {
-                                holder.registerProblem(instruction.element(), RapidBundle.message("inspection.message.missing.variable", expr.getCanonicalText()));
-                            }
-                            if (optionality == Optionality.UNKNOWN) {
-                                holder.registerProblem(instruction.element(), RapidBundle.message("inspection.message.unknown.variable", expr.getCanonicalText()));
-                            }
+                Expression instruction = entry.getValue();
+                DataFlowBlock block = dataFlow.getBlock(entry.getKey());
+                if(block == null) {
+                    return;
+                }
+                if (instruction instanceof ReferenceExpression referenceExpression) {
+                    if (expression instanceof RapidReferenceExpression object) {
+                        Optionality optionality = block.getOptionality(referenceExpression);
+                        if (optionality == Optionality.MISSING) {
+                            holder.registerProblem(object, RapidBundle.message("inspection.message.missing.variable", object.getCanonicalText()));
+                        }
+                        if (optionality == Optionality.UNKNOWN) {
+                            holder.registerProblem(object, RapidBundle.message("inspection.message.unknown.variable", object.getCanonicalText()));
                         }
                     }
-                    if (!(variable.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
-                        return;
-                    }
-                    BooleanValue constraint = block.getConstraint(variable);
-                    if (constraint == BooleanValue.ALWAYS_TRUE || constraint == BooleanValue.ALWAYS_FALSE) {
-                        String string = constraint == BooleanValue.ALWAYS_TRUE ? "true" : "false";
-                        holder.registerProblem(expression, RapidBundle.message("inspection.message.constant.expression", string));
-                    }
+                }
+                if (!(instruction.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
+                    return;
+                }
+                BooleanValue constraint = block.getConstraint(instruction);
+                if (constraint == BooleanValue.ALWAYS_TRUE || constraint == BooleanValue.ALWAYS_FALSE) {
+                    String string = constraint == BooleanValue.ALWAYS_TRUE ? "true" : "false";
+                    holder.registerProblem(expression, RapidBundle.message("inspection.message.constant.expression", string));
                 }
             }
         };
     }
 
-    private @Nullable BasicBlock getBasicBlock(@NotNull Block block, @NotNull RapidExpression expression) {
+    private @Nullable Map.Entry<BasicBlock, Expression> getBasicBlock(@NotNull Block block, @NotNull RapidExpression expression) {
         for (BasicBlock basicBlock : block.getBasicBlocks()) {
-            Instruction instruction = getInstruction(expression, basicBlock);
+            Expression instruction = getExpression(expression, basicBlock);
             if (instruction != null) {
-                return basicBlock;
+                return Map.entry(basicBlock, instruction);
             }
         }
         return null;

@@ -4,6 +4,7 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.type.RapidType;
+import com.bossymr.rapid.language.type.RapidUnknownType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.util.CachedValuesManager;
 import org.jetbrains.annotations.NotNull;
@@ -26,7 +27,10 @@ public class RapidTypeElementImpl extends PhysicalElement implements RapidTypeEl
             RapidReferenceExpression expression = getReferenceExpression();
             if (expression != null) {
                 RapidSymbol element = expression.getSymbol();
-                return new RapidType(element instanceof RapidStructure ? (RapidStructure) element : null, expression.getText());
+                if(element instanceof RapidStructure structure) {
+                    return structure.createType();
+                }
+                return new RapidUnknownType(expression.getText());
             } else {
                 return null;
             }

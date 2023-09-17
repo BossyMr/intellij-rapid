@@ -23,7 +23,7 @@ import java.util.*;
 public class ControlFlowExpressionVisitor extends RapidElementVisitor {
 
     private final @NotNull ControlFlowBuilder builder;
-    private final @NotNull Deque<Expression> stack = new ArrayDeque<>();
+    private final @NotNull Deque<Optional<Expression>> stack = new ArrayDeque<>();
 
     public ControlFlowExpressionVisitor(@NotNull ControlFlowBuilder builder) {
         this.builder = builder;
@@ -31,28 +31,28 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
 
     public @NotNull Expression visit(@NotNull RapidExpression expression) {
         expression.accept(this);
-        Expression result = stack.removeLast();
-        return result != null ? result : new VariableSnapshot(expression.getType() != null ? expression.getType() : RapidPrimitiveType.ANYTYPE);
+        return stack.removeLast()
+                .orElseGet(() -> new VariableSnapshot(expression.getType() != null ? expression.getType() : RapidPrimitiveType.ANYTYPE));
     }
 
     @Override
     public void visitAggregateExpression(@NotNull RapidAggregateExpression expression) {
         RapidType type = expression.getType();
         if (type == null) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
         List<Expression> components = new ArrayList<>();
         for (RapidExpression component : expression.getExpressions()) {
             component.accept(this);
-            Expression expr = stack.removeLast();
+            Expression expr = stack.removeLast().orElse(null);
             if (expr == null) {
-                stack.addLast(null);
+                stack.addLast(Optional.empty());
                 return;
             }
             components.add(expr);
         }
-        stack.addLast(new AggregateExpression(expression, type, components));
+        stack.addLast(Optional.of(new AggregateExpression(expression, type, components)));
     }
 
     @Override
@@ -60,17 +60,18 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         RapidType type = expression.getType();
         IElementType elementType = expression.getSign().getNode().getElementType();
         UnaryOperator unaryOperator = getUnaryOperator(elementType);
-        if (type == null || unaryOperator == null) {
-            stack.addLast(null);
+        RapidExpression child = expression.getExpression();
+        if (type == null || unaryOperator == null || child == null) {
+            stack.addLast(Optional.empty());
             return;
         }
-        expression.accept(this);
-        Expression component = stack.removeLast();
+        child.accept(this);
+        Expression component = stack.removeLast().orElse(null);
         if (component == null) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
-        stack.addLast(new UnaryExpression(expression, type, unaryOperator, component));
+        stack.addLast(Optional.of(new UnaryExpression(expression, type, unaryOperator, component)));
     }
 
     private @Nullable UnaryOperator getUnaryOperator(@NotNull IElementType elementType) {
@@ -88,55 +89,55 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         RapidType type = expression.getType();
         RapidSymbol symbol = expression.getSymbol();
         if (type == null || symbol == null) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
         String name = symbol.getName();
         if (name == null) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
         RapidExpression qualifier = expression.getQualifier();
         if (symbol instanceof RapidComponent component) {
             if (!(qualifier instanceof RapidReferenceExpression referenceExpression)) {
-                stack.addLast(null);
+                stack.addLast(Optional.empty());
                 return;
             }
             referenceExpression.accept(this);
-            Expression qualifierExpression = stack.removeLast();
+            Expression qualifierExpression = stack.removeLast().orElse(null);
             if (!(qualifierExpression instanceof ReferenceExpression qualifierReferenceExpression) || component.getName() == null) {
-                stack.addLast(null);
+                stack.addLast(Optional.empty());
                 return;
             }
-            stack.addLast(new ComponentExpression(expression, type, qualifierReferenceExpression, component.getName()));
+            stack.addLast(Optional.of(new ComponentExpression(expression, type, qualifierReferenceExpression, component.getName())));
         } else if (symbol instanceof PhysicalField field) {
             PhysicalRoutine routine = PhysicalRoutine.getRoutine(field);
             if (routine == null) {
                 String moduleName = ControlFlowElementVisitor.getModuleName(field);
-                stack.addLast(new FieldExpression(expression, type, moduleName != null ? moduleName : "", name));
+                stack.addLast(Optional.of(new FieldExpression(expression, type, moduleName != null ? moduleName : "", name)));
             } else {
                 Variable variable = builder.findVariable(name);
                 if (variable == null) {
-                    stack.addLast(null);
+                    stack.addLast(Optional.empty());
                 } else {
-                    stack.addLast(new VariableExpression(expression, variable));
+                    stack.addLast(Optional.of(new VariableExpression(expression, variable)));
                 }
             }
         } else if (symbol instanceof RapidTargetVariable) {
             Variable variable = builder.findVariable(name);
             if(variable == null) {
-                stack.addLast(null);
+                stack.addLast(Optional.empty());
             } else {
-                stack.addLast(new VariableExpression(expression, variable));
+                stack.addLast(Optional.of(new VariableExpression(expression, variable)));
             }
         } else if (symbol instanceof RapidField) {
-            stack.addLast(new FieldExpression(type, "", name));
+            stack.addLast(Optional.of(new FieldExpression(type, "", name)));
         } else if (symbol instanceof RapidParameter) {
             Argument argument = builder.findArgument(name);
             if (argument == null) {
-                stack.addLast(null);
+                stack.addLast(Optional.empty());
             } else {
-                stack.addLast(new VariableExpression(expression, argument));
+                stack.addLast(Optional.of(new VariableExpression(expression, argument)));
             }
         }
     }
@@ -148,18 +149,18 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         BinaryOperator binaryOperator = getBinaryOperator(elementType);
         RapidExpression rightExpr = expression.getRight();
         if (type == null || binaryOperator == null || rightExpr == null) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
         expression.getLeft().accept(this);
-        Expression left = stack.removeLast();
+        Expression left = stack.removeLast().orElse(null);
         rightExpr.accept(this);
-        Expression right = stack.removeLast();
+        Expression right = stack.removeLast().orElse(null);
         if (left == null || right == null) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
-        stack.addLast(new BinaryExpression(expression, binaryOperator, left, right));
+        stack.addLast(Optional.of(new BinaryExpression(expression, binaryOperator, left, right)));
     }
 
     private @Nullable BinaryOperator getBinaryOperator(@NotNull IElementType elementType) {
@@ -203,13 +204,13 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         RapidType type = expression.getType();
         RapidSymbol symbol = expression.getReferenceExpression().getSymbol();
         if (type == null || !(symbol instanceof RapidRoutine)) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
         String routineName = symbol.getName();
         String moduleName = ControlFlowElementVisitor.getModuleName(symbol);
         if (routineName == null) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
         String name = (moduleName != null ? moduleName : "") + ":" + routineName;
@@ -217,7 +218,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         BasicBlock basicBlock = builder.createBasicBlock();
         List<RapidArgument> arguments = expression.getArgumentList().getArguments();
         Expression functionCall = createFunctionCall(expression, type, arguments, routineExpr, basicBlock);
-        stack.addLast(functionCall);
+        stack.addLast(Optional.of(functionCall));
     }
 
     public @NotNull Expression createFunctionCall(@NotNull PsiElement element, @NotNull RapidType type, @NotNull List<RapidArgument> arguments, @NotNull Expression routineName, @NotNull BasicBlock nextBlock) {
@@ -229,6 +230,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     public void createFunctionCall(@NotNull PsiElement element, @NotNull List<RapidArgument> arguments, @NotNull Expression routineName, @Nullable ReferenceExpression returnVariable, @NotNull BasicBlock nextBlock) {
         Map<ArgumentDescriptor, RapidExpression> descriptors = getArgumentDescriptors(arguments);
         createFunctionCall(element, descriptors, routineName, returnVariable, nextBlock);
+        builder.enterBasicBlock(nextBlock);
     }
 
     public void createFunctionCall(@NotNull PsiElement element, @NotNull Map<ArgumentDescriptor, RapidExpression> arguments, @NotNull Expression routineName, @Nullable ReferenceExpression returnVariable, @NotNull BasicBlock nextBlock) {
@@ -280,18 +282,23 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             if (argument instanceof RapidRequiredArgument) {
                 map.put(new ArgumentDescriptor.Required(i), argument.getArgument());
             } else {
-                RapidReferenceExpression referenceExpression = Objects.requireNonNull(argument.getParameter());
-                String canonicalText = referenceExpression.getCanonicalText();
-                ArgumentDescriptor argumentDescriptor;
-                if (argument instanceof RapidConditionalArgument) {
-                    argumentDescriptor = new ArgumentDescriptor.Conditional(canonicalText);
-                } else {
-                    argumentDescriptor = new ArgumentDescriptor.Optional(canonicalText);
-                }
+                ArgumentDescriptor argumentDescriptor = getArgumentDescriptor(argument);
                 map.put(argumentDescriptor, argument.getArgument());
             }
         }
         return map;
+    }
+
+    private static @NotNull ArgumentDescriptor getArgumentDescriptor(@NotNull RapidArgument argument) {
+        RapidReferenceExpression referenceExpression = Objects.requireNonNull(argument.getParameter());
+        String canonicalText = referenceExpression.getCanonicalText();
+        ArgumentDescriptor argumentDescriptor;
+        if (argument instanceof RapidConditionalArgument) {
+            argumentDescriptor = new ArgumentDescriptor.Conditional(canonicalText);
+        } else {
+            argumentDescriptor = new ArgumentDescriptor.Optional(canonicalText);
+        }
+        return argumentDescriptor;
     }
 
     private @NotNull Map<ArgumentDescriptor, ReferenceExpression> getArgumentExpressions(@NotNull Map<ArgumentDescriptor, RapidExpression> arguments) {
@@ -300,7 +307,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             ReferenceExpression referenceExpression = null;
             if (expression != null) {
                 expression.accept(this);
-                Expression result = stack.removeLast();
+                Expression result = stack.removeLast().orElse(null);
                 if (result instanceof ReferenceExpression) {
                     referenceExpression = ((ReferenceExpression) result);
                 }
@@ -314,22 +321,22 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     public void visitIndexExpression(@NotNull RapidIndexExpression expression) {
         RapidExpression array = expression.getExpression();
         array.accept(this);
-        Expression variable = stack.removeLast();
+        Expression variable = stack.removeLast().orElse(null);
         if (!(variable instanceof ReferenceExpression referenceExpression)) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
         IndexExpression indexExpression = null;
         for (RapidExpression dimension : expression.getArray().getDimensions()) {
             dimension.accept(this);
-            Expression component = stack.removeLast();
+            Expression component = stack.removeLast().orElse(null);
             if (component == null) {
-                stack.addLast(null);
+                stack.addLast(Optional.empty());
                 return;
             }
             indexExpression = new IndexExpression(expression, Objects.requireNonNullElse(indexExpression, referenceExpression), component);
         }
-        stack.addLast(indexExpression);
+        stack.addLast(Optional.ofNullable(indexExpression));
     }
 
     @Override
@@ -342,9 +349,9 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         RapidType type = expression.getType();
         Object object = expression.getValue();
         if (type == null || object == null) {
-            stack.addLast(null);
+            stack.addLast(Optional.empty());
             return;
         }
-        stack.addLast(new ConstantExpression(expression, type, object));
+        stack.addLast(Optional.of(new ConstantExpression(expression, type, object)));
     }
 }

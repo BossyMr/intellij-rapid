@@ -51,47 +51,41 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     }
 
     private void visitBranch(@NotNull BasicBlock successor, @NotNull Expression condition) {
-        DataFlowBlock dataFlowBlock = blocks.get(successor);
+        DataFlowBlock successorBlock = blocks.get(successor);
         List<DataFlowState> states = block.getStates();
         List<DataFlowState> successors = new ArrayList<>(states.size());
         for (DataFlowState state : states) {
-            DataFlowState copy = state.createSuccessorState();
+            DataFlowState copy = DataFlowState.createSuccessorState(successorBlock, state);
             copy.add(condition);
-            if (!(state.isSatisfiable())) {
+            if (!(copy.isSatisfiable())) {
                 continue;
             }
             if (block.getHeads().isEmpty()) {
-                successors.add(state);
+                successors.add(copy);
                 continue;
             }
             for (BlockCycle blockCycle : block.getHeads()) {
                 Optional<DataFlowState> previousCycle = getPreviousCycle(state, blockCycle);
                 if (previousCycle.isEmpty()) {
                     // First iteration
-                    DataFlowState successorState = DataFlowState.createSuccessorState(dataFlowBlock, state);
-                    successorState.add(condition);
-                    successors.add(successorState);
+                    successors.add(DataFlowState.copy(copy));
                     continue;
                 }
                 Optional<DataFlowState> thirdCycle = getPreviousCycle(previousCycle.orElseThrow(), blockCycle);
                 if (thirdCycle.isEmpty()) {
                     // Second iteration
-                    DataFlowState successorState = DataFlowState.createSuccessorState(dataFlowBlock, state);
-                    successorState.add(condition);
-                    successors.add(successorState);
+                    successors.add(DataFlowState.copy(copy));
                     continue;
                 }
                 // Third iteration
-                if (isBlockCycle(dataFlowBlock, blockCycle)) {
+                if (isBlockCycle(successorBlock, blockCycle)) {
                     continue;
                 }
-                DataFlowState successorState = DataFlowState.createSuccessorState(dataFlowBlock, state);
-                successorState.add(condition);
-                successors.add(successorState);
+                successors.add(DataFlowState.copy(copy));
             }
         }
         for (DataFlowState state : successors) {
-            block.addSuccessor(dataFlowBlock, state);
+            block.addSuccessor(successorBlock, state);
         }
     }
 

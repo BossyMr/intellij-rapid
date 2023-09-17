@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.xdebugger.frame.presentation.XValuePresentation;
 import org.jetbrains.annotations.NotNull;

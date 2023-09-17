@@ -9,13 +9,13 @@ import org.jetbrains.annotations.NotNull;
 
 public enum HardcodedContract {
     PRESENT(new ContractBuilder("Present", RapidPrimitiveType.BOOLEAN)
-            .withArgumentGroup(true).withArgument(ParameterType.REFERENCE, "OptPar", RapidPrimitiveType.ANYTYPE).build()
+            .withArgumentGroup(false).withArgument(ParameterType.REFERENCE, "OptPar", RapidPrimitiveType.ANYTYPE).build()
             .withResult()
-            .withCondition((state, variables) -> state.setOptionality(variables.getArgument("OptPar"), Optionality.PRESENT))
+            .withCondition((state, variables) -> state.forceOptionality(variables.getArgument("OptPar"), Optionality.PRESENT))
             .withCondition((state, variables) -> state.assign(variables.getOutput(), new ConstantExpression(RapidPrimitiveType.BOOLEAN, true)))
             .withSuccess()
             .withResult()
-            .withCondition((state, variables) -> state.setOptionality(variables.getArgument("OptPar"), Optionality.MISSING))
+            .withCondition((state, variables) -> state.forceOptionality(variables.getArgument("OptPar"), Optionality.MISSING))
             .withCondition((state, variables) -> state.assign(variables.getOutput(), new ConstantExpression(RapidPrimitiveType.BOOLEAN, false)))
             .withSuccess()
             .build());

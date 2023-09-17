@@ -1,6 +1,8 @@
 package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.RapidIcons;
+import com.bossymr.rapid.language.type.RapidAliasType;
+import com.bossymr.rapid.language.type.RapidAtomicType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.navigation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
@@ -18,6 +20,11 @@ public interface RapidAlias extends RapidStructure {
      * @return the type of this alias, or {@code null} if this symbol is incomplete.
      */
     @Nullable RapidType getType();
+
+    @Override
+    default @NotNull RapidType createType() {
+        return new RapidAliasType(this);
+    }
 
     @Override
     @NotNull RapidPointer<? extends RapidAlias> createPointer();

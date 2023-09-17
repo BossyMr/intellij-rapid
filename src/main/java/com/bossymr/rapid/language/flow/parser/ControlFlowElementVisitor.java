@@ -293,12 +293,9 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             // Compute default step value -> +1 if from < to or -1 if from > t
             ReferenceExpression stepVariable = builder.createVariable(RapidPrimitiveType.NUMBER);
             stepValue = stepVariable;
-            ReferenceExpression directionVariable = builder.createVariable(RapidPrimitiveType.BOOLEAN); // TRUE = ASCENDING FALSE = DESCENDING
-            Expression directionExpression = new BinaryExpression(BinaryOperator.LESS_THAN, indexVariable, toValue);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, directionVariable, directionExpression));
             BasicBlock ascending = builder.createBasicBlock();
             BasicBlock descending = builder.createBasicBlock();
-            builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, directionVariable, ascending, descending));
+            builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, new BinaryExpression(BinaryOperator.LESS_THAN, indexVariable, toValue), ascending, descending));
             builder.enterBasicBlock(ascending);
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ConstantExpression(RapidPrimitiveType.NUMBER, 1)));
             builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, loopBasicBlock));
@@ -312,11 +309,8 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             // Add the step to the variable.
             Expression indexExpression = new BinaryExpression(BinaryOperator.ADD, indexVariable, stepValue);
             builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, indexVariable, indexExpression));
-            ReferenceExpression conditionVariable = builder.createVariable(RapidPrimitiveType.BOOLEAN);
             // Check if the variable is equal to the result, in which case, do not loop.
-            Expression conditionExpression = new BinaryExpression(BinaryOperator.EQUAL_TO, indexVariable, toValue);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, conditionVariable, conditionExpression));
-            builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, conditionVariable, nextBasicBlock, loopBasicBlock));
+            builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, new BinaryExpression(BinaryOperator.EQUAL_TO, indexVariable, toValue), nextBasicBlock, loopBasicBlock));
         }
         builder.enterBasicBlock(nextBasicBlock);
     }
@@ -366,11 +360,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             builder.failScope(statement);
             return;
         }
-        Expression expr = expressionVisitor.visit(condition);
-        if (!(expr instanceof ReferenceExpression value)) {
-            builder.failScope(statement);
-            return;
-        }
+        Expression value = expressionVisitor.visit(condition);
         RapidStatementList elseBranch = statement.getElseBranch();
         BasicBlock thenBasicBlock = builder.createBasicBlock();
         // If the scope has no else branch, go to the next scope instead.
@@ -378,7 +368,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         BasicBlock elseBasicBlock = elseBranch != null ? builder.createBasicBlock() : nextBasicBlock.get();
         if (!(value.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             value = builder.createVariable(RapidPrimitiveType.BOOLEAN);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(condition, value, new VariableSnapshot(RapidPrimitiveType.ANYTYPE)));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(condition, (ReferenceExpression) value, new VariableSnapshot(RapidPrimitiveType.ANYTYPE)));
         }
         builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, value, thenBasicBlock, elseBasicBlock));
         builder.enterBasicBlock(thenBasicBlock);
@@ -421,7 +411,6 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         }
         BasicBlock nextBlock = builder.createBasicBlock();
         expressionVisitor.createFunctionCall(statement, arguments, routineValue, null, nextBlock);
-        builder.enterBasicBlock(nextBlock);
     }
 
     private @NotNull Expression getFunctionValue(@NotNull RapidProcedureCallStatement statement) {

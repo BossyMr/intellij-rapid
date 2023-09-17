@@ -171,7 +171,7 @@ public sealed abstract class Block {
         public @Nullable Argument findArgument(@NotNull String name) {
             for (ArgumentGroup argumentGroup : argumentGroups) {
                 for (Argument argument : argumentGroup.arguments()) {
-                    if (name.equals(argument.name())) {
+                    if (name.equals(argument.getName())) {
                         return argument;
                     }
                 }

@@ -36,13 +36,19 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
 
     public static @Nullable List<ConstantExpression> getSolutions(@NotNull DataFlowState state, @NotNull Expression variable, int timeout) {
         List<ConstantExpression> solutions = new ArrayList<>();
-        try (Context context = new Context()) {
+        Map<String, String> configuration = new HashMap<>();
+        configuration.put("model", "true");
+        try (Context context = new Context(configuration)) {
             ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context);
             Solver solver = getSolver(context, state, conditionAnalyzer);
             while (solver.check() == Status.SATISFIABLE) {
                 Model model = solver.getModel();
                 Expr<?> var = variable.accept(conditionAnalyzer);
                 Expr<?> expr = model.getConstInterp(var);
+                if(expr == null) {
+                    // TODO: 2023-09-17 Find out why expr is null
+                    return null;
+                }
                 solutions.add(getConstant(expr, variable.getType()));
                 solver.add(context.mkNot(context.mkEq(var, expr)));
                 if (solutions.size() >= timeout) {
@@ -106,8 +112,13 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         Expr right = expression.getRight().accept(this);
         Expr<FPRMSort> sortExpr = context.mkConst("", context.mkFPRoundingModeSort());
         return switch (expression.getOperator()) {
-            case ADD -> context.mkFPAdd(sortExpr, left, right);
-            case CONCAT -> context.mkConcat(context.mkToRe(left), context.mkToRe(right));
+            case ADD -> {
+                if(expression.getLeft().getType().isAssignable(RapidPrimitiveType.STRING) || expression.getRight().getType().isAssignable(RapidPrimitiveType.STRING)) {
+                    yield context.mkConcat(context.mkToRe(left), context.mkToRe(right));
+                } else {
+                    yield context.mkFPAdd(sortExpr, left, right);
+                }
+            }
             case SUBTRACT -> context.mkFPSub(sortExpr, left, right);
             case MULTIPLY -> context.mkFPMul(sortExpr, left, right);
             case DIVIDE -> context.mkFPDiv(sortExpr, left, right);

@@ -49,7 +49,7 @@ public interface Expression {
 
             @Override
             public Expression visitUnaryExpression(@NotNull UnaryExpression expression) {
-                Expression component = expression.accept(this);
+                Expression component = expression.getExpression().accept(this);
                 UnaryExpression unaryExpression = new UnaryExpression(expression.getType(), expression.getOperator(), component);
                 return mapper.apply(unaryExpression);
             }

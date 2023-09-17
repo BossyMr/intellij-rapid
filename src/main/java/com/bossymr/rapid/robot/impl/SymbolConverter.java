@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.impl;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.*;
 import com.bossymr.rapid.language.type.RapidType;
+import com.bossymr.rapid.language.type.RapidUnknownType;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -81,7 +82,10 @@ public final class SymbolConverter {
     private @NotNull RapidAtomic getAtomic(@NotNull AtomicModel symbol) {
         RapidType dataType = null;
         if (!(symbol.getDataType() == null || symbol.getDataType().isEmpty())) {
-            dataType = new RapidType(getStructure(symbol.getDataType()));
+            RapidStructure structure = getStructure(symbol.getDataType());
+            if(structure != null) {
+                dataType = structure.createType();
+            }
         }
         return getSymbol(new VirtualAtomic(getName(symbol), dataType));
     }
@@ -117,7 +121,8 @@ public final class SymbolConverter {
     }
 
     private @NotNull RapidField getField(@NotNull FieldModel state, @NotNull FieldType fieldType) {
-        RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
+        RapidStructure structure = getStructure(Objects.requireNonNull(state.getDataType()));
+        RapidType dataType = structure != null ? structure.createType() : new RapidUnknownType(state.getName());
         boolean readOnly = false;
         if (state instanceof PersistentModel persistentSymbol) {
             readOnly = persistentSymbol.isReadOnly();
@@ -129,7 +134,8 @@ public final class SymbolConverter {
     }
 
     private @NotNull VirtualParameter getParameter(@NotNull VirtualParameterGroup parameterGroup, @NotNull ParameterModel state) {
-        RapidType dataType = new RapidType(getStructure(Objects.requireNonNull(state.getDataType())));
+        RapidStructure structure = getStructure(Objects.requireNonNull(state.getDataType()));
+        RapidType dataType = structure != null ? structure.createType() : new RapidUnknownType(state.getName());
         ParameterType parameterType = switch (state.getMode()) {
             case "in" -> ParameterType.INPUT;
             case "var" -> ParameterType.VARIABLE;
@@ -149,7 +155,13 @@ public final class SymbolConverter {
         for (int i = 0; i < state.getParameterCount(); i++) {
             groups.add(null);
         }
-        RapidType dataType = state instanceof FunctionModel functionSymbolState && functionSymbolState.getDataType().length() > 0 ? new RapidType(getStructure(functionSymbolState.getDataType())) : null;
+        RapidType dataType;
+        if (state instanceof FunctionModel functionSymbolState && !(functionSymbolState.getDataType()).isEmpty()) {
+            RapidStructure structure = getStructure(functionSymbolState.getDataType());
+            dataType = structure != null ? structure.createType() : null;
+        } else {
+            dataType = null;
+        }
         VirtualRoutine routine = new VirtualRoutine(routineType, getName(state), dataType, groups);
         for (SymbolModel symbolModel : states) {
             assert symbolModel instanceof ParameterModel;
