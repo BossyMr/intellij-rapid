@@ -68,6 +68,11 @@ public class DataFlowGraphService extends AnAction {
         }
         File instructionFile = FileUtil.createTempFile("data-flow", ".dot", true);
         try {
+            if (outputFile.getParentFile() != null && !(outputFile.getParentFile().exists())) {
+                if (!(outputFile.getParentFile().mkdirs())) {
+                    throw new IOException("Could not create parent directory");
+                }
+            }
             FileUtil.writeToFile(instructionFile, text);
             GeneralCommandLine commandLine = new GeneralCommandLine(processPath.getAbsolutePath())
                     .withInput(instructionFile.getAbsoluteFile())

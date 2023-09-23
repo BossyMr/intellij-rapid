@@ -20,6 +20,15 @@ public class Argument implements Field {
         this.name = name;
     }
 
+    public @Nullable ArgumentGroup getArgumentGroup(@NotNull Block block) {
+        for (ArgumentGroup argumentGroup : block.getArgumentGroups()) {
+            if (argumentGroup.arguments().contains(this)) {
+                return argumentGroup;
+            }
+        }
+        return null;
+    }
+
     @Override
     public int getIndex() {
         return index;

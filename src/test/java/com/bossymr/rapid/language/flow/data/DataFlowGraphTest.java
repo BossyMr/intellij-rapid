@@ -58,16 +58,20 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
     public void testModule() throws IOException, ExecutionException {
         check("""
                 MODULE foo
-                    PROC bar(\\num x)
-                        VAR num y := 5;
-                        VAR num z := 0;
-                        IF Present(x) THEN
-                            y := y + x;
-                        ELSE
-                            y := y - x;
-                            z := x;
+                    PROC bar()
+                        VAR num variable := 0;
+                        variable := Abs(-1);
+                        IF variable = 1 THEN
                         ENDIF
                     ENDPROC
+                    
+                    FUNC num Abs(num value)
+                        IF value >= 0 THEN
+                            return value;
+                        ELSE
+                            return -value;
+                        ENDIF
+                    ENDFUNC
                 ENDMODULE
                 """);
     }

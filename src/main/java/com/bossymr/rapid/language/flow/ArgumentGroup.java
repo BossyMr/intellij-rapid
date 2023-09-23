@@ -16,8 +16,7 @@ public record ArgumentGroup(
 ) {
 
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return 
-        visitor.visitArgumentGroup(this);
+        return visitor.visitArgumentGroup(this);
     }
 
 }

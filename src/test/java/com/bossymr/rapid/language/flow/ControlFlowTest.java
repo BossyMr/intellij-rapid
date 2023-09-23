@@ -332,7 +332,6 @@ public class ControlFlowTest extends BasePlatformTestCase {
         check("""
                 MODULE foo
                     FUNC num bar()
-                        VAR num value := -1;
                         return Abs(-1);
                     ENDFUNC
                     
@@ -360,16 +359,16 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 }
                                 
                 func num foo:bar() {
-                	var num _0 [value];
+                	num _0;
                 	num _1;
                                 
                 	entry 0 {
-                		_0 := -1.0;
-                		_1 := foo:Abs(_0) -> 1;
+                		_1 := -1.0;
+                		_0 := foo:Abs(_0 := _1) -> 1;
                 	}
                                 
                 	block 1 {
-                		return _1;
+                		return _0;
                 	}
                 }
                 """);

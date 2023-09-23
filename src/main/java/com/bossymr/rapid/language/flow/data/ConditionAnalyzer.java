@@ -8,7 +8,6 @@ import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -34,31 +33,6 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
     }
 
-    public static @Nullable List<ConstantExpression> getSolutions(@NotNull DataFlowState state, @NotNull Expression variable, int timeout) {
-        List<ConstantExpression> solutions = new ArrayList<>();
-        Map<String, String> configuration = new HashMap<>();
-        configuration.put("model", "true");
-        try (Context context = new Context(configuration)) {
-            ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context);
-            Solver solver = getSolver(context, state, conditionAnalyzer);
-            while (solver.check() == Status.SATISFIABLE) {
-                Model model = solver.getModel();
-                Expr<?> var = variable.accept(conditionAnalyzer);
-                Expr<?> expr = model.getConstInterp(var);
-                if(expr == null) {
-                    // TODO: 2023-09-17 Find out why expr is null
-                    return null;
-                }
-                solutions.add(getConstant(expr, variable.getType()));
-                solver.add(context.mkNot(context.mkEq(var, expr)));
-                if (solutions.size() >= timeout) {
-                    return null;
-                }
-            }
-        }
-        return solutions;
-    }
-
     @SuppressWarnings("unchecked")
     private static @NotNull Solver getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull ConditionAnalyzer conditionAnalyzer) {
         Solver solver = context.mkSolver();
@@ -77,7 +51,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         String value = expr.toString();
         Object object = null;
         if (type.isAssignable(RapidPrimitiveType.STRING)) {
-            object = value;
+            object = value.substring(1, value.length() - 1);
         }
         if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
             object = Boolean.valueOf(value);
@@ -155,7 +129,6 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
         Symbol symbol = symbols.get(expression);
         if (expression instanceof PathCounter) {
-            // TODO: 2023-09-13 Check whether this actually represents an integer.
             return context.mkConst(symbol, context.mkFPSort(0, 64));
         }
         RapidType type = expression.getType();

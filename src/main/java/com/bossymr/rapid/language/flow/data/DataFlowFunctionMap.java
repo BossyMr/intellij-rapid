@@ -229,7 +229,8 @@ public class DataFlowFunctionMap {
             RapidType returnType = functionBlock.getReturnType();
             DataFlowState simpleState = DataFlowState.createUnknownState(getBlock());
             Result output = new Result.Success(simpleState, returnType != null ? state.createSnapshot(returnType, null) : null);
-            Set<Result> result = Set.of(output);
+            Result actual = getOutput(output, state, instruction);
+            Set<Result> result = actual != null ? Set.of(actual) : Set.of();
             state.getBlock().ifPresent(callerBlock -> {
                 usages.put(callerBlock, result);
                 registerUsage(callerBlock, blockDescriptor, output);

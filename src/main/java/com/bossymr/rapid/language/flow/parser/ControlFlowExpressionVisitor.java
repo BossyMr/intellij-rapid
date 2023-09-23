@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
+import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
@@ -236,7 +237,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     public void createFunctionCall(@NotNull PsiElement element, @NotNull Map<ArgumentDescriptor, RapidExpression> arguments, @NotNull Expression routineName, @Nullable ReferenceExpression returnVariable, @NotNull BasicBlock nextBlock) {
         Optional<ArgumentDescriptor.Conditional> optional = getFirstOptionalArgument(arguments);
         if (optional.isEmpty()) {
-            Map<ArgumentDescriptor, ReferenceExpression> expressions = getArgumentExpressions(arguments);
+            Map<ArgumentDescriptor, ReferenceExpression> expressions = getArgumentExpressions(element, arguments);
             builder.exitBasicBlock(new BranchingInstruction.CallInstruction(element, routineName, expressions, returnVariable, nextBlock));
             return;
         }
@@ -301,7 +302,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         return argumentDescriptor;
     }
 
-    private @NotNull Map<ArgumentDescriptor, ReferenceExpression> getArgumentExpressions(@NotNull Map<ArgumentDescriptor, RapidExpression> arguments) {
+    private @NotNull Map<ArgumentDescriptor, ReferenceExpression> getArgumentExpressions(@NotNull PsiElement element, @NotNull Map<ArgumentDescriptor, RapidExpression> arguments) {
         Map<ArgumentDescriptor, ReferenceExpression> map = new HashMap<>();
         arguments.forEach((descriptor, expression) -> {
             ReferenceExpression referenceExpression = null;
@@ -310,6 +311,10 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
                 Expression result = stack.removeLast().orElse(null);
                 if (result instanceof ReferenceExpression) {
                     referenceExpression = ((ReferenceExpression) result);
+                } else if (result != null) {
+                    ReferenceExpression variable = builder.createVariable(result.getType());
+                    builder.continueScope(new LinearInstruction.AssignmentInstruction(element, variable, result));
+                    referenceExpression = variable;
                 }
             }
             map.put(descriptor, referenceExpression);

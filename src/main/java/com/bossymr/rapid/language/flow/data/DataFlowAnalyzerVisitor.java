@@ -190,45 +190,43 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
 
     @Override
     public Void visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
+        Expression expression = instruction.routine();
         DataFlowBlock successor = blocks.get(instruction.next());
         for (DataFlowState state : block.getStates()) {
-            List<ConstantExpression> solutions = state.getSolutions(instruction.routine(), 10);
-            if (solutions == null) {
+            if (!(expression instanceof ConstantExpression solution)) {
                 visitAnyCallInstruction(instruction, state);
                 continue;
             }
-            for (ConstantExpression solution : solutions) {
-                if (!(solution.getValue() instanceof String routineName)) {
+            if (!(solution.getValue() instanceof String routineName)) {
+                continue;
+            }
+            BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.element(), routineName);
+            if (blockDescriptor == null) {
+                functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, new DataFlowFunction.Result.Error(state, null));
+                continue;
+            }
+            Optional<DataFlowFunction> optional = functionMap.get(blockDescriptor);
+            RapidRoutine routine = getRoutine(instruction, blockDescriptor);
+            if (optional.isEmpty()) {
+                if (routine != null) {
+                    visitAnyCallInstruction(instruction, state, routine);
+                } else {
+                    visitAnyCallInstruction(instruction, state);
+                }
+                continue;
+            }
+            DataFlowFunction function = optional.orElseThrow();
+            Set<DataFlowFunction.Result> results = function.getOutput(state, instruction);
+            for (DataFlowFunction.Result result : results) {
+                if (result instanceof DataFlowFunction.Result.Exit) {
+                    functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, result);
                     continue;
                 }
-                BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.element(), routineName);
-                if (blockDescriptor == null) {
-                    functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, new DataFlowFunction.Result.Error(state, null));
+                if (result instanceof DataFlowFunction.Result.Error) {
+                    functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, result);
                     continue;
                 }
-                Optional<DataFlowFunction> optional = functionMap.get(blockDescriptor);
-                RapidRoutine routine = getRoutine(instruction, blockDescriptor);
-                if (optional.isEmpty()) {
-                    if (routine != null) {
-                        visitAnyCallInstruction(instruction, state, routine);
-                    } else {
-                        visitAnyCallInstruction(instruction, state);
-                    }
-                    continue;
-                }
-                DataFlowFunction function = optional.orElseThrow();
-                Set<DataFlowFunction.Result> results = function.getOutput(state, instruction);
-                for (DataFlowFunction.Result result : results) {
-                    if (result instanceof DataFlowFunction.Result.Exit) {
-                        functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, result);
-                        continue;
-                    }
-                    if (result instanceof DataFlowFunction.Result.Error) {
-                        functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, result);
-                        continue;
-                    }
-                    block.addSuccessor(successor, result.state());
-                }
+                block.addSuccessor(successor, result.state());
             }
         }
         return null;
