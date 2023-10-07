@@ -299,7 +299,7 @@ public class DataFlowGraphService extends AnAction {
                 stringBuilder.append(component.getKey());
                 stringBuilder.append("</td>");
                 stringBuilder.append("<td align=\"left\">");
-                component.getValue().accept(visitor);
+                stringBuilder.append(component.getValue().accept(visitor));
                 stringBuilder.append("</td>");
                 stringBuilder.append("</tr>\n");
             }
@@ -313,10 +313,10 @@ public class DataFlowGraphService extends AnAction {
                 if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
                     stringBuilder.append("<tr>");
                     stringBuilder.append("<td>");
-                    assignment.index().accept(visitor);
+                    stringBuilder.append(assignment.index().accept(visitor));
                     stringBuilder.append("</td>");
                     stringBuilder.append("<td align=\"left\">");
-                    assignment.value().accept(visitor);
+                    stringBuilder.append(assignment.value().accept(visitor));
                     stringBuilder.append("</td>");
                     stringBuilder.append("</tr>\n");
                 } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
@@ -324,7 +324,7 @@ public class DataFlowGraphService extends AnAction {
                     stringBuilder.append("[default]");
                     stringBuilder.append("</td>");
                     stringBuilder.append("<td align=\"left\">");
-                    defaultValue.defaultValue().accept(visitor);
+                    stringBuilder.append(defaultValue.defaultValue().accept(visitor));
                     stringBuilder.append("</td>");
                     stringBuilder.append("</tr>\n");
                 }

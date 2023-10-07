@@ -70,8 +70,6 @@ public class RapidAliasType implements RapidType {
 
     @Override
     public String toString() {
-        return "RapidAliasType{" +
-                "alias=" + alias +
-                '}';
+        return getPresentableText();
     }
 }

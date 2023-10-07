@@ -331,7 +331,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
 
     @Override
     public @NotNull String visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
-        return "=" + snapshot.hashCode();
+        return "~" + snapshot.hashCode();
     }
 
     @Override

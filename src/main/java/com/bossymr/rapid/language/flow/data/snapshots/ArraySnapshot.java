@@ -58,10 +58,9 @@ public class ArraySnapshot implements SnapshotExpression {
 
     public @NotNull List<ArrayEntry> getAllAssignments(@NotNull DataFlowState state) {
         List<ArrayEntry> values = new ArrayList<>();
-        loop:
         for (ListIterator<ArrayEntry.Assignment> iterator = assignments.listIterator(assignments.size()); iterator.hasPrevious(); ) {
             ArrayEntry.Assignment assignment = iterator.previous();
-            if(isEqualToPrevious(values, assignment, state)) {
+            if (isEqualToPrevious(values, assignment, state)) {
                 continue;
             }
             values.add(assignment);
@@ -132,10 +131,6 @@ public class ArraySnapshot implements SnapshotExpression {
 
     @Override
     public String toString() {
-        return "ArraySnapshot{" +
-                "variable=" + underlyingVariable +
-                ", defaultValue=" + defaultValue +
-                ", assignments=" + assignments +
-                '}';
+        return "~" + hashCode();
     }
 }

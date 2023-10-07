@@ -4,7 +4,6 @@ import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Variable;
-import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
@@ -33,7 +32,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
     public @NotNull Expression visit(@NotNull RapidExpression expression) {
         expression.accept(this);
         return stack.removeLast()
-                .orElseGet(() -> new VariableSnapshot(expression.getType() != null ? expression.getType() : RapidPrimitiveType.ANYTYPE));
+                .orElseGet(() -> builder.createVariable(expression.getType() != null ? expression.getType() : RapidPrimitiveType.ANYTYPE));
     }
 
     @Override
@@ -72,7 +71,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             stack.addLast(Optional.empty());
             return;
         }
-        stack.addLast(Optional.of(new UnaryExpression(expression, type, unaryOperator, component)));
+        stack.addLast(Optional.of(new UnaryExpression(expression, unaryOperator, component)));
     }
 
     private @Nullable UnaryOperator getUnaryOperator(@NotNull IElementType elementType) {
@@ -346,7 +345,12 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
 
     @Override
     public void visitParenthesisedExpression(@NotNull RapidParenthesisedExpression expression) {
-        expression.accept(this);
+        RapidExpression component = expression.getExpression();
+        if (component == null) {
+            stack.addLast(Optional.empty());
+            return;
+        }
+        component.accept(this);
     }
 
     @Override

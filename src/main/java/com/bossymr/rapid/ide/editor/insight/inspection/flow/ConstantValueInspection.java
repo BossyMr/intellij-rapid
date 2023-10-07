@@ -8,7 +8,6 @@ import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
-import com.bossymr.rapid.language.psi.RapidBinaryExpression;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
@@ -131,12 +130,15 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 }
                 if (instruction instanceof ReferenceExpression referenceExpression) {
                     if (expression instanceof RapidReferenceExpression object) {
-                        Optionality optionality = block.getOptionality(referenceExpression);
-                        if (optionality == Optionality.MISSING) {
-                            holder.registerProblem(object, RapidBundle.message("inspection.message.missing.variable", object.getCanonicalText()));
-                        }
-                        if (optionality == Optionality.UNKNOWN) {
-                            holder.registerProblem(object, RapidBundle.message("inspection.message.unknown.variable", object.getCanonicalText()));
+                        PsiElement parent = expression.getParent();
+                        if (parent != null) {
+                            Optionality optionality = block.getOptionality(referenceExpression, parent);
+                            if (optionality == Optionality.MISSING) {
+                                holder.registerProblem(object, RapidBundle.message("inspection.message.missing.variable", object.getCanonicalText()));
+                            }
+                            if (optionality == Optionality.UNKNOWN) {
+                                holder.registerProblem(object, RapidBundle.message("inspection.message.unknown.variable", object.getCanonicalText()));
+                            }
                         }
                     }
                 }

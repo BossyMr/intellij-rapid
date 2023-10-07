@@ -8,6 +8,7 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -183,9 +184,11 @@ public class DataFlowBlock {
         return indexValues;
     }
 
-    public @NotNull Optionality getOptionality(@NotNull ReferenceExpression expression) {
+    public @NotNull Optionality getOptionality(@NotNull ReferenceExpression variable, @NotNull PsiElement element) {
         Optionality optionality = null;
         for (DataFlowState state : states) {
+            Optional<SnapshotExpression> snapshot = state.getHistoricSnapshot(variable, element);
+            ReferenceExpression expression = snapshot.isPresent() ? snapshot.orElseThrow() : variable;
             if(optionality == null) {
                 optionality = state.getOptionality(expression);
             } else {

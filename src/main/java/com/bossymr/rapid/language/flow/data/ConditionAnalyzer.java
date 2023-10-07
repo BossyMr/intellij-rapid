@@ -9,7 +9,10 @@ import com.bossymr.rapid.language.type.RapidType;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
 
@@ -47,24 +50,6 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         return solver;
     }
 
-    private static @NotNull ConstantExpression getConstant(@NotNull Expr<?> expr, @NotNull RapidType type) {
-        String value = expr.toString();
-        Object object = null;
-        if (type.isAssignable(RapidPrimitiveType.STRING)) {
-            object = value.substring(1, value.length() - 1);
-        }
-        if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
-            object = Boolean.valueOf(value);
-        }
-        if (type.isAssignable(RapidPrimitiveType.NUMBER)) {
-            object = Double.valueOf(value);
-        }
-        if (type.isAssignable(RapidPrimitiveType.DOUBLE)) {
-            object = Double.valueOf(value);
-        }
-        return new ConstantExpression(type, Objects.requireNonNull(object));
-    }
-
     private static @NotNull List<Expression> getAllExpressions(@NotNull DataFlowState state) {
         List<Expression> expressions = new ArrayList<>();
         getAllExpressions(expressions, state);
@@ -87,7 +72,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         Expr<FPRMSort> sortExpr = context.mkConst("", context.mkFPRoundingModeSort());
         return switch (expression.getOperator()) {
             case ADD -> {
-                if(expression.getLeft().getType().isAssignable(RapidPrimitiveType.STRING) || expression.getRight().getType().isAssignable(RapidPrimitiveType.STRING)) {
+                if (expression.getLeft().getType().isAssignable(RapidPrimitiveType.STRING) || expression.getRight().getType().isAssignable(RapidPrimitiveType.STRING)) {
                     yield context.mkConcat(context.mkToRe(left), context.mkToRe(right));
                 } else {
                     yield context.mkFPAdd(sortExpr, left, right);
@@ -101,8 +86,14 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                     context.mkMod(context.mkReal2Int(context.mkFPToReal(left)), context.mkReal2Int(context.mkFPToReal(right)));
             case LESS_THAN -> context.mkFPLt(left, right);
             case LESS_THAN_OR_EQUAL -> context.mkFPLEq(left, right);
-            case EQUAL_TO -> context.mkEq(left, right);
-            case NOT_EQUAL_TO -> context.mkNot(context.mkEq(left, right));
+            case EQUAL_TO -> {
+                if (left.getSort().equals(right.getSort())) {
+                    yield context.mkEq(left, right);
+                } else {
+                    yield context.mkBool(false);
+                }
+            }
+            case NOT_EQUAL_TO -> new UnaryExpression(UnaryOperator.NOT, expression).accept(this);
             case GREATER_THAN -> context.mkFPGt(left, right);
             case GREATER_THAN_OR_EQUAL -> context.mkFPGEq(left, right);
             case AND -> context.mkAnd(left, right);

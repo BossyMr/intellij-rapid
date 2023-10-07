@@ -57,15 +57,6 @@ public interface RapidType {
     }
 
     /**
-     * Creates a new type which represents a one dimensional array of this type.
-     *
-     * @return a new type which represents an array of this type.
-     */
-    default RapidType createArrayType() {
-        return createArrayType(1);
-    }
-
-    /**
      * Returns the number of dimensions of this type.
      *
      * @return the number of dimensions of this type.

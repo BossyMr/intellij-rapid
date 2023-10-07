@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
@@ -30,7 +31,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
         return results;
     }
 
-    protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, BranchingInstruction.@NotNull CallInstruction instruction) {
+    protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull BranchingInstruction.CallInstruction instruction) {
         /*
          * Create an empty successor to the specified state.
          *
@@ -48,25 +49,29 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
         /*
          * A map which contains instructions to replace the key expression with the value expression.
          */
-        Map<ReferenceExpression, ReferenceExpression> variables = new HashMap<>();
+        Map<ReferenceExpression, ReferenceExpression> modifications = new HashMap<>();
 
         Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.arguments());
         for (Argument argument : arguments.keySet()) {
             ReferenceExpression expression = arguments.get(argument);
-            variables.put(new VariableExpression(argument), expression);
+            modifications.put(new VariableExpression(argument), expression);
         }
 
-        Map<SnapshotExpression, SnapshotExpression> snapshots = new HashMap<>();
-
-        DataFlowState successorState = DataFlowState.copy(result.state(), state)
-                .modify(variables, snapshots);
+        DataFlowState successorState = state.merge(result.state(), modifications);
 
         // Assign target to the output of the result.
         ReferenceExpression variable = result.variable();
         ReferenceExpression target = instruction.returnValue();
         if (variable != null && target != null) {
             Optional<SnapshotExpression> optional = result.state().getSnapshot(variable);
-            successorState.assign(target, optional.isPresent() ? optional.orElseThrow() : variable);
+            ReferenceExpression value;
+            if (optional.isPresent()) {
+                SnapshotExpression expression = optional.orElseThrow();
+                value = modifications.getOrDefault(expression, expression);
+            } else {
+                value = variable;
+            }
+            successorState.assign(target, value);
         }
 
         for (Argument argument : arguments.keySet()) {
@@ -74,8 +79,15 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
             if (argument.getParameterType() != ParameterType.INPUT) {
                 VariableExpression variableExpression = new VariableExpression(argument);
                 Optional<SnapshotExpression> optional = result.state().getSnapshot(variableExpression);
-                SnapshotExpression functionSnapshot = optional.orElseThrow();
-                successorState.assign(expression, snapshots.getOrDefault(functionSnapshot, functionSnapshot));
+                ReferenceExpression value;
+                if (optional.isPresent()) {
+                    value = modifications.getOrDefault(optional.orElseThrow(), optional.orElseThrow());
+                } else {
+                    value = variableExpression;
+                }
+                Optionality optionality = successorState.getOptionality(expression);
+                successorState.assign(expression, value);
+                successorState.forceOptionality(value, optionality);
             }
         }
 
@@ -89,10 +101,10 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
             return new Result.Exit(successorState);
         }
         if (result instanceof Result.Success) {
-            return new Result.Success(successorState, variables.getOrDefault(variable, variable));
+            return new Result.Success(successorState, modifications.getOrDefault(variable, variable));
         }
         if (result instanceof Result.Error) {
-            return new Result.Error(successorState, variables.getOrDefault(variable, variable));
+            return new Result.Error(successorState, modifications.getOrDefault(variable, variable));
         }
         return null;
     }

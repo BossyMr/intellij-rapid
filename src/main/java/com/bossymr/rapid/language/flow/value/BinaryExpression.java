@@ -34,7 +34,7 @@ public class BinaryExpression implements Expression {
     private static @Nullable RapidType getType(@NotNull BinaryOperator operator, @NotNull Expression left, @NotNull Expression right) {
         return switch (operator) {
             case ADD, SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> {
-                if(operator == BinaryOperator.AND) {
+                if (operator == BinaryOperator.ADD) {
                     if (left.getType().isAssignable(RapidPrimitiveType.STRING) && left.getType().isAssignable(RapidPrimitiveType.STRING)) {
                         yield RapidPrimitiveType.STRING;
                     }
@@ -114,11 +114,6 @@ public class BinaryExpression implements Expression {
 
     @Override
     public String toString() {
-        return "BinaryExpression{" +
-                "type=" + type +
-                ", operator=" + operator +
-                ", left=" + left +
-                ", right=" + right +
-                '}';
+        return left + " " + operator.getText() + " " + right;
     }
 }

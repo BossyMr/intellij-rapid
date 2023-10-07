@@ -60,9 +60,6 @@ public class ConstantExpression implements Expression {
 
     @Override
     public String toString() {
-        return "ConstantExpression{" +
-                "type=" + type +
-                ", value=" + value +
-                '}';
+        return value instanceof String ? "\"" + value + "\"" : String.valueOf(value);
     }
 }

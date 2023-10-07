@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.SmartPointerManager;
 import com.intellij.psi.SmartPsiElementPointer;
@@ -17,15 +18,35 @@ public class UnaryExpression implements Expression {
     private final @NotNull UnaryOperator operator;
     private final @NotNull Expression component;
 
-    public UnaryExpression(@NotNull RapidType type, @NotNull UnaryOperator operator, @NotNull Expression component) {
-        this(null, type, operator, component);
+    public UnaryExpression(@NotNull UnaryOperator operator, @NotNull Expression component) {
+        this(null, operator, component);
     }
 
-    public UnaryExpression(@Nullable RapidExpression expression, @NotNull RapidType type, @NotNull UnaryOperator operator, @NotNull Expression component) {
+    public UnaryExpression(@Nullable RapidExpression expression, @NotNull UnaryOperator operator, @NotNull Expression component) {
         this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
-        this.type = type;
+        this.type = Objects.requireNonNull(getType(operator, component));
         this.operator = operator;
         this.component = component;
+    }
+
+    private static @Nullable RapidType getType(@NotNull UnaryOperator operator, @NotNull Expression expression) {
+        return switch (operator) {
+            case NOT -> {
+                if (expression.getType().isAssignable(RapidPrimitiveType.BOOLEAN)) {
+                    yield RapidPrimitiveType.BOOLEAN;
+                }
+                yield null;
+            }
+            case NEGATE -> {
+                if (expression.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                    yield RapidPrimitiveType.NUMBER;
+                }
+                if (expression.getType().isAssignable(RapidPrimitiveType.DOUBLE)) {
+                    yield RapidPrimitiveType.DOUBLE;
+                }
+                yield null;
+            }
+        };
     }
 
     public @NotNull UnaryOperator getOperator() {
@@ -66,10 +87,6 @@ public class UnaryExpression implements Expression {
 
     @Override
     public String toString() {
-        return "UnaryExpression{" +
-                "type=" + type +
-                ", operator=" + operator +
-                ", expression=" + component +
-                '}';
+        return operator.getText() + component;
     }
 }

@@ -97,11 +97,6 @@ public class RecordSnapshot implements SnapshotExpression {
 
     @Override
     public String toString() {
-        return "RecordSnapshot{" +
-                "type=" + type +
-                ", underlyingVariable=" + underlyingVariable +
-                ", components=" + components +
-                ", snapshots=" + snapshots +
-                '}';
+        return "~" + hashCode();
     }
 }

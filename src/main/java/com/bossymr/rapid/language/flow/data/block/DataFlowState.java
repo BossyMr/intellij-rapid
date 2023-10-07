@@ -8,15 +8,18 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
-import org.jetbrains.annotations.Contract;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * A {@code DataFlowState} represents the state of the program at a specific point.
@@ -82,15 +85,16 @@ public class DataFlowState {
         this.predecessor = predecessor;
         this.functionBlock = state.functionBlock;
         this.snapshots = new HashMap<>();
-        Map<SnapshotExpression, SnapshotExpression> map = new HashMap<>();
-        state.snapshots.forEach((field, snapshot) -> snapshots.put(field, mapSnapshot(snapshot, new HashMap<>(), map, state)));
         this.conditions = new ArrayList<>();
-        for (Expression expression : state.conditions) {
-            conditions.add(expression.replace(component -> mapExpression(component, new HashMap<>(), map, state)));
-        }
         this.optionality = new HashMap<>();
+        Map<ReferenceExpression, ReferenceExpression> modifications = new HashMap<>();
+        state.snapshots.forEach((field, snapshot) -> snapshots.put(field, (SnapshotExpression) modifyExpression(snapshot, modifications)));
+        for (Expression expression : state.conditions) {
+            conditions.add(expression.replace(component -> modifyExpression(component, modifications)));
+        }
         state.optionality.forEach((snapshot, optionality) -> {
-            this.optionality.put(mapSnapshot(snapshot, new HashMap<>(), map, state), optionality);
+            SnapshotExpression expression = (SnapshotExpression) modifyExpression(snapshot, modifications);
+            this.optionality.put(expression, optionality);
         });
     }
 
@@ -102,10 +106,6 @@ public class DataFlowState {
      */
     public static @NotNull DataFlowState copy(@NotNull DataFlowState state) {
         return new DataFlowState(state, state.getPredecessor().orElse(null));
-    }
-
-    public static @NotNull DataFlowState copy(@NotNull DataFlowState state, @Nullable DataFlowState predecessor) {
-        return new DataFlowState(state, predecessor);
     }
 
     /**
@@ -249,94 +249,110 @@ public class DataFlowState {
         return Optional.ofNullable(block);
     }
 
-    private @NotNull Expression mapExpression(@NotNull Expression previous, @NotNull Map<ReferenceExpression, ReferenceExpression> variableMap, @NotNull Map<SnapshotExpression, SnapshotExpression> snapshotMap, @NotNull DataFlowState state) {
-        if (!(previous instanceof ReferenceExpression expression)) {
+    private @NotNull Expression modifyExpression(@NotNull Expression previous, @NotNull Map<ReferenceExpression, ReferenceExpression> modifications) {
+        if (previous instanceof ReferenceExpression referenceExpression) {
+            return modifyExpression(referenceExpression, modifications);
+        } else {
             return previous;
         }
-        return mapSnapshot(expression, variableMap, snapshotMap, state);
     }
 
-    private boolean isDeclared(@NotNull SnapshotExpression expression) {
-        if (snapshots.containsValue(expression)) {
-            return true;
-        }
-        if (predecessor != null) {
-            return predecessor.isDeclared(expression);
-        }
-        return false;
-    }
-
-    @Contract("null, _, _, _ -> null; !null, _, _, _ -> !null")
-    @SuppressWarnings("unchecked")
-    private <T extends ReferenceExpression> @Nullable T mapSnapshot(@Nullable T previous, @NotNull Map<ReferenceExpression, ReferenceExpression> variableMap, @NotNull Map<SnapshotExpression, SnapshotExpression> snapshotMap, @NotNull DataFlowState state) {
-        if (previous == null) {
-            return null;
-        }
-        if (variableMap.containsKey(previous)) {
-            ReferenceExpression referenceExpression = variableMap.get(previous);
-            if (!(previous.getClass().isInstance(referenceExpression))) {
-                throw new IllegalArgumentException("Specified variableMap is invalid: " + variableMap);
-            }
-            T output = (T) variableMap.get(previous);
-            if (previous instanceof SnapshotExpression) {
-                snapshotMap.put((SnapshotExpression) previous, (SnapshotExpression) output);
-            }
-            return output;
+    private @NotNull ReferenceExpression modifyExpression(@NotNull ReferenceExpression previous, @NotNull Map<ReferenceExpression, ReferenceExpression> modifications) {
+        if (modifications.containsKey(previous)) {
+            return modifications.get(previous);
         }
         if (previous instanceof FieldExpression || previous instanceof VariableExpression) {
             return previous;
         }
         if (previous instanceof IndexExpression indexExpression) {
-            return (T) new IndexExpression(mapSnapshot(indexExpression.getVariable(), variableMap, snapshotMap, state), mapExpression(indexExpression.getIndex(), variableMap, snapshotMap, state));
+            ReferenceExpression underlyingVariable = modifyExpression(indexExpression.getVariable(), modifications);
+            Expression indexVariable = modifyExpression(indexExpression.getIndex(), modifications);
+            IndexExpression copy = new IndexExpression(indexExpression.getElement(), underlyingVariable, indexVariable);
+            if (copy.equals(indexExpression)) {
+                return indexExpression;
+            }
+            return copy;
         }
         if (previous instanceof ComponentExpression componentExpression) {
-            return (T) new ComponentExpression(componentExpression.getType(), mapSnapshot(componentExpression.getVariable(), variableMap, snapshotMap, state), componentExpression.getComponent());
-        }
-        if (!(previous instanceof SnapshotExpression snapshot)) {
-            throw new IllegalArgumentException("Could not map: " + previous);
-        }
-        if (snapshotMap.containsKey(snapshot)) {
-            return (T) snapshotMap.get(snapshot);
-        }
-        if (!(state.snapshots.containsValue(snapshot))) {
-            if (isDeclared(snapshot)) {
-                snapshotMap.put(snapshot, snapshot);
-                return previous;
+            ReferenceExpression underlyingVariable = modifyExpression(componentExpression.getVariable(), modifications);
+            ComponentExpression copy = new ComponentExpression(componentExpression.getElement(), componentExpression.getType(), underlyingVariable, componentExpression.getComponent());
+            if (copy.equals(componentExpression)) {
+                return componentExpression;
             }
+            return copy;
         }
-        if (previous instanceof RecordSnapshot recordSnapshot) {
-            RecordSnapshot copy = new RecordSnapshot(snapshot.getType(), mapSnapshot(recordSnapshot.getUnderlyingVariable(), variableMap, snapshotMap, state));
-            snapshotMap.put(snapshot, copy);
-            for (var entry : recordSnapshot.getSnapshots().entrySet()) {
-                copy.assign(entry.getKey(), mapExpression(entry.getValue(), variableMap, snapshotMap, state));
+        if (!(previous instanceof SnapshotExpression snapshotExpression)) {
+            throw new IllegalArgumentException("Unexpected expression: " + previous);
+        }
+        if (isAssignedInChain(snapshotExpression)) {
+            return snapshotExpression;
+        }
+        if (snapshotExpression instanceof RecordSnapshot recordSnapshot) {
+            ReferenceExpression underlyingVariable = recordSnapshot.getUnderlyingVariable() != null ? modifyExpression(recordSnapshot.getUnderlyingVariable(), modifications) : null;
+            RecordSnapshot copy = new RecordSnapshot(recordSnapshot.getType(), underlyingVariable);
+            modifications.put(recordSnapshot, copy);
+            for (Map.Entry<String, Expression> entry : recordSnapshot.getSnapshots().entrySet()) {
+                copy.assign(entry.getKey(), modifyExpression(entry.getValue(), modifications));
             }
-            return (T) copy;
+            return copy;
         }
         if (previous instanceof ArraySnapshot arraySnapshot) {
-            ArraySnapshot copy = new ArraySnapshot(parent -> mapExpression(arraySnapshot.getDefaultValue().get(), variableMap, snapshotMap, state), arraySnapshot.getType(), mapSnapshot(arraySnapshot.getUnderlyingVariable(), variableMap, snapshotMap, state));
-            snapshotMap.put(snapshot, copy);
+            ReferenceExpression underlyingVariable = arraySnapshot.getUnderlyingVariable() != null ? modifyExpression(arraySnapshot.getUnderlyingVariable(), modifications) : null;
+            Function<ArraySnapshot, Expression> defaultValue = (snapshot) -> modifyExpression(arraySnapshot.getDefaultValue().get(), modifications);
+            ArraySnapshot copy = new ArraySnapshot(defaultValue, arraySnapshot.getType(), underlyingVariable);
+            modifications.put(arraySnapshot, copy);
             for (ArrayEntry.Assignment assignment : arraySnapshot.getAssignments()) {
-                copy.assign(mapExpression(assignment.index(), variableMap, snapshotMap, state), mapExpression(assignment.value(), variableMap, snapshotMap, state));
+                Expression indexExpression = modifyExpression(assignment.index(), modifications);
+                Expression valueExpression = modifyExpression(assignment.value(), modifications);
+                copy.assign(indexExpression, valueExpression);
             }
-            return (T) copy;
+            return copy;
         }
         if (previous instanceof VariableSnapshot variableSnapshot) {
-            ReferenceExpression underlyingVariable = mapSnapshot(variableSnapshot.getUnderlyingVariable(), variableMap, snapshotMap, state);
-            VariableSnapshot copy = new VariableSnapshot(underlyingVariable != null ? underlyingVariable.getType() : variableSnapshot.getType(), underlyingVariable);
-            snapshotMap.put(variableSnapshot, copy);
-            return (T) copy;
+            ReferenceExpression underlyingVariable = variableSnapshot.getUnderlyingVariable() != null ? modifyExpression(variableSnapshot.getUnderlyingVariable(), modifications) : null;
+            RapidType type = underlyingVariable != null ? underlyingVariable.getType() : variableSnapshot.getType();
+            if (Objects.equals(underlyingVariable, variableSnapshot.getUnderlyingVariable()) && type.equals(variableSnapshot.getType())) {
+                return variableSnapshot;
+            }
+            VariableSnapshot copy = new VariableSnapshot(type, underlyingVariable);
+            modifications.put(variableSnapshot, copy);
+            return copy;
         }
         throw new AssertionError();
     }
 
-    public @NotNull DataFlowState modify(@NotNull Map<ReferenceExpression, ReferenceExpression> modifications, @NotNull Map<SnapshotExpression, SnapshotExpression> snapshotMap) {
-        DataFlowState state = new DataFlowState(block, functionBlock, predecessor);
-        snapshots.forEach((field, snapshot) -> state.snapshots.put(field, mapSnapshot(snapshot, modifications, snapshotMap, state)));
-        for (Expression expression : conditions) {
-            state.add(expression.replace(component -> mapExpression(component, modifications, snapshotMap, this)));
+    private boolean isAssignedInChain(SnapshotExpression snapshotExpression) {
+        DataFlowState predecessor = this;
+        while (predecessor != null) {
+            if (predecessor.getSnapshots().containsValue(snapshotExpression)) {
+                return true;
+            }
+            predecessor = predecessor.getPredecessor().orElse(null);
         }
-        optionality.forEach((snapshot, optionality) -> state.optionality.put(mapSnapshot(snapshot, modifications, snapshotMap, state), optionality));
-        return state;
+        return false;
+    }
+
+    public @NotNull DataFlowState merge(@NotNull DataFlowState state, @NotNull Map<ReferenceExpression, ReferenceExpression> modifications) {
+        DataFlowState successorState = createSuccessorState();
+        for (Expression expression : state.getExpressions()) {
+            successorState.add(expression.replace(component -> {
+                if (component instanceof VariableExpression) {
+                    return modifications.get(component);
+                }
+                return modifyExpression(component, modifications);
+            }));
+        }
+        state.getOptionality().forEach((snapshot, optionality) -> {
+            SnapshotExpression expression = (SnapshotExpression) modifyExpression(snapshot, modifications);
+            successorState.forceOptionality(expression, optionality);
+        });
+        for (Field field : getSnapshots().keySet()) {
+            SnapshotExpression snapshot = getSnapshots().get(field);
+            if (modifications.containsKey(snapshot)) {
+                successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, modifications.get(snapshot)));
+            }
+        }
+        return successorState;
     }
 
     public @NotNull Set<PathCounter> getPathCounters() {
@@ -360,23 +376,32 @@ public class DataFlowState {
     }
 
     public void assign(@NotNull ReferenceExpression variable, @NotNull Expression expression) {
-        if (variable instanceof VariableExpression leftValue && expression instanceof VariableExpression rightValue) {
+        if (variable instanceof VariableExpression leftValue && expression instanceof ReferenceExpression rightValue) {
             Optional<SnapshotExpression> snapshot = getSnapshot(rightValue);
             if (snapshot.isPresent()) {
                 snapshots.put(leftValue.getField(), snapshot.orElseThrow());
                 return;
             }
         }
+        expression = expression.replace(this::getSnapshot);
         Optional<SnapshotExpression> snapshot = createSnapshot(variable);
         if (snapshot.isEmpty()) {
             return;
         }
-        expression = expression.replace(this::getSnapshot);
         insert(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot.orElseThrow(), expression));
     }
 
     public void add(@NotNull Expression expression) {
         expression = expression.replace(this::getSnapshot);
+        if (expression instanceof BinaryExpression binaryExpression && binaryExpression.getOperator() == BinaryOperator.EQUAL_TO) {
+            if (binaryExpression.getLeft() instanceof ReferenceExpression left && binaryExpression.getRight() instanceof ReferenceExpression right) {
+                if (!(getOptionality(left).equals(getOptionality(right)))) {
+                    Optionality optionality = getOptionality(left).and(getOptionality(right));
+                    setOptionality(left, optionality);
+                    setOptionality(right, optionality);
+                }
+            }
+        }
         insert(expression);
     }
 
@@ -403,14 +428,14 @@ public class DataFlowState {
                 if (binaryExpression.getLeft() instanceof ReferenceExpression referenceExpression) {
                     AggregateExpression aggregateExpression = (AggregateExpression) binaryExpression.getRight();
                     List<Expression> components = aggregateExpression.getComponents();
-                    if (binaryExpression.getType().getDimensions() > 0) {
+                    if (referenceExpression.getType().getDimensions() > 0) {
                         for (int i = 0; i < components.size(); i++) {
                             Expression component = components.get(i);
                             IndexExpression indexExpression = new IndexExpression(referenceExpression, new ConstantExpression(RapidPrimitiveType.NUMBER, i));
                             assign(indexExpression, component);
                         }
                         return;
-                    } else if (binaryExpression.getType().getActualStructure() instanceof RapidRecord record) {
+                    } else if (referenceExpression.getType().getActualStructure() instanceof RapidRecord record) {
                         List<RapidComponent> fields = record.getComponents();
                         if (fields.size() != components.size()) {
                             throw new IllegalArgumentException("Cannot add expression: " + expression);
@@ -434,6 +459,11 @@ public class DataFlowState {
     }
 
     public @NotNull Optionality getOptionality(@NotNull ReferenceExpression expression) {
+        Optionality result = getActualOptionality(expression);
+        return Objects.requireNonNullElse(result, Optionality.PRESENT);
+    }
+
+    private @Nullable Optionality getActualOptionality(@NotNull ReferenceExpression expression) {
         Optional<SnapshotExpression> optional = getSnapshot(expression);
         if (optional.isPresent()) {
             SnapshotExpression snapshot = optional.orElseThrow();
@@ -441,26 +471,21 @@ public class DataFlowState {
                 return optionality.get(snapshot);
             }
             if (predecessor != null) {
-                return predecessor.getOptionality(snapshot);
+                return predecessor.getActualOptionality(snapshot);
             }
         }
-        return Optionality.PRESENT;
+        return null;
     }
 
     public void forceOptionality(@NotNull ReferenceExpression expression, @NotNull Optionality optionality) {
-        Optionality current = getOptionality(expression);
-        if (current.and(optionality) == current) {
-            return;
-        }
-        Optional<SnapshotExpression> optional = createSnapshot(expression);
-        if (optional.isPresent()) {
-            SnapshotExpression snapshot = optional.orElseThrow();
-            this.optionality.put(snapshot, optionality);
-            add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, expression));
-        }
+        setOptionality(expression, optionality, true);
     }
 
     public void setOptionality(@NotNull ReferenceExpression expression, @NotNull Optionality optionality) {
+        setOptionality(expression, optionality, false);
+    }
+
+    private void setOptionality(@NotNull ReferenceExpression expression, @NotNull Optionality optionality, boolean forceOptionality) {
         Field field = getField(expression);
         if (!(field instanceof Argument argument)) {
             return;
@@ -469,23 +494,37 @@ public class DataFlowState {
         if (argumentGroup == null) {
             return;
         }
-        Optionality current = getOptionality(expression);
-        if (current.and(optionality) == current) {
+        SnapshotExpression snapshot = getSnapshot(expression).orElse(null);
+        if (snapshot == null) {
             return;
         }
-        Optional<SnapshotExpression> optional = createSnapshot(expression);
-        if (optional.isEmpty()) {
+        Optionality value;
+        Optionality actual;
+        if (forceOptionality) {
+            value = getActualOptionality(snapshot);
+            if (value != null && value.and(optionality) == value) {
+                return;
+            }
+            actual = optionality;
+        } else {
+            value = getOptionality(snapshot);
+            if (value.and(optionality) == value) {
+                return;
+            }
+            actual = value.and(optionality);
+        }
+        SnapshotExpression result = createSnapshot(expression).orElse(null);
+        if (result == null) {
             return;
         }
-        SnapshotExpression snapshot = optional.orElseThrow();
-        this.optionality.put(snapshot, current.and(optionality));
-        add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, expression));
+        this.optionality.put(result, actual);
+        conditions.add(new BinaryExpression(BinaryOperator.EQUAL_TO, result, snapshot));
         if (optionality == Optionality.PRESENT) {
             for (Argument otherArgument : argumentGroup.arguments()) {
                 if (otherArgument == argument) {
                     continue;
                 }
-                setOptionality(new VariableExpression(otherArgument), Optionality.MISSING);
+                setOptionality(new VariableExpression(otherArgument), Optionality.MISSING, forceOptionality);
             }
         }
     }
@@ -627,6 +666,45 @@ public class DataFlowState {
         return snapshot;
     }
 
+    public @NotNull Expression getHistoricSnapshot(@NotNull Expression value, @NotNull PsiElement expression) {
+        if (value instanceof ReferenceExpression referenceValue) {
+            Optional<SnapshotExpression> snapshot = getHistoricSnapshot(referenceValue, expression);
+            if (snapshot.isPresent()) {
+                return snapshot.orElseThrow();
+            }
+        }
+        return value;
+
+    }
+
+    public @NotNull Optional<SnapshotExpression> getHistoricSnapshot(@NotNull ReferenceExpression variable, @NotNull PsiElement expression) {
+        PsiManager manager = expression.getManager();
+        for (Expression condition : conditions) {
+            for (Expression component : condition.getComponents()) {
+                RapidExpression element = component.getElement();
+                if (!(manager.areElementsEquivalent(expression, element))) {
+                    continue;
+                }
+                if (component instanceof SnapshotExpression snapshot && variable.equals(snapshot.getUnderlyingVariable())) {
+                    return Optional.of(snapshot);
+                }
+                for (Expression child : component.getChildren()) {
+                    if (!(child instanceof SnapshotExpression snapshot)) {
+                        continue;
+                    }
+                    if (!(variable.equals(snapshot.getUnderlyingVariable()))) {
+                        continue;
+                    }
+                    return Optional.of(snapshot);
+                }
+            }
+        }
+        if (predecessor != null) {
+            return predecessor.getHistoricSnapshot(variable, expression);
+        }
+        return Optional.empty();
+    }
+
     public @NotNull Expression getSnapshot(@NotNull Expression value) {
         if (value instanceof ReferenceExpression referenceValue) {
             Optional<SnapshotExpression> snapshot = getSnapshot(referenceValue);
@@ -646,73 +724,84 @@ public class DataFlowState {
      * @return the latest snapshot for the variable, or an empty optional if no reference to this variable was found.
      */
     public @NotNull Optional<SnapshotExpression> getSnapshot(@NotNull ReferenceExpression expression) {
-        if (expression instanceof FieldExpression) {
-            return Optional.empty();
-        }
-        if (expression instanceof SnapshotExpression snapshot) {
-            return Optional.of(snapshot);
-        }
-        if (expression instanceof VariableExpression variable) {
-            Field field = variable.getField();
-            if (snapshots.containsKey(field)) {
-                return Optional.of(snapshots.get(field));
-            } else if (predecessor != null) {
-                return predecessor.getSnapshot(expression);
-            } else {
+        return expression.accept(new ControlFlowVisitor<>() {
+            @Override
+            public Optional<SnapshotExpression> visitFieldExpression(@NotNull FieldExpression expression) {
                 return Optional.empty();
             }
-        }
-        if (expression instanceof IndexExpression indexValue) {
-            Optional<SnapshotExpression> snapshot = getSnapshot(indexValue.getVariable());
-            if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
-                return Optional.empty();
+
+            @Override
+            public Optional<SnapshotExpression> visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
+                return Optional.of(snapshot);
             }
-            Expression indexSnapshot = getSnapshot(indexValue.getIndex());
-            List<ArrayEntry> assignments = arraySnapshot.getAssignments(this, indexSnapshot);
-            if (assignments.size() > 1) {
-                throw new IllegalStateException("Array: " + arraySnapshot + " provided " + assignments.size() + " assignments for index " + indexSnapshot);
-            } else if (assignments.isEmpty()) {
-                throw new IllegalStateException("Array: " + arraySnapshot + " provided no assignments for index " + indexSnapshot);
+
+            @Override
+            public Optional<SnapshotExpression> visitVariableExpression(@NotNull VariableExpression expression) {
+                Field field = expression.getField();
+                if (snapshots.containsKey(field)) {
+                    return Optional.of(snapshots.get(field));
+                } else if (predecessor != null) {
+                    return predecessor.getSnapshot(expression);
+                } else {
+                    return Optional.empty();
+                }
             }
-            ArrayEntry arrayEntry = assignments.get(0);
-            if (arrayEntry instanceof ArrayEntry.DefaultValue defaultAssignment) {
-                Expression value = defaultAssignment.defaultValue();
-                if (!(value instanceof ReferenceExpression defaultValue)) {
+
+            @Override
+            public Optional<SnapshotExpression> visitIndexExpression(@NotNull IndexExpression expression) {
+                Optional<SnapshotExpression> snapshot = getSnapshot(expression.getVariable());
+                if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
+                    return Optional.empty();
+                }
+                Expression indexSnapshot = getSnapshot(expression.getIndex());
+                List<ArrayEntry> assignments = arraySnapshot.getAssignments(DataFlowState.this, indexSnapshot);
+                if (assignments.size() > 1) {
+                    throw new IllegalStateException("Array: " + arraySnapshot + " provided " + assignments.size() + " assignments for index " + indexSnapshot);
+                } else if (assignments.isEmpty()) {
+                    throw new IllegalStateException("Array: " + arraySnapshot + " provided no assignments for index " + indexSnapshot);
+                }
+                ArrayEntry arrayEntry = assignments.get(0);
+                if (arrayEntry instanceof ArrayEntry.DefaultValue defaultAssignment) {
+                    Expression value = defaultAssignment.defaultValue();
+                    if (!(value instanceof ReferenceExpression defaultValue)) {
+                        VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
+                        add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
+                        return Optional.of(variableSnapshot);
+                    }
+                    Optional<SnapshotExpression> defaultSnapshot = getSnapshot(defaultValue);
+                    if (defaultSnapshot.isPresent()) {
+                        arraySnapshot.assign(indexSnapshot, defaultSnapshot.orElseThrow());
+                    }
+                    return defaultSnapshot;
+                }
+                if (arrayEntry instanceof ArrayEntry.Assignment assignment) {
+                    Expression value = assignment.value();
+                    if (!(value instanceof ReferenceExpression assignmentValue)) {
+                        VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
+                        add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
+                        return Optional.of(variableSnapshot);
+                    }
+                    return getSnapshot(assignmentValue);
+                }
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public Optional<SnapshotExpression> visitComponentExpression(@NotNull ComponentExpression expression) {
+                Optional<SnapshotExpression> snapshot = getSnapshot(expression.getVariable());
+                if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof RecordSnapshot recordSnapshot)) {
+                    return Optional.empty();
+                }
+                Expression value = recordSnapshot.getValue(expression.getComponent());
+                if (value instanceof ReferenceExpression variable) {
+                    return getSnapshot(variable);
+                } else {
                     VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
                     add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
                     return Optional.of(variableSnapshot);
                 }
-                Optional<SnapshotExpression> defaultSnapshot = getSnapshot(defaultValue);
-                if (defaultSnapshot.isPresent()) {
-                    arraySnapshot.assign(indexSnapshot, defaultSnapshot.orElseThrow());
-                }
-                return defaultSnapshot;
             }
-            if (arrayEntry instanceof ArrayEntry.Assignment assignment) {
-                Expression value = assignment.value();
-                if (!(value instanceof ReferenceExpression assignmentValue)) {
-                    VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
-                    add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
-                    return Optional.of(variableSnapshot);
-                }
-                return getSnapshot(assignmentValue);
-            }
-        }
-        if (expression instanceof ComponentExpression componentValue) {
-            Optional<SnapshotExpression> snapshot = getSnapshot(componentValue.getVariable());
-            if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof RecordSnapshot recordSnapshot)) {
-                return Optional.empty();
-            }
-            Expression value = recordSnapshot.getValue(componentValue.getComponent());
-            if (value instanceof ReferenceExpression variable) {
-                return getSnapshot(variable);
-            } else {
-                VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
-                add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
-                return Optional.of(variableSnapshot);
-            }
-        }
-        throw new IllegalArgumentException();
+        });
     }
 
     @Override

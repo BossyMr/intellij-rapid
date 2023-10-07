@@ -65,9 +65,6 @@ public class VariableSnapshot implements SnapshotExpression {
 
     @Override
     public @NotNull String toString() {
-        return "VariableSnapshot{" +
-                "identity='" + hashCode() + '\'' +
-                ", type='" + type + '\'' +
-                '}';
+        return "~" + hashCode();
     }
 }

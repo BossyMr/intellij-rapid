@@ -67,8 +67,6 @@ public class RapidAtomicType implements RapidType {
 
     @Override
     public String toString() {
-        return "RapidAtomicType{" +
-                "atomic=" + atomic +
-                '}';
+        return getPresentableText();
     }
 }

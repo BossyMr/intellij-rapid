@@ -65,8 +65,6 @@ public enum RapidPrimitiveType implements RapidType {
 
     @Override
     public String toString() {
-        return "RapidPrimitiveType{" +
-                "symbol=" + symbol +
-                '}';
+        return getPresentableText();
     }
 }

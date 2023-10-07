@@ -64,8 +64,6 @@ public class RapidRecordType implements RapidType {
 
     @Override
     public String toString() {
-        return "RapidRecordType{" +
-                "record=" + record +
-                '}';
+        return getPresentableText();
     }
 }

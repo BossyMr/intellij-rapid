@@ -2,22 +2,12 @@ package com.bossymr.rapid.ide.insight.flow;
 
 import com.bossymr.rapid.ide.editor.insight.inspection.flow.ConstantValueInspection;
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.flow.ControlFlowService;
-import com.bossymr.rapid.language.flow.data.DataFlow;
-import com.bossymr.rapid.language.flow.debug.DataFlowGraphService;
-import com.intellij.execution.ExecutionException;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 
 public class ConstantValueInspectionTest extends BasePlatformTestCase {
-
-    private final File DEFAULT_PATH = new File(System.getProperty("user.home") + "\\Documents\\testOutput\\");
 
     @Override
     protected void setUp() throws Exception {
@@ -31,23 +21,38 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
     }
 
     private void doTest(@NotNull String text) {
-        doTest(text, null);
-    }
-
-    private void doTest(@NotNull String text, @Nullable File output) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
         myFixture.checkHighlighting(true, true, true, true);
-        if (output != null) {
-            DataFlow dataFlow = ControlFlowService.getInstance().getDataFlow(myFixture.getProject());
-            Path path = output.toPath().resolve(getTestName(false) + ".svg");
-            try {
-                DataFlowGraphService.convert(path.toFile(), dataFlow);
-            } catch (IOException e) {
-                fail(e.getMessage());
-            } catch (ExecutionException e) {
-                fail(e.getMessage());
-            }
-        }
+    }
+
+    public void testLoop() {
+        doTest("""
+                MODULE foo
+                    PROC bar(num x)
+                        VAR num y := 0;
+                        WHILE x > 0 THEN
+                            y := y + 1;
+                            x := x - 1;
+                        ENDWHILE
+                        IF <warning descr="Value of expression is always false">x > 0</warning> THEN
+                        ENDIF
+                        IF <warning descr="Value of expression is always false">y < 0</warning> THEN
+                        ENDIF
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
+    public void testEquality() {
+        doTest("""
+                MODULE foo
+                    PROC bar(num x)
+                        VAR num y := x;
+                        IF <warning descr="Value of expression is always true">y = x</warning> THEN
+                        ENDIF
+                    ENDPROC
+                ENDMODULE
+                """);
     }
 
     public void testFunctionCall() {
@@ -68,7 +73,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                         ENDIF
                     ENDFUNC
                 ENDMODULE
-                """, DEFAULT_PATH);
+                """);
     }
 
     public void testGroupExpression() {

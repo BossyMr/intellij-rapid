@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class AggregateExpression implements Expression {
 
@@ -61,9 +62,8 @@ public class AggregateExpression implements Expression {
 
     @Override
     public String toString() {
-        return "AggregateExpression{" +
-                "type=" + type +
-                ", expressions=" + expressions +
-                '}';
+        return expressions.stream()
+                .map(Expression::toString)
+                .collect(Collectors.joining(", ", "[", "]"));
     }
 }

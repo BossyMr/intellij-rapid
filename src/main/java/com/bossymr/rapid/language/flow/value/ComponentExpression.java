@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.RapidReferenceExpression;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.SmartPointerManager;
 import com.intellij.psi.SmartPsiElementPointer;
@@ -12,7 +12,7 @@ import java.util.Objects;
 
 public class ComponentExpression implements ReferenceExpression {
 
-    private final @Nullable SmartPsiElementPointer<RapidExpression> expression;
+    private final @Nullable SmartPsiElementPointer<RapidReferenceExpression> expression;
     private final @NotNull RapidType type;
     private final @NotNull ReferenceExpression variable;
     private final @NotNull String component;
@@ -21,8 +21,13 @@ public class ComponentExpression implements ReferenceExpression {
         this(null, type, variable, component);
     }
 
-    public ComponentExpression(@Nullable RapidExpression expression, @NotNull RapidType type, @NotNull ReferenceExpression variable, @NotNull String component) {
+    public ComponentExpression(@Nullable RapidReferenceExpression expression, @NotNull RapidType type, @NotNull ReferenceExpression variable, @NotNull String component) {
         this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
+        if (expression != null) {
+            if (expression.getQualifier() == null) {
+                throw new IllegalArgumentException("Cannot create ComponentExpression with expression: " + expression);
+            }
+        }
         this.type = type;
         this.variable = variable;
         this.component = component;
@@ -42,7 +47,7 @@ public class ComponentExpression implements ReferenceExpression {
     }
 
     @Override
-    public @Nullable RapidExpression getElement() {
+    public @Nullable RapidReferenceExpression getElement() {
         return expression != null ? expression.getElement() : null;
     }
 
@@ -66,10 +71,6 @@ public class ComponentExpression implements ReferenceExpression {
 
     @Override
     public String toString() {
-        return "ComponentExpression{" +
-                "type=" + type +
-                ", variable=" + variable +
-                ", component='" + component + '\'' +
-                '}';
+        return variable + "." + component;
     }
 }

@@ -50,8 +50,6 @@ public class RapidUnknownType implements RapidType {
 
     @Override
     public String toString() {
-        return "RapidUnknownType{" +
-                "name='" + name + '\'' +
-                '}';
+        return getPresentableText();
     }
 }

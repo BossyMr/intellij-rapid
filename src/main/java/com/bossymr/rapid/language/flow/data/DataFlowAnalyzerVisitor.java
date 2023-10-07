@@ -130,14 +130,12 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
 
     @Override
     public Void visitRetryInstruction(@NotNull BranchingInstruction.RetryInstruction instruction) {
-        super.visitRetryInstruction(instruction);
-        return null;
+        return super.visitRetryInstruction(instruction);
     }
 
     @Override
     public Void visitTryNextInstruction(@NotNull BranchingInstruction.TryNextInstruction instruction) {
-        super.visitTryNextInstruction(instruction);
-        return null;
+        return super.visitTryNextInstruction(instruction);
     }
 
     @Override
