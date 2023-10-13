@@ -3,13 +3,13 @@ package com.bossymr.rapid.language.flow.data.block;
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.BooleanValue;
 import com.bossymr.rapid.language.flow.Optionality;
-import com.bossymr.rapid.language.flow.data.BlockCycle;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -23,47 +23,11 @@ public class DataFlowBlock {
     private final @NotNull BasicBlock basicBlock;
     private final @NotNull List<DataFlowState> states = new ArrayList<>();
 
-    private final @NotNull Set<BlockCycle> cycles;
-
     private final @NotNull Set<DataFlowEdge> successors = new HashSet<>();
     private final @NotNull Set<DataFlowEdge> predecessors = new HashSet<>();
 
-    public DataFlowBlock(@NotNull BasicBlock basicBlock, @NotNull Set<BlockCycle> cycles) {
+    public DataFlowBlock(@NotNull BasicBlock basicBlock) {
         this.basicBlock = basicBlock;
-        this.cycles = cycles;
-    }
-
-    public @NotNull Set<BlockCycle> getCycles() {
-        return cycles;
-    }
-
-    public @NotNull Set<BlockCycle> getHeads() {
-        Set<BlockCycle> counters = new HashSet<>();
-        for (BlockCycle blockCycle : cycles) {
-            List<DataFlowBlock> sequence = blockCycle.getSequence();
-            if (sequence.isEmpty()) {
-                continue;
-            }
-            if (sequence.get(0).equals(this)) {
-                counters.add(blockCycle);
-            }
-        }
-        return Set.copyOf(counters);
-    }
-
-
-    public @NotNull Set<BlockCycle> getTails() {
-        Set<BlockCycle> counters = new HashSet<>();
-        for (BlockCycle blockCycle : cycles) {
-            List<DataFlowBlock> sequence = blockCycle.getSequence();
-            if (sequence.isEmpty()) {
-                continue;
-            }
-            if (sequence.get(sequence.size() - 1).equals(this)) {
-                counters.add(blockCycle);
-            }
-        }
-        return Set.copyOf(counters);
     }
 
     public @NotNull BasicBlock getBasicBlock() {
@@ -99,53 +63,85 @@ public class DataFlowBlock {
         }
         separate(new BinaryExpression(BinaryOperator.EQUAL_TO, variable, expression));
         for (DataFlowState state : states) {
+            DataFlowState previousCycle = getPreviousCycle(state);
+            if(previousCycle != null) {
+
+            }
             // TODO: Check whether this assignment is cyclic, and if so, handle it correctly by using a relevant path counter.
             state.assign(variable, expression);
         }
     }
 
-    private void separate(@NotNull Expression expression) {
-        // TODO: 2023-09-10 This entire algorithm seems a bit overly complicated
-        Collection<Expression> components = expression.getComponents();
-        List<DataFlowState> copy = new ArrayList<>();
-        for (Expression component : components) {
-            if (!(component instanceof ReferenceExpression referenceExpression)) {
-                continue;
-            }
-            List<IndexExpression> indexExpressions = getIndexExpressions(referenceExpression);
-            for (ListIterator<IndexExpression> iterator = indexExpressions.listIterator(indexExpressions.size()); iterator.hasPrevious(); ) {
-                List<DataFlowState> results = separate(iterator.previous());
-                copy.addAll(results);
+    private @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {
+        DataFlowState predecessor = state;
+        while((predecessor = predecessor.getPredecessor()) != null) {
+            if(predecessor.equals(state)) {
+                return predecessor;
             }
         }
-        if (copy.isEmpty()) {
+        return null;
+    }
+
+    private @NotNull Expression getCyclicExpression(@NotNull DataFlowState state, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
+        return null;
+    }
+
+    /**
+     * Split this DataFlowBlock so that, in any DataFlowState, any index expression in the specified expression will
+     * only return a single value.
+     *
+     * @param expression the expression.
+     */
+    private void separate(@NotNull Expression expression) {
+        List<DataFlowState> results = new ArrayList<>();
+        for (Expression component : expression.getComponents()) {
+            if (!(component instanceof IndexExpression indexExpression)) {
+                continue;
+            }
+            indexExpression.iterate(child -> {
+                if (child instanceof IndexExpression) {
+                    results.addAll(separate(((IndexExpression) child)));
+                }
+            });
+        }
+        if (results.isEmpty()) {
             return;
         }
         states.clear();
-        states.addAll(copy);
+        states.addAll(results);
     }
 
-    private @NotNull List<DataFlowState> separate(@NotNull IndexExpression indexValue) {
-        if (indexValue.getVariable() instanceof FieldExpression) {
-            return List.copyOf(states);
-        }
+    /**
+     * Return a list of states so that the specified index expression will always return exactly one value.
+     *
+     * @param expression the expression.
+     * @return a list of states.
+     */
+    private @NotNull List<DataFlowState> separate(@NotNull IndexExpression expression) {
         List<DataFlowState> results = new ArrayList<>();
         for (DataFlowState state : states) {
-            Optional<SnapshotExpression> snapshot = state.getSnapshot(indexValue.getVariable());
-            if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
-                continue;
+            ReferenceExpression variable = expression.getVariable();
+            Optional<SnapshotExpression> snapshot = state.getSnapshot(variable);
+            if (!(snapshot.orElse(null) instanceof ArraySnapshot arraySnapshot)) {
+                throw new IllegalStateException("Expected state: " + state + " to create ArraySnapshot for variable: " + variable);
             }
-            List<ArrayEntry> assignments = arraySnapshot.getAssignments(state, indexValue.getIndex());
+            List<ArrayEntry> assignments = arraySnapshot.getAssignments(state, expression.getIndex());
             if (assignments.size() == 1) {
+                // The expression returns exactly one result.
                 results.add(state);
                 continue;
             }
             for (int i = 0; i < assignments.size(); i++) {
                 ArrayEntry assignment = assignments.get(i);
                 DataFlowState copy = DataFlowState.copy(state);
-                assignAssignment(copy, indexValue, BinaryOperator.EQUAL_TO, assignment);
+                // Constraint the index of the assignment to always be equal to the index for the expression.
+                // As a result, this assignment will always be valid.
+                assignAssignment(copy, expression, BinaryOperator.EQUAL_TO, assignment);
                 for (int j = 0; j < i; j++) {
-                    assignAssignment(copy, indexValue, BinaryOperator.NOT_EQUAL_TO, assignments.get(j));
+                    // For any assignment which occurred after this assignment:
+                    // Constraint the index of the assignment to always be not equal to the index for the expression.
+                    // As a result, no assignment which occurred after this assignment will overwrite this assignment.
+                    assignAssignment(copy, expression, BinaryOperator.NOT_EQUAL_TO, assignments.get(j));
                 }
                 results.add(copy);
             }
@@ -172,31 +168,24 @@ public class DataFlowBlock {
         }
     }
 
-    private @NotNull List<IndexExpression> getIndexExpressions(@NotNull ReferenceExpression referenceValue) {
-        if (!(referenceValue instanceof IndexExpression)) {
-            return List.of();
-        }
-        List<IndexExpression> indexValues = new ArrayList<>();
-        while (referenceValue instanceof IndexExpression indexValue) {
-            indexValues.add(indexValue);
-            referenceValue = indexValue.getVariable();
-        }
-        return indexValues;
-    }
-
     public @NotNull Optionality getOptionality(@NotNull ReferenceExpression variable, @NotNull PsiElement element) {
         Optionality optionality = null;
         for (DataFlowState state : states) {
+            // Take the expression: x := x + y - where the optionality of x is UNKNOWN.
+            // If you attempt to find the regular snapshot of the expression 'x' from the right hand side of the
+            // assignment, it would return the latest snapshot for 'x' from the left hand side of the assignment.
+            // Because that 'x' was just assigned a value, it must be present. Therefore, the historic snapshot must be
+            // retrieved, where the PsiElement of the expression matches the element of the snapshot.
             Optional<SnapshotExpression> snapshot = state.getHistoricSnapshot(variable, element);
             ReferenceExpression expression = snapshot.isPresent() ? snapshot.orElseThrow() : variable;
-            if(optionality == null) {
+            if (optionality == null) {
                 optionality = state.getOptionality(expression);
             } else {
                 optionality = optionality.or(state.getOptionality(expression));
             }
         }
-        if(optionality == null) {
-            throw new IllegalStateException("Invalid block: " + this);
+        if (optionality == null) {
+            throw new IllegalStateException("Malformed DataFlowBlock: " + this);
         }
         return optionality;
     }
@@ -211,7 +200,7 @@ public class DataFlowBlock {
 
     public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull DataFlowState state) {
         if (state.getBlock().isPresent()) {
-            if(state.getBlock().orElseThrow() != successor) {
+            if (state.getBlock().orElseThrow() != successor) {
                 state = DataFlowState.createSuccessorState(successor, state);
             }
         }
