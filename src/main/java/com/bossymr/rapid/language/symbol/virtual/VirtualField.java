@@ -3,8 +3,8 @@ package com.bossymr.rapid.language.symbol.virtual;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.RapidField;
-import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.Visibility;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,15 +17,15 @@ public class VirtualField implements RapidField, VirtualSymbol {
     private final @NotNull RapidType type;
     private final boolean isModifiable;
 
-    public VirtualField(@NotNull FieldType fieldType, @NotNull String name, @NotNull RapidType type, boolean isModifiable) {
-        this(fieldType, "", name, type, isModifiable);
+    public VirtualField(@NotNull String name, @NotNull FieldType fieldType, @NotNull RapidType valueType, boolean isModifiable) {
+        this("", name, fieldType, valueType, isModifiable);
     }
 
-    public VirtualField(@NotNull FieldType fieldType, @NotNull String moduleName, @NotNull String name, @NotNull RapidType type, boolean isModifiable) {
+    public VirtualField(@NotNull String moduleName, @NotNull String name, @NotNull FieldType fieldType, @NotNull RapidType valueType, boolean isModifiable) {
         this.fieldType = fieldType;
         this.moduleName = moduleName;
         this.name = name;
-        this.type = type;
+        this.type = valueType;
         this.isModifiable = isModifiable;
     }
 

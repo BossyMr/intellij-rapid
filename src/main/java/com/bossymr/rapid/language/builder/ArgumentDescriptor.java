@@ -1,4 +1,4 @@
-package com.bossymr.rapid.language.flow;
+package com.bossymr.rapid.language.builder;
 
 import org.jetbrains.annotations.NotNull;
 

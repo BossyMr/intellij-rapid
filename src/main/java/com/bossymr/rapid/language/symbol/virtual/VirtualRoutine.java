@@ -3,9 +3,9 @@ package com.bossymr.rapid.language.symbol.virtual;
 import com.bossymr.rapid.language.psi.RapidStatement;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
-import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.Visibility;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,14 +20,14 @@ public class VirtualRoutine implements RapidRoutine, VirtualSymbol {
     private final @Nullable List<VirtualParameterGroup> parameters;
 
     public VirtualRoutine(@NotNull RoutineType routineType, @NotNull String name, @Nullable RapidType type, @Nullable List<VirtualParameterGroup> parameters) {
-        this(routineType, "", name, type, parameters);
+        this("", name, routineType, type, parameters);
     }
 
-    public VirtualRoutine(@NotNull RoutineType routineType, @NotNull String moduleName, @NotNull String name, @Nullable RapidType type, @Nullable List<VirtualParameterGroup> parameters) {
+    public VirtualRoutine(@NotNull String moduleName, @NotNull String name, @NotNull RoutineType routineType, @Nullable RapidType returnType, @Nullable List<VirtualParameterGroup> parameters) {
         this.routineType = routineType;
         this.moduleName = moduleName;
         this.name = name;
-        this.type = type;
+        this.type = returnType;
         this.parameters = parameters;
     }
 

@@ -32,7 +32,7 @@ public interface Expression {
         return accept(new ControlFlowVisitor<>() {
             @Override
             public Expression visitAggregateExpression(@NotNull AggregateExpression expression) {
-                List<Expression> expressions = expression.getComponents().stream()
+                List<Expression> expressions = expression.getExpressions().stream()
                         .map(component -> component.accept(this))
                         .toList();
                 AggregateExpression aggregateExpression = new AggregateExpression(expression.getElement(), expression.getType(), expressions);
@@ -89,7 +89,7 @@ public interface Expression {
         return accept(new ControlFlowVisitor<>() {
             @Override
             public Collection<Expression> visitAggregateExpression(@NotNull AggregateExpression expression) {
-                return expression.getComponents();
+                return Set.copyOf(expression.getExpressions());
             }
 
             @Override

@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A {@code LinearInstruction} represents an instruction which will move the program pointer to the next instruction.
@@ -17,7 +18,7 @@ public sealed interface LinearInstruction extends Instruction {
      * @param variable the field.
      * @param value the value.
      */
-    record AssignmentInstruction(@NotNull PsiElement element, @NotNull ReferenceExpression variable, @NotNull Expression value) implements LinearInstruction {
+    record AssignmentInstruction(@Nullable PsiElement element, @NotNull ReferenceExpression variable, @NotNull Expression value) implements LinearInstruction {
         @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
             return visitor.visitAssignmentInstruction(this);
@@ -30,7 +31,7 @@ public sealed interface LinearInstruction extends Instruction {
      * @param variable the interrupt.
      * @param routine the routine.
      */
-    record ConnectInstruction(@NotNull PsiElement element, @NotNull ReferenceExpression variable, @NotNull Expression routine) implements LinearInstruction {
+    record ConnectInstruction(@Nullable PsiElement element, @NotNull ReferenceExpression variable, @NotNull Expression routine) implements LinearInstruction {
         @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
             return visitor.visitConnectInstruction(this);

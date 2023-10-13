@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.flow.value;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.SmartPointerManager;
 import com.intellij.psi.SmartPsiElementPointer;
@@ -16,14 +17,30 @@ public class ConstantExpression implements Expression {
     private final @NotNull RapidType type;
     private final @NotNull Object value;
 
-    public ConstantExpression(@NotNull RapidType type, @NotNull Object value) {
-        this(null, type, value);
+    public ConstantExpression(@NotNull Object value) {
+        this(null, value);
     }
 
-    public ConstantExpression(@Nullable RapidExpression expression, @NotNull RapidType type, @NotNull Object value) {
+    public ConstantExpression(@Nullable RapidExpression expression, @NotNull Object value) {
         this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
-        this.type = type;
+        this.type = Objects.requireNonNull(getType(value));
         this.value = value;
+    }
+
+    private static @Nullable RapidType getType(@NotNull Object value) {
+        if (value instanceof String) {
+            return RapidPrimitiveType.STRING;
+        }
+        if (value instanceof Double || value instanceof Long) {
+            return RapidPrimitiveType.DOUBLE;
+        }
+        if (value instanceof Byte || value instanceof Character || value instanceof Float || value instanceof Integer) {
+            return RapidPrimitiveType.NUMBER;
+        }
+        if (value instanceof Boolean) {
+            return RapidPrimitiveType.BOOLEAN;
+        }
+        return null;
     }
 
     public @NotNull Object getValue() {

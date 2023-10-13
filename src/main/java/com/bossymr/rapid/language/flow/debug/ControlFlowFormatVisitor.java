@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.debug;
 
+import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
@@ -90,7 +91,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
         if (!(variables.isEmpty())) {
             stringBuilder.append("\n");
         }
-        List<BasicBlock> basicBlocks = block.getBasicBlocks();
+        List<BasicBlock> basicBlocks = block.getInstructions();
         for (int i = 0; i < basicBlocks.size(); i++) {
             if (i > 0) {
                 stringBuilder.append("\n");
@@ -338,11 +339,11 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     public @NotNull String visitAggregateExpression(@NotNull AggregateExpression expression) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("[");
-        for (int i = 0; i < expression.getComponents().size(); i++) {
+        for (int i = 0; i < expression.getExpressions().size(); i++) {
             if (i > 0) {
                 stringBuilder.append(", ");
             }
-            stringBuilder.append(expression.getComponents().get(i).accept(this));
+            stringBuilder.append(expression.getExpressions().get(i).accept(this));
         }
         stringBuilder.append("]");
         return stringBuilder.toString();

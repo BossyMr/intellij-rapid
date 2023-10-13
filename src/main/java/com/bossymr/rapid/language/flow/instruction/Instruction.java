@@ -21,6 +21,8 @@ public sealed interface Instruction permits BranchingInstruction, LinearInstruct
      */
     @Nullable PsiElement element();
 
+    @Nullable Instruction next();
+
     <R> R accept(@NotNull ControlFlowVisitor<R> visitor);
 
 }

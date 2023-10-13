@@ -17,7 +17,6 @@ import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.StatementListType;
-import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.configurations.PathEnvironmentVariableUtil;
@@ -155,7 +154,7 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("style=dotted;\nlabel=\"").append(blockName).append("\";").append("\n");
         stringBuilder.append(getEntryBlockIndex(block)).append("[shape=oval;label=Entry];").append("\n");
         for (StatementListType value : StatementListType.values()) {
-            BasicBlock entryBlock = block.getEntryBlock(value);
+            BasicBlock entryBlock = block.getEntryInstruction(value);
             if (entryBlock == null) {
                 continue;
             }
@@ -166,7 +165,7 @@ public class DataFlowGraphService extends AnAction {
                 }
             }
         }
-        for (BasicBlock basicBlock : block.getBasicBlocks()) {
+        for (BasicBlock basicBlock : block.getInstructions()) {
             DataFlowBlock dataFlowBlock = dataFlow.getBlock(basicBlock);
             if (dataFlowBlock == null) {
                 continue;
@@ -336,7 +335,7 @@ public class DataFlowGraphService extends AnAction {
                     }
                 } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
                     if (defaultValue.defaultValue() instanceof SnapshotExpression referenceValue) {
-                        writeSnapshot(stringBuilder, state, new IndexExpression(arraySnapshot, new ConstantExpression(RapidPrimitiveType.ANYTYPE, "[default]")), referenceValue, snapshots);
+                        writeSnapshot(stringBuilder, state, new IndexExpression(arraySnapshot, new ConstantExpression("[default]")), referenceValue, snapshots);
                     }
                 }
             }

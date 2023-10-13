@@ -41,7 +41,7 @@ public class ControlFlowBuilder {
     }
 
     public void enterFunction(@NotNull PhysicalRoutine routine, @NotNull String moduleName) {
-        VirtualRoutine virtualRoutine = new VirtualRoutine(routine.getRoutineType(), moduleName, Objects.requireNonNull(routine.getName()), routine.getType(), new ArrayList<>());
+        VirtualRoutine virtualRoutine = new VirtualRoutine(moduleName, Objects.requireNonNull(routine.getName()), routine.getRoutineType(), routine.getType(), new ArrayList<>());
         List<PhysicalParameterGroup> parameters = routine.getParameters();
         if (parameters != null) {
             for (PhysicalParameterGroup parameterGroup : parameters) {
@@ -56,7 +56,7 @@ public class ControlFlowBuilder {
     }
 
     public void enterField(@NotNull PhysicalField field, @NotNull String moduleName) {
-        VirtualField virtualField = new VirtualField(field.getFieldType(), moduleName, Objects.requireNonNull(field.getName()), Objects.requireNonNull(field.getType()), field.isModifiable());
+        VirtualField virtualField = new VirtualField(moduleName, Objects.requireNonNull(field.getName()), field.getFieldType(), Objects.requireNonNull(field.getType()), field.isModifiable());
         Block block = new Block.FieldBlock(virtualField, moduleName);
         enterBlock(block);
     }
@@ -132,7 +132,7 @@ public class ControlFlowBuilder {
             throw new IllegalStateException("Cannot exit scope as no scope is currently active");
         }
         currentBasicBlock.setTerminator(branchingInstruction);
-        currentBlock.getBasicBlocks().add(currentBasicBlock);
+        currentBlock.getInstructions().add(currentBasicBlock);
         currentBasicBlock = null;
     }
 

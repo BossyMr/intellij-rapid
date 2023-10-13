@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.flow.instruction;
 
-import com.bossymr.rapid.language.flow.ArgumentDescriptor;
+import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
@@ -26,7 +26,7 @@ public sealed interface BranchingInstruction extends Instruction {
      * @param onSuccess the instruction to go to if the specified value is {@code true}.
      * @param onFailure the instruction to go to if the specified value is {@code false}.
      */
-    record ConditionalBranchingInstruction(@NotNull PsiElement element, @NotNull Expression value, @NotNull BasicBlock onSuccess,
+    record ConditionalBranchingInstruction(@Nullable PsiElement element, @NotNull Expression value, @NotNull BasicBlock onSuccess,
                                            @NotNull BasicBlock onFailure) implements BranchingInstruction {
 
         public ConditionalBranchingInstruction {
@@ -55,7 +55,7 @@ public sealed interface BranchingInstruction extends Instruction {
      * A {@code RetryInstruction} will move the program pointer back to the instruction that failed and caused the
      * program pointer to go to this instruction.
      */
-    record RetryInstruction(@NotNull PsiElement element) implements BranchingInstruction {
+    record RetryInstruction(@Nullable PsiElement element) implements BranchingInstruction {
         @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
             return visitor.visitRetryInstruction(this);
@@ -66,7 +66,7 @@ public sealed interface BranchingInstruction extends Instruction {
      * A {@code TryNextInstruction} will move the program pointer to the instruction after the instruction which failed
      * and caused the program pointer to go to this instruction.
      */
-    record TryNextInstruction(@NotNull PsiElement element) implements BranchingInstruction {
+    record TryNextInstruction(@Nullable PsiElement element) implements BranchingInstruction {
         @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
             return visitor.visitTryNextInstruction(this);
@@ -86,6 +86,11 @@ public sealed interface BranchingInstruction extends Instruction {
         }
 
         @Override
+        public @Nullable Instruction next() {
+            return null;
+        }
+
+        @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
             return visitor.visitReturnInstruction(this);
         }
@@ -94,7 +99,12 @@ public sealed interface BranchingInstruction extends Instruction {
     /**
      * An {@code ExitInstruction} will exit the program.
      */
-    record ExitInstruction(@NotNull PsiElement element) implements BranchingInstruction {
+    record ExitInstruction(@Nullable PsiElement element) implements BranchingInstruction {
+        @Override
+        public @Nullable Instruction next() {
+            return null;
+        }
+
         @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
             return visitor.visitExitInstruction(this);
@@ -106,7 +116,12 @@ public sealed interface BranchingInstruction extends Instruction {
      *
      * @param exception the exception.
      */
-    record ThrowInstruction(@NotNull PsiElement element, @Nullable Expression exception) implements BranchingInstruction {
+    record ThrowInstruction(@Nullable PsiElement element, @Nullable Expression exception) implements BranchingInstruction {
+        @Override
+        public @Nullable Instruction next() {
+            return null;
+        }
+
         @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
             return visitor.visitThrowInstruction(this);
@@ -136,8 +151,8 @@ public sealed interface BranchingInstruction extends Instruction {
      * argument is only present.
      * @param returnValue the field to store the return value of this routine.
      */
-    record CallInstruction(@NotNull PsiElement element, @NotNull Expression routine, @NotNull Map<ArgumentDescriptor, ReferenceExpression> arguments,
-                           @Nullable ReferenceExpression returnValue, @NotNull BasicBlock next) implements BranchingInstruction {
+    record CallInstruction(@Nullable PsiElement element, @NotNull Expression routine, @NotNull Map<ArgumentDescriptor, ReferenceExpression> arguments,
+                           @Nullable ReferenceExpression returnValue) implements BranchingInstruction {
 
         public CallInstruction {
             assert routine.getType().isAssignable(RapidPrimitiveType.STRING) : "Cannot invoke: " + routine;

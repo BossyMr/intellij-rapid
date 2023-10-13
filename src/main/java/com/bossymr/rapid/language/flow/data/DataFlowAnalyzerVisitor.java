@@ -1,6 +1,10 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.rapid.language.flow.*;
+import com.bossymr.rapid.language.builder.ArgumentDescriptor;
+import com.bossymr.rapid.language.flow.BasicBlock;
+import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.BlockDescriptor;
+import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
@@ -10,7 +14,6 @@ import com.bossymr.rapid.language.psi.PhysicalElement;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
-import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -45,8 +48,8 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     @Override
     public Void visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
         Expression value = instruction.value();
-        visitBranch(instruction.onSuccess(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(RapidPrimitiveType.BOOLEAN, true)));
-        visitBranch(instruction.onFailure(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(RapidPrimitiveType.BOOLEAN, false)));
+        visitBranch(instruction.onSuccess(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(true)));
+        visitBranch(instruction.onFailure(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(false)));
         return null;
     }
 

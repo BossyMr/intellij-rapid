@@ -33,8 +33,8 @@ class ConditionAnalyzerTest {
         DataFlowState state = DataFlowState.createState(getEmptyFunctionBlock());
         VariableSnapshot x = new VariableSnapshot(RapidPrimitiveType.NUMBER);
         VariableSnapshot z = new VariableSnapshot(RapidPrimitiveType.BOOLEAN);
-        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, x, new ConstantExpression(RapidPrimitiveType.NUMBER, 0)));
-        BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, x, new ConstantExpression(RapidPrimitiveType.NUMBER, 0));
+        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, x, new ConstantExpression(0)));
+        BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, x, new ConstantExpression(0));
         Expression condition = new BinaryExpression(BinaryOperator.EQUAL_TO, z, expression);
         BooleanValue value = state.getConstraint(condition);
         Assertions.assertEquals(BooleanValue.ALWAYS_TRUE, value);

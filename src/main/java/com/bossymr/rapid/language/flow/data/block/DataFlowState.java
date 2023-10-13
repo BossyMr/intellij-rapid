@@ -239,7 +239,7 @@ public class DataFlowState {
                 object = 0;
             }
             if (object != null) {
-                add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, new ConstantExpression(type, object)));
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, new ConstantExpression(object)));
             }
             return snapshot;
         }
@@ -427,11 +427,11 @@ public class DataFlowState {
                 }
                 if (binaryExpression.getLeft() instanceof ReferenceExpression referenceExpression) {
                     AggregateExpression aggregateExpression = (AggregateExpression) binaryExpression.getRight();
-                    List<Expression> components = aggregateExpression.getComponents();
+                    List<Expression> components = aggregateExpression.getExpressions();
                     if (referenceExpression.getType().getDimensions() > 0) {
                         for (int i = 0; i < components.size(); i++) {
                             Expression component = components.get(i);
-                            IndexExpression indexExpression = new IndexExpression(referenceExpression, new ConstantExpression(RapidPrimitiveType.NUMBER, i));
+                            IndexExpression indexExpression = new IndexExpression(referenceExpression, new ConstantExpression(i));
                             assign(indexExpression, component);
                         }
                         return;
@@ -594,7 +594,7 @@ public class DataFlowState {
     private boolean checkSatisfiability(@NotNull Expression expression, boolean value) {
         DataFlowState state = createSuccessorState();
         state.add(expression);
-        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new ConstantExpression(RapidPrimitiveType.BOOLEAN, value)));
+        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new ConstantExpression(value)));
         return state.isSatisfiable();
     }
 

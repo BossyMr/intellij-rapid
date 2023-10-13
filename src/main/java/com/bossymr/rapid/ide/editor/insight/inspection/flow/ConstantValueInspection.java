@@ -155,7 +155,7 @@ public class ConstantValueInspection extends LocalInspectionTool {
     }
 
     private @Nullable Map.Entry<BasicBlock, Expression> getBasicBlock(@NotNull Block block, @NotNull RapidExpression expression) {
-        for (BasicBlock basicBlock : block.getBasicBlocks()) {
+        for (BasicBlock basicBlock : block.getInstructions()) {
             Expression instruction = getExpression(expression, basicBlock);
             if (instruction != null) {
                 return Map.entry(basicBlock, instruction);

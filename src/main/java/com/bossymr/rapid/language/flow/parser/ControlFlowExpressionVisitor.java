@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.flow.parser;
 
+import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
@@ -214,7 +214,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         String name = (moduleName != null ? moduleName : "") + ":" + routineName;
-        Expression routineExpr = new ConstantExpression(RapidPrimitiveType.STRING, name);
+        Expression routineExpr = new ConstantExpression(name);
         BasicBlock basicBlock = builder.createBasicBlock();
         List<RapidArgument> arguments = expression.getArgumentList().getArguments();
         Expression functionCall = createFunctionCall(expression, type, arguments, routineExpr, basicBlock);
@@ -242,7 +242,7 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
         }
         ArgumentDescriptor.Conditional argumentDescriptor = optional.orElseThrow();
         ReferenceExpression isPresentVariable = builder.createVariable(RapidPrimitiveType.BOOLEAN);
-        ConstantExpression isPresentRoutineName = new ConstantExpression(RapidPrimitiveType.STRING, ":Present");
+        ConstantExpression isPresentRoutineName = new ConstantExpression(":Present");
         Argument argument = Objects.requireNonNull(builder.findArgument(argumentDescriptor.name()));
         Map<ArgumentDescriptor, ReferenceExpression> map = Map.of(new ArgumentDescriptor.Required(0), new VariableExpression(argument));
         BasicBlock ifStatementBlock = builder.createBasicBlock();
@@ -361,6 +361,6 @@ public class ControlFlowExpressionVisitor extends RapidElementVisitor {
             stack.addLast(Optional.empty());
             return;
         }
-        stack.addLast(Optional.of(new ConstantExpression(expression, type, object)));
+        stack.addLast(Optional.of(new ConstantExpression(expression, object)));
     }
 }

@@ -130,7 +130,7 @@ public final class SymbolConverter {
         if (state instanceof VariableModel variableSymbol) {
             readOnly = variableSymbol.isReadOnly();
         }
-        return getSymbol(new VirtualField(fieldType, getName(state), dataType, !(readOnly)));
+        return getSymbol(new VirtualField(getName(state), fieldType, dataType, !(readOnly)));
     }
 
     private @NotNull VirtualParameter getParameter(@NotNull VirtualParameterGroup parameterGroup, @NotNull ParameterModel state) {

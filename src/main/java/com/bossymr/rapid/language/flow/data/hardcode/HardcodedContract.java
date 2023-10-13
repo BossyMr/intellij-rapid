@@ -13,12 +13,12 @@ public enum HardcodedContract {
             .withResult()
             .withCondition((state, variables) -> state.assign(variables.getArgument("OptPar"), variables.getArgument("OptPar")))
             .withCondition((state, variables) -> state.forceOptionality(variables.getArgument("OptPar"), Optionality.PRESENT))
-            .withCondition((state, variables) -> state.assign(variables.getOutput(), new ConstantExpression(RapidPrimitiveType.BOOLEAN, true)))
+            .withCondition((state, variables) -> state.assign(variables.getOutput(), new ConstantExpression(true)))
             .withSuccess()
             .withResult()
             .withCondition((state, variables) -> state.assign(variables.getArgument("OptPar"), variables.getArgument("OptPar")))
             .withCondition((state, variables) -> state.forceOptionality(variables.getArgument("OptPar"), Optionality.MISSING))
-            .withCondition((state, variables) -> state.assign(variables.getOutput(), new ConstantExpression(RapidPrimitiveType.BOOLEAN, false)))
+            .withCondition((state, variables) -> state.assign(variables.getOutput(), new ConstantExpression(false)))
             .withSuccess()
             .build());
 

@@ -29,7 +29,7 @@ public sealed abstract class BasicBlock {
     }
 
     public int getIndex() {
-        return getBlock().getBasicBlocks().indexOf(this);
+        return getBlock().getInstructions().indexOf(this);
     }
 
     public abstract @Nullable StatementListType getScopeType();

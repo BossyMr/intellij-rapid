@@ -10,7 +10,6 @@ import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.BinaryExpression;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.ConstantExpression;
-import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.openapi.progress.ProgressManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
@@ -41,7 +40,7 @@ public class DataFlowAnalyzer {
     }
 
     public static @NotNull Map<BasicBlock, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull BiPredicate<Map<BasicBlock, DataFlowBlock>, DataFlowBlock> consumer) {
-        List<BasicBlock> basicBlocks = functionBlock.getBasicBlocks();
+        List<BasicBlock> basicBlocks = functionBlock.getInstructions();
         Set<List<BasicBlock>> cycles = getCycles(functionBlock);
         Map<BasicBlock, DataFlowBlock> blocks = basicBlocks.stream().collect(Collectors.toMap(block -> block, block -> new DataFlowBlock(block, new HashSet<>())));
         for (List<BasicBlock> cycle : cycles) {
@@ -164,13 +163,13 @@ public class DataFlowAnalyzer {
             for (PathCounter pathCounter : state.getPathCounters()) {
                 for (BlockCycle blockCycle : pathCounter.getResetPath()) {
                     if (blockCycle.getSequence().contains(block)) {
-                        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, pathCounter, new ConstantExpression(RapidPrimitiveType.NUMBER, 0)));
+                        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, pathCounter, new ConstantExpression(0)));
                         break;
                     }
                 }
                 for (BlockCycle blockCycle : pathCounter.getIncrementPath()) {
                     if (blockCycle.getSequence().contains(block)) {
-                        BinaryExpression binaryExpression = new BinaryExpression(BinaryOperator.ADD, pathCounter, new ConstantExpression(RapidPrimitiveType.NUMBER, 1));
+                        BinaryExpression binaryExpression = new BinaryExpression(BinaryOperator.ADD, pathCounter, new ConstantExpression(1));
                         state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, pathCounter, binaryExpression));
                         break;
                     }

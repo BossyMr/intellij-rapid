@@ -297,10 +297,10 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             BasicBlock descending = builder.createBasicBlock();
             builder.exitBasicBlock(new BranchingInstruction.ConditionalBranchingInstruction(statement, new BinaryExpression(BinaryOperator.LESS_THAN, indexVariable, toValue), ascending, descending));
             builder.enterBasicBlock(ascending);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ConstantExpression(RapidPrimitiveType.NUMBER, 1)));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ConstantExpression(1)));
             builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, loopBasicBlock));
             builder.enterBasicBlock(descending);
-            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ConstantExpression(RapidPrimitiveType.NUMBER, -1)));
+            builder.continueScope(new LinearInstruction.AssignmentInstruction(statement, stepVariable, new ConstantExpression(-1)));
             builder.exitBasicBlock(new BranchingInstruction.UnconditionalBranchingInstruction(statement, loopBasicBlock));
         }
         builder.enterBasicBlock(loopBasicBlock);
@@ -420,11 +420,11 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         }
         RapidSymbol symbol = referenceExpression.getSymbol();
         if (!(symbol instanceof RapidRoutine routine) || routine.getName() == null) {
-            return new ConstantExpression(RapidPrimitiveType.STRING, referenceExpression.getCanonicalText());
+            return new ConstantExpression(referenceExpression.getCanonicalText());
         }
         String moduleName = routine instanceof PhysicalRoutine physicalRoutine ? ControlFlowElementVisitor.getModuleName(physicalRoutine) : null;
         String name = (moduleName != null ? moduleName + ":" : "") + routine.getName();
-        return new ConstantExpression(RapidPrimitiveType.STRING, name);
+        return new ConstantExpression(name);
     }
 
     @Override
@@ -444,7 +444,7 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
         }
         String routineName = routine.getName();
         String name = getModuleName(routine) + ":" + routineName;
-        builder.continueScope(new LinearInstruction.ConnectInstruction(statement, variable, new ConstantExpression(RapidPrimitiveType.ANYTYPE, name)));
+        builder.continueScope(new LinearInstruction.ConnectInstruction(statement, variable, new ConstantExpression(name)));
     }
 
     @Override

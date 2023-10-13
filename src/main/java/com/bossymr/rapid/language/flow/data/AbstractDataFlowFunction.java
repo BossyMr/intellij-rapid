@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.flow.data;
 
+import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;

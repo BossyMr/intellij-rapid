@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow;
 
+import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.type.RapidType;
@@ -14,8 +15,8 @@ public sealed abstract class Block {
     private final @NotNull String name;
     private final @Nullable RapidType returnType;
 
-    private final @NotNull List<BasicBlock> basicBlocks;
-    private final @NotNull Map<StatementListType, BasicBlock> entryBlocks;
+    private final @NotNull List<Instruction> instructions;
+    private final @NotNull Map<StatementListType, Instruction> entryBlocks;
     private final @NotNull List<Variable> variables;
 
     private final @NotNull RapidSymbol element;
@@ -24,10 +25,22 @@ public sealed abstract class Block {
         this.moduleName = moduleName;
         this.name = name;
         this.returnType = returnType;
-        this.basicBlocks = new ArrayList<>();
+        this.instructions = new ArrayList<>();
         this.entryBlocks = new HashMap<>();
         this.variables = new ArrayList<>();
         this.element = element;
+    }
+
+    private boolean isEmpty() {
+        return instructions.isEmpty();
+    }
+
+    private boolean isComplete() {
+        if (isEmpty()) {
+            return false;
+        }
+        Instruction last = instructions.get(instructions.size() - 1);
+        // TODO: 2023-10-13 Check if last has successor which isn't declared
     }
 
     public @NotNull RapidSymbol getElement() {
@@ -46,20 +59,20 @@ public sealed abstract class Block {
         return returnType;
     }
 
-    public @NotNull List<BasicBlock> getBasicBlocks() {
-        return basicBlocks;
+    public @NotNull List<Instruction> getInstructions() {
+        return instructions;
     }
 
-    public @NotNull BasicBlock getEntryBlock() {
+    public @NotNull Instruction getEntryInstruction() {
         return entryBlocks.get(StatementListType.STATEMENT_LIST);
     }
 
-    public @Nullable BasicBlock getEntryBlock(@NotNull StatementListType scopeType) {
+    public @Nullable Instruction getEntryInstruction(@NotNull StatementListType scopeType) {
         return entryBlocks.get(scopeType);
     }
 
-    public @NotNull Set<BasicBlock> getEntryBlocks() {
-        return Set.copyOf(entryBlocks.values());
+    public @NotNull Collection<Instruction> getEntryBlocks() {
+        return entryBlocks.values();
     }
 
     public @NotNull List<ArgumentGroup> getArgumentGroups() {
@@ -79,29 +92,32 @@ public sealed abstract class Block {
         return null;
     }
 
-    public @NotNull BasicBlock setEntryBlock(@NotNull StatementListType scopeType) {
+    public @Nullable Argument findArgument(@NotNull String name) {
+        for (ArgumentGroup argumentGroup : getArgumentGroups()) {
+            for (Argument argument : argumentGroup.arguments()) {
+                if (name.equals(argument.getName())) {
+                    return argument;
+                }
+            }
+        }
+        return null;
+    }
+
+    public void setEntryInstruction(@NotNull StatementListType scopeType, @NotNull Instruction instruction) {
         if (scopeType == StatementListType.ERROR_CLAUSE) {
             throw new IllegalArgumentException();
         }
-        if (getEntryBlock(scopeType) != null) {
+        if (getEntryInstruction(scopeType) != null) {
             throw new IllegalStateException();
         }
-        BasicBlock basicBlock = new BasicBlock.EntryBasicBlock(this, scopeType);
-        entryBlocks.put(scopeType, basicBlock);
-        return basicBlock;
+        entryBlocks.put(scopeType, instruction);
     }
 
-    public @NotNull BasicBlock setErrorClause(@Nullable List<Integer> exceptions) {
-        if (getEntryBlock(StatementListType.ERROR_CLAUSE) != null) {
+    public @NotNull BasicBlock setErrorClause(@Nullable List<Integer> exceptions, @NotNull Instruction instruction) {
+        if (getEntryInstruction(StatementListType.ERROR_CLAUSE) != null) {
             throw new IllegalStateException();
         }
-        BasicBlock basicBlock = new BasicBlock.ErrorBasicBlock(this, exceptions);
-        entryBlocks.put(StatementListType.ERROR_CLAUSE, basicBlock);
-        return basicBlock;
-    }
-
-    public @NotNull BasicBlock createBasicBlock() {
-        return new BasicBlock.IntermediateBasicBlock(this);
+        entryBlocks.put(StatementListType.ERROR_CLAUSE, )
     }
 
     public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
@@ -166,17 +182,6 @@ public sealed abstract class Block {
         @Override
         public @NotNull List<ArgumentGroup> getArgumentGroups() {
             return argumentGroups;
-        }
-
-        public @Nullable Argument findArgument(@NotNull String name) {
-            for (ArgumentGroup argumentGroup : argumentGroups) {
-                for (Argument argument : argumentGroup.arguments()) {
-                    if (name.equals(argument.getName())) {
-                        return argument;
-                    }
-                }
-            }
-            return null;
         }
 
         public @NotNull Argument findArgument(int index) {
