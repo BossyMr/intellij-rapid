@@ -5,8 +5,8 @@ import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
-import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
+import com.bossymr.rapid.language.flow.instruction.ReturnInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.FieldType;
@@ -15,16 +15,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 public class ControlFlowCodeBuilder implements RapidCodeBuilder {
 
-    protected final @NotNull Consumer<Instruction> consumer;
-    private final @NotNull Block block;
+    protected final @NotNull Block block;
+    protected final @NotNull ControlFlowBlockBuilder builder;
 
-    public ControlFlowCodeBuilder(@NotNull Block block, @NotNull Consumer<Instruction> consumer) {
+    public ControlFlowCodeBuilder(@NotNull Block block, @NotNull ControlFlowBlockBuilder builder) {
         this.block = block;
-        this.consumer = consumer;
+        this.builder = builder;
     }
 
     public @NotNull ReferenceExpression createVariable(@NotNull RapidType type) {
@@ -85,7 +84,7 @@ public class ControlFlowCodeBuilder implements RapidCodeBuilder {
     }
 
     @Override
-    public void exit(@Nullable RapidReturnStatement statement, @Nullable Expression expression) {
-        consumer.accept(new BranchingInstruction.ReturnInstruction(statement, expression));
+    public void returnValue(@Nullable RapidReturnStatement statement, @Nullable Expression expression) {
+        builder.continueScope(new ReturnInstruction(statement, expression));
     }
 }

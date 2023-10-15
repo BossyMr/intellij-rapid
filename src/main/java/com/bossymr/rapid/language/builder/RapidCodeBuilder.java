@@ -62,14 +62,14 @@ public interface RapidCodeBuilder {
     @NotNull Expression error(@Nullable RapidElement element,
                               @NotNull RapidType type);
 
-    default void exit() {
-        exit(null);
+    default void returnValue() {
+        returnValue(null);
     }
 
-    default void exit(@Nullable Expression expression) {
-        exit(null, expression);
+    default void returnValue(@Nullable Expression expression) {
+        returnValue(null, expression);
     }
 
-    void exit(@Nullable RapidReturnStatement statement,
-              @Nullable Expression expression);
+    void returnValue(@Nullable RapidReturnStatement statement,
+                     @Nullable Expression expression);
 }

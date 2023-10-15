@@ -27,11 +27,11 @@ import java.util.function.Supplier;
 public class ControlFlowElementVisitor extends RapidElementVisitor {
 
     private final @NotNull ControlFlowBuilder builder;
-    private final @NotNull ControlFlowExpressionVisitor expressionVisitor;
+    private final @NotNull ControlFlowExpressionVisitor2 expressionVisitor;
 
     public ControlFlowElementVisitor(@NotNull Project project) {
         this.builder = new ControlFlowBuilder(project);
-        this.expressionVisitor = new ControlFlowExpressionVisitor(builder);
+        this.expressionVisitor = new ControlFlowExpressionVisitor2(builder);
     }
 
     public static @Nullable String getModuleName(@NotNull RapidSymbol symbol) {
@@ -428,26 +428,6 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
     }
 
     @Override
-    public void visitConnectStatement(@NotNull RapidConnectStatement statement) {
-        if (!(statement.getLeft() instanceof RapidReferenceExpression referenceExpression)) {
-            builder.failScope(statement);
-            return;
-        }
-        Expression expression = expressionVisitor.visit(referenceExpression);
-        if (!(expression instanceof ReferenceExpression variable) || !(statement.getRight() instanceof RapidReferenceExpression trapReference)) {
-            builder.failScope(statement);
-            return;
-        }
-        if (!(trapReference instanceof PhysicalRoutine routine) || routine.getRoutineType() != RoutineType.TRAP || routine.getName() == null) {
-            builder.failScope(statement);
-            return;
-        }
-        String routineName = routine.getName();
-        String name = getModuleName(routine) + ":" + routineName;
-        builder.continueScope(new LinearInstruction.ConnectInstruction(statement, variable, new ConstantExpression(name)));
-    }
-
-    @Override
     public void visitReturnStatement(@NotNull RapidReturnStatement statement) {
         RapidExpression expression = statement.getExpression();
         Expression value = expression != null ? expressionVisitor.visit(expression) : null;
@@ -477,6 +457,26 @@ public class ControlFlowElementVisitor extends RapidElementVisitor {
             return;
         }
         builder.enterLabel(statement, name);
+    }
+
+    @Override
+    public void visitConnectStatement(@NotNull RapidConnectStatement statement) {
+        if (!(statement.getLeft() instanceof RapidReferenceExpression referenceExpression)) {
+            builder.failScope(statement);
+            return;
+        }
+        Expression expression = expressionVisitor.visit(referenceExpression);
+        if (!(expression instanceof ReferenceExpression variable) || !(statement.getRight() instanceof RapidReferenceExpression trapReference)) {
+            builder.failScope(statement);
+            return;
+        }
+        if (!(trapReference instanceof PhysicalRoutine routine) || routine.getRoutineType() != RoutineType.TRAP || routine.getName() == null) {
+            builder.failScope(statement);
+            return;
+        }
+        String routineName = routine.getName();
+        String name = getModuleName(routine) + ":" + routineName;
+        builder.continueScope(new LinearInstruction.ConnectInstruction(statement, variable, new ConstantExpression(name)));
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.type;
 
 import com.bossymr.rapid.language.symbol.RapidAlias;
 import com.bossymr.rapid.language.symbol.RapidStructure;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.ValueType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,7 +52,7 @@ public class RapidAliasType implements RapidType {
         if(underlyingType != null) {
             return underlyingType.getText();
         } else {
-            return RapidType.getDefaultText();
+            return RapidSymbol.getDefaultText();
         }
     }
 

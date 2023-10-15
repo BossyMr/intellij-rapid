@@ -1,12 +1,11 @@
 package com.bossymr.rapid.language.flow;
 
+import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
-import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
-import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
+import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -44,55 +43,47 @@ public class ControlFlowVisitor<R> {
         return null;
     }
 
-    public R visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
-        return visitLinearInstruction(instruction);
-    }
-
-    public R visitConnectInstruction(@NotNull LinearInstruction.ConnectInstruction instruction) {
-        return visitLinearInstruction(instruction);
-    }
-
-    public R visitLinearInstruction(@NotNull LinearInstruction instruction) {
+    public R visitAssignmentInstruction(@NotNull AssignmentInstruction instruction) {
         return visitInstruction(instruction);
     }
 
-    public R visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
-        return visitBranchingInstruction(instruction);
+    public R visitConnectInstruction(@NotNull ConnectInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public R visitUnconditionalBranchingInstruction(@NotNull BranchingInstruction.UnconditionalBranchingInstruction instruction) {
-        return visitBranchingInstruction(instruction);
+    public R visitConditionalBranchingInstruction(@NotNull ConditionalBranchingInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public R visitRetryInstruction(@NotNull BranchingInstruction.RetryInstruction instruction) {
-        return visitBranchingInstruction(instruction);
+    public R visitUnconditionalBranchingInstruction(@NotNull UnconditionalBranchingInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public R visitTryNextInstruction(@NotNull BranchingInstruction.TryNextInstruction instruction) {
-        return visitBranchingInstruction(instruction);
+    public R visitRetryInstruction(@NotNull RetryInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public R visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
-        return visitBranchingInstruction(instruction);
+    public R visitTryNextInstruction(@NotNull TryNextInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public R visitExitInstruction(@NotNull BranchingInstruction.ExitInstruction instruction) {
-        return visitBranchingInstruction(instruction);
+    public R visitReturnInstruction(@NotNull ReturnInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public R visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
-        return visitBranchingInstruction(instruction);
+    public R visitExitInstruction(@NotNull ExitInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public R visitErrorInstruction(@NotNull BranchingInstruction.ErrorInstruction instruction) {
-        return visitBranchingInstruction(instruction);
+    public R visitThrowInstruction(@NotNull ThrowInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public R visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
-        return visitBranchingInstruction(instruction);
+    public R visitErrorInstruction(@NotNull ErrorInstruction instruction) {
+        return visitInstruction(instruction);
     }
 
-    public R visitBranchingInstruction(@NotNull BranchingInstruction instruction) {
+    public R visitCallInstruction(@NotNull CallInstruction instruction) {
         return visitInstruction(instruction);
     }
 
@@ -158,5 +149,9 @@ public class ControlFlowVisitor<R> {
 
     public R visitReferenceExpression(@NotNull ReferenceExpression expression) {
         return visitExpression(expression);
+    }
+
+    public R visitLabel(@NotNull Label label) {
+        return null;
     }
 }

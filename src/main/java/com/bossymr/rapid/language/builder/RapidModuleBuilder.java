@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.builder;
 
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.RapidField;
+import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -40,28 +41,28 @@ public interface RapidModuleBuilder {
 
 
     @NotNull
-    default RapidModuleBuilder withProcedure(@NotNull RapidField element,
+    default RapidModuleBuilder withProcedure(@NotNull RapidRoutine element,
                                              @NotNull String name,
                                              @NotNull Consumer<RapidRoutineBuilder> consumer) {
         return withRoutine(element, name, RoutineType.PROCEDURE, null, consumer);
     }
 
     @NotNull
-    default RapidModuleBuilder withTrap(@NotNull RapidField element,
+    default RapidModuleBuilder withTrap(@NotNull RapidRoutine element,
                                         @NotNull String name,
                                         @NotNull Consumer<RapidRoutineBuilder> consumer) {
         return withRoutine(element, name, RoutineType.TRAP, null, consumer);
     }
 
     @NotNull
-    default RapidModuleBuilder withFunction(@NotNull RapidField element,
+    default RapidModuleBuilder withFunction(@NotNull RapidRoutine element,
                                             @NotNull String name,
                                             @NotNull RapidType returnType,
                                             @NotNull Consumer<RapidRoutineBuilder> consumer) {
         return withRoutine(element, name, RoutineType.PROCEDURE, returnType, consumer);
     }
 
-    @NotNull RapidModuleBuilder withRoutine(@NotNull RapidField element,
+    @NotNull RapidModuleBuilder withRoutine(@NotNull RapidRoutine element,
                                             @NotNull String name,
                                             @NotNull RoutineType routineType,
                                             @Nullable RapidType returnType,

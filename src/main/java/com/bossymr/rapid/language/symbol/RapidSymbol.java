@@ -33,6 +33,10 @@ import java.util.Objects;
 @SuppressWarnings("UnstableApiUsage")
 public interface RapidSymbol extends Symbol, NavigatableSymbol, SearchTargetSymbol {
 
+    static @NotNull String getDefaultText() {
+        return "<ID>";
+    }
+
     /**
      * Returns a pointer which can be used to restore this symbol between read-actions.
      *

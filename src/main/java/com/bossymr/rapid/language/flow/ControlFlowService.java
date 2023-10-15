@@ -6,14 +6,15 @@ import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
-import com.bossymr.rapid.language.flow.parser.ControlFlowElementVisitor;
+import com.bossymr.rapid.language.flow.parser.ControlFlowElementBuilder;
+import com.bossymr.rapid.language.psi.RapidFile;
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
@@ -117,13 +118,14 @@ public final class ControlFlowService {
 
     @RequiresReadLock
     private @NotNull ControlFlow calculateControlFlow(@NotNull Project project) {
-        ControlFlowElementVisitor analyzer = new ControlFlowElementVisitor(project);
+        ControlFlowElementBuilder analyzer = new ControlFlowElementBuilder(project);
         PsiManager manager = PsiManager.getInstance(project);
         Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(project));
         for (VirtualFile virtualFile : virtualFiles) {
-            PsiFile file1 = manager.findFile(virtualFile);
-            if (file1 != null) {
-                file1.accept(analyzer);
+            if (manager.findFile(virtualFile) instanceof RapidFile file) {
+                for (PhysicalModule module : file.getModules()) {
+                    analyzer.process(module);
+                }
             }
         }
         return analyzer.getControlFlow();

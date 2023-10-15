@@ -8,6 +8,7 @@ import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualParameterGroup;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,37 @@ public class ControlFlowRoutineBuilder implements RapidRoutineBuilder {
 
     @Override
     public @NotNull RapidRoutineBuilder withCode(@NotNull StatementListType codeType, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
-        return null;
+        ControlFlowBlockBuilder blockBuilder = new ControlFlowBlockBuilder(block);
+        ControlFlowCodeBlockBuilder builder = new ControlFlowCodeBlockBuilder(block, blockBuilder);
+        consumer.accept(builder);
+        if (!(blockBuilder.getInstructions().isEmpty())) {
+            block.setEntryInstruction(codeType, blockBuilder.getInstructions().get(0));
+        }
+        if(blockBuilder.isInScope()) {
+            if(routine.getType() != null) {
+                throw new IllegalArgumentException();
+            } else {
+                builder.returnValue();
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public @NotNull RapidRoutineBuilder withCode(@Nullable List<Integer> exceptions, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
+        ControlFlowBlockBuilder blockBuilder = new ControlFlowBlockBuilder(block);
+        ControlFlowCodeBlockBuilder builder = new ControlFlowCodeBlockBuilder(block, blockBuilder);
+        consumer.accept(builder);
+        if (!(blockBuilder.getInstructions().isEmpty())) {
+            block.setErrorClause(exceptions, blockBuilder.getInstructions().get(0));
+        }
+        if(blockBuilder.isInScope()) {
+            if(routine.getType() != null) {
+                throw new IllegalArgumentException();
+            } else {
+                builder.returnValue();
+            }
+        }
+        return this;
     }
 }

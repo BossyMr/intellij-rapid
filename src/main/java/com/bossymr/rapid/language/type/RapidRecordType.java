@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.type;
 
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.ValueType;
 import org.jetbrains.annotations.NotNull;
 
@@ -46,7 +47,7 @@ public class RapidRecordType implements RapidType {
 
     @Override
     public @NotNull String getText() {
-        return Objects.requireNonNullElse(record.getName(), RapidType.getDefaultText());
+        return Objects.requireNonNullElse(record.getName(), RapidSymbol.getDefaultText());
     }
 
     @Override

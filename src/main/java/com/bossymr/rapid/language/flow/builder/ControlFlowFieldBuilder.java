@@ -17,6 +17,11 @@ public class ControlFlowFieldBuilder implements RapidFieldBuilder {
 
     @Override
     public @NotNull RapidFieldBuilder withInitializer(@NotNull Consumer<RapidCodeBuilder> consumer) {
-        return null;
+        ControlFlowBlockBuilder builder = new ControlFlowBlockBuilder(block);
+        consumer.accept(new ControlFlowCodeBuilder(block, builder));
+        if(builder.isInScope()) {
+            throw new IllegalArgumentException();
+        }
+        return this;
     }
 }

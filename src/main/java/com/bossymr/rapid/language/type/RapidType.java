@@ -10,10 +10,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface RapidType {
 
-    static @NotNull String getDefaultText() {
-        return "<ID>";
-    }
-
     /**
      * Checks whether a value of the specified type can be assigned to a variable or expression of this type.
      *

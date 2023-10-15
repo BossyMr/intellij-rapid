@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.RapidField;
+import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualField;
 import com.bossymr.rapid.language.symbol.virtual.VirtualParameterGroup;
@@ -42,7 +43,7 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
     }
 
     @Override
-    public @NotNull RapidModuleBuilder withRoutine(@NotNull RapidField element, @NotNull String name, @NotNull RoutineType routineType, @Nullable RapidType returnType, @NotNull Consumer<RapidRoutineBuilder> consumer) {
+    public @NotNull RapidModuleBuilder withRoutine(@NotNull RapidRoutine element, @NotNull String name, @NotNull RoutineType routineType, @Nullable RapidType returnType, @NotNull Consumer<RapidRoutineBuilder> consumer) {
         BlockDescriptor blockDescriptor = new BlockDescriptor(moduleName, name);
         List<VirtualParameterGroup> parameterGroups = routineType != RoutineType.TRAP ? new ArrayList<>() : null;
         VirtualRoutine routine = new VirtualRoutine(moduleName, name, routineType, returnType, parameterGroups);

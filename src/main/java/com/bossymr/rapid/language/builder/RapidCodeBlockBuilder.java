@@ -11,6 +11,12 @@ import java.util.function.Consumer;
 
 public interface RapidCodeBlockBuilder extends RapidCodeBuilder {
 
+    default @NotNull Label label() {
+        return label(null, null);
+    }
+
+    @NotNull Label label(@Nullable RapidElement element, @Nullable String name);
+
     @NotNull RapidCodeBlockBuilder error(@Nullable RapidElement element);
 
     default @NotNull RapidCodeBlockBuilder ifThen(@NotNull Expression expression,
@@ -33,38 +39,6 @@ public interface RapidCodeBlockBuilder extends RapidCodeBuilder {
                                               @NotNull Expression expression,
                                               @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer,
                                               @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer);
-
-    @NotNull
-    default RapidCodeBlockBuilder forLoop(@NotNull String variableName,
-                                          @NotNull Expression initialization,
-                                          @NotNull Expression termination,
-                                          @NotNull Expression increment) {
-        return forLoop(null, variableName, initialization, termination, increment);
-    }
-
-    @NotNull RapidCodeBlockBuilder forLoop(@Nullable RapidElement element,
-                                           @NotNull String variableName,
-                                           @NotNull Expression initialization,
-                                           @NotNull Expression termination,
-                                           @NotNull Expression increment);
-
-    @NotNull
-    default RapidCodeBlockBuilder whileLoop(@NotNull Expression condition) {
-        return whileLoop(null, condition);
-    }
-
-    @NotNull RapidCodeBlockBuilder whileLoop(@Nullable RapidElement element,
-                                             @NotNull Expression condition);
-
-    @NotNull
-    default RapidCodeBlockBuilder testBlock(@NotNull Expression expression,
-                                            @NotNull Consumer<RapidTestBlockBuilder> consumer) {
-        return testBlock(null, expression, consumer);
-    }
-
-    @NotNull RapidCodeBlockBuilder testBlock(@Nullable RapidElement element,
-                                             @NotNull Expression expression,
-                                             @NotNull Consumer<RapidTestBlockBuilder> consumer);
 
     @NotNull
     default RapidCodeBlockBuilder goTo(@NotNull Label label) {
@@ -93,6 +67,13 @@ public interface RapidCodeBlockBuilder extends RapidCodeBuilder {
     }
 
     @NotNull RapidCodeBlockBuilder tryNextInstruction(@Nullable RapidElement element);
+
+    @NotNull
+    default RapidCodeBlockBuilder exit() {
+        return exit(null);
+    }
+
+    @NotNull RapidCodeBlockBuilder exit(@Nullable RapidElement element);
 
     @NotNull
     default RapidCodeBlockBuilder retryInstruction() {
