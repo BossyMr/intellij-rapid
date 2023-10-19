@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.psi;
 
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.symbol.physical.PhysicalVariable;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.navigation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,6 +11,9 @@ import org.jetbrains.annotations.NotNull;
  */
 @SuppressWarnings("UnstableApiUsage")
 public interface RapidTargetVariable extends PhysicalVariable {
+
+    @Override
+    @NotNull RapidType getType();
 
     @Override
     default @NotNull TargetPresentation getTargetPresentation() {

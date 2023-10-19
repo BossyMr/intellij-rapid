@@ -8,13 +8,10 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
-import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -67,9 +64,15 @@ public class DataFlowState {
     private final @NotNull Map<Field, SnapshotExpression> snapshots;
 
     /**
+     * The first snapshot of each variable.
+     */
+    private final @NotNull Map<Field, SnapshotExpression> roots;
+
+    /**
      * The constraints for all variables.
      */
     private final @NotNull Map<SnapshotExpression, Optionality> optionality;
+
 
     private DataFlowState(@Nullable DataFlowBlock block, @NotNull Block functionBlock, @Nullable DataFlowState predecessor) {
         this.predecessor = predecessor;
@@ -78,6 +81,7 @@ public class DataFlowState {
         this.conditions = new ArrayList<>();
         this.snapshots = new HashMap<>();
         this.optionality = new HashMap<>();
+        this.roots = new HashMap<>();
     }
 
     private DataFlowState(@NotNull DataFlowState state, @Nullable DataFlowState predecessor) {
@@ -87,7 +91,9 @@ public class DataFlowState {
         this.snapshots = new HashMap<>();
         this.conditions = new ArrayList<>();
         this.optionality = new HashMap<>();
+        this.roots = state.roots.isEmpty() ? Map.of() : new HashMap<>();
         Map<ReferenceExpression, ReferenceExpression> modifications = new HashMap<>();
+        state.roots.forEach((field, snapshot) -> roots.put(field, (SnapshotExpression) modifyExpression(snapshot, modifications)));
         state.snapshots.forEach((field, snapshot) -> snapshots.put(field, (SnapshotExpression) modifyExpression(snapshot, modifications)));
         for (Expression expression : state.conditions) {
             conditions.add(expression.replace(component -> modifyExpression(component, modifications)));
@@ -122,7 +128,7 @@ public class DataFlowState {
     }
 
     public static @NotNull DataFlowState createState(@NotNull DataFlowBlock block) {
-        DataFlowState state = new DataFlowState(block, block.getBasicBlock().getBlock(), null);
+        DataFlowState state = new DataFlowState(block, block.getInstruction().getBlock(), null);
         state.initializeDefault();
         return state;
     }
@@ -142,13 +148,13 @@ public class DataFlowState {
     }
 
     public static @NotNull DataFlowState createUnknownState(@NotNull DataFlowBlock block) {
-        DataFlowState state = new DataFlowState(block, block.getBasicBlock().getBlock(), null);
+        DataFlowState state = new DataFlowState(block, block.getInstruction().getBlock(), null);
         state.initializeUnknown();
         return state;
     }
 
     public static @NotNull DataFlowState createSuccessorState(@NotNull DataFlowBlock block, @NotNull DataFlowState predecessor) {
-        return new DataFlowState(block, block.getBasicBlock().getBlock(), predecessor);
+        return new DataFlowState(block, block.getInstruction().getBlock(), predecessor);
     }
 
     public static @NotNull DataFlowState createSuccessorState(@NotNull Block block, @NotNull DataFlowState predecessor) {
@@ -190,6 +196,9 @@ public class DataFlowState {
             createSnapshot(new VariableExpression(variable));
         }
         initializeArguments();
+        for (Field field : snapshots.keySet()) {
+            roots.put(field, snapshots.get(field));
+        }
     }
 
     private void initializeDefault() {
@@ -197,6 +206,9 @@ public class DataFlowState {
             snapshots.put(variable, createDefaultSnapshot(new VariableExpression(variable)));
         }
         initializeArguments();
+        for (Field field : snapshots.keySet()) {
+            roots.put(field, snapshots.get(field));
+        }
     }
 
     private void initializeArguments() {
@@ -427,7 +439,7 @@ public class DataFlowState {
                 }
                 if (binaryExpression.getLeft() instanceof ReferenceExpression referenceExpression) {
                     AggregateExpression aggregateExpression = (AggregateExpression) binaryExpression.getRight();
-                    List<Expression> components = aggregateExpression.getExpressions();
+                    List<? extends Expression> components = aggregateExpression.getExpressions();
                     if (referenceExpression.getType().getDimensions() > 0) {
                         for (int i = 0; i < components.size(); i++) {
                             Expression component = components.get(i);
@@ -666,43 +678,63 @@ public class DataFlowState {
         return snapshot;
     }
 
-    public @NotNull Expression getHistoricSnapshot(@NotNull Expression value, @NotNull PsiElement expression) {
-        if (value instanceof ReferenceExpression referenceValue) {
-            Optional<SnapshotExpression> snapshot = getHistoricSnapshot(referenceValue, expression);
-            if (snapshot.isPresent()) {
-                return snapshot.orElseThrow();
-            }
-        }
-        return value;
-
-    }
-
-    public @NotNull Optional<SnapshotExpression> getHistoricSnapshot(@NotNull ReferenceExpression variable, @NotNull PsiElement expression) {
-        PsiManager manager = expression.getManager();
-        for (Expression condition : conditions) {
-            for (Expression component : condition.getComponents()) {
-                RapidExpression element = component.getElement();
-                if (!(manager.areElementsEquivalent(expression, element))) {
-                    continue;
-                }
-                if (component instanceof SnapshotExpression snapshot && variable.equals(snapshot.getUnderlyingVariable())) {
-                    return Optional.of(snapshot);
-                }
-                for (Expression child : component.getChildren()) {
-                    if (!(child instanceof SnapshotExpression snapshot)) {
-                        continue;
-                    }
-                    if (!(variable.equals(snapshot.getUnderlyingVariable()))) {
-                        continue;
-                    }
-                    return Optional.of(snapshot);
-                }
-            }
-        }
+    public @NotNull Optional<SnapshotExpression> getRoot(@NotNull ReferenceExpression expression) {
         if (predecessor != null) {
-            return predecessor.getHistoricSnapshot(variable, expression);
+            return predecessor.getSnapshot(expression);
         }
-        return Optional.empty();
+        return expression.accept(new ControlFlowVisitor<>() {
+            @Override
+            public Optional<SnapshotExpression> visitFieldExpression(@NotNull FieldExpression expression) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<SnapshotExpression> visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
+                return Optional.of(snapshot);
+            }
+
+            @Override
+            public Optional<SnapshotExpression> visitVariableExpression(@NotNull VariableExpression expression) {
+                Field field = expression.getField();
+                if (roots.containsKey(field)) {
+                    return Optional.of(roots.get(field));
+                } else {
+                    return Optional.empty();
+                }
+            }
+
+            @Override
+            public Optional<SnapshotExpression> visitIndexExpression(@NotNull IndexExpression expression) {
+                Optional<SnapshotExpression> snapshot = getRoot(expression.getVariable());
+                if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof ArraySnapshot arraySnapshot)) {
+                    return Optional.empty();
+                }
+                Expression defaultValue = arraySnapshot.getDefaultValue().get();
+                if (defaultValue instanceof SnapshotExpression snapshotExpression) {
+                    return Optional.of(snapshotExpression);
+                } else {
+                    VariableSnapshot variableSnapshot = new VariableSnapshot(defaultValue.getType());
+                    add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, defaultValue));
+                    return Optional.of(variableSnapshot);
+                }
+            }
+
+            @Override
+            public Optional<SnapshotExpression> visitComponentExpression(@NotNull ComponentExpression expression) {
+                Optional<SnapshotExpression> snapshot = getSnapshot(expression.getVariable());
+                if (snapshot.isEmpty() || !(snapshot.orElseThrow() instanceof RecordSnapshot recordSnapshot)) {
+                    return Optional.empty();
+                }
+                Expression defaultValue = recordSnapshot.getRoot(expression.getComponent());
+                if (defaultValue instanceof SnapshotExpression snapshotExpression) {
+                    return Optional.of(snapshotExpression);
+                } else {
+                    VariableSnapshot variableSnapshot = new VariableSnapshot(defaultValue.getType());
+                    add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, defaultValue));
+                    return Optional.of(variableSnapshot);
+                }
+            }
+        });
     }
 
     public @NotNull Expression getSnapshot(@NotNull Expression value) {

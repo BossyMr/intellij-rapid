@@ -5,9 +5,9 @@ import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidTargetVariable;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
+import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
-import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.IncorrectOperationException;
@@ -50,7 +50,7 @@ public class PhysicalTargetVariable extends PhysicalElement implements RapidTarg
     }
 
     @Override
-    public @Nullable RapidType getType() {
+    public @NotNull RapidType getType() {
         return RapidPrimitiveType.NUMBER;
     }
 

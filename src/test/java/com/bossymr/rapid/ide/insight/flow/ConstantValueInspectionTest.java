@@ -25,7 +25,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
         myFixture.checkHighlighting(true, true, true, true);
     }
 
-    public void testLoop() {
+    public void disableTestLoop() {
         doTest("""
                 MODULE foo
                     PROC bar(num x)

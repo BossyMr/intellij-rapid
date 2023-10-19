@@ -1,6 +1,5 @@
 package com.bossymr.rapid.language.flow;
 
-import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,21 +15,14 @@ import java.util.Objects;
  */
 public class ControlFlow {
 
-    private final @NotNull Project project;
     private final @NotNull Map<BlockDescriptor, Block> map;
 
-    public ControlFlow(@NotNull Project project, @NotNull Map<BlockDescriptor, Block> map) {
+    public ControlFlow(@NotNull Map<BlockDescriptor, Block> map) {
         this.map = Map.copyOf(map);
-        this.project = project;
-    }
-
-    public @NotNull Project getProject() {
-        return project;
     }
 
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return 
-        visitor.visitControlFlow(this);
+        return visitor.visitControlFlow(this);
     }
 
     /**
@@ -59,12 +51,12 @@ public class ControlFlow {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ControlFlow that = (ControlFlow) o;
-        return Objects.equals(project, that.project) && Objects.equals(map, that.map);
+        return Objects.equals(map, that.map);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(project, map);
+        return Objects.hash(map);
     }
 
     @Override

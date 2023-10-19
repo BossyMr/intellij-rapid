@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.builder;
 import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
 import com.bossymr.rapid.language.builder.RapidParameterGroupBuilder;
 import com.bossymr.rapid.language.builder.RapidRoutineBuilder;
+import com.bossymr.rapid.language.flow.ArgumentGroup;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualParameterGroup;
@@ -31,8 +32,10 @@ public class ControlFlowRoutineBuilder implements RapidRoutineBuilder {
             throw new IllegalStateException();
         }
         VirtualParameterGroup parameterGroup = new VirtualParameterGroup(routine, isOptional, new ArrayList<>());
-        ControlFlowParameterGroupBuilder builder = new ControlFlowParameterGroupBuilder(parameterGroup);
+        ArgumentGroup argumentGroup = new ArgumentGroup(isOptional, new ArrayList<>());
+        ControlFlowParameterGroupBuilder builder = new ControlFlowParameterGroupBuilder(block, parameterGroup, argumentGroup);
         consumer.accept(builder);
+        block.getArgumentGroups().add(argumentGroup);
         parameters.add(parameterGroup);
         return this;
     }
@@ -41,6 +44,7 @@ public class ControlFlowRoutineBuilder implements RapidRoutineBuilder {
     public @NotNull RapidRoutineBuilder withCode(@NotNull StatementListType codeType, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
         ControlFlowBlockBuilder blockBuilder = new ControlFlowBlockBuilder(block);
         ControlFlowCodeBlockBuilder builder = new ControlFlowCodeBlockBuilder(block, blockBuilder);
+        blockBuilder.enterScope();
         consumer.accept(builder);
         if (!(blockBuilder.getInstructions().isEmpty())) {
             block.setEntryInstruction(codeType, blockBuilder.getInstructions().get(0));
@@ -59,6 +63,7 @@ public class ControlFlowRoutineBuilder implements RapidRoutineBuilder {
     public @NotNull RapidRoutineBuilder withCode(@Nullable List<Integer> exceptions, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
         ControlFlowBlockBuilder blockBuilder = new ControlFlowBlockBuilder(block);
         ControlFlowCodeBlockBuilder builder = new ControlFlowCodeBlockBuilder(block, blockBuilder);
+        blockBuilder.enterScope();
         consumer.accept(builder);
         if (!(blockBuilder.getInstructions().isEmpty())) {
             block.setErrorClause(exceptions, blockBuilder.getInstructions().get(0));

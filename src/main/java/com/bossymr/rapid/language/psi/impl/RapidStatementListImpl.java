@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.psi.impl;
 
 import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.intellij.lang.ASTNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,6 +41,10 @@ public class RapidStatementListImpl extends PhysicalElement implements RapidStat
     @Override
     public List<RapidStatement> getStatements() {
         return findChildrenByType(RapidElementTypes.STATEMENTS);
+    }
+
+    public List<PhysicalField> getFields() {
+        return findChildrenByType(RapidElementTypes.FIELD);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.psi;
 
+import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -29,5 +30,7 @@ public interface RapidStatementList extends RapidElement {
      * @return the statements contained in this statement list.
      */
     List<RapidStatement> getStatements();
+
+    List<PhysicalField> getFields();
 
 }

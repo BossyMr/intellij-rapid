@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.instruction;
 
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.intellij.psi.PsiElement;
@@ -12,8 +13,8 @@ public class ThrowInstruction extends Instruction {
 
     private final @Nullable Expression exceptionValue;
 
-    public ThrowInstruction(@Nullable PsiElement element, @Nullable Expression exceptionValue) {
-        super(element);
+    public ThrowInstruction(@NotNull Block block, @Nullable PsiElement element, @Nullable Expression exceptionValue) {
+        super(block, element);
         this.exceptionValue = exceptionValue;
     }
 

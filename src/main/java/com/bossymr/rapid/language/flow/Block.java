@@ -16,9 +16,9 @@ public sealed abstract class Block {
     private final @Nullable RapidType returnType;
 
     private final @NotNull List<Instruction> instructions;
-    private final @NotNull Map<StatementListType, Instruction> entryBlocks;
-    private final @NotNull List<Variable> variables;
+    private final @NotNull Map<StatementListType, EntryInstruction> entryBlocks;
 
+    private final @NotNull List<Variable> variables;
     private final @NotNull RapidSymbol element;
 
     public Block(@NotNull RapidSymbol element, @Nullable String moduleName, @NotNull String name, @Nullable RapidType returnType) {
@@ -33,14 +33,6 @@ public sealed abstract class Block {
 
     private boolean isEmpty() {
         return instructions.isEmpty();
-    }
-
-    private boolean isComplete() {
-        if (isEmpty()) {
-            return false;
-        }
-        Instruction last = instructions.get(instructions.size() - 1);
-        // TODO: 2023-10-13 Check if last has successor which isn't declared
     }
 
     public @NotNull RapidSymbol getElement() {
@@ -63,15 +55,15 @@ public sealed abstract class Block {
         return instructions;
     }
 
-    public @NotNull Instruction getEntryInstruction() {
+    public @NotNull EntryInstruction getEntryInstruction() {
         return entryBlocks.get(StatementListType.STATEMENT_LIST);
     }
 
-    public @Nullable Instruction getEntryInstruction(@NotNull StatementListType scopeType) {
+    public @Nullable EntryInstruction getEntryInstruction(@NotNull StatementListType scopeType) {
         return entryBlocks.get(scopeType);
     }
 
-    public @NotNull Collection<Instruction> getEntryBlocks() {
+    public @NotNull Collection<EntryInstruction> getEntryInstructions() {
         return entryBlocks.values();
     }
 
@@ -110,14 +102,14 @@ public sealed abstract class Block {
         if (getEntryInstruction(scopeType) != null) {
             throw new IllegalStateException();
         }
-        entryBlocks.put(scopeType, instruction);
+        entryBlocks.put(scopeType, new EntryInstruction(scopeType, instruction));
     }
 
-    public @NotNull BasicBlock setErrorClause(@Nullable List<Integer> exceptions, @NotNull Instruction instruction) {
+    public void setErrorClause(@Nullable List<Integer> exceptions, @NotNull Instruction instruction) {
         if (getEntryInstruction(StatementListType.ERROR_CLAUSE) != null) {
             throw new IllegalStateException();
         }
-        entryBlocks.put(StatementListType.ERROR_CLAUSE, )
+        entryBlocks.put(StatementListType.ERROR_CLAUSE, new EntryInstruction.ErrorEntryInstruction(instruction, exceptions));
     }
 
     public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
@@ -193,7 +185,7 @@ public sealed abstract class Block {
         @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
             return
-            visitor.visitFunctionBlock(this);
+                    visitor.visitFunctionBlock(this);
         }
 
         @Override
@@ -232,7 +224,7 @@ public sealed abstract class Block {
         @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
             return
-            visitor.visitFieldBlock(this);
+                    visitor.visitFieldBlock(this);
         }
 
         @Override

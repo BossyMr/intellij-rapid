@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.instruction;
 
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
@@ -7,8 +8,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class RetryInstruction extends Instruction {
 
-    public RetryInstruction(@Nullable PsiElement element) {
-        super(element);
+    public RetryInstruction(@NotNull Block block, @Nullable PsiElement element) {
+        super(block, element);
     }
 
     @Override

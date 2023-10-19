@@ -1,22 +1,33 @@
 package com.bossymr.rapid.language.flow.instruction;
 
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 
 public class UnconditionalBranchingInstruction extends Instruction {
 
-    private final @NotNull LabelInstruction label;
+    private final @NotNull ControlFlowLabel label;
 
-    public UnconditionalBranchingInstruction(@Nullable PsiElement element, @NotNull LabelInstruction label) {
-        super(element);
+    public UnconditionalBranchingInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull ControlFlowLabel label) {
+        super(block, element);
         this.label = label;
     }
 
-    public @NotNull LabelInstruction getLabel() {
+    @Override
+    public @NotNull List<Instruction> getSuccessors() {
+        return List.of(getSuccessor());
+    }
+
+    public @NotNull Instruction getSuccessor() {
+        return Objects.requireNonNull(label.getInstruction());
+    }
+
+    public @NotNull ControlFlowLabel getLabel() {
         return label;
     }
 

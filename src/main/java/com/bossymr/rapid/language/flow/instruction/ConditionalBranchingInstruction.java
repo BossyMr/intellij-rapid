@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.instruction;
 
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.intellij.psi.PsiElement;
@@ -12,16 +13,18 @@ public class ConditionalBranchingInstruction extends Instruction {
 
     private final @NotNull Expression condition;
 
-    public ConditionalBranchingInstruction(@Nullable PsiElement element, @NotNull Expression condition) {
-        super(element);
+    public ConditionalBranchingInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull Expression condition) {
+        super(block, element);
         this.condition = condition;
     }
 
-    public @NotNull Instruction getTrue() {
+    public @Nullable Instruction getTrue() {
+        // TODO: 2023-10-19 What if only false instruction is specified,
+        //  this should link to the fall through instruction
         return getSuccessors().get(0);
     }
 
-    public @NotNull Instruction getFalse() {
+    public @Nullable Instruction getFalse() {
         return getSuccessors().get(1);
     }
 

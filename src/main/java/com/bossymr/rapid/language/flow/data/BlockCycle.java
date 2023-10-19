@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
+import com.bossymr.rapid.language.flow.instruction.Instruction;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
@@ -57,7 +57,7 @@ public class BlockCycle {
     @Override
     public String toString() {
         String sequenceText = sequence.stream().map(block -> {
-            BasicBlock basicBlock = block.getBasicBlock();
+            Instruction basicBlock = block.getInstruction();
             return String.valueOf(basicBlock.getIndex());
         }).collect(Collectors.joining(","));
         return "BlockCycle{" +

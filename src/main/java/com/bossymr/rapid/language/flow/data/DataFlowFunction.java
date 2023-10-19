@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
-import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
+import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,7 +16,7 @@ public interface DataFlowFunction {
 
     @NotNull Block.FunctionBlock getBlock();
 
-    @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull BranchingInstruction.CallInstruction instruction);
+    @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull CallInstruction instruction);
 
     sealed interface Result {
 

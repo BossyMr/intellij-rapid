@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.builder;
 
 import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.instruction.ControlFlowLabel;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -14,11 +15,17 @@ public class ControlFlowBlockBuilder {
 
     private final @NotNull List<Instruction> instructions = new ArrayList<>();
 
+    private final @NotNull List<ControlFlowLabel> labels = new ArrayList<>();
+
     private final @NotNull Block block;
     private Scope currentScope;
 
     public ControlFlowBlockBuilder(@NotNull Block block) {
         this.block = block;
+    }
+
+    public @NotNull List<ControlFlowLabel> getLabels() {
+        return labels;
     }
 
     public boolean isInScope() {
@@ -38,9 +45,9 @@ public class ControlFlowBlockBuilder {
         return scope;
     }
 
-    public @NotNull Scope exitScope() {
+    public @Nullable Scope exitScope() {
         if(currentScope == null) {
-            throw new IllegalStateException();
+            return null;
         }
         Scope scope = currentScope;
         currentScope = null;
@@ -66,6 +73,10 @@ public class ControlFlowBlockBuilder {
         }
         scope.setTail(instruction);
         instructions.add(instruction);
+        for (ControlFlowLabel label : labels) {
+            label.setInstruction(instruction);
+        }
+        labels.clear();
         block.getInstructions().add(instruction);
     }
 

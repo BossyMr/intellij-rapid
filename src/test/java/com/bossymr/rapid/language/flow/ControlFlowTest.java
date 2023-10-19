@@ -19,16 +19,15 @@ public class ControlFlowTest extends BasePlatformTestCase {
                     FUNC num bar()
                         VAR num value := 2 * 3;
                         return value;
-                    ENDPROC
+                    ENDFUNC
                 ENDMODULE
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
                 	
-                	entry 0 {
-                		_0 := 2.0 * 3.0;
-                		return _0;
-                	}
+                	STATEMENT_LIST:
+                	0: _0 := 2.0 * 3.0;
+                	1: return _0;
                 }
                 """);
     }
@@ -46,7 +45,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                             value := value * 2 + 2;
                         ENDIF
                         RETURN value;
-                    ENDPROC
+                    ENDFUNC
                 ENDMODULE
                 """, """
                 func num foo:bar() {
@@ -92,7 +91,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                             value := value - 1;
                         ENDWHILE
                         return value;
-                    ENDPROC
+                    ENDFUNC
                 ENDMODULE
                 """, """
                 func num foo:bar() {
@@ -126,7 +125,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                         VAR num value{2, 3} := [[1, 2, 3], [3, 4, 5]];
                         value{2, 3} := 6;
                         return value{0, 2};
-                    ENDPROC
+                    ENDFUNC
                 ENDMODULE
                 """, """
                 func num foo:bar() {
@@ -176,7 +175,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                             value := value + 1;
                         ENDFOR
                         return value;
-                    ENDPROC
+                    ENDFUNC
                 ENDMODULE
                 """, """
                 func num foo:bar() {
@@ -222,7 +221,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                             value := value + 1;
                         ENDFOR
                         return value;
-                    ENDPROC
+                    ENDFUNC
                 ENDMODULE
                 """, """
                 func num foo:bar() {
@@ -265,7 +264,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                             CASE 2:
                                 RETURN 2;
                         ENDTEST
-                    ENDPROC
+                    ENDFUNC
                 ENDMODULE
                 """, """
                 func num foo:bar() {
@@ -345,31 +344,22 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 func num foo:Abs(input num _0 [value]) {
-                	entry 0 {
-                		if(_0 >= 0.0) -> [true: 1, false: 2]
-                	}
+                	STATEMENT_LIST:
+                	0: if(_0 >= 0.0) -> [true: 1, false: 2]
                                 
-                	block 1 {
-                		return _0;
-                	}
+                	1: return _0;
                                 
-                	block 2 {
-                		return -_0;
-                	}
+                	2: return -_0;
                 }
                                 
                 func num foo:bar() {
                 	num _0;
-                	num _1;
+                	dnum _1;
                                 
-                	entry 0 {
-                		_1 := -1.0;
-                		_0 := foo:Abs(_0 := _1) -> 1;
-                	}
-                                
-                	block 1 {
-                		return _0;
-                	}
+                	STATEMENT_LIST:
+                	0: _1 := -1.0;
+                	1: _0 := :Abs(_0 := _1);
+                	2: return _0;
                 }
                 """);
     }

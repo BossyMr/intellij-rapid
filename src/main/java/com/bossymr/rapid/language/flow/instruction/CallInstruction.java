@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.instruction;
 
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
@@ -18,11 +19,15 @@ public class CallInstruction extends Instruction {
     private final @Nullable ReferenceExpression returnValue;
     private final @NotNull Map<ArgumentDescriptor, ReferenceExpression> arguments;
 
-    public CallInstruction(@Nullable PsiElement element, @NotNull Expression routineName, @Nullable ReferenceExpression returnValue, @NotNull Map<ArgumentDescriptor, ReferenceExpression> arguments) {
-        super(element);
+    public CallInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull Expression routineName, @Nullable ReferenceExpression returnValue, @NotNull Map<ArgumentDescriptor, ReferenceExpression> arguments) {
+        super(block, element);
         this.routineName = routineName;
         this.returnValue = returnValue;
         this.arguments = arguments;
+    }
+
+    public @NotNull Instruction getSuccessor() {
+        return getSuccessors().get(0);
     }
 
     public @NotNull Expression getRoutineName() {

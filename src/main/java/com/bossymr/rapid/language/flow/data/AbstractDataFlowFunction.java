@@ -5,7 +5,7 @@ import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
-import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
+import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.flow.value.VariableExpression;
@@ -20,7 +20,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
     protected abstract @NotNull Set<DataFlowFunction.Result> getResults();
 
     @Override
-    public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull BranchingInstruction.CallInstruction instruction) {
+    public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull CallInstruction instruction) {
         Set<DataFlowFunction.Result> results = new HashSet<>();
         for (Result result : getResults()) {
             Result output = getOutput(result, state, instruction);
@@ -31,7 +31,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
         return results;
     }
 
-    protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull BranchingInstruction.CallInstruction instruction) {
+    protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull CallInstruction instruction) {
         /*
          * Create an empty successor to the specified state.
          *
@@ -51,7 +51,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
          */
         Map<ReferenceExpression, ReferenceExpression> modifications = new HashMap<>();
 
-        Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.arguments());
+        Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
         for (Argument argument : arguments.keySet()) {
             ReferenceExpression expression = arguments.get(argument);
             modifications.put(new VariableExpression(argument), expression);
@@ -61,7 +61,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
 
         // Assign target to the output of the result.
         ReferenceExpression variable = result.variable();
-        ReferenceExpression target = instruction.returnValue();
+        ReferenceExpression target = instruction.getReturnValue();
         if (variable != null && target != null) {
             Optional<SnapshotExpression> optional = result.state().getSnapshot(variable);
             ReferenceExpression value;

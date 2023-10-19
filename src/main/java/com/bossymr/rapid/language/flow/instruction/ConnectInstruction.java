@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.instruction;
 
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
@@ -14,8 +15,8 @@ public class ConnectInstruction extends Instruction {
     private final @NotNull ReferenceExpression variable;
     private final @NotNull Expression expression;
 
-    public ConnectInstruction(@Nullable PsiElement element, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
-        super(element);
+    public ConnectInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
+        super(block, element);
         this.variable = variable;
         this.expression = expression;
     }

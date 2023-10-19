@@ -25,6 +25,8 @@ public class RecordSnapshot implements SnapshotExpression {
     private final @NotNull Map<String, RapidType> components;
     private final @NotNull Map<String, Expression> snapshots;
 
+    private final @NotNull Map<String, Expression> roots;
+
     public RecordSnapshot(@NotNull RapidType type, @Nullable ReferenceExpression underlyingVariable) {
         this.type = type;
         this.underlyingVariable = underlyingVariable;
@@ -41,23 +43,22 @@ public class RecordSnapshot implements SnapshotExpression {
             components.put(componentName, componentType);
         }
         this.snapshots = new HashMap<>();
+        this.roots = new HashMap<>();
     }
 
     public @NotNull Map<String, Expression> getSnapshots() {
         return snapshots;
     }
 
-    public void assign(@NotNull String name, @NotNull Expression value) {
-        snapshots.put(name, value);
+    public @NotNull Map<String, Expression> getRoots() {
+        return roots;
     }
 
-    public @NotNull VariableSnapshot createSnapshot(@NotNull String name) {
-        if (!(components.containsKey(name))) {
-            throw new IllegalArgumentException();
+    public void assign(@NotNull String name, @NotNull Expression value) {
+        snapshots.put(name, value);
+        if (!(roots.containsKey(name))) {
+            roots.put(name, value);
         }
-        VariableSnapshot snapshot = new VariableSnapshot(components.get(name));
-        snapshots.put(name, snapshot);
-        return snapshot;
     }
 
     public @NotNull Expression getValue(@NotNull String name) {
@@ -65,6 +66,13 @@ public class RecordSnapshot implements SnapshotExpression {
             throw new IllegalArgumentException();
         }
         return snapshots.get(name);
+    }
+
+    public @NotNull Expression getRoot(@NotNull String name) {
+        if (!(roots.containsKey(name))) {
+            throw new IllegalArgumentException();
+        }
+        return roots.get(name);
     }
 
     @Override

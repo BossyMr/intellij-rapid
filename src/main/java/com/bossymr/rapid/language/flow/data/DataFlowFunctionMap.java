@@ -6,7 +6,7 @@ import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
-import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
+import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.value.BinaryExpression;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.VariableExpression;
@@ -72,7 +72,7 @@ public class DataFlowFunctionMap {
     }
 
     private void registerExit(@NotNull DataFlowBlock returnBlock, @NotNull DataFlowFunction.Result result) {
-        Block block = returnBlock.getBasicBlock().getBlock();
+        Block block = returnBlock.getInstruction().getBlock();
         BlockDescriptor blockDescriptor = BlockDescriptor.getBlockKey(block);
         ResultEntry outputEntry = new ResultEntry(blockDescriptor, result.state());
         exitPoints.put(result, returnBlock);
@@ -212,7 +212,7 @@ public class DataFlowFunctionMap {
         }
 
         @Override
-        public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull BranchingInstruction.CallInstruction instruction) {
+        public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull CallInstruction instruction) {
             Map<DataFlowBlock, Result> value = result.get();
             BlockDescriptor blockDescriptor = BlockDescriptor.getBlockKey(functionBlock);
             if (value != null) {

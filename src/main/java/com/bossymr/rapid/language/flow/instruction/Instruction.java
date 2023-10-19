@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.instruction;
 
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.SmartPointerManager;
@@ -8,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -17,17 +17,32 @@ import java.util.Objects;
  */
 public abstract class Instruction {
 
+    private final @NotNull Block block;
+
     private final @NotNull List<Instruction> successors = new ArrayList<>(1);
     private final @NotNull List<Instruction> predecessors = new ArrayList<>(1);
 
     private final @Nullable SmartPsiElementPointer<PsiElement> pointer;
 
-    protected Instruction(@Nullable PsiElement element) {
+    protected Instruction(@NotNull Block block, @Nullable PsiElement element) {
+        this.block = block;
         if (element != null) {
             pointer = SmartPointerManager.createPointer(element);
         } else {
             pointer = null;
         }
+    }
+
+    public int getIndex() {
+        int index = getBlock().getInstructions().indexOf(this);
+        if (index < 0) {
+            throw new IllegalStateException();
+        }
+        return index;
+    }
+
+    public @NotNull Block getBlock() {
+        return block;
     }
 
     public @NotNull List<Instruction> getSuccessors() {
@@ -39,7 +54,7 @@ public abstract class Instruction {
     }
 
     public @Nullable PsiElement getElement() {
-        if(pointer != null) {
+        if (pointer != null) {
             return pointer.getElement();
         } else {
             return null;
@@ -58,6 +73,6 @@ public abstract class Instruction {
 
     @Override
     public int hashCode() {
-        return Objects.hash(successors, predecessors, pointer);
+        return Objects.hash(pointer);
     }
 }

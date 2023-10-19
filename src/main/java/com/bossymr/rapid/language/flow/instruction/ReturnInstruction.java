@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.instruction;
 
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.intellij.psi.PsiElement;
@@ -12,8 +13,8 @@ public class ReturnInstruction extends Instruction {
 
     private final @Nullable Expression returnValue;
 
-    public ReturnInstruction(@Nullable PsiElement element, @Nullable Expression returnValue) {
-        super(element);
+    public ReturnInstruction(@NotNull Block block, @Nullable PsiElement element, @Nullable Expression returnValue) {
+        super(block, element);
         this.returnValue = returnValue;
     }
 

@@ -27,10 +27,6 @@ public class ControlFlowVisitor<R> {
         return null;
     }
 
-    public R visitBasicBlock(@NotNull BasicBlock basicBlock) {
-        return null;
-    }
-
     public R visitArgumentGroup(@NotNull ArgumentGroup argumentGroup) {
         return null;
     }

@@ -1,12 +1,12 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.bossymr.rapid.language.flow.debug.DataFlowGraphService;
+import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.intellij.execution.ExecutionException;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
@@ -32,18 +32,18 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
         if (!(outputDirectory.exists() || outputDirectory.mkdir())) {
             throw new IOException("Could not create output folder");
         }
-        Map<BasicBlock, AtomicInteger> passes = new HashMap<>();
+        Map<Instruction, AtomicInteger> passes = new HashMap<>();
         ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(getProject());
         String output = ControlFlowFormatVisitor.format(controlFlow);
         Path path = outputDirectory.toPath();
         FileUtil.writeToFile(path.resolve("flow.txt").toFile(), output);
         AtomicInteger total = new AtomicInteger();
         DataFlow result = ControlFlowService.getInstance().getDataFlow(controlFlow, (dataFlow, block) -> {
-            BasicBlock basicBlock = block.getBasicBlock();
-            Block functionBlock = basicBlock.getBlock();
-            passes.computeIfAbsent(basicBlock, key -> new AtomicInteger());
-            int pass = passes.get(basicBlock).getAndIncrement();
-            File outputFile = path.resolve(total.getAndIncrement() + " " + functionBlock.getModuleName() + "-" + functionBlock.getName() + " Pass #" + pass + " Block #" + block.getBasicBlock().getIndex() + ".svg").toFile();
+            Instruction instruction = block.getInstruction();
+            Block functionBlock = instruction.getBlock();
+            passes.computeIfAbsent(instruction, key -> new AtomicInteger());
+            int pass = passes.get(instruction).getAndIncrement();
+            File outputFile = path.resolve(total.getAndIncrement() + " " + functionBlock.getModuleName() + "-" + functionBlock.getName() + " Pass #" + pass + " Block #" + block.getInstruction().getIndex() + ".svg").toFile();
             try {
                 DataFlowGraphService.convert(outputFile, dataFlow);
             } catch (IOException | ExecutionException e) {

@@ -32,7 +32,7 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
     }
 
     @Override
-    public @NotNull RapidModuleBuilder withField(@NotNull RapidField element, @NotNull String name, @NotNull FieldType fieldType, @NotNull RapidType valueType, @NotNull Consumer<RapidFieldBuilder> consumer) {
+    public @NotNull RapidModuleBuilder withField(@Nullable RapidField element, @NotNull String name, @NotNull FieldType fieldType, @NotNull RapidType valueType, @NotNull Consumer<RapidFieldBuilder> consumer) {
         BlockDescriptor blockDescriptor = new BlockDescriptor(moduleName, name);
         VirtualField field = new VirtualField(moduleName, name, fieldType, valueType, true);
         Block.FieldBlock block = new Block.FieldBlock(field, moduleName);
@@ -43,7 +43,7 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
     }
 
     @Override
-    public @NotNull RapidModuleBuilder withRoutine(@NotNull RapidRoutine element, @NotNull String name, @NotNull RoutineType routineType, @Nullable RapidType returnType, @NotNull Consumer<RapidRoutineBuilder> consumer) {
+    public @NotNull RapidModuleBuilder withRoutine(@Nullable RapidRoutine element, @NotNull String name, @NotNull RoutineType routineType, @Nullable RapidType returnType, @NotNull Consumer<RapidRoutineBuilder> consumer) {
         BlockDescriptor blockDescriptor = new BlockDescriptor(moduleName, name);
         List<VirtualParameterGroup> parameterGroups = routineType != RoutineType.TRAP ? new ArrayList<>() : null;
         VirtualRoutine routine = new VirtualRoutine(moduleName, name, routineType, returnType, parameterGroups);

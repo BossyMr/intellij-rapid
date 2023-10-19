@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.builder.RapidRoutineBuilder;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
 import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
@@ -14,7 +15,7 @@ import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.physical.*;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
-import com.intellij.openapi.project.Project;
+import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,8 +27,8 @@ public class ControlFlowElementBuilder {
 
     private final @NotNull ControlFlowBuilder builder;
 
-    public ControlFlowElementBuilder(@NotNull Project project) {
-        this.builder = new ControlFlowBuilder(project);
+    public ControlFlowElementBuilder() {
+        this.builder = new ControlFlowBuilder();
     }
 
     public @NotNull ControlFlow getControlFlow() {
@@ -79,13 +80,6 @@ public class ControlFlowElementBuilder {
         if (returnType == null && routineType == RoutineType.FUNCTION) {
             returnType = RapidPrimitiveType.ANYTYPE;
         }
-        List<PhysicalParameterGroup> parameters = routine.getParameters();
-        if (parameters != null && routineType == RoutineType.TRAP) {
-            parameters = null;
-        }
-        if (parameters == null && routineType != RoutineType.TRAP) {
-            parameters = List.of();
-        }
         String name = routine.getName();
         if (name == null) {
             name = RapidSymbol.getDefaultText();
@@ -93,23 +87,19 @@ public class ControlFlowElementBuilder {
         builder.withRoutine(routine, name, routineType, returnType, getRoutineConsumer(routine));
     }
 
-    private @NotNull Consumer<RapidRoutineBuilder> getRoutineConsumer(@NotNull PhysicalRoutine routine) {
-        return builder -> {
-            if (routine.getParameters() != null) {
-                for (PhysicalParameterGroup parameterGroup : routine.getParameters()) {
-                    builder.withParameterGroup(parameterGroup.isOptional(), getParameterGroupConsumer(parameterGroup));
+    public static void processExpression(@NotNull PhysicalRoutine routine, @NotNull RapidStatementList statementList, @NotNull RapidCodeBlockBuilder builder) {
+        ControlFlowStatementVisitor visitor = new ControlFlowStatementVisitor(builder, routine);
+        for (RapidElement element : PsiTreeUtil.getChildrenOfAnyType(statementList, RapidStatement.class, PhysicalField.class)) {
+            if (element instanceof PhysicalField field) {
+                ReferenceExpression variable = builder.createVariable(field.getName(), field.getFieldType(), field.getType() != null ? field.getType() : RapidPrimitiveType.ANYTYPE);
+                if (field.getInitializer() != null) {
+                    builder.assign(variable, ControlFlowExpressionVisitor.getExpression(field.getInitializer(), builder));
                 }
             }
-            for (RapidStatementList statementList : routine.getStatementLists()) {
-                StatementListType statementListType = statementList.getStatementListType();
-                if (statementListType == StatementListType.ERROR_CLAUSE) {
-                    List<Integer> exceptions = getExceptions(statementList.getExpressions());
-                    builder.withCode(exceptions, codeBuilder -> processExpression(statementList, codeBuilder));
-                } else {
-                    builder.withCode(statementListType, codeBuilder -> processExpression(statementList, codeBuilder));
-                }
+            if (element instanceof RapidStatement statement) {
+                statement.accept(visitor);
             }
-        };
+        }
     }
 
     private @NotNull Consumer<RapidParameterGroupBuilder> getParameterGroupConsumer(@NotNull PhysicalParameterGroup parameterGroup) {
@@ -144,10 +134,30 @@ public class ControlFlowElementBuilder {
         return exceptions;
     }
 
-    private void processExpression(@NotNull RapidStatementList statementList, @NotNull RapidCodeBlockBuilder builder) {
-        ControlFlowStatementVisitor visitor = new ControlFlowStatementVisitor(builder);
-        for (RapidStatement statement : statementList.getStatements()) {
-            statement.accept(visitor);
-        }
+    private @NotNull Consumer<RapidRoutineBuilder> getRoutineConsumer(@NotNull PhysicalRoutine routine) {
+        return builder -> {
+            if (routine.getParameters() != null) {
+                RoutineType routineType = routine.getRoutineType();
+                List<PhysicalParameterGroup> parameters = routine.getParameters();
+                if (routineType == RoutineType.TRAP) {
+                    parameters = List.of();
+                }
+                if (parameters == null) {
+                    parameters = List.of();
+                }
+                for (PhysicalParameterGroup parameterGroup : parameters) {
+                    builder.withParameterGroup(parameterGroup.isOptional(), getParameterGroupConsumer(parameterGroup));
+                }
+            }
+            for (RapidStatementList statementList : routine.getStatementLists()) {
+                StatementListType statementListType = statementList.getStatementListType();
+                if (statementListType == StatementListType.ERROR_CLAUSE) {
+                    List<Integer> exceptions = getExceptions(statementList.getExpressions());
+                    builder.withCode(exceptions, codeBuilder -> processExpression(routine, statementList, codeBuilder));
+                } else {
+                    builder.withCode(statementListType, codeBuilder -> processExpression(routine, statementList, codeBuilder));
+                }
+            }
+        };
     }
 }

@@ -4,8 +4,7 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
-import com.bossymr.rapid.language.flow.instruction.BranchingInstruction;
-import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
+import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
@@ -25,84 +24,10 @@ import java.util.Objects;
 
 public class ConstantValueInspection extends LocalInspectionTool {
 
-    private static @Nullable Expression getExpression(@NotNull RapidExpression expression, @NotNull BasicBlock basicBlock) {
+    private static @Nullable Expression getExpression(@NotNull RapidExpression expression, @NotNull Instruction instruction) {
         ExpressionControlFlowVisitor visitor = new ExpressionControlFlowVisitor(expression);
-        for (LinearInstruction instruction : basicBlock.getInstructions()) {
-            Expression output = instruction.accept(visitor);
-            if(output != null) {
-                return output;
-            }
-        }
-        BranchingInstruction terminator = basicBlock.getTerminator();
-        return terminator.accept(visitor);
-    }
+        return instruction.accept(visitor);
 
-    private static class ExpressionControlFlowVisitor extends ControlFlowVisitor<Expression> {
-
-        private final @NotNull PsiElement element;
-
-        public ExpressionControlFlowVisitor(@NotNull PsiElement element) {
-            this.element = element;
-        }
-
-        private boolean isEquivalent(@Nullable Expression expression) {
-            if(expression == null) {
-                return false;
-            }
-            RapidExpression expressionElement = expression.getElement();
-            return expressionElement != null && expressionElement.isEquivalentTo(element);
-        }
-
-        private Expression getEquivalent(@Nullable Expression @Nullable... expressions) {
-            if(expressions == null) {
-                return null;
-            }
-            for (Expression expression : expressions) {
-                if(isEquivalent(expression)) {
-                    return expression;
-                }
-            }
-            return null;
-        }
-
-        @Override
-        public Expression visitAssignmentInstruction(@NotNull LinearInstruction.AssignmentInstruction instruction) {
-            if(isEquivalent(instruction.variable())) {
-                return instruction.variable();
-            }
-            Expression[] expressions = instruction.value().getComponents().toArray(Expression[]::new);
-            return getEquivalent(expressions);
-        }
-
-        @Override
-        public Expression visitConnectInstruction(@NotNull LinearInstruction.ConnectInstruction instruction) {
-            return getEquivalent(instruction.variable(), instruction.routine());
-        }
-
-        @Override
-        public Expression visitConditionalBranchingInstruction(@NotNull BranchingInstruction.ConditionalBranchingInstruction instruction) {
-            return getEquivalent(instruction.value());
-        }
-
-        @Override
-        public Expression visitReturnInstruction(@NotNull BranchingInstruction.ReturnInstruction instruction) {
-            return getEquivalent(instruction.value());
-        }
-
-        @Override
-        public Expression visitThrowInstruction(@NotNull BranchingInstruction.ThrowInstruction instruction) {
-            return getEquivalent(instruction.exception());
-        }
-
-        @Override
-        public Expression visitCallInstruction(@NotNull BranchingInstruction.CallInstruction instruction) {
-            Expression equivalent = getEquivalent(instruction.routine(), instruction.returnValue());
-            if(equivalent != null) {
-                return equivalent;
-            }
-            Expression[] expressions = instruction.arguments().values().toArray(Expression[]::new);
-            return getEquivalent(expressions);
-        }
     }
 
     @Override
@@ -119,20 +44,20 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 if (functionBlock == null) {
                     return;
                 }
-                Map.Entry<BasicBlock, Expression> entry = getBasicBlock(functionBlock, expression);
+                Map.Entry<Instruction, Expression> entry = getInstruction(functionBlock, expression);
                 if (entry == null) {
                     return;
                 }
                 Expression instruction = entry.getValue();
                 DataFlowBlock block = dataFlow.getBlock(entry.getKey());
-                if(block == null) {
+                if (block == null) {
                     return;
                 }
                 if (instruction instanceof ReferenceExpression referenceExpression) {
                     if (expression instanceof RapidReferenceExpression object) {
                         PsiElement parent = expression.getParent();
                         if (parent != null) {
-                            Optionality optionality = block.getOptionality(referenceExpression, parent);
+                            Optionality optionality = block.getOptionality(referenceExpression);
                             if (optionality == Optionality.MISSING) {
                                 holder.registerProblem(object, RapidBundle.message("inspection.message.missing.variable", object.getCanonicalText()));
                             }
@@ -154,11 +79,11 @@ public class ConstantValueInspection extends LocalInspectionTool {
         };
     }
 
-    private @Nullable Map.Entry<BasicBlock, Expression> getBasicBlock(@NotNull Block block, @NotNull RapidExpression expression) {
-        for (BasicBlock basicBlock : block.getInstructions()) {
-            Expression instruction = getExpression(expression, basicBlock);
-            if (instruction != null) {
-                return Map.entry(basicBlock, instruction);
+    private @Nullable Map.Entry<Instruction, Expression> getInstruction(@NotNull Block block, @NotNull RapidExpression expression) {
+        for (Instruction instruction : block.getInstructions()) {
+            Expression result = getExpression(expression, instruction);
+            if (result != null) {
+                return Map.entry(instruction, result);
             }
         }
         return null;
@@ -174,5 +99,73 @@ public class ConstantValueInspection extends LocalInspectionTool {
             }
         }
         return null;
+    }
+
+    private static class ExpressionControlFlowVisitor extends ControlFlowVisitor<Expression> {
+
+        private final @NotNull PsiElement element;
+
+        public ExpressionControlFlowVisitor(@NotNull PsiElement element) {
+            this.element = element;
+        }
+
+        private boolean isEquivalent(@Nullable Expression expression) {
+            if (expression == null) {
+                return false;
+            }
+            RapidExpression expressionElement = expression.getElement();
+            return expressionElement != null && expressionElement.isEquivalentTo(element);
+        }
+
+        private Expression getEquivalent(@Nullable Expression @Nullable ... expressions) {
+            if (expressions == null) {
+                return null;
+            }
+            for (Expression expression : expressions) {
+                if (isEquivalent(expression)) {
+                    return expression;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public Expression visitAssignmentInstruction(@NotNull AssignmentInstruction instruction) {
+            if (isEquivalent(instruction.getVariable())) {
+                return instruction.getVariable();
+            }
+            Expression[] expressions = instruction.getExpression().getComponents().toArray(Expression[]::new);
+            return getEquivalent(expressions);
+        }
+
+        @Override
+        public Expression visitConnectInstruction(@NotNull ConnectInstruction instruction) {
+            return getEquivalent(instruction.getVariable(), instruction.getExpression());
+        }
+
+        @Override
+        public Expression visitConditionalBranchingInstruction(@NotNull ConditionalBranchingInstruction instruction) {
+            return getEquivalent(instruction.getCondition());
+        }
+
+        @Override
+        public Expression visitReturnInstruction(@NotNull ReturnInstruction instruction) {
+            return getEquivalent(instruction.getReturnValue());
+        }
+
+        @Override
+        public Expression visitThrowInstruction(@NotNull ThrowInstruction instruction) {
+            return getEquivalent(instruction.getExceptionValue());
+        }
+
+        @Override
+        public Expression visitCallInstruction(@NotNull CallInstruction instruction) {
+            Expression equivalent = getEquivalent(instruction.getRoutineName(), instruction.getReturnValue());
+            if (equivalent != null) {
+                return equivalent;
+            }
+            Expression[] expressions = instruction.getArguments().values().toArray(Expression[]::new);
+            return getEquivalent(expressions);
+        }
     }
 }

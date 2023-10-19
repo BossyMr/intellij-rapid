@@ -85,7 +85,7 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
 
     @Override
     public @NotNull List<PhysicalField> getFields() {
-        return PsiTreeUtil.getChildrenOfTypeAsList(getStatementList(), PhysicalField.class);
+        return getStatementList().getFields();
     }
 
     @Override

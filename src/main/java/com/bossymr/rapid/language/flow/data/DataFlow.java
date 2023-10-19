@@ -1,9 +1,9 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
+import com.bossymr.rapid.language.flow.instruction.Instruction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,11 +13,11 @@ import java.util.Objects;
 
 public class DataFlow {
 
-    private final @NotNull Map<BasicBlock, DataFlowBlock> map;
+    private final @NotNull Map<Instruction, DataFlowBlock> map;
     private final @NotNull ControlFlow controlFlow;
     private final @NotNull Map<DataFlowBlock, DataFlowUsage> usages;
 
-    public DataFlow(@NotNull ControlFlow controlFlow, @NotNull Map<BasicBlock, DataFlowBlock> blocks, @NotNull Map<DataFlowBlock, DataFlowUsage> usages) {
+    public DataFlow(@NotNull ControlFlow controlFlow, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull Map<DataFlowBlock, DataFlowUsage> usages) {
         this.map = Map.copyOf(blocks);
         this.controlFlow = controlFlow;
         this.usages = usages;
@@ -35,7 +35,7 @@ public class DataFlow {
         return usages;
     }
 
-    public @Nullable DataFlowBlock getBlock(@NotNull BasicBlock block) {
+    public @Nullable DataFlowBlock getBlock(@NotNull Instruction block) {
         return map.get(block);
     }
 

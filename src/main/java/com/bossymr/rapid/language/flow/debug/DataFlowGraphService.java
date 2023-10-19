@@ -2,10 +2,10 @@ package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.network.MultiMap;
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.ControlFlowService;
+import com.bossymr.rapid.language.flow.EntryInstruction;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowEdge;
@@ -14,7 +14,6 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.instruction.LinearInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.StatementListType;
 import com.intellij.execution.ExecutionException;
@@ -140,7 +139,7 @@ public class DataFlowGraphService extends AnAction {
                     case ERROR -> "error";
                     case EXIT -> "exit";
                 });
-                stringBuilder.append("\" ltail=").append(getBasicBlockClusterName(block.getBasicBlock())).append(" lhead=").append(getBasicBlockClusterName(callerBlock.getBasicBlock()));
+                stringBuilder.append("\" ltail=").append(getInstructionClusterName(block.getInstruction())).append(" lhead=").append(getInstructionClusterName(callerBlock.getInstruction()));
                 stringBuilder.append("]\n");
             }
         }
@@ -154,32 +153,27 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("style=dotted;\nlabel=\"").append(blockName).append("\";").append("\n");
         stringBuilder.append(getEntryBlockIndex(block)).append("[shape=oval;label=Entry];").append("\n");
         for (StatementListType value : StatementListType.values()) {
-            BasicBlock entryBlock = block.getEntryInstruction(value);
-            if (entryBlock == null) {
+            EntryInstruction entryInstruction = block.getEntryInstruction(value);
+            if (entryInstruction == null) {
                 continue;
             }
-            DataFlowBlock entryFlowBlock = dataFlow.getBlock(entryBlock);
+            DataFlowBlock entryFlowBlock = dataFlow.getBlock(entryInstruction.getInstruction());
             if (entryFlowBlock != null) {
                 for (DataFlowState state : entryFlowBlock.getStates()) {
                     stringBuilder.append(getEntryBlockIndex(block)).append(" -> ").append(getStateIndex(entryFlowBlock, states, state)).append(";").append("\n");
                 }
             }
         }
-        for (BasicBlock basicBlock : block.getInstructions()) {
-            DataFlowBlock dataFlowBlock = dataFlow.getBlock(basicBlock);
+        for (Instruction instruction : block.getInstructions()) {
+            DataFlowBlock dataFlowBlock = dataFlow.getBlock(instruction);
             if (dataFlowBlock == null) {
                 continue;
             }
-            stringBuilder.append("subgraph ").append(getBasicBlockClusterName(basicBlock)).append(" {\n");
+            stringBuilder.append("subgraph ").append(getInstructionClusterName(instruction)).append(" {\n");
             stringBuilder.append("label=<");
             stringBuilder.append("<table BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">");
-            stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Block #").append(basicBlock.getIndex()).append("</td></tr>\n");
-            int index = 0;
-            for (LinearInstruction instruction : basicBlock.getInstructions()) {
-                writeInstruction(stringBuilder, index, instruction);
-                index += 1;
-            }
-            writeInstruction(stringBuilder, index, basicBlock.getTerminator());
+            stringBuilder.append("<tr><td COLSPAN=\"3\">").append("Block #").append(instruction.getIndex()).append("</td></tr>\n");
+            writeInstruction(stringBuilder, instruction);
             stringBuilder.append("</table>>;");
             Collection<DataFlowState> currentStates = states.getAll(dataFlowBlock);
             for (DataFlowState state : currentStates) {
@@ -190,7 +184,7 @@ public class DataFlowGraphService extends AnAction {
                 for (DataFlowEdge predecessor : dataFlowBlock.getPredecessors()) {
                     DataFlowBlock source = predecessor.getSource();
                     stringBuilder.append(getStateIndex(source, 0)).append(" -> ").append(getStateIndex(dataFlowBlock, 0));
-                    stringBuilder.append("[ltail=").append(getBasicBlockClusterName(source.getBasicBlock())).append(" lhead=").append(getBasicBlockClusterName(basicBlock));
+                    stringBuilder.append("[ltail=").append(getInstructionClusterName(source.getInstruction())).append(" lhead=").append(getInstructionClusterName(instruction));
                     stringBuilder.append("]\n");
                 }
             }
@@ -215,7 +209,7 @@ public class DataFlowGraphService extends AnAction {
                 stringBuilder.append(";\n");
             } else {
                 stringBuilder.append(getStateIndex(predecessorBlock.orElseThrow(), 0)).append(" -> ").append(getStateIndex(block, states, state));
-                stringBuilder.append("[ltail=").append(getBasicBlockClusterName(block.getBasicBlock())).append(" lhead=").append(getBasicBlockClusterName(block.getBasicBlock()));
+                stringBuilder.append("[ltail=").append(getInstructionClusterName(block.getInstruction())).append(" lhead=").append(getInstructionClusterName(block.getInstruction()));
                 stringBuilder.append("]\n");
             }
         }
@@ -225,9 +219,9 @@ public class DataFlowGraphService extends AnAction {
         return "\"cluster_" + block.getModuleName() + "_" + block.getName() + "\"";
     }
 
-    private static @NotNull String getBasicBlockClusterName(@NotNull BasicBlock basicBlock) {
-        String clusterName = getBlockClusterName(basicBlock.getBlock());
-        int index = basicBlock.getIndex();
+    private static @NotNull String getInstructionClusterName(@NotNull Instruction instruction) {
+        String clusterName = getBlockClusterName(instruction.getBlock());
+        int index = instruction.getIndex();
         if (index < 0) {
             throw new IllegalArgumentException();
         }
@@ -251,7 +245,7 @@ public class DataFlowGraphService extends AnAction {
             stringBuilder.append("</td>");
             stringBuilder.append("</tr>\n");
         }
-        if(!(state.getOptionality().isEmpty())) {
+        if (!(state.getOptionality().isEmpty())) {
             stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Optionality").append("</td></tr>\n");
             for (var entry : state.getOptionality().entrySet()) {
                 stringBuilder.append("<tr>");
@@ -273,14 +267,14 @@ public class DataFlowGraphService extends AnAction {
     }
 
     private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceExpression variable, @NotNull SnapshotExpression snapshot, @NotNull Set<SnapshotExpression> snapshots) {
-        if(!(snapshots.add(snapshot))) {
+        if (!(snapshots.add(snapshot))) {
             return;
         }
         ControlFlowFormatVisitor visitor = new ControlFlowFormatVisitor();
         stringBuilder.append("<tr>");
         stringBuilder.append("<td>");
         stringBuilder.append(variable.accept(visitor));
-        if(variable instanceof VariableExpression variableValue && variableValue.getField().getName() != null) {
+        if (variable instanceof VariableExpression variableValue && variableValue.getField().getName() != null) {
             stringBuilder.append("[");
             stringBuilder.append(variableValue.getField().getName());
             stringBuilder.append("]");
@@ -342,10 +336,9 @@ public class DataFlowGraphService extends AnAction {
         }
     }
 
-    private static void writeInstruction(@NotNull StringBuilder stringBuilder, int index, @NotNull Instruction instruction) {
+    private static void writeInstruction(@NotNull StringBuilder stringBuilder, @NotNull Instruction instruction) {
         stringBuilder.append("<tr>");
-        stringBuilder.append("<td>").append(index).append("</td>");
-        stringBuilder.append("<td align=\"left\" CELLPADDING=\"4\">");
+        stringBuilder.append("<td COLSPAN=\"2\" align=\"left\" CELLPADDING=\"4\">");
         stringBuilder.append(HtmlChunk.text(instruction.accept(new ControlFlowFormatVisitor())));
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");
@@ -357,10 +350,10 @@ public class DataFlowGraphService extends AnAction {
     }
 
     private static @NotNull String getStateIndex(@NotNull DataFlowBlock block, int index) {
-        BasicBlock basicBlock = block.getBasicBlock();
-        Block functionBlock = basicBlock.getBlock();
+        Instruction instruction = block.getInstruction();
+        Block functionBlock = instruction.getBlock();
         String blockName = functionBlock.getModuleName() + ":" + functionBlock.getName();
-        String stateName = blockName + ":" + basicBlock.getIndex() + ":" + index;
+        String stateName = blockName + ":" + instruction.getIndex() + ":" + index;
         return "\"" + stateName + "\"";
     }
 

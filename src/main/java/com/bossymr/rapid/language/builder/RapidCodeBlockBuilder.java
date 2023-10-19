@@ -11,11 +11,14 @@ import java.util.function.Consumer;
 
 public interface RapidCodeBlockBuilder extends RapidCodeBuilder {
 
-    default @NotNull Label label() {
-        return label(null, null);
+    default @NotNull Label createLabel() {
+        return createLabel(null);
     }
 
-    @NotNull Label label(@Nullable RapidElement element, @Nullable String name);
+    @NotNull Label createLabel(@Nullable String name);
+
+    @NotNull Label getLabel(@NotNull String name);
+
 
     @NotNull RapidCodeBlockBuilder error(@Nullable RapidElement element);
 
@@ -83,22 +86,22 @@ public interface RapidCodeBlockBuilder extends RapidCodeBuilder {
     @NotNull RapidCodeBlockBuilder retryInstruction(@Nullable RapidElement element);
 
     @NotNull
-    default RapidCodeBuilder assign(@NotNull ReferenceExpression variable,
+    default RapidCodeBlockBuilder assign(@NotNull ReferenceExpression variable,
                                     @NotNull Expression expression) {
         return assign(null, variable, expression);
     }
 
-    @NotNull RapidCodeBuilder assign(@Nullable RapidElement element,
+    @NotNull RapidCodeBlockBuilder assign(@Nullable RapidElement element,
                                      @NotNull ReferenceExpression variable,
                                      @NotNull Expression expression);
 
     @NotNull
-    default RapidCodeBuilder connect(@NotNull ReferenceExpression variable,
+    default RapidCodeBlockBuilder connect(@NotNull ReferenceExpression variable,
                                      @NotNull Expression expression) {
         return connect(null, variable, expression);
     }
 
-    @NotNull RapidCodeBuilder connect(@Nullable RapidElement element,
+    @NotNull RapidCodeBlockBuilder connect(@Nullable RapidElement element,
                                       @NotNull ReferenceExpression variable,
                                       @NotNull Expression expression);
 
@@ -133,4 +136,6 @@ public interface RapidCodeBlockBuilder extends RapidCodeBuilder {
     @NotNull RapidCodeBlockBuilder invoke(@Nullable RapidElement element,
                                           @NotNull Expression routine,
                                           @NotNull Consumer<RapidArgumentBuilder> arguments);
+
+
 }

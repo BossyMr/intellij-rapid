@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -27,6 +28,13 @@ public interface Expression {
     <R> R accept(@NotNull ControlFlowVisitor<R> visitor);
 
     @Nullable RapidExpression getElement();
+
+    default void iterate(@NotNull Consumer<Expression> consumer) {
+        replace(expression -> {
+            consumer.accept(expression);
+            return expression;
+        });
+    }
 
     default @NotNull Expression replace(@NotNull Function<Expression, Expression> mapper) {
         return accept(new ControlFlowVisitor<>() {
@@ -83,25 +91,6 @@ public interface Expression {
             return expression;
         });
         return expressions;
-    }
-
-    default @NotNull Collection<Expression> getChildren() {
-        return accept(new ControlFlowVisitor<>() {
-            @Override
-            public Collection<Expression> visitAggregateExpression(@NotNull AggregateExpression expression) {
-                return Set.copyOf(expression.getExpressions());
-            }
-
-            @Override
-            public Collection<Expression> visitBinaryExpression(@NotNull BinaryExpression expression) {
-                return Set.of(expression.getLeft(), expression.getRight());
-            }
-
-            @Override
-            public Collection<Expression> visitUnaryExpression(@NotNull UnaryExpression expression) {
-                return Set.of(expression.getExpression());
-            }
-        });
     }
 
 }

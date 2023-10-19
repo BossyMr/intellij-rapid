@@ -5,11 +5,11 @@ import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
-import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.ReturnInstruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.FieldType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,36 +26,55 @@ public class ControlFlowCodeBuilder implements RapidCodeBuilder {
         this.builder = builder;
     }
 
-    public @NotNull ReferenceExpression createVariable(@NotNull RapidType type) {
-        return createVariable(null, null, type);
-    }
-
-    public @NotNull ReferenceExpression createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
+    @Override
+    public @NotNull ReferenceExpression createVariable(@Nullable String name,
+                                                       @Nullable FieldType fieldType,
+                                                       @NotNull RapidType type) {
         Variable variable = block.createVariable(name, fieldType, type);
         return new VariableExpression(variable);
     }
 
     @Override
-    public @NotNull ReferenceExpression getVariable(@NotNull String name) {
+    public @NotNull ReferenceExpression getVariable(@Nullable RapidReferenceExpression expression, @NotNull String name) {
         Variable variable = block.findVariable(name);
         if (variable == null) {
-            throw new IllegalArgumentException();
+            return new VariableSnapshot(RapidPrimitiveType.ANYTYPE);
         }
-        return new VariableExpression(variable);
+        return new VariableExpression(expression, variable);
     }
 
     @Override
-    public @NotNull ReferenceExpression getArgument(@NotNull String name) {
+    public @NotNull ReferenceExpression getArgument(@Nullable RapidReferenceExpression expression, @NotNull String name) {
         Argument argument = block.findArgument(name);
         if (argument == null) {
-            throw new IllegalArgumentException();
+            throw new IllegalStateException();
         }
-        return new VariableExpression(argument);
+        return new VariableExpression(expression, argument);
     }
 
     @Override
-    public @NotNull ReferenceExpression getField(@NotNull String moduleName, @NotNull String name, @NotNull RapidType valueType) {
-        return new FieldExpression(valueType, moduleName, name);
+    public @NotNull ReferenceExpression getField(@Nullable RapidReferenceExpression expression, @NotNull String moduleName, @NotNull String name, @NotNull RapidType valueType) {
+        return new FieldExpression(expression, valueType, moduleName, name);
+    }
+
+    @Override
+    public @NotNull IndexExpression index(@Nullable RapidIndexExpression element, @NotNull ReferenceExpression variable, @NotNull Expression index) {
+        if (variable.getType().getDimensions() < 1) {
+            throw new IllegalArgumentException();
+        }
+        // TODO: 2023-10-16 Double should be assignable to num and so no
+        if (!(index.getType().isAssignable(RapidPrimitiveType.NUMBER))) {
+            throw new IllegalArgumentException();
+        }
+        return new IndexExpression(element, variable, index);
+    }
+
+    @Override
+    public @NotNull Expression component(@Nullable RapidReferenceExpression element, @NotNull RapidType type, @NotNull ReferenceExpression variable, @NotNull String name) {
+        if (variable.getType().getDimensions() < 1) {
+            throw new IllegalArgumentException();
+        }
+        return new ComponentExpression(element, type, variable, name);
     }
 
     @Override
@@ -85,6 +104,7 @@ public class ControlFlowCodeBuilder implements RapidCodeBuilder {
 
     @Override
     public void returnValue(@Nullable RapidReturnStatement statement, @Nullable Expression expression) {
-        builder.continueScope(new ReturnInstruction(statement, expression));
+        builder.continueScope(new ReturnInstruction(block, statement, expression));
+        builder.exitScope();
     }
 }

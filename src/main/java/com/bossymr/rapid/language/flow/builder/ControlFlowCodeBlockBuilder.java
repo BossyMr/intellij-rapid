@@ -1,6 +1,9 @@
 package com.bossymr.rapid.language.flow.builder;
 
-import com.bossymr.rapid.language.builder.*;
+import com.bossymr.rapid.language.builder.ArgumentDescriptor;
+import com.bossymr.rapid.language.builder.Label;
+import com.bossymr.rapid.language.builder.RapidArgumentBuilder;
+import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.Expression;
@@ -18,20 +21,40 @@ import java.util.function.Consumer;
 
 public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implements RapidCodeBlockBuilder {
 
+    private final @NotNull Map<String, ControlFlowLabel> labels = new HashMap<>();
+
     public ControlFlowCodeBlockBuilder(@NotNull Block block, @NotNull ControlFlowBlockBuilder builder) {
         super(block, builder);
     }
 
     @Override
-    public @NotNull Label label(@Nullable RapidElement element, @Nullable String name) {
-        LabelInstruction instruction = new LabelInstruction(element, null);
-        builder.continueScope(instruction);
+    public @NotNull Label createLabel(@Nullable String name) {
+        if (name != null && labels.containsKey(name)) {
+            ControlFlowLabel label = labels.get(name);
+            builder.getLabels().add(label);
+            return label;
+        }
+        ControlFlowLabel instruction = new ControlFlowLabel(name);
+        if (name != null) {
+            labels.put(name, instruction);
+        }
+        builder.getLabels().add(instruction);
+        return instruction;
+    }
+
+    @Override
+    public @NotNull Label getLabel(@NotNull String name) {
+        if (labels.containsKey(name)) {
+            return labels.get(name);
+        }
+        ControlFlowLabel instruction = new ControlFlowLabel(name);
+        labels.put(name, instruction);
         return instruction;
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder error(@Nullable RapidElement element) {
-        builder.continueScope(new ErrorInstruction(element));
+        builder.continueScope(new ErrorInstruction(block, element));
         return this;
     }
 
@@ -42,7 +65,7 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
 
     @Override
     public @NotNull RapidCodeBlockBuilder ifThenElse(@Nullable RapidElement element, @NotNull Expression expression, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer, @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer) {
-        ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(element, expression);
+        ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, element, expression);
         builder.continueScope(instruction);
         builder.exitScope();
 
@@ -53,9 +76,12 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
 
         ControlFlowBlockBuilder.Scope elseScope = builder.enterScope();
         elseScope.getPredecessors().add(instruction);
-        thenConsumer.accept(this);
+        elseConsumer.accept(this);
         elseScope = builder.exitScope();
 
+        if (thenScope == null || elseScope == null) {
+            return this;
+        }
         ControlFlowBlockBuilder.Scope nextScope = builder.enterScope();
         if(thenScope.getTail() != null) {
             nextScope.getPredecessors().add(thenScope.getTail());
@@ -67,52 +93,56 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
         } else {
             nextScope.getPredecessors().add(instruction);
         }
-
         return this;
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder goTo(@Nullable RapidElement element, @NotNull Label label) {
-        if(!(label instanceof LabelInstruction instruction)) {
+        if (!(label instanceof ControlFlowLabel instruction)) {
             throw new IllegalArgumentException();
         }
-        builder.continueScope(new UnconditionalBranchingInstruction(element, instruction));
+        builder.continueScope(new UnconditionalBranchingInstruction(block, element, instruction));
+        builder.exitScope();
         return this;
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder throwException(@Nullable RapidElement element, @Nullable Expression expression) {
-        builder.continueScope(new ThrowInstruction(element, expression));
+        builder.continueScope(new ThrowInstruction(block, element, expression));
+        builder.exitScope();
         return this;
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder tryNextInstruction(@Nullable RapidElement element) {
-        builder.continueScope(new TryNextInstruction(element));
+        builder.continueScope(new TryNextInstruction(block, element));
+        builder.exitScope();
         return this;
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder exit(@Nullable RapidElement element) {
-        builder.continueScope(new ExitInstruction(element));
+        builder.continueScope(new ExitInstruction(block, element));
+        builder.exitScope();
         return this;
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder retryInstruction(@Nullable RapidElement element) {
-        builder.continueScope(new RetryInstruction(element));
+        builder.continueScope(new RetryInstruction(block, element));
+        builder.exitScope();
         return this;
     }
 
     @Override
-    public @NotNull RapidCodeBuilder assign(@Nullable RapidElement element, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
-        builder.continueScope(new AssignmentInstruction(element, variable, expression));
+    public @NotNull RapidCodeBlockBuilder assign(@Nullable RapidElement element, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
+        builder.continueScope(new AssignmentInstruction(block, element, variable, expression));
         return this;
     }
 
     @Override
-    public @NotNull RapidCodeBuilder connect(@Nullable RapidElement element, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
-        builder.continueScope(new ConnectInstruction(element, variable, expression));
+    public @NotNull RapidCodeBlockBuilder connect(@Nullable RapidElement element, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
+        builder.continueScope(new ConnectInstruction(block, element, variable, expression));
         return this;
     }
 
@@ -138,7 +168,7 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
     private void call(@Nullable RapidElement element, @NotNull Expression routine, @Nullable ReferenceExpression returnVariable, @NotNull Map<ArgumentDescriptor, Expression> arguments) {
         Optional<ArgumentDescriptor.Conditional> optional = getConditionalArgument(arguments);
         if (optional.isEmpty()) {
-            builder.continueScope(new CallInstruction(element, routine, returnVariable, getArgumentVariables(arguments)));
+            builder.continueScope(new CallInstruction(block, element, routine, returnVariable, getArgumentVariables(arguments)));
             return;
         }
         ArgumentDescriptor.Conditional conditional = optional.orElseThrow();

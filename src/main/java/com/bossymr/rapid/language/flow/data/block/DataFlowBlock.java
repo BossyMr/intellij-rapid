@@ -1,13 +1,12 @@
 package com.bossymr.rapid.language.flow.data.block;
 
-import com.bossymr.rapid.language.flow.BasicBlock;
 import com.bossymr.rapid.language.flow.BooleanValue;
 import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
+import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
-import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,18 +19,18 @@ import java.util.*;
  */
 public class DataFlowBlock {
 
-    private final @NotNull BasicBlock basicBlock;
+    private final @NotNull Instruction instruction;
     private final @NotNull List<DataFlowState> states = new ArrayList<>();
 
     private final @NotNull Set<DataFlowEdge> successors = new HashSet<>();
     private final @NotNull Set<DataFlowEdge> predecessors = new HashSet<>();
 
-    public DataFlowBlock(@NotNull BasicBlock basicBlock) {
-        this.basicBlock = basicBlock;
+    public DataFlowBlock(@NotNull Instruction instruction) {
+        this.instruction = instruction;
     }
 
-    public @NotNull BasicBlock getBasicBlock() {
-        return basicBlock;
+    public @NotNull Instruction getInstruction() {
+        return instruction;
     }
 
     public @NotNull List<DataFlowState> getStates() {
@@ -64,7 +63,7 @@ public class DataFlowBlock {
         separate(new BinaryExpression(BinaryOperator.EQUAL_TO, variable, expression));
         for (DataFlowState state : states) {
             DataFlowState previousCycle = getPreviousCycle(state);
-            if(previousCycle != null) {
+            if (previousCycle != null) {
 
             }
             // TODO: Check whether this assignment is cyclic, and if so, handle it correctly by using a relevant path counter.
@@ -74,8 +73,8 @@ public class DataFlowBlock {
 
     private @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {
         DataFlowState predecessor = state;
-        while((predecessor = predecessor.getPredecessor()) != null) {
-            if(predecessor.equals(state)) {
+        while ((predecessor = predecessor.getPredecessor().orElse(null)) != null) {
+            if (predecessor.equals(state)) {
                 return predecessor;
             }
         }
@@ -168,15 +167,10 @@ public class DataFlowBlock {
         }
     }
 
-    public @NotNull Optionality getOptionality(@NotNull ReferenceExpression variable, @NotNull PsiElement element) {
+    public @NotNull Optionality getOptionality(@NotNull ReferenceExpression variable) {
         Optionality optionality = null;
         for (DataFlowState state : states) {
-            // Take the expression: x := x + y - where the optionality of x is UNKNOWN.
-            // If you attempt to find the regular snapshot of the expression 'x' from the right hand side of the
-            // assignment, it would return the latest snapshot for 'x' from the left hand side of the assignment.
-            // Because that 'x' was just assigned a value, it must be present. Therefore, the historic snapshot must be
-            // retrieved, where the PsiElement of the expression matches the element of the snapshot.
-            Optional<SnapshotExpression> snapshot = state.getHistoricSnapshot(variable, element);
+            Optional<SnapshotExpression> snapshot = state.getRoot(variable);
             ReferenceExpression expression = snapshot.isPresent() ? snapshot.orElseThrow() : variable;
             if (optionality == null) {
                 optionality = state.getOptionality(expression);
@@ -220,8 +214,8 @@ public class DataFlowBlock {
     @Override
     public String toString() {
         return "DataFlowBlock{" +
-                "index=" + basicBlock.getIndex() +
-                ", basicBlock=" + basicBlock +
+                "index=" + instruction.getIndex() +
+                ", basicBlock=" + instruction +
                 ", states=" + states +
                 '}';
     }
