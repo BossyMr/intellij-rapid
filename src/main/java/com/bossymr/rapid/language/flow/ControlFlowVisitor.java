@@ -51,10 +51,6 @@ public class ControlFlowVisitor<R> {
         return visitInstruction(instruction);
     }
 
-    public R visitUnconditionalBranchingInstruction(@NotNull UnconditionalBranchingInstruction instruction) {
-        return visitInstruction(instruction);
-    }
-
     public R visitRetryInstruction(@NotNull RetryInstruction instruction) {
         return visitInstruction(instruction);
     }

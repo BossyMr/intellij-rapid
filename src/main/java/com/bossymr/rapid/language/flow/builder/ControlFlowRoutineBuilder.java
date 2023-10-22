@@ -41,14 +41,18 @@ public class ControlFlowRoutineBuilder implements RapidRoutineBuilder {
     }
 
     @Override
-    public @NotNull RapidRoutineBuilder withCode(@NotNull StatementListType codeType, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
+    public @NotNull RapidRoutineBuilder withCode(@Nullable StatementListType codeType, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
         ControlFlowBlockBuilder blockBuilder = new ControlFlowBlockBuilder(block);
         ControlFlowCodeBlockBuilder builder = new ControlFlowCodeBlockBuilder(block, blockBuilder);
+        if(codeType != null) {
+            blockBuilder.addCommand(instruction -> {
+                if(block.getEntryInstruction(codeType) == null) {
+                    block.setEntryInstruction(codeType, instruction);
+                }
+            });
+        }
         blockBuilder.enterScope();
         consumer.accept(builder);
-        if (!(blockBuilder.getInstructions().isEmpty())) {
-            block.setEntryInstruction(codeType, blockBuilder.getInstructions().get(0));
-        }
         if(blockBuilder.isInScope()) {
             if(routine.getType() != null) {
                 throw new IllegalArgumentException();
@@ -63,11 +67,11 @@ public class ControlFlowRoutineBuilder implements RapidRoutineBuilder {
     public @NotNull RapidRoutineBuilder withCode(@Nullable List<Integer> exceptions, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
         ControlFlowBlockBuilder blockBuilder = new ControlFlowBlockBuilder(block);
         ControlFlowCodeBlockBuilder builder = new ControlFlowCodeBlockBuilder(block, blockBuilder);
+        blockBuilder.addCommand(instruction -> {
+            block.setErrorClause(exceptions, instruction);
+        });
         blockBuilder.enterScope();
         consumer.accept(builder);
-        if (!(blockBuilder.getInstructions().isEmpty())) {
-            block.setErrorClause(exceptions, blockBuilder.getInstructions().get(0));
-        }
         if(blockBuilder.isInScope()) {
             if(routine.getType() != null) {
                 throw new IllegalArgumentException();

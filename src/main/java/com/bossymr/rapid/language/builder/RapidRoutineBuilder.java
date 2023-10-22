@@ -15,7 +15,7 @@ public interface RapidRoutineBuilder {
         return withCode(StatementListType.STATEMENT_LIST, consumer);
     }
 
-    @NotNull RapidRoutineBuilder withCode(@NotNull StatementListType codeType,
+    @NotNull RapidRoutineBuilder withCode(@Nullable StatementListType codeType,
                                           @NotNull Consumer<RapidCodeBlockBuilder> consumer);
 
     @NotNull RapidRoutineBuilder withCode(@Nullable List<Integer> exceptions,

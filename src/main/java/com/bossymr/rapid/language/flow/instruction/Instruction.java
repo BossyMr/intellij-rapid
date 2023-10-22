@@ -8,9 +8,7 @@ import com.intellij.psi.SmartPsiElementPointer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * An {@code Instruction} represents a statement.
@@ -62,17 +60,4 @@ public abstract class Instruction {
     }
 
     public abstract <R> R accept(@NotNull ControlFlowVisitor<R> visitor);
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Instruction that = (Instruction) o;
-        return Objects.equals(successors, that.successors) && Objects.equals(predecessors, that.predecessors) && Objects.equals(pointer, that.pointer);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(pointer);
-    }
 }

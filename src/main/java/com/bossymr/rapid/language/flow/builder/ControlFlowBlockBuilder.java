@@ -6,16 +6,13 @@ import com.bossymr.rapid.language.flow.instruction.Instruction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class ControlFlowBlockBuilder {
 
-    private final @NotNull List<Instruction> instructions = new ArrayList<>();
-
-    private final @NotNull List<ControlFlowLabel> labels = new ArrayList<>();
+    private final @NotNull Deque<Predicate<Instruction>> commands = new ArrayDeque<>();
 
     private final @NotNull Block block;
     private Scope currentScope;
@@ -24,20 +21,23 @@ public class ControlFlowBlockBuilder {
         this.block = block;
     }
 
-    public @NotNull List<ControlFlowLabel> getLabels() {
-        return labels;
+    public void addCommand(@NotNull Predicate<Instruction> command) {
+        commands.addFirst(command);
+    }
+
+    public void addCommand(@NotNull Consumer<Instruction> command) {
+        addCommand(instruction -> {
+            command.accept(instruction);
+            return true;
+        });
     }
 
     public boolean isInScope() {
         return currentScope != null;
     }
 
-    public @NotNull List<Instruction> getInstructions() {
-        return instructions;
-    }
-
     public @NotNull Scope enterScope() {
-        if(currentScope != null) {
+        if (currentScope != null) {
             throw new IllegalStateException();
         }
         Scope scope = new Scope();
@@ -46,38 +46,76 @@ public class ControlFlowBlockBuilder {
     }
 
     public @Nullable Scope exitScope() {
-        if(currentScope == null) {
+        if (currentScope == null) {
             return null;
         }
+        commands.clear();
         Scope scope = currentScope;
         currentScope = null;
         return scope;
     }
 
-    public void continueScope(@NotNull Instruction instruction) {
-        if(currentScope == null) {
+    public void goTo(@NotNull ControlFlowLabel instruction) {
+        Instruction label = instruction.getInstruction();
+        Set<Instruction> predecessors = Set.copyOf(currentScope.getPredecessors());
+        if (label == null) {
+            List<Predicate<Instruction>> copy = List.copyOf(commands);
+            Scope scope = currentScope;
+            exitScope();
+            addCommand(next -> {
+                Instruction newLabel = instruction.getInstruction();
+                if (newLabel != null) {
+                    if (scope.getTail() != null) {
+                        scope.getTail().getSuccessors().add(newLabel);
+                        newLabel.getPredecessors().add(scope.getTail());
+                    } else {
+                        for (Instruction predecessor : scope.getPredecessors()) {
+                            predecessor.getSuccessors().add(newLabel);
+                            newLabel.getPredecessors().add(predecessor);
+                        }
+                    }
+                    copy.forEach(command -> command.test(newLabel));
+                    return true;
+                }
+                return false;
+            });
             return;
         }
-        Scope scope = currentScope;
-        Instruction tail = scope.getTail();
+        Instruction tail = currentScope.getTail();
+        if (tail != null) {
+            tail.getSuccessors().add(label);
+            label.getPredecessors().add(tail);
+        } else {
+            for (Instruction predecessor : predecessors) {
+                predecessor.getSuccessors().add(label);
+                label.getPredecessors().add(predecessor);
+            }
+        }
+        commands.removeIf(command -> command.test(label));
+        exitScope();
+    }
+
+
+    public void continueScope(@NotNull Instruction instruction) {
+        if (currentScope == null) {
+            return;
+        }
+        Instruction tail = currentScope.getTail();
         if (tail != null) {
             tail.getSuccessors().add(instruction);
             instruction.getPredecessors().add(tail);
         }
         if (tail == null) {
-            scope.setHead(instruction);
-            for (Instruction predecessor : scope.getPredecessors()) {
+            currentScope.setHead(instruction);
+            for (Instruction predecessor : currentScope.getPredecessors()) {
                 predecessor.getSuccessors().add(instruction);
                 instruction.getPredecessors().add(predecessor);
             }
         }
-        scope.setTail(instruction);
-        instructions.add(instruction);
-        for (ControlFlowLabel label : labels) {
-            label.setInstruction(instruction);
-        }
-        labels.clear();
+        currentScope.setTail(instruction);
         block.getInstructions().add(instruction);
+        commands.removeIf(command -> command.test(instruction));
+        commands.clear();
     }
 
     public static class Scope {

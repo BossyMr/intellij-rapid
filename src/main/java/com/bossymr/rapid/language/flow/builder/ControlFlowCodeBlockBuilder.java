@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -29,17 +30,20 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
 
     @Override
     public @NotNull Label createLabel(@Nullable String name) {
+        if(!(builder.isInScope())) {
+            builder.enterScope();
+        }
         if (name != null && labels.containsKey(name)) {
             ControlFlowLabel label = labels.get(name);
-            builder.getLabels().add(label);
+            builder.addCommand(label::setInstruction);
             return label;
         }
-        ControlFlowLabel instruction = new ControlFlowLabel(name);
+        ControlFlowLabel label = new ControlFlowLabel(name);
         if (name != null) {
-            labels.put(name, instruction);
+            labels.put(name, label);
         }
-        builder.getLabels().add(instruction);
-        return instruction;
+        builder.addCommand(label::setInstruction);
+        return label;
     }
 
     @Override
@@ -79,19 +83,50 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
         elseConsumer.accept(this);
         elseScope = builder.exitScope();
 
-        if (thenScope == null || elseScope == null) {
+        if (thenScope == null && elseScope == null) {
+            // Both paths will not fall-through.
             return this;
         }
+
         ControlFlowBlockBuilder.Scope nextScope = builder.enterScope();
-        if(thenScope.getTail() != null) {
-            nextScope.getPredecessors().add(thenScope.getTail());
-        } else {
-            nextScope.getPredecessors().add(instruction);
+
+        List<Instruction> successors = instruction.getSuccessors();
+        if (thenScope != null) {
+            if (thenScope.getTail() != null) {
+                // This scope is not empty, the next scope should continue from the last instruction in that scope.
+                nextScope.getPredecessors().add(thenScope.getTail());
+            } else {
+                // This scope is empty. As a result, no successor is added to the if-statement. The if-statement should
+                // have the first instruction in nextScope as a successor.
+                nextScope.getPredecessors().add(instruction);
+                if(successors.isEmpty()) {
+                    successors.add(null);
+                } else {
+                    successors.add(null);
+                    successors.set(1, successors.get(0));
+                    successors.set(0, null);
+                }
+                builder.addCommand(next -> {
+                    successors.remove(successors.size() - 1);
+                    successors.set(0, next);
+                });
+            }
         }
-        if(elseScope.getTail() != null) {
-            nextScope.getPredecessors().add(elseScope.getTail());
-        } else {
-            nextScope.getPredecessors().add(instruction);
+        if (elseScope != null) {
+            if (elseScope.getTail() != null) {
+                // This scope is not empty.
+                nextScope.getPredecessors().add(elseScope.getTail());
+            } else {
+                // This scope is empty.
+                if(successors.size() == 1) {
+                    successors.add(null);
+                }
+                nextScope.getPredecessors().add(instruction);
+                builder.addCommand(next -> {
+                    successors.remove(successors.size() - 1);
+                    successors.set(1, next);
+                });
+            }
         }
         return this;
     }
@@ -101,8 +136,7 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
         if (!(label instanceof ControlFlowLabel instruction)) {
             throw new IllegalArgumentException();
         }
-        builder.continueScope(new UnconditionalBranchingInstruction(block, element, instruction));
-        builder.exitScope();
+        builder.goTo(instruction);
         return this;
     }
 
@@ -178,17 +212,17 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
                 builder -> {
                     Expression expression = arguments.get(conditional);
                     if (expression == null) {
-                        error(null);
+                        builder.error(null);
                         return;
                     }
                     Map<ArgumentDescriptor, Expression> copy = new HashMap<>(arguments);
                     copy.remove(conditional);
                     copy.put(new ArgumentDescriptor.Optional(conditional.name()), expression);
-                    call(element, routine, returnVariable, copy);
+                    ((ControlFlowCodeBlockBuilder) builder).call(element, routine, returnVariable, copy);
                 }, builder -> {
                     Map<ArgumentDescriptor, Expression> copy = new HashMap<>(arguments);
                     copy.remove(conditional);
-                    call(element, routine, returnVariable, copy);
+                    ((ControlFlowCodeBlockBuilder) builder).call(element, routine, returnVariable, copy);
                 });
     }
 

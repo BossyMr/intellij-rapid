@@ -97,12 +97,6 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     }
 
     @Override
-    public Void visitUnconditionalBranchingInstruction(@NotNull UnconditionalBranchingInstruction instruction) {
-        block.addSuccessor(blocks.get(instruction.getSuccessor()));
-        return null;
-    }
-
-    @Override
     public Void visitReturnInstruction(@NotNull ReturnInstruction instruction) {
         for (DataFlowState state : block.getStates()) {
             DataFlowState successor = state.createCompactSuccessor();

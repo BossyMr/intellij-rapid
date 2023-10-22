@@ -110,7 +110,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
             stringBuilder.append(": ");
             stringBuilder.append(instruction.accept(this));
             if (instruction.getSuccessors().size() != 1 || instruction.getSuccessors().get(0).getIndex() != instruction.getIndex() + 1) {
-                if (!(instruction.getSuccessors().isEmpty()) && !(instruction instanceof UnconditionalBranchingInstruction || instruction instanceof ConditionalBranchingInstruction)) {
+                if (!(instruction.getSuccessors().isEmpty()) && !(instruction instanceof ConditionalBranchingInstruction)) {
                     stringBuilder.append("\n\t");
                     stringBuilder.append(" ".repeat(String.valueOf(instruction.getIndex()).length() + 2));
                     stringBuilder.append("goto -> ");
@@ -179,11 +179,6 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     @Override
     public @NotNull String visitConditionalBranchingInstruction(@NotNull ConditionalBranchingInstruction instruction) {
         return "if(" + instruction.getCondition().accept(this) + ") -> [true: " + instruction.getTrue().getIndex() + ", false: " + instruction.getFalse().getIndex() + "]";
-    }
-
-    @Override
-    public @NotNull String visitUnconditionalBranchingInstruction(@NotNull UnconditionalBranchingInstruction instruction) {
-        return "goto -> " + instruction.getSuccessor().getIndex() + ";";
     }
 
     @Override

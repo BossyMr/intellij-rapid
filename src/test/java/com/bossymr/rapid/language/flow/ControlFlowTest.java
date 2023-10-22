@@ -97,23 +97,14 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 func num foo:bar() {
                 	var num _0 [value];
                                 
-                	entry 0 {
-                		_0 := 2.0 * 3.0;
-                		goto -> 1;
-                	}
+                	STATEMENT_LIST:
+                	0: _0 := 2.0 * 3.0;
+                	1: if(_0 > 0.0) -> [true: 2, false: 3]
                                 
-                	block 1 {
-                		if(_0 > 0.0) -> [true: 2, false: 3]
-                	}
+                	2: _0 := _0 - 1.0;
+                	   goto -> [1];
                                 
-                	block 2 {
-                		_0 := _0 - 1.0;
-                		goto -> 1;
-                	}
-                                
-                	block 3 {
-                		return _0;
-                	}
+                	3: return _0;
                 }
                 """);
     }
@@ -180,34 +171,31 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
-                	num _1 [i];
+                	var num _1 [i];
                 	num _2;
+                	bool _3;
                                 
-                	entry 0 {
-                		_0 := 0.0;
-                		_1 := 0.0;
-                		if(_1 < 10.0) -> [true: 1, false: 2]
-                	}
+                	STATEMENT_LIST:
+                	0: _0 := 0.0;
+                	1: _1 := 0.0;
+                	2: if(_1 < 10.0) -> [true: 3, false: 4]
                                 
-                	block 1 {
-                		_2 := 1;
-                		goto -> 3;
-                	}
+                	3: _2 := 1;
+                	   goto -> [5];
                                 
-                	block 2 {
-                		_2 := -1;
-                		goto -> 3;
-                	}
+                	4: _2 := -1;
+                	5: if(_2 < 0) -> [true: 6, false: 7]
                                 
-                	block 3 {
-                		_0 := _0 + 1.0;
-                		_1 := _1 + _2;
-                		if(_1 = 10.0) -> [true: 4, false: 3]
-                	}
+                	6: _3 := _1 > 10.0;
+                	   goto -> [8];
                                 
-                	block 4 {
-                		return _0;
-                	}
+                	7: _3 := _1 < 10.0;
+                	8: if(_3) -> [true: 9, false: 10]
+                                
+                	9: _0 := _0 + 1.0;
+                	   goto -> [5];
+                                
+                	10: return _0;
                 }
                 """);
     }
@@ -226,23 +214,24 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
-                	num _1 [i];
+                	var num _1 [i];
+                	bool _2;
                                 
-                	entry 0 {
-                		_0 := 0.0;
-                		_1 := 0.0;
-                		goto -> 1;
-                	}
+                	STATEMENT_LIST:
+                	0: _0 := 0.0;
+                	1: _1 := 0.0;
+                	2: if(5.0 < 0) -> [true: 3, false: 4]
                                 
-                	block 1 {
-                		_0 := _0 + 1.0;
-                		_1 := _1 + 5.0;
-                		if(_1 = 10.0) -> [true: 2, false: 1]
-                	}
+                	3: _2 := _1 > 10.0;
+                	   goto -> [5];
                                 
-                	block 2 {
-                		return _0;
-                	}
+                	4: _2 := _1 < 10.0;
+                	5: if(_2) -> [true: 6, false: 7]
+                                
+                	6: _0 := _0 + 1.0;
+                	   goto -> [2];
+                                
+                	7: return _0;
                 }
                 """);
     }
@@ -269,60 +258,22 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
-                	bool _1;
-                	bool _2;
-                	bool _3;
-                	bool _4;
-                	bool _5;
-                	bool _6;
-                	bool _7;
-                	bool _8;
-                	bool _9;
                                 
-                	entry 0 {
-                	    _0 := 0.0;
-                		_1 := _0 = 0.0;
-                		if(_1) -> [true: 1, false: 2]
-                	}
+                	STATEMENT_LIST:
+                	0: _0 := 0.0;
+                	1: if(_0 = 0.0) -> [true: 2, false: 3]
                                 
-                	block 1 {
-                		return 0.0;
-                	}
+                	2: return 0.0;
                                 
-                	block 2 {
-                		_2 := _0 = 1.0;
-                		_3 := _0 = 3.0;
-                		_4 := _2 OR _3;
-                		_2 := _4;
-                		if(_2) -> [true: 3, false: 4]
-                	}
+                	3: if(_0 = 1.0 OR _0 = 3.0) -> [true: 4, false: 5]
                                 
-                	block 3 {
-                		return 1.0;
-                	}
+                	4: return 1.0;
                                 
-                	block 4 {
-                		_5 := _0 = 4.0;
-                		_6 := _0 = 5.0;
-                		_7 := _5 OR _6;
-                		_5 := _7;
-                		_8 := _0 = 6.0;
-                		_9 := _5 OR _8;
-                		_5 := _9;
-                		if(_5) -> [true: 5, false: 6]
-                	}
+                	5: if(_0 = 4.0 OR _0 = 5.0 OR _0 = 6.0) -> [true: 6, false: 7]
                                 
-                	block 5 {
-                		return 3.0;
-                	}
+                	6: return 3.0;
                                 
-                	block 6 {
-                		goto -> 7;
-                	}
-                                
-                	block 7 {
-                		return -1.0;
-                	}
+                	7: return -1.0;
                 }
                 """);
     }
@@ -377,31 +328,20 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 proc foo:bar(\\input num _0 [a]) {
                 	bool _1;
                                 
-                	entry 0 {
-                		_1 := :Present(_0 := _0) -> 1;
-                	}
+                	STATEMENT_LIST:
+                	0: _1 := :Present(_0 := _0);
+                	1: if(_1) -> [true: 2, false: 3]
                                 
-                	block 1 {
-                		if(_1) -> [true: 2, false: 3]
-                	}
+                	2: conditional(_a := _0);
+                	   goto -> [4];
                                 
-                	block 2 {
-                		foo:conditional(_a := _0) -> 4;
-                	}
-                                
-                	block 3 {
-                		foo:conditional() -> 4;
-                	}
-                                
-                	block 4 {
-                		return;
-                	}
+                	3: conditional();
+                	4: return;
                 }
                                 
                 proc foo:conditional(\\input num _0 [a]) {
-                	entry 0 {
-                		return;
-                	}
+                	STATEMENT_LIST:
+                	0: return;
                 }
                 """);
     }

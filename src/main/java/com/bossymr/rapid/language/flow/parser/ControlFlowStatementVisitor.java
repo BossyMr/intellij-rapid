@@ -6,10 +6,7 @@ import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.symbol.FieldType;
-import com.bossymr.rapid.language.symbol.RapidLabelStatement;
-import com.bossymr.rapid.language.symbol.RapidSymbol;
-import com.bossymr.rapid.language.symbol.RoutineType;
+import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -67,12 +64,22 @@ class ControlFlowStatementVisitor extends RapidElementVisitor {
 
     @Override
     public void visitProcedureCallStatement(@NotNull RapidProcedureCallStatement statement) {
-        Expression expression = ControlFlowExpressionVisitor.getExpression(statement.getReferenceExpression(), builder);
+        Expression expression;
+        if(statement.getReferenceExpression() instanceof RapidReferenceExpression referenceExpression) {
+            RapidSymbol symbol = referenceExpression.getSymbol();
+            if(!(symbol instanceof RapidRoutine target) || target.getName() == null) {
+                expression = builder.error(referenceExpression, RapidPrimitiveType.STRING);
+            } else {
+                expression = builder.literal(target.getName());
+            }
+        } else {
+            expression = ControlFlowExpressionVisitor.getExpression(statement.getReferenceExpression(), builder);
+        }
         if (!(expression.getType().isAssignable(RapidPrimitiveType.STRING))) {
             builder.error(statement);
             return;
         }
-        builder.invoke(expression, ControlFlowExpressionVisitor.getArgumentBuilder(builder, statement.getArgumentList()));
+        builder.invoke(statement, expression, ControlFlowExpressionVisitor.getArgumentBuilder(builder, statement.getArgumentList()));
     }
 
     @Override
@@ -190,8 +197,8 @@ class ControlFlowStatementVisitor extends RapidElementVisitor {
         Label label = builder.createLabel();
         ReferenceExpression breakVariable = builder.createVariable(RapidPrimitiveType.BOOLEAN);
         builder.ifThenElse(builder.binary(BinaryOperator.LESS_THAN, stepExpression, builder.literal(0)),
-                codeBuilder -> codeBuilder.assign(breakVariable, codeBuilder.binary(BinaryOperator.LESS_THAN_OR_EQUAL, index, toExpression)),
-                codeBuilder -> codeBuilder.assign(breakVariable, codeBuilder.binary(BinaryOperator.GREATER_THAN_OR_EQUAL, index, toExpression)));
+                codeBuilder -> codeBuilder.assign(breakVariable, codeBuilder.binary(BinaryOperator.GREATER_THAN, index, toExpression)),
+                codeBuilder -> codeBuilder.assign(breakVariable, codeBuilder.binary(BinaryOperator.LESS_THAN, index, toExpression)));
         builder.ifThen(breakVariable,
                 codeBuilder -> {
                     if (statement.getStatementList() != null) {

@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.builder;
 
+import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.builder.RapidBuilder;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
@@ -92,7 +93,7 @@ class ControlFlowBuilderTest {
     void ifThenElseNoFallThrough() {
         check(builder -> {
             builder.withModule("foo", moduleBuilder -> {
-                moduleBuilder.withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> {
+                moduleBuilder.withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> {
                     routineBuilder.withCode(codeBuilder -> {
                         ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
                         codeBuilder.assign(x, codeBuilder.literal(0));
@@ -105,7 +106,7 @@ class ControlFlowBuilderTest {
                 });
             });
         }, """
-                proc foo:bar() {
+                func num foo:bar() {
                 	num _0;
                 	bool _1;
                                 
@@ -117,6 +118,96 @@ class ControlFlowBuilderTest {
                 	3: return -_0;
                                 
                 	4: return _0;
+                }
+                """);
+    }
+
+    @Test
+    void goToUnknownLabel() {
+        check(builder -> {
+            builder.withModule("foo", moduleBuilder -> {
+                moduleBuilder.withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> {
+                    routineBuilder.withCode(codeBuilder -> {
+                        codeBuilder.goTo(codeBuilder.getLabel("label"));
+                        codeBuilder.assign(codeBuilder.createVariable(RapidPrimitiveType.NUMBER), codeBuilder.literal(0));
+                        codeBuilder.createLabel("label");
+                        codeBuilder.exit();
+                    });
+                });
+            });
+        }, """
+                proc foo:bar() {
+                    num _0;
+                
+                	STATEMENT_LIST:
+                	0: exit;
+                }
+                """);
+    }
+
+    @Test
+    void ifThenElseEmptyBlock() {
+        check(builder -> {
+            builder.withModule("foo", moduleBuilder -> {
+                moduleBuilder.withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> {
+                    routineBuilder.withCode(codeBuilder -> {
+                        ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
+                        codeBuilder.assign(x, codeBuilder.literal(0));
+                        ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
+                        codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
+                        codeBuilder.ifThenElse(y,
+                                ifThenBuilder -> {},
+                                ifThenBuilder -> ifThenBuilder.returnValue(x));
+                        codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
+                    });
+                });
+            });
+        }, """
+                func num foo:bar() {
+                	num _0;
+                	bool _1;
+                                
+                	STATEMENT_LIST:
+                	0: _0 := 0;
+                	1: _1 := _0 < 0;
+                	2: if(_1) -> [true: 4, false: 3]
+                                                                
+                	3: return _0;
+                	
+                	4: return -_0;
+                }
+                """);
+    }
+
+    @Test
+    void ifThenElseGotoBlock() {
+        check(builder -> {
+            builder.withModule("foo", moduleBuilder -> {
+                moduleBuilder.withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> {
+                    routineBuilder.withCode(codeBuilder -> {
+                        ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
+                        Label label = codeBuilder.createLabel();
+                        codeBuilder.assign(x, codeBuilder.literal(0));
+                        ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
+                        codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
+                        codeBuilder.ifThenElse(y,
+                                ifThenBuilder -> ifThenBuilder.goTo(label),
+                                ifThenBuilder -> ifThenBuilder.returnValue(x));
+                        codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
+                    });
+                });
+            });
+        }, """
+                func num foo:bar() {
+                	num _0;
+                	bool _1;
+                                
+                	STATEMENT_LIST:
+                	0: _0 := 0;
+                	1: _1 := _0 < 0;
+                	2: if(_1) -> [true: 0, false: 3]
+                                                                
+                	3: return _0;
                 }
                 """);
     }
