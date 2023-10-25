@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.symbol;
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.type.RapidAliasType;
 import com.bossymr.rapid.language.type.RapidAtomicType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.navigation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
@@ -19,7 +20,13 @@ public interface RapidAtomic extends RapidStructure {
 
     @Override
     default @NotNull RapidType createType() {
-        return new RapidAtomicType(this);
+        return switch (getName()) {
+            case "num" -> RapidPrimitiveType.NUMBER;
+            case "dnum" -> RapidPrimitiveType.DOUBLE;
+            case "bool" -> RapidPrimitiveType.BOOLEAN;
+            case "string" -> RapidPrimitiveType.STRING;
+            default -> new RapidAtomicType(this);
+        };
     }
 
     /**

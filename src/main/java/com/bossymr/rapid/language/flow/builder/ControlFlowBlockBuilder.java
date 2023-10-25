@@ -6,22 +6,22 @@ import com.bossymr.rapid.language.flow.instruction.Instruction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 public class ControlFlowBlockBuilder {
 
-    private final @NotNull Deque<Predicate<Instruction>> commands = new ArrayDeque<>();
-
+    private final @NotNull Deque<Command> commands = new ArrayDeque<>();
     private final @NotNull Block block;
-    private Scope currentScope;
+
+    private @Nullable Scope currentScope;
 
     public ControlFlowBlockBuilder(@NotNull Block block) {
         this.block = block;
     }
 
-    public void addCommand(@NotNull Predicate<Instruction> command) {
+    public void addCommand(@NotNull Command command) {
         commands.addFirst(command);
     }
 
@@ -32,116 +32,83 @@ public class ControlFlowBlockBuilder {
         });
     }
 
-    public boolean isInScope() {
-        return currentScope != null;
-    }
-
-    public @NotNull Scope enterScope() {
-        if (currentScope != null) {
-            throw new IllegalStateException();
-        }
-        Scope scope = new Scope();
-        currentScope = scope;
-        return scope;
-    }
-
     public @Nullable Scope exitScope() {
-        if (currentScope == null) {
-            return null;
-        }
-        commands.clear();
         Scope scope = currentScope;
         currentScope = null;
         return scope;
     }
 
+    public void enterScope() {
+        currentScope = new Scope(new ArrayDeque<>());
+    }
+
+    public void enterScope(@NotNull Scope scope) {
+        if(this.currentScope != null) {
+            currentScope = currentScope.merge(scope);
+        } else {
+            currentScope = scope;
+        }
+    }
+
+    public boolean isInScope() {
+        return currentScope != null;
+    }
+
     public void goTo(@NotNull ControlFlowLabel instruction) {
         Instruction label = instruction.getInstruction();
-        Set<Instruction> predecessors = Set.copyOf(currentScope.getPredecessors());
         if (label == null) {
-            List<Predicate<Instruction>> copy = List.copyOf(commands);
-            Scope scope = currentScope;
-            exitScope();
-            addCommand(next -> {
-                Instruction newLabel = instruction.getInstruction();
-                if (newLabel != null) {
-                    if (scope.getTail() != null) {
-                        scope.getTail().getSuccessors().add(newLabel);
-                        newLabel.getPredecessors().add(scope.getTail());
-                    } else {
-                        for (Instruction predecessor : scope.getPredecessors()) {
-                            predecessor.getSuccessors().add(newLabel);
-                            newLabel.getPredecessors().add(predecessor);
-                        }
-                    }
-                    copy.forEach(command -> command.test(newLabel));
-                    return true;
+            Scope copy = currentScope != null ? currentScope.copy() : new Scope(new ArrayDeque<>());
+            addCommand(nextInstruction -> {
+                Instruction currentLabel = instruction.getInstruction();
+                if (currentLabel == null) {
+                    return false;
                 }
-                return false;
+                copy.commands().removeIf(command -> command.process(currentLabel));
+                return true;
             });
-            return;
-        }
-        Instruction tail = currentScope.getTail();
-        if (tail != null) {
-            tail.getSuccessors().add(label);
-            label.getPredecessors().add(tail);
         } else {
-            for (Instruction predecessor : predecessors) {
-                predecessor.getSuccessors().add(label);
-                label.getPredecessors().add(predecessor);
+            commands.removeIf(command -> command.process(label));
+            if (currentScope != null) {
+                currentScope.commands().removeIf(command -> command.process(label));
             }
         }
-        commands.removeIf(command -> command.test(label));
         exitScope();
     }
 
 
     public void continueScope(@NotNull Instruction instruction) {
-        if (currentScope == null) {
+        if(currentScope == null) {
             return;
         }
-        Instruction tail = currentScope.getTail();
-        if (tail != null) {
-            tail.getSuccessors().add(instruction);
-            instruction.getPredecessors().add(tail);
-        }
-        if (tail == null) {
-            currentScope.setHead(instruction);
-            for (Instruction predecessor : currentScope.getPredecessors()) {
-                predecessor.getSuccessors().add(instruction);
-                instruction.getPredecessors().add(predecessor);
-            }
-        }
-        currentScope.setTail(instruction);
         block.getInstructions().add(instruction);
-        commands.removeIf(command -> command.test(instruction));
-        commands.clear();
+        commands.removeIf(command -> command.process(instruction));
+        if (currentScope != null) {
+            currentScope.commands().removeIf(command -> command.process(instruction));
+        } else {
+            currentScope = new Scope(new ArrayDeque<>());
+        }
+        currentScope.commands().addFirst(nextInstruction -> {
+            nextInstruction.getPredecessors().add(instruction);
+            instruction.getSuccessors().add(nextInstruction);
+            return true;
+        });
     }
 
-    public static class Scope {
+    public record Scope(@NotNull Deque<Command> commands) {
 
-        private final @NotNull Set<Instruction> predecessors = new HashSet<>();
-
-        private @Nullable Instruction head, tail;
-
-        public @NotNull Set<Instruction> getPredecessors() {
-            return predecessors;
+        public @NotNull Scope merge(@NotNull Scope scope) {
+            Scope copy = copy();
+            copy.commands().addAll(scope.commands());
+            return copy;
         }
 
-        public @Nullable Instruction getHead() {
-            return head;
+        public @NotNull Scope copy() {
+            return new Scope(new ArrayDeque<>(commands));
         }
+    }
 
-        public void setHead(@Nullable Instruction head) {
-            this.head = head;
-        }
-
-        public @Nullable Instruction getTail() {
-            return tail;
-        }
-
-        public void setTail(@Nullable Instruction tail) {
-            this.tail = tail;
-        }
+    @FunctionalInterface
+    public interface Command {
+        boolean process(@NotNull Instruction instruction);
     }
 }

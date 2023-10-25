@@ -25,7 +25,7 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
 
     private void check(@NotNull String text) throws IOException, ExecutionException {
         myFixture.configureByText(RapidFileType.getInstance(), text);
-        File outputDirectory = new File(System.getProperty("user.home") + "\\Documents\\graph\\");
+        File outputDirectory = Path.of(System.getProperty("user.home"), "graph", getTestName(false)).toFile();
         if (outputDirectory.exists()) {
             FileUtil.delete(outputDirectory);
         }
@@ -58,9 +58,14 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
     public void testModule() throws IOException, ExecutionException {
         check("""
                 MODULE foo
-                    PROC bar(num x)
-                        VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];
-                        IF (variable{1, 3} * variable{2, 2}) = 8 THEN
+                    PROC bar(\\num x)
+                        VAR num y := 5;
+                        VAR num z := 0;
+                        IF Present(x) THEN
+                            y := y + x;
+                        ELSE
+                            y := y - x;
+                            z := x;
                         ENDIF
                     ENDPROC
                 ENDMODULE

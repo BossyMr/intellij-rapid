@@ -8,8 +8,26 @@ import org.jetbrains.annotations.NotNull;
 
 public enum RapidPrimitiveType implements RapidType {
 
-    NUMBER(new VirtualAtomic("num")),
-    DOUBLE(new VirtualAtomic("dnum")),
+    NUMBER(new VirtualAtomic("num")) {
+        @Override
+        public boolean isAssignable(@NotNull RapidType type) {
+            if(type.equals(RapidPrimitiveType.DOUBLE)) {
+                return true;
+            }
+            return super.isAssignable(type);
+        }
+    },
+
+    DOUBLE(new VirtualAtomic("dnum")) {
+        @Override
+        public boolean isAssignable(@NotNull RapidType type) {
+            if(type.equals(RapidPrimitiveType.NUMBER)) {
+                return true;
+            }
+            return super.isAssignable(type);
+        }
+    },
+
     BOOLEAN(new VirtualAtomic("bool")),
     STRING(new VirtualAtomic("string")),
 

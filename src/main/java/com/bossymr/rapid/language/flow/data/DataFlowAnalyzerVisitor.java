@@ -35,6 +35,17 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     @Override
     public Void visitAssignmentInstruction(@NotNull AssignmentInstruction instruction) {
         block.assign(instruction.getVariable(), instruction.getExpression());
+        for (Instruction successor : instruction.getSuccessors()) {
+            block.addSuccessor(blocks.get(successor));
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitConnectInstruction(@NotNull ConnectInstruction instruction) {
+        for (Instruction successor : instruction.getSuccessors()) {
+            block.addSuccessor(blocks.get(successor));
+        }
         return null;
     }
 
@@ -46,20 +57,19 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
         return null;
     }
 
-    private void visitBranch(@NotNull Instruction successor, @NotNull Expression condition) {
+    private void visitBranch(@Nullable Instruction successor, @NotNull Expression condition) {
+        if (successor == null) {
+            return;
+        }
         DataFlowBlock successorBlock = blocks.get(successor);
         List<DataFlowState> states = block.getStates();
-        List<DataFlowState> successors = new ArrayList<>(states.size());
         for (DataFlowState state : states) {
             DataFlowState copy = DataFlowState.createSuccessorState(successorBlock, state);
             copy.add(condition);
             if (!(copy.isSatisfiable())) {
                 continue;
             }
-            // TODO: 2023-10-17 Rework
-        }
-        for (DataFlowState state : successors) {
-            block.addSuccessor(successorBlock, state);
+           block.addSuccessor(successorBlock, copy);
         }
     }
 
@@ -150,7 +160,6 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     public Void visitCallInstruction(@NotNull CallInstruction instruction) {
         Expression expression = instruction.getRoutineName();
         DataFlowBlock successor = blocks.get(instruction.getSuccessor());
-        String moduleName = instruction.getBlock().getModuleName();
         for (DataFlowState state : block.getStates()) {
             if (!(expression instanceof ConstantExpression solution)) {
                 visitAnyCallInstruction(instruction, state);

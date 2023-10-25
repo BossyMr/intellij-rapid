@@ -14,10 +14,7 @@ import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implements RapidCodeBlockBuilder {
@@ -30,7 +27,7 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
 
     @Override
     public @NotNull Label createLabel(@Nullable String name) {
-        if(!(builder.isInScope())) {
+        if (!(builder.isInScope())) {
             builder.enterScope();
         }
         if (name != null && labels.containsKey(name)) {
@@ -64,70 +61,51 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
 
     @Override
     public @NotNull RapidCodeBlockBuilder ifThen(@Nullable RapidElement element, @NotNull Expression expression, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer) {
-        return ifThenElse(element, expression, thenConsumer, builder -> {});
+        return ifThenElse(element, expression, thenConsumer, builder -> {
+        });
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder ifThenElse(@Nullable RapidElement element, @NotNull Expression expression, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer, @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer) {
         ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, element, expression);
         builder.continueScope(instruction);
-        builder.exitScope();
+        ControlFlowBlockBuilder.Scope scope = Objects.requireNonNull(builder.exitScope());
 
-        ControlFlowBlockBuilder.Scope thenScope = builder.enterScope();
-        thenScope.getPredecessors().add(instruction);
+        // Visit the "then" branch
+        builder.enterScope(scope.copy());
         thenConsumer.accept(this);
-        thenScope = builder.exitScope();
+        ControlFlowBlockBuilder.Scope thenScope = builder.exitScope();
 
-        ControlFlowBlockBuilder.Scope elseScope = builder.enterScope();
-        elseScope.getPredecessors().add(instruction);
+        List<Instruction> successors = instruction.getSuccessors();
+        if(successors.isEmpty()) {
+            successors.add(null);
+        }
+
+        // Visit the "else" branch
+        builder.enterScope(scope.copy());
         elseConsumer.accept(this);
-        elseScope = builder.exitScope();
+        ControlFlowBlockBuilder.Scope elseScope = builder.exitScope();
 
         if (thenScope == null && elseScope == null) {
-            // Both paths will not fall-through.
             return this;
         }
 
-        ControlFlowBlockBuilder.Scope nextScope = builder.enterScope();
+        if(successors.size() == 1 && successors.get(0) == null) {
+            // Both the "else" and "then" branch are empty
+            successors.remove(0);
+        }
 
-        List<Instruction> successors = instruction.getSuccessors();
-        if (thenScope != null) {
-            if (thenScope.getTail() != null) {
-                // This scope is not empty, the next scope should continue from the last instruction in that scope.
-                nextScope.getPredecessors().add(thenScope.getTail());
-            } else {
-                // This scope is empty. As a result, no successor is added to the if-statement. The if-statement should
-                // have the first instruction in nextScope as a successor.
-                nextScope.getPredecessors().add(instruction);
-                if(successors.isEmpty()) {
-                    successors.add(null);
-                } else {
-                    successors.add(null);
-                    successors.set(1, successors.get(0));
-                    successors.set(0, null);
-                }
-                builder.addCommand(next -> {
-                    successors.remove(successors.size() - 1);
-                    successors.set(0, next);
-                });
-            }
+        if(successors.size() == 2 && successors.get(0) == null) {
+            // The "then" branch is empty
+            Objects.requireNonNull(thenScope).commands().addLast(nextInstruction -> {
+                successors.remove(successors.size() - 1);
+                successors.set(0, nextInstruction);
+                return true;
+            });
         }
-        if (elseScope != null) {
-            if (elseScope.getTail() != null) {
-                // This scope is not empty.
-                nextScope.getPredecessors().add(elseScope.getTail());
-            } else {
-                // This scope is empty.
-                if(successors.size() == 1) {
-                    successors.add(null);
-                }
-                nextScope.getPredecessors().add(instruction);
-                builder.addCommand(next -> {
-                    successors.remove(successors.size() - 1);
-                    successors.set(1, next);
-                });
-            }
-        }
+
+        if (thenScope != null) builder.enterScope(thenScope);
+        if (elseScope != null) builder.enterScope(elseScope);
         return this;
     }
 

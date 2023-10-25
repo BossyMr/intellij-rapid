@@ -58,7 +58,7 @@ public class DataFlowBlock {
 
     public void assign(@NotNull ReferenceExpression variable, @NotNull Expression expression) {
         if (!(variable.getType().isAssignable(expression.getType()))) {
-            throw new IllegalArgumentException("Cannot assign expression: " + expression);
+            throw new IllegalArgumentException("Cannot assign expression: " + expression + " (type: " + expression.getType() + ") to variable of type: " + variable.getType());
         }
         separate(new BinaryExpression(BinaryOperator.EQUAL_TO, variable, expression));
         for (DataFlowState state : states) {

@@ -31,14 +31,17 @@ public class RapidRecordType implements RapidType {
         ValueType valueType = ValueType.VALUE_TYPE;
         for (RapidComponent component : getStructure().getComponents()) {
             RapidType componentType = component.getType();
-            ValueType componentValueType = componentType.getValueType();
-            if(componentValueType == ValueType.UNKNOWN) {
+            if (componentType == null) {
                 return ValueType.UNKNOWN;
             }
-            if(componentValueType == ValueType.NON_VALUE_TYPE) {
+            ValueType componentValueType = componentType.getValueType();
+            if (componentValueType == ValueType.UNKNOWN) {
+                return ValueType.UNKNOWN;
+            }
+            if (componentValueType == ValueType.NON_VALUE_TYPE) {
                 return ValueType.NON_VALUE_TYPE;
             }
-            if(componentValueType == ValueType.SEMI_VALUE_TYPE) {
+            if (componentValueType == ValueType.SEMI_VALUE_TYPE) {
                 valueType = ValueType.SEMI_VALUE_TYPE;
             }
         }

@@ -29,7 +29,7 @@ public class RapidAliasType implements RapidType {
     @Override
     public @Nullable RapidStructure getActualStructure() {
         RapidType underlyingType = getUnderlyingType();
-        if(underlyingType != null) {
+        if (underlyingType != null) {
             return underlyingType.getActualStructure();
         } else {
             return getStructure();
@@ -49,7 +49,7 @@ public class RapidAliasType implements RapidType {
     @Override
     public @NotNull String getText() {
         RapidType underlyingType = getUnderlyingType();
-        if(underlyingType != null) {
+        if (underlyingType != null) {
             return underlyingType.getText();
         } else {
             return RapidSymbol.getDefaultText();

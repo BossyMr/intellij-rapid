@@ -6,6 +6,9 @@ import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
+import com.intellij.codeInspection.InspectionManager;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.progress.ProcessCanceledException;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -21,7 +24,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     private final @NotNull List<SnapshotExpression> snapshots = new ArrayList<>();
     private final @NotNull Map<ReferenceExpression, Symbol> symbols = new HashMap<>();
 
-    public ConditionAnalyzer(@NotNull Context context) {
+    private ConditionAnalyzer(@NotNull Context context) {
         this.context = context;
     }
 
@@ -32,7 +35,10 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         try (Context context = new Context()) {
             ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context);
             Solver solver = getSolver(context, state, conditionAnalyzer);
-            return solver.check() == Status.SATISFIABLE;
+            return switch (solver.check()) {
+                case UNSATISFIABLE -> false;
+                case UNKNOWN, SATISFIABLE -> true;
+            };
         }
     }
 

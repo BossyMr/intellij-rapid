@@ -19,12 +19,16 @@ public class ConditionalBranchingInstruction extends Instruction {
     }
 
     public @Nullable Instruction getTrue() {
-        // TODO: 2023-10-19 What if only false instruction is specified,
-        //  this should link to the fall through instruction
+        if(getSuccessors().isEmpty()) {
+            return null;
+        }
         return getSuccessors().get(0);
     }
 
     public @Nullable Instruction getFalse() {
+        if(getSuccessors().size() < 2 ) {
+            return null;
+        }
         return getSuccessors().get(1);
     }
 
