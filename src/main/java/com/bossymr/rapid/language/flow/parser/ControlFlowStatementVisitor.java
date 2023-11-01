@@ -214,8 +214,8 @@ class ControlFlowStatementVisitor extends RapidElementVisitor {
             builder.error(statement);
             return;
         }
-        Expression expression = ControlFlowExpressionVisitor.getExpression(statement.getCondition(), builder);
         Label label = builder.createLabel();
+        Expression expression = ControlFlowExpressionVisitor.getExpression(statement.getCondition(), builder);
         builder.ifThen(expression,
                 codeBuilder -> {
                     if (statement.getStatementList() != null) {

@@ -213,6 +213,31 @@ class ControlFlowBuilderTest {
     }
 
     @Test
+    void ifThenGoTo() {
+        check(builder -> {
+            builder.withModule("foo", moduleBuilder -> {
+                moduleBuilder.withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> {
+                    routineBuilder.withCode(codeBuilder -> {
+                        ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
+                        ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
+                        codeBuilder.assign(x, codeBuilder.literal(0));
+                        codeBuilder.assign(y, codeBuilder.literal(5));
+                        Label label = codeBuilder.createLabel();
+                        codeBuilder.ifThen(codeBuilder.binary(BinaryOperator.GREATER_THAN, y, codeBuilder.literal(0)),
+                                ifThenBuilder -> {
+                                    ifThenBuilder.assign(x, ifThenBuilder.binary(BinaryOperator.ADD, x, ifThenBuilder.literal(1)));
+                                    ifThenBuilder.assign(y, ifThenBuilder.binary(BinaryOperator.SUBTRACT, y, ifThenBuilder.literal(1)));
+                                    ifThenBuilder.goTo(label);
+                                });
+                        codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
+                    });
+                });
+            });
+        }, """
+                """);
+    }
+
+    @Test
     void call() {
         check(builder -> {
             builder.withModule("foo", moduleBuilder -> {

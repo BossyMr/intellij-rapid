@@ -100,11 +100,12 @@ public class DataFlowGraphService extends AnAction {
         }
         for (DataFlowState state : block.getStates()) {
             states.put(block, state);
-            if (state.getPredecessor().isPresent()) {
-                DataFlowState predecessor = state.getPredecessor().orElseThrow();
-                if (predecessor.getBlock().isPresent()) {
-                    states.put(predecessor.getBlock().orElseThrow(), predecessor);
-                    getStates(states, visited, predecessor.getBlock().orElseThrow());
+            DataFlowState predecessor = state.getPredecessor();
+            if (predecessor != null) {
+                DataFlowBlock predecessorBlock = predecessor.getBlock();
+                if (predecessorBlock != null) {
+                    states.put(predecessorBlock, predecessor);
+                    getStates(states, visited, predecessorBlock);
                 }
             }
         }
@@ -196,19 +197,19 @@ public class DataFlowGraphService extends AnAction {
     }
 
     private static void writePredecessor(@NotNull StringBuilder stringBuilder, @NotNull MultiMap<DataFlowBlock, DataFlowState> states, @NotNull DataFlowState state, @NotNull DataFlowBlock block) {
-        if (state.getPredecessor().isPresent()) {
-            DataFlowState predecessor = state.getPredecessor().orElseThrow();
-            Optional<DataFlowBlock> predecessorBlock = predecessor.getBlock();
-            if (predecessorBlock.isEmpty()) {
+        DataFlowState predecessor = state.getPredecessor();
+        if (predecessor != null) {
+            DataFlowBlock predecessorBlock = predecessor.getBlock();
+            if (predecessorBlock == null) {
                 return;
             }
-            if (states.getAll(predecessorBlock.orElseThrow()).contains(predecessor)) {
-                stringBuilder.append(getStateIndex(predecessorBlock.orElseThrow(), states, predecessor));
+            if (states.getAll(predecessorBlock).contains(predecessor)) {
+                stringBuilder.append(getStateIndex(predecessorBlock, states, predecessor));
                 stringBuilder.append(" -> ");
                 stringBuilder.append(getStateIndex(block, states, state));
                 stringBuilder.append(";\n");
             } else {
-                stringBuilder.append(getStateIndex(predecessorBlock.orElseThrow(), 0)).append(" -> ").append(getStateIndex(block, states, state));
+                stringBuilder.append(getStateIndex(predecessorBlock, 0)).append(" -> ").append(getStateIndex(block, states, state));
                 stringBuilder.append("[ltail=").append(getInstructionClusterName(block.getInstruction())).append(" lhead=").append(getInstructionClusterName(block.getInstruction()));
                 stringBuilder.append("]\n");
             }

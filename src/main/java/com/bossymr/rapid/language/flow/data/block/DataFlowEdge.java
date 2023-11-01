@@ -38,10 +38,6 @@ public final class DataFlowEdge {
         this.state = state;
     }
 
-    public DataFlowState getCopy() {
-        return copy;
-    }
-
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;

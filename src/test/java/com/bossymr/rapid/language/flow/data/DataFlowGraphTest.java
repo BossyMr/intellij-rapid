@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DataFlowGraphTest extends BasePlatformTestCase {
 
     private static final int MAX_PASSES = 5;
+    private static final boolean DRAW_EACH_PASS = false;
 
     private void check(@NotNull String text) throws IOException, ExecutionException {
         myFixture.configureByText(RapidFileType.getInstance(), text);
@@ -43,11 +44,13 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
             Block functionBlock = instruction.getBlock();
             passes.computeIfAbsent(instruction, key -> new AtomicInteger());
             int pass = passes.get(instruction).getAndIncrement();
-            File outputFile = path.resolve(total.getAndIncrement() + " " + functionBlock.getModuleName() + "-" + functionBlock.getName() + " Pass #" + pass + " Block #" + block.getInstruction().getIndex() + ".svg").toFile();
-            try {
-                DataFlowGraphService.convert(outputFile, dataFlow);
-            } catch (IOException | ExecutionException e) {
-                throw new RuntimeException(e);
+            if (DRAW_EACH_PASS) {
+                File outputFile = path.resolve(total.getAndIncrement() + " " + functionBlock.getModuleName() + "-" + functionBlock.getName() + " Pass #" + pass + " Block #" + block.getInstruction().getIndex() + ".svg").toFile();
+                try {
+                    DataFlowGraphService.convert(outputFile, dataFlow);
+                } catch (IOException | ExecutionException e) {
+                    throw new RuntimeException(e);
+                }
             }
             return pass <= MAX_PASSES;
         });
@@ -58,15 +61,36 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
     public void testModule() throws IOException, ExecutionException {
         check("""
                 MODULE foo
-                    PROC bar(\\num x)
-                        VAR num y := 5;
-                        VAR num z := 0;
-                        IF Present(x) THEN
-                            y := y + x;
-                        ELSE
-                            y := y - x;
-                            z := x;
+                    PROC bar()
+                        VAR num a := 0;
+                        VAR num b := 0;
+                        VAR num i := 0;
+                        VAR num j := 0;
+                        
+                        VAR num AA{100};
+                        VAR num BB{100};
+                        
+                        WHILE i < 15 DO
+                            IF AA{i} = 1 THEN
+                                a := a + 1;
+                            ENDIF
+                            i := i + 1;
+                        ENDWHILE
+                        
+                        WHILE j < 15 DO
+                            IF BB{j} = 1 THEN
+                                b := b + 1;
+                            ENDIF
+                            j := j + 1;
+                        ENDWHILE
+                        
+                        IF a > 12 THEN
+                            IF a + b = 23 THEN
+                                EXIT;
+                            ENDIF
                         ENDIF
+                        
+                        RETURN a + b;
                     ENDPROC
                 ENDMODULE
                 """);

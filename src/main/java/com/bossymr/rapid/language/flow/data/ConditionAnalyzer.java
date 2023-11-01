@@ -6,9 +6,6 @@ import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
-import com.intellij.codeInspection.InspectionManager;
-import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.progress.ProcessCanceledException;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -67,7 +64,10 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             Expression expression = state.getExpressions().get(i);
             expressions.add(expression);
         }
-        state.getPredecessor().ifPresent(predecessor -> getAllExpressions(expressions, predecessor));
+        DataFlowState predecessor = state.getPredecessor();
+        if(predecessor != null) {
+            getAllExpressions(expressions, predecessor);
+        }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

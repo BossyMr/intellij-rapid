@@ -63,10 +63,9 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
         ReferenceExpression variable = result.variable();
         ReferenceExpression target = instruction.getReturnValue();
         if (variable != null && target != null) {
-            Optional<SnapshotExpression> optional = result.state().getSnapshot(variable);
+            SnapshotExpression expression = result.state().getSnapshot(variable);
             ReferenceExpression value;
-            if (optional.isPresent()) {
-                SnapshotExpression expression = optional.orElseThrow();
+            if (expression != null) {
                 value = modifications.getOrDefault(expression, expression);
             } else {
                 value = variable;
@@ -78,10 +77,10 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
             ReferenceExpression expression = arguments.get(argument);
             if (argument.getParameterType() != ParameterType.INPUT) {
                 VariableExpression variableExpression = new VariableExpression(argument);
-                Optional<SnapshotExpression> optional = result.state().getSnapshot(variableExpression);
+                SnapshotExpression snapshot = result.state().getSnapshot(variableExpression);
                 ReferenceExpression value;
-                if (optional.isPresent()) {
-                    value = modifications.getOrDefault(optional.orElseThrow(), optional.orElseThrow());
+                if (snapshot != null) {
+                    value = modifications.getOrDefault(snapshot, snapshot);
                 } else {
                     value = variableExpression;
                 }

@@ -12,11 +12,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-/**
- * A {@code DataFlowBlock} represents the state of the program at the end of a specific block. A {@code DataFlowBlock}
- * contains references to predecessors and successors, as-well as a series of states which represent the possible states
- * of the program.
- */
 public class DataFlowBlock {
 
     private final @NotNull Instruction instruction;
@@ -51,7 +46,6 @@ public class DataFlowBlock {
         }
         separate(expression);
         for (DataFlowState state : states) {
-            // TODO: Check whether this assignment is cyclic, and if so, handle it correctly by using a relevant path counter.
             state.add(expression);
         }
     }
@@ -64,16 +58,25 @@ public class DataFlowBlock {
         for (DataFlowState state : states) {
             DataFlowState previousCycle = getPreviousCycle(state);
             if (previousCycle != null) {
-
+                /*
+                 * If this block is in a loop (i.e. a state with this instruction is a predecessor to this state) and
+                 * this assignment is cyclic in nature: this assignment has the previous snapshot (or a snapshot
+                 * which is newer than the root snapshot of the previous iteration) of the variable which is being
+                 * assigned in the expression. For example: x2 := x1 + 1 or x3 := x1 + 1 (if x1 is the latest snapshot
+                 * for x at that point).
+                 *
+                 * If this assignment is cyclic: calculate how much the value increased per cycle using z3 maximum and
+                 * minimum operations (if the same: is linear; otherwise: is non-linear, assign to [any]).
+                 * Rewrite as: x2 := (delta x) * n.
+                 */
             }
-            // TODO: Check whether this assignment is cyclic, and if so, handle it correctly by using a relevant path counter.
             state.assign(variable, expression);
         }
     }
 
     private @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {
         DataFlowState predecessor = state;
-        while ((predecessor = predecessor.getPredecessor().orElse(null)) != null) {
+        while ((predecessor = predecessor.getPredecessor()) != null) {
             if (predecessor.equals(state)) {
                 return predecessor;
             }
@@ -120,8 +123,8 @@ public class DataFlowBlock {
         List<DataFlowState> results = new ArrayList<>();
         for (DataFlowState state : states) {
             ReferenceExpression variable = expression.getVariable();
-            Optional<SnapshotExpression> snapshot = state.getSnapshot(variable);
-            if (!(snapshot.orElse(null) instanceof ArraySnapshot arraySnapshot)) {
+            SnapshotExpression snapshot = state.getSnapshot(variable);
+            if (!(snapshot instanceof ArraySnapshot arraySnapshot)) {
                 throw new IllegalStateException("Expected state: " + state + " to create ArraySnapshot for variable: " + variable);
             }
             List<ArrayEntry> assignments = arraySnapshot.getAssignments(state, expression.getIndex());
@@ -170,8 +173,8 @@ public class DataFlowBlock {
     public @NotNull Optionality getOptionality(@NotNull ReferenceExpression variable) {
         Optionality optionality = null;
         for (DataFlowState state : states) {
-            Optional<SnapshotExpression> snapshot = state.getRoot(variable);
-            ReferenceExpression expression = snapshot.isPresent() ? snapshot.orElseThrow() : variable;
+            SnapshotExpression snapshot = state.getRoot(variable);
+            ReferenceExpression expression = snapshot != null ? snapshot : variable;
             if (optionality == null) {
                 optionality = state.getOptionality(expression);
             } else {
@@ -193,8 +196,9 @@ public class DataFlowBlock {
     }
 
     public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull DataFlowState state) {
-        if (state.getBlock().isPresent()) {
-            if (state.getBlock().orElseThrow() != successor) {
+        DataFlowBlock block = state.getBlock();
+        if (block != null) {
+            if (block != successor) {
                 state = DataFlowState.createSuccessorState(successor, state);
             }
         }

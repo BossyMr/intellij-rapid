@@ -55,7 +55,7 @@ public final class ControlFlowService {
 
     @RequiresReadLock
     public @NotNull DataFlow getDataFlow(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer) {
-        Map<Instruction, DataFlowBlock> dataFlow = new HashMap<>();
+        Map<Instruction, DataFlowState> dataFlow = new HashMap<>();
         Collection<Block> blocks = controlFlow.getBlocks();
         Map<BlockDescriptor, Block.FunctionBlock> descriptorMap = blocks.stream()
                 .filter(block -> block instanceof Block.FunctionBlock)
@@ -67,8 +67,8 @@ public final class ControlFlowService {
             if (!(block instanceof Block.FunctionBlock functionBlock)) {
                 continue;
             }
-            Map<Instruction, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap, (returnValue, value) -> {
-                Map<Instruction, DataFlowBlock> copyMap = new HashMap<>(Map.copyOf(dataFlow));
+            Map<Instruction, DataFlowState> result = DataFlowAnalyzer.analyze(functionBlock, functionMap, (returnValue, value) -> {
+                Map<Instruction, DataFlowState> copyMap = new HashMap<>(Map.copyOf(dataFlow));
                 copyMap.putAll(returnValue);
                 return consumer.test(createDataFlow(controlFlow, copyMap, functionMap.getUsages()), value);
             });
@@ -84,7 +84,7 @@ public final class ControlFlowService {
         return createDataFlow(controlFlow, dataFlow, functionMap.getUsages());
     }
 
-    private @NotNull DataFlow createDataFlow(@NotNull ControlFlow controlFlow, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull Map<DataFlowBlock, DataFlowUsage> usages) {
+    private @NotNull DataFlow createDataFlow(@NotNull ControlFlow controlFlow, @NotNull Map<Instruction, DataFlowState> blocks, @NotNull Map<DataFlowBlock, DataFlowUsage> usages) {
         return new DataFlow(controlFlow, blocks, usages);
     }
 

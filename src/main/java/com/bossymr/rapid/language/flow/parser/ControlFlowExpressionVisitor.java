@@ -112,18 +112,14 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
     @Override
     public void visitBinaryExpression(@NotNull RapidBinaryExpression expression) {
         RapidType type = expression.getType();
-        if (type == null) {
-            result.set(builder.error(expression, RapidPrimitiveType.ANYTYPE));
-            return;
-        }
         IElementType operatorType = expression.getSign().getNode().getElementType();
         BinaryOperator binaryOperator = getBinaryOperator(operatorType);
-        if (binaryOperator == null || expression.getRight() == null) {
-            result.set(builder.error(expression, type));
+        if (binaryOperator == null) {
+            result.set(builder.error(expression, Objects.requireNonNullElse(type, RapidPrimitiveType.ANYTYPE)));
             return;
         }
         Expression left = getExpression(expression.getLeft(), builder);
-        Expression right = getExpression(expression.getRight(), builder);
+        Expression right = expression.getRight() != null ? getExpression(expression.getRight(), builder) : builder.error(null, RapidPrimitiveType.ANYTYPE);
         result.set(builder.binary(expression, binaryOperator, left, right));
     }
 

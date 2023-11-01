@@ -215,13 +215,13 @@ public class DataFlowFunctionMap {
         public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull CallInstruction instruction) {
             Map<DataFlowBlock, Result> value = result.get();
             BlockDescriptor blockDescriptor = BlockDescriptor.getBlockKey(functionBlock);
+            DataFlowBlock block = state.getBlock();
             if (value != null) {
                 Set<Result> results = super.getOutput(state, instruction);
-                Optional<DataFlowBlock> block = state.getBlock();
-                if (block.isPresent()) {
-                    usages.put(block.orElseThrow(), Set.copyOf(results));
+                if (block != null) {
+                    usages.put(block, Set.copyOf(results));
                     for (Result output : results) {
-                        registerUsage(block.orElseThrow(), blockDescriptor, output);
+                        registerUsage(block, blockDescriptor, output);
                     }
                 }
                 return results;
@@ -231,10 +231,10 @@ public class DataFlowFunctionMap {
             Result output = new Result.Success(simpleState, returnType != null ? state.createSnapshot(returnType, null) : null);
             Result actual = getOutput(output, state, instruction);
             Set<Result> result = actual != null ? Set.of(actual) : Set.of();
-            state.getBlock().ifPresent(callerBlock -> {
-                usages.put(callerBlock, result);
-                registerUsage(callerBlock, blockDescriptor, output);
-            });
+            if(block != null) {
+                usages.put(block, result);
+                registerUsage(block, blockDescriptor, output);
+            }
             return result;
         }
     }

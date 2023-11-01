@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
-import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
@@ -17,47 +16,47 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
 
-    private final @NotNull Block.FunctionBlock functionBlock;
+    private final @NotNull DataFlowAnalyzer analyzer;
+
     private final @NotNull DataFlowBlock block;
     private final @NotNull Map<Instruction, DataFlowBlock> blocks;
+    private final @NotNull Set<BlockCycle> cycles;
     private final @NotNull DataFlowFunctionMap functionMap;
 
-    public DataFlowAnalyzerVisitor(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowBlock block, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull DataFlowFunctionMap functionMap) {
-        this.functionBlock = functionBlock;
+    public DataFlowAnalyzerVisitor(@NotNull DataFlowAnalyzer analyzer, @NotNull DataFlowBlock block, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull Set<BlockCycle> cycles, @NotNull DataFlowFunctionMap functionMap) {
+        this.analyzer = analyzer;
         this.block = block;
         this.blocks = blocks;
+        this.cycles = cycles;
         this.functionMap = functionMap;
     }
 
     @Override
     public Void visitAssignmentInstruction(@NotNull AssignmentInstruction instruction) {
         block.assign(instruction.getVariable(), instruction.getExpression());
-        for (Instruction successor : instruction.getSuccessors()) {
-            block.addSuccessor(blocks.get(successor));
-        }
+        addSuccessors(instruction);
         return null;
     }
 
     @Override
     public Void visitConnectInstruction(@NotNull ConnectInstruction instruction) {
-        for (Instruction successor : instruction.getSuccessors()) {
-            block.addSuccessor(blocks.get(successor));
-        }
+        addSuccessors(instruction);
         return null;
     }
 
     @Override
     public Void visitConditionalBranchingInstruction(@NotNull ConditionalBranchingInstruction instruction) {
         Expression value = instruction.getCondition();
-        visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(true)));
-        visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(false)));
+        visitBranch(instruction, instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(true)));
+        visitBranch(instruction, instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(false)));
         return null;
     }
 
-    private void visitBranch(@Nullable Instruction successor, @NotNull Expression condition) {
+    private void visitBranch(@NotNull ConditionalBranchingInstruction instruction, @Nullable Instruction successor, @NotNull Expression condition) {
         if (successor == null) {
             return;
         }
@@ -69,54 +68,62 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
             if (!(copy.isSatisfiable())) {
                 continue;
             }
-           block.addSuccessor(successorBlock, copy);
+            addSuccessor(instruction, successor, copy);
         }
     }
 
-    private @NotNull Optional<DataFlowState> getPreviousCycle(@NotNull DataFlowState state, @NotNull BlockCycle blockCycle) {
-        Optional<DataFlowBlock> originBlock = state.getBlock();
-        if (originBlock.isEmpty()) {
-            return Optional.empty();
+    private void addSuccessors(@NotNull Instruction instruction) {
+        for (Instruction successor : instruction.getSuccessors()) {
+            DataFlowBlock successorBlock = blocks.get(successor);
+            for (DataFlowState state : block.getStates()) {
+                DataFlowState successorState = DataFlowState.createSuccessorState(successorBlock, state);
+                addSuccessor(instruction, successor, successorState);
+            }
         }
-        do {
-            Optional<DataFlowState> predecessor = state.getPredecessor();
-            if (predecessor.isEmpty()) {
-                return Optional.empty();
-            }
-            state = predecessor.orElseThrow();
-            Optional<DataFlowBlock> currentBlock = state.getBlock();
-            if (currentBlock.isEmpty()) {
-                return Optional.empty();
-            }
-            if (currentBlock.equals(originBlock)) {
-                return Optional.of(state);
-            }
-        } while (isBlockCycle(state, blockCycle));
-        return Optional.empty();
     }
 
-    private boolean isBlockCycle(@NotNull DataFlowState state, @NotNull BlockCycle blockCycle) {
-        return state.getBlock()
-                .map(block -> isBlockCycle(block, blockCycle))
-                .orElse(false);
+    private void addSuccessor(@NotNull Instruction instruction, @NotNull Instruction successor, @NotNull DataFlowState successorState) {
+        Set<BlockCycle> successorCycles = getCycles(successor);
+        successorCycles.removeAll(getCycles(instruction));
+        DataFlowBlock successorBlock = blocks.get(successor);
+        if(successorCycles.isEmpty()) {
+            block.addSuccessor(successorBlock, successorState);
+            return;
+        }
+        // Process regularly (but isolated) until a state is reached which isn't in any cycle, then, save it in the
+        // exit map. Once the workList is empty (all cycles have reached an exit), return - with modification for
+        // infinite loops without any exits at all.
+        Map<Instruction, DataFlowBlock> original = new HashMap<>();
 
+        for (BlockCycle blockCycle : successorCycles) {
+
+            Map<Instruction, Set<DataFlowState>> exits = analyzer.processCycle(successorBlock, successorState, blockCycle);
+            for (Instruction exitInstruction : exits.keySet()) {
+                Set<DataFlowState> exitStates = exits.get(exitInstruction);
+                for (DataFlowState exitState : exitStates) {
+                    block.addSuccessor(successorBlock, exitState);
+                }
+            }
+        }
     }
 
-    private boolean isBlockCycle(@NotNull DataFlowBlock block, @NotNull BlockCycle blockCycle) {
-        return blockCycle.getSequence().contains(block);
+    private @NotNull Set<BlockCycle> getCycles(@NotNull Instruction instruction) {
+        return cycles.stream()
+                .filter(cycle -> cycle.instructions().contains(instruction))
+                .collect(Collectors.toSet());
     }
 
     @Override
     public Void visitReturnInstruction(@NotNull ReturnInstruction instruction) {
         for (DataFlowState state : block.getStates()) {
-            DataFlowState successor = state.createCompactSuccessor();
+            DataFlowState successor = state.createCompactState();
             Expression returnValue = instruction.getReturnValue();
             if (returnValue != null) {
                 SnapshotExpression snapshot = successor.createSnapshot(returnValue.getType(), null);
                 successor.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, returnValue));
-                functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, new DataFlowFunction.Result.Success(successor, snapshot));
+                functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, new DataFlowFunction.Result.Success(successor, snapshot));
             } else {
-                functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, new DataFlowFunction.Result.Success(successor, null));
+                functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, new DataFlowFunction.Result.Success(successor, null));
             }
         }
         return null;
@@ -125,8 +132,8 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     @Override
     public Void visitExitInstruction(@NotNull ExitInstruction instruction) {
         for (DataFlowState state : block.getStates()) {
-            DataFlowState successor = state.createCompactSuccessor();
-            functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, new DataFlowFunction.Result.Exit(successor));
+            DataFlowState successor = state.createCompactState();
+            functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, new DataFlowFunction.Result.Exit(successor));
         }
         return null;
     }
@@ -134,14 +141,14 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     @Override
     public Void visitThrowInstruction(@NotNull ThrowInstruction instruction) {
         for (DataFlowState state : block.getStates()) {
-            DataFlowState successor = state.createCompactSuccessor();
+            DataFlowState successor = state.createCompactState();
             Expression exceptionValue = instruction.getExceptionValue();
             if (exceptionValue != null) {
                 SnapshotExpression snapshot = successor.createSnapshot(exceptionValue.getType(), null);
                 successor.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, exceptionValue));
-                functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, new DataFlowFunction.Result.Error(successor, snapshot));
+                functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, new DataFlowFunction.Result.Error(successor, snapshot));
             } else {
-                functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, new DataFlowFunction.Result.Error(successor, null));
+                functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, new DataFlowFunction.Result.Error(successor, null));
             }
         }
         return null;
@@ -159,7 +166,6 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     @Override
     public Void visitCallInstruction(@NotNull CallInstruction instruction) {
         Expression expression = instruction.getRoutineName();
-        DataFlowBlock successor = blocks.get(instruction.getSuccessor());
         for (DataFlowState state : block.getStates()) {
             if (!(expression instanceof ConstantExpression solution)) {
                 visitAnyCallInstruction(instruction, state);
@@ -170,7 +176,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
             }
             BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.getElement(), routineName);
             if (blockDescriptor == null) {
-                functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, new DataFlowFunction.Result.Error(state, null));
+                functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, new DataFlowFunction.Result.Error(state, null));
                 continue;
             }
             Optional<DataFlowFunction> optional = functionMap.get(blockDescriptor);
@@ -187,14 +193,14 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
             Set<DataFlowFunction.Result> results = function.getOutput(state, instruction);
             for (DataFlowFunction.Result result : results) {
                 if (result instanceof DataFlowFunction.Result.Exit) {
-                    functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, result);
+                    functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, result);
                     continue;
                 }
                 if (result instanceof DataFlowFunction.Result.Error) {
-                    functionMap.set(BlockDescriptor.getBlockKey(functionBlock), block, result);
+                    functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, result);
                     continue;
                 }
-                block.addSuccessor(successor, result.state());
+                addSuccessor(instruction, instruction.getSuccessor(), result.state());
             }
         }
         return null;
@@ -220,31 +226,30 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
         DataFlowBlock successor = blocks.get(instruction.getSuccessor());
         DataFlowState successorState = DataFlowState.createSuccessorState(successor, state);
         if (returnValue != null) {
-            state.createSnapshot(returnValue);
+            state.assign(returnValue, null);
         }
         for (var entry : parameters.entrySet()) {
             if (entry.getKey().getParameterType() != ParameterType.INPUT) {
                 Expression argument = entry.getValue();
                 if (argument instanceof ReferenceExpression referenceExpression) {
-                    state.createSnapshot(referenceExpression);
+                    state.assign(referenceExpression, null);
                 }
             }
         }
-        block.addSuccessor(successor, successorState);
+        addSuccessor(instruction, instruction.getSuccessor(), successorState);
     }
 
     private void visitAnyCallInstruction(@NotNull CallInstruction instruction, @NotNull DataFlowState state) {
         ReferenceExpression returnValue = instruction.getReturnValue();
-        DataFlowBlock successor = blocks.get(instruction.getSuccessor());
         if (returnValue != null) {
-            state.createSnapshot(returnValue);
+            state.assign(returnValue, null);
         }
         for (Expression value : instruction.getArguments().values()) {
             if (value instanceof ReferenceExpression referenceExpression) {
-                state.createSnapshot(referenceExpression);
+                state.assign(referenceExpression, null);
             }
         }
-        block.addSuccessor(successor, state);
+        addSuccessor(instruction, instruction.getSuccessor(), state);
     }
 
     private @Nullable BlockDescriptor getBlockDescriptor(@Nullable PsiElement context, @NotNull String text) {
