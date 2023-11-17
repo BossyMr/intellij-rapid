@@ -143,7 +143,7 @@ public final class RapidResolveService {
     }
 
     public @Nullable RapidSymbol findCustomSymbol(@NotNull String @NotNull [] sections) {
-        ControlFlow controlFlow = ControlFlowService.getControlFlow();
+        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow();
         Block block = controlFlow.getBlock("", sections[1]);
         if (block != null) {
             RapidSymbol element = block.getElement();
