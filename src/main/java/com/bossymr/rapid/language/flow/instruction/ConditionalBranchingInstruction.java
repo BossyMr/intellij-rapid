@@ -18,14 +18,14 @@ public class ConditionalBranchingInstruction extends Instruction {
         this.condition = condition;
     }
 
-    public @Nullable Instruction getTrue() {
+    public Instruction getTrue() {
         if(getSuccessors().isEmpty()) {
             return null;
         }
         return getSuccessors().get(0);
     }
 
-    public @Nullable Instruction getFalse() {
+    public Instruction getFalse() {
         if(getSuccessors().size() < 2 ) {
             return null;
         }

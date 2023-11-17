@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.psi;
 /**
  * Represents the different attributes of a statement list.
  */
-public enum StatementListType {
+public enum BlockType {
 
     /**
      * This statement list is a regular statement list.

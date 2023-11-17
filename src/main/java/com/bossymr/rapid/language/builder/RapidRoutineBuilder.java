@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.builder;
 
-import com.bossymr.rapid.language.psi.StatementListType;
+import com.bossymr.rapid.language.psi.BlockType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,10 +12,10 @@ public interface RapidRoutineBuilder {
     @NotNull RapidRoutineBuilder withParameterGroup(boolean isOptional, @NotNull Consumer<RapidParameterGroupBuilder> consumer);
 
     default @NotNull RapidRoutineBuilder withCode(@NotNull Consumer<RapidCodeBlockBuilder> consumer) {
-        return withCode(StatementListType.STATEMENT_LIST, consumer);
+        return withCode(BlockType.STATEMENT_LIST, consumer);
     }
 
-    @NotNull RapidRoutineBuilder withCode(@Nullable StatementListType codeType,
+    @NotNull RapidRoutineBuilder withCode(@Nullable BlockType codeType,
                                           @NotNull Consumer<RapidCodeBlockBuilder> consumer);
 
     @NotNull RapidRoutineBuilder withCode(@Nullable List<Integer> exceptions,

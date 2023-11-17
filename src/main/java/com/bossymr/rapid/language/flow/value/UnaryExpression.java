@@ -46,6 +46,7 @@ public class UnaryExpression implements Expression {
                 }
                 yield null;
             }
+            case PRESENT -> RapidPrimitiveType.BOOLEAN;
         };
     }
 

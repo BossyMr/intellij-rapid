@@ -15,6 +15,11 @@ public interface RapidCodeBuilder {
         return createVariable(null, null, type);
     }
 
+    default @NotNull ReferenceExpression createVariable(@Nullable String name,
+                                                        @NotNull RapidType type) {
+        return createVariable(name, null, type);
+    }
+
     @NotNull ReferenceExpression createVariable(@Nullable String name,
                                                 @Nullable FieldType fieldType,
                                                 @NotNull RapidType type);

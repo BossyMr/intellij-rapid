@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.symbol.virtual;
 
+import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.psi.RapidStatement;
-import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.Visibility;
@@ -61,8 +61,8 @@ public class VirtualRoutine implements RapidRoutine, VirtualSymbol {
     }
 
     @Override
-    public @Nullable List<RapidStatement> getStatements(@NotNull StatementListType statementListType) {
-        if (statementListType == StatementListType.STATEMENT_LIST) {
+    public @Nullable List<RapidStatement> getStatements(@NotNull BlockType blockType) {
+        if (blockType == BlockType.STATEMENT_LIST) {
             return getStatements();
         }
         return null;

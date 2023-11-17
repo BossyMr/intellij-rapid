@@ -8,8 +8,9 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.UnaryExpression;
+import com.bossymr.rapid.language.flow.value.UnaryOperator;
 import com.bossymr.rapid.language.psi.RapidElement;
-import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -77,7 +78,7 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
         ControlFlowBlockBuilder.Scope thenScope = builder.exitScope();
 
         List<Instruction> successors = instruction.getSuccessors();
-        if(successors.isEmpty()) {
+        if (successors.isEmpty()) {
             successors.add(null);
         }
 
@@ -90,12 +91,12 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
             return this;
         }
 
-        if(successors.size() == 1 && successors.get(0) == null) {
+        if (successors.size() == 1 && successors.get(0) == null) {
             // Both the "else" and "then" branch are empty
             successors.remove(0);
         }
 
-        if(successors.size() == 2 && successors.get(0) == null) {
+        if (successors.size() == 2 && successors.get(0) == null) {
             // The "then" branch is empty
             Objects.requireNonNull(thenScope).commands().addLast(nextInstruction -> {
                 successors.remove(successors.size() - 1);
@@ -106,6 +107,16 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
 
         if (thenScope != null) builder.enterScope(thenScope);
         if (elseScope != null) builder.enterScope(elseScope);
+        return this;
+    }
+
+    @Override
+    public @NotNull RapidCodeBlockBuilder loop(@Nullable RapidElement element, @NotNull Expression expression, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
+        Label label = createLabel();
+        ifThen(element, expression, thenConsumer -> {
+            consumer.accept(thenConsumer);
+            thenConsumer.goTo(label);
+        });
         return this;
     }
 
@@ -185,7 +196,7 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
         }
         ArgumentDescriptor.Conditional conditional = optional.orElseThrow();
         ReferenceExpression argument = getArgument(conditional.name());
-        Expression isPresent = call(":Present", RapidPrimitiveType.BOOLEAN, builder -> builder.withRequiredArgument(argument));
+        Expression isPresent = new UnaryExpression(UnaryOperator.PRESENT, argument);
         ifThenElse(isPresent,
                 builder -> {
                     Expression expression = arguments.get(conditional);
@@ -221,8 +232,8 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
 
     private @NotNull Optional<ArgumentDescriptor.Conditional> getConditionalArgument(@NotNull Map<ArgumentDescriptor, ?> arguments) {
         return arguments.keySet().stream()
-                .filter(argument -> argument instanceof ArgumentDescriptor.Conditional)
-                .map(argument -> (ArgumentDescriptor.Conditional) argument)
-                .findFirst();
+                        .filter(argument -> argument instanceof ArgumentDescriptor.Conditional)
+                        .map(argument -> (ArgumentDescriptor.Conditional) argument)
+                        .findFirst();
     }
 }

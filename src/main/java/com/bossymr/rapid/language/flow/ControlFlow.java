@@ -18,7 +18,7 @@ public class ControlFlow {
     private final @NotNull Map<BlockDescriptor, Block> map;
 
     public ControlFlow(@NotNull Map<BlockDescriptor, Block> map) {
-        this.map = Map.copyOf(map);
+        this.map = map;
     }
 
     public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {

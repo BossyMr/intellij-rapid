@@ -5,7 +5,7 @@ import com.bossymr.rapid.language.builder.RapidParameterGroupBuilder;
 import com.bossymr.rapid.language.builder.RapidRoutineBuilder;
 import com.bossymr.rapid.language.flow.ArgumentGroup;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.psi.StatementListType;
+import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualParameterGroup;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import org.jetbrains.annotations.NotNull;
@@ -41,7 +41,7 @@ public class ControlFlowRoutineBuilder implements RapidRoutineBuilder {
     }
 
     @Override
-    public @NotNull RapidRoutineBuilder withCode(@Nullable StatementListType codeType, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
+    public @NotNull RapidRoutineBuilder withCode(@Nullable BlockType codeType, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
         ControlFlowBlockBuilder blockBuilder = new ControlFlowBlockBuilder(block);
         ControlFlowCodeBlockBuilder builder = new ControlFlowCodeBlockBuilder(block, blockBuilder);
         if(codeType != null) {

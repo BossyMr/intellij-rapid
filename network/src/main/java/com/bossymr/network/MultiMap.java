@@ -29,6 +29,11 @@ public class MultiMap<K, V> extends AbstractMap<K, V> {
         this.supplier = supplier;
     }
 
+    public MultiMap(@NotNull Map<K, Collection<Entry<K, V>>> delegate, @NotNull Supplier<? extends Collection<Entry<K, V>>> supplier) {
+        this.delegate = delegate;
+        this.supplier = supplier;
+    }
+
     @Override
     public V put(K key, V value) {
         delegate.computeIfAbsent(key, unused -> supplier.get());

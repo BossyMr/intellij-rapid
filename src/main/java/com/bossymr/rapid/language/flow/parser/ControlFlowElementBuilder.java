@@ -150,12 +150,12 @@ public class ControlFlowElementBuilder {
                 }
             }
             for (RapidStatementList statementList : routine.getStatementLists()) {
-                StatementListType statementListType = statementList.getStatementListType();
-                if (statementListType == StatementListType.ERROR_CLAUSE) {
+                BlockType blockType = statementList.getStatementListType();
+                if (blockType == BlockType.ERROR_CLAUSE) {
                     List<Integer> exceptions = getExceptions(statementList.getExpressions());
                     builder.withCode(exceptions, codeBuilder -> processExpression(routine, statementList, codeBuilder));
                 } else {
-                    builder.withCode(statementListType, codeBuilder -> processExpression(routine, statementList, codeBuilder));
+                    builder.withCode(blockType, codeBuilder -> processExpression(routine, statementList, codeBuilder));
                 }
             }
         };

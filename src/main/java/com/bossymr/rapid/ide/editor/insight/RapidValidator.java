@@ -323,7 +323,7 @@ public class RapidValidator {
     public void checkOutsideErrorHandler(@NotNull RapidStatement statement, @NotNull String message) {
         RapidStatementList statementList = PsiTreeUtil.getParentOfType(statement, RapidStatementList.class);
         if (statementList == null) return;
-        if (statementList.getStatementListType() == StatementListType.ERROR_CLAUSE) {
+        if (statementList.getStatementListType() == BlockType.ERROR_CLAUSE) {
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, message)
                     .range(statement)
                     .create();
@@ -333,7 +333,7 @@ public class RapidValidator {
     public void checkInsideErrorHandler(@NotNull RapidStatement statement, @NotNull String message) {
         RapidStatementList statementList = PsiTreeUtil.getParentOfType(statement, RapidStatementList.class);
         if (statementList == null) return;
-        if (statementList.getStatementListType() != StatementListType.ERROR_CLAUSE) {
+        if (statementList.getStatementListType() != BlockType.ERROR_CLAUSE) {
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, message)
                     .range(statement)
                     .create();
@@ -509,7 +509,7 @@ public class RapidValidator {
         for (RapidArgument argument : argumentList.getArguments()) {
             RapidParameter parameter = getParameter(routine, argumentList, previous, argument);
             if (parameter != null) {
-                if (previous.size() > 0) {
+                if (!(previous.isEmpty())) {
                     int index = parameters.indexOf(parameter.getParameterGroup());
                     RapidParameter last = previous.get(previous.size() - 1);
                     int prev = parameters.indexOf(last.getParameterGroup());
@@ -561,7 +561,7 @@ public class RapidValidator {
                 .toList();
         missing.removeIf(RapidParameterGroup::isOptional);
         missing.removeIf(groups::contains);
-        if (missing.size() > 0) {
+        if (!missing.isEmpty()) {
             long size = parameters.stream().filter(group -> !(group.isOptional())).count();
             annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.routine.call.number.of.components", routine.getName(), size))
                     .range(argumentList)
@@ -668,7 +668,7 @@ public class RapidValidator {
             for (RapidParameterGroup group : groups) {
                 if (group.isOptional()) continue;
                 List<? extends RapidParameter> parameters = group.getParameters();
-                if (parameters.size() == 0) continue;
+                if (parameters.isEmpty()) continue;
                 if (previous.contains(parameters.get(0))) continue;
                 return parameters.get(0);
             }

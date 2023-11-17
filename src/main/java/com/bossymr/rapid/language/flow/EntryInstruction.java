@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.psi.StatementListType;
+import com.bossymr.rapid.language.psi.BlockType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,9 +11,9 @@ import java.util.Objects;
 public class EntryInstruction {
 
     private final @NotNull Instruction instruction;
-    private final @NotNull StatementListType entryType;
+    private final @NotNull BlockType entryType;
 
-    public EntryInstruction(@NotNull StatementListType entryType, @NotNull Instruction instruction) {
+    public EntryInstruction(@NotNull BlockType entryType, @NotNull Instruction instruction) {
         this.instruction = instruction;
         this.entryType = entryType;
     }
@@ -22,7 +22,7 @@ public class EntryInstruction {
         return instruction;
     }
 
-    public @NotNull StatementListType getEntryType() {
+    public @NotNull BlockType getEntryType() {
         return entryType;
     }
 
@@ -52,7 +52,7 @@ public class EntryInstruction {
         private final @Nullable List<Integer> exceptions;
 
         public ErrorEntryInstruction(@NotNull Instruction instruction, @Nullable List<Integer> exceptions) {
-            super(StatementListType.ERROR_CLAUSE, instruction);
+            super(BlockType.ERROR_CLAUSE, instruction);
             this.exceptions = exceptions;
         }
 

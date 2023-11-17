@@ -44,6 +44,16 @@ public interface RapidCodeBlockBuilder extends RapidCodeBuilder {
                                               @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer);
 
     @NotNull
+    default RapidCodeBlockBuilder loop(@NotNull Expression expression,
+                                       @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
+        return loop(null, expression, consumer);
+    }
+
+    @NotNull RapidCodeBlockBuilder loop(@Nullable RapidElement element,
+                                        @NotNull Expression expression,
+                                        @NotNull Consumer<RapidCodeBlockBuilder> consumer);
+
+    @NotNull
     default RapidCodeBlockBuilder goTo(@NotNull Label label) {
         return goTo(null, label);
     }

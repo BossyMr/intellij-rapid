@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.ConditionAnalyzer;
-import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
@@ -49,7 +48,7 @@ import java.util.function.Function;
 public class DataFlowState {
 
     private final @Nullable DataFlowState predecessor;
-    private final @Nullable DataFlowBlock block;
+    private @Nullable DataFlowBlock block;
 
     private final @NotNull Block functionBlock;
 
@@ -73,7 +72,6 @@ public class DataFlowState {
      */
     private final @NotNull Map<SnapshotExpression, Optionality> optionality;
 
-
     private DataFlowState(@Nullable DataFlowBlock block, @NotNull Block functionBlock, @Nullable DataFlowState predecessor) {
         this.predecessor = predecessor;
         this.block = block;
@@ -91,7 +89,7 @@ public class DataFlowState {
         this.snapshots = new HashMap<>();
         this.conditions = new ArrayList<>();
         this.optionality = new HashMap<>();
-        this.roots = state.roots.isEmpty() ? Map.of() : new HashMap<>();
+        this.roots = new HashMap<>();
         Map<ReferenceExpression, ReferenceExpression> modifications = new HashMap<>();
         state.roots.forEach((field, snapshot) -> roots.put(field, (SnapshotExpression) modifyExpression(snapshot, modifications)));
         state.snapshots.forEach((field, snapshot) -> snapshots.put(field, (SnapshotExpression) modifyExpression(snapshot, modifications)));
@@ -186,10 +184,17 @@ public class DataFlowState {
         return successor;
     }
 
-    // TODO: Implement #createCompactState(@NotNull Instruction)
-
     public @Nullable DataFlowState getPredecessor() {
         return predecessor;
+    }
+
+    public boolean isAncestor(@NotNull DataFlowState state) {
+        for (DataFlowState predecessor = this; predecessor != null; predecessor = predecessor.getPredecessor()) {
+            if (predecessor.equals(state)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void initializeUnknown() {
@@ -260,6 +265,10 @@ public class DataFlowState {
 
     public @Nullable DataFlowBlock getBlock() {
         return block;
+    }
+
+    public void setBlock(@Nullable DataFlowBlock block) {
+        this.block = block;
     }
 
     private @NotNull Expression modifyExpression(@NotNull Expression previous, @NotNull Map<ReferenceExpression, ReferenceExpression> modifications) {
@@ -366,26 +375,6 @@ public class DataFlowState {
             }
         }
         return successorState;
-    }
-
-    public @NotNull Set<PathCounter> getPathCounters() {
-        Set<PathCounter> counters = new HashSet<>();
-        getPathCounters(counters);
-        return counters;
-    }
-
-    private void getPathCounters(@NotNull Set<PathCounter> counters) {
-        for (Expression condition : conditions) {
-            Collection<Expression> components = condition.getComponents();
-            for (Expression component : components) {
-                if (component instanceof PathCounter pathCounter) {
-                    counters.add(pathCounter);
-                }
-            }
-        }
-        if (predecessor != null) {
-            predecessor.getPathCounters(counters);
-        }
     }
 
     public void assign(@NotNull ReferenceExpression variable, @Nullable Expression expression) {
@@ -579,6 +568,23 @@ public class DataFlowState {
 
     public @NotNull List<Expression> getExpressions() {
         return conditions;
+    }
+
+    public @NotNull List<Expression> getAllExpressions() {
+        List<Expression> expressions = new ArrayList<>();
+        getAllExpressions(expressions);
+        return expressions;
+    }
+
+    private void getAllExpressions(@NotNull List<Expression> expressions) {
+        for (int i = getExpressions().size() - 1; i >= 0; i--) {
+            Expression expression = getExpressions().get(i);
+            expressions.add(expression);
+        }
+        DataFlowState predecessor = getPredecessor();
+        if (predecessor != null) {
+            predecessor.getAllExpressions(expressions);
+        }
     }
 
     public @NotNull Map<Field, SnapshotExpression> getSnapshots() {

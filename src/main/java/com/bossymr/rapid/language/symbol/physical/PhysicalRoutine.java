@@ -94,7 +94,7 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     }
 
     public @NotNull RapidStatementList getStatementList() {
-        RapidStatementList statementList = getStatementList(StatementListType.STATEMENT_LIST);
+        RapidStatementList statementList = getStatementList(BlockType.STATEMENT_LIST);
         return Objects.requireNonNull(statementList);
     }
 
@@ -103,15 +103,15 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     }
 
     @Override
-    public @Nullable List<RapidStatement> getStatements(@NotNull StatementListType statementListType) {
-        RapidStatementList statementList = getStatementList(statementListType);
+    public @Nullable List<RapidStatement> getStatements(@NotNull BlockType blockType) {
+        RapidStatementList statementList = getStatementList(blockType);
         return statementList != null ? statementList.getStatements() : null;
     }
 
-    public @Nullable RapidStatementList getStatementList(@NotNull StatementListType statementListType) {
+    public @Nullable RapidStatementList getStatementList(@NotNull BlockType blockType) {
         List<RapidStatementList> statementLists = findChildrenByType(RapidElementTypes.STATEMENT_LIST);
         for (RapidStatementList statementList : statementLists) {
-            if (statementListType == statementList.getStatementListType()) {
+            if (blockType == statementList.getStatementListType()) {
                 return statementList;
             }
         }

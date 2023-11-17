@@ -27,6 +27,25 @@ public interface RapidModuleBuilder {
                                           @NotNull Consumer<RapidFieldBuilder> consumer);
 
     @NotNull
+    default RapidModuleBuilder withFunction(@NotNull String name,
+                                            @NotNull RapidType returnType,
+                                            @NotNull Consumer<RapidRoutineBuilder> consumer) {
+        return withRoutine(null, name, RoutineType.FUNCTION, returnType, consumer);
+    }
+
+    @NotNull
+    default RapidModuleBuilder withProcedure(@NotNull String name,
+                                             @NotNull Consumer<RapidRoutineBuilder> consumer) {
+        return withRoutine(null, name, RoutineType.PROCEDURE, null, consumer);
+    }
+
+    @NotNull
+    default RapidModuleBuilder withTrap(@NotNull String name,
+                                        @NotNull Consumer<RapidRoutineBuilder> consumer) {
+        return withRoutine(null, name, RoutineType.PROCEDURE, null, consumer);
+    }
+
+    @NotNull
     default RapidModuleBuilder withRoutine(@NotNull String name,
                                            @NotNull RoutineType routineType,
                                            @Nullable RapidType returnType,

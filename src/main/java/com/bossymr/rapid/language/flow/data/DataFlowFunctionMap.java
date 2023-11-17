@@ -4,7 +4,6 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
-import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.value.BinaryExpression;
@@ -15,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 public class DataFlowFunctionMap {
 
@@ -53,18 +53,17 @@ public class DataFlowFunctionMap {
      */
     private final @NotNull Map<DataFlowFunction.Result, DataFlowBlock> exitPoints = new HashMap<>();
 
+    /**
+     * A {@code Consumer} called for each declared usage to a function which has not been processed.
+     */
+    private final @NotNull BiConsumer<BlockDescriptor, DataFlowFunctionMap> consumer;
 
-    public DataFlowFunctionMap(@NotNull Map<BlockDescriptor, Block.FunctionBlock> descriptorMap, @NotNull Deque<DataFlowBlock> workList) {
+
+    public DataFlowFunctionMap(@NotNull Map<BlockDescriptor, Block.FunctionBlock> descriptorMap, @NotNull Deque<DataFlowBlock> workList, @NotNull BiConsumer<BlockDescriptor, DataFlowFunctionMap> consumer) {
         this.descriptorMap = descriptorMap;
+        this.consumer = consumer;
         this.functionMap = new HashMap<>();
         this.workList = workList;
-        for (HardcodedContract value : HardcodedContract.values()) {
-            DataFlowFunction function = value.getFunction();
-            Block.FunctionBlock functionBlock = function.getBlock();
-            BlockDescriptor blockKey = BlockDescriptor.getBlockKey(functionBlock);
-            descriptorMap.put(blockKey, functionBlock);
-            functionMap.put(blockKey, function);
-        }
     }
 
     public @NotNull Map<DataFlowBlock, DataFlowUsage> getUsages() {
@@ -108,6 +107,7 @@ public class DataFlowFunctionMap {
             }
         } else {
             softReferences.put(callerBlock, new ResultEntry(blockDescriptor, result.state()));
+            consumer.accept(blockDescriptor, this);
         }
     }
 

@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.psi.StatementListType;
+import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -15,8 +15,8 @@ public sealed abstract class Block {
     private final @NotNull String name;
     private final @Nullable RapidType returnType;
 
+    private final @NotNull Map<BlockType, EntryInstruction> entryPoints;
     private final @NotNull List<Instruction> instructions;
-    private final @NotNull Map<StatementListType, EntryInstruction> entryBlocks;
 
     private final @NotNull List<Variable> variables;
     private final @NotNull RapidSymbol element;
@@ -26,13 +26,9 @@ public sealed abstract class Block {
         this.name = name;
         this.returnType = returnType;
         this.instructions = new ArrayList<>();
-        this.entryBlocks = new HashMap<>();
+        this.entryPoints = new HashMap<>();
         this.variables = new ArrayList<>();
         this.element = element;
-    }
-
-    private boolean isEmpty() {
-        return instructions.isEmpty();
     }
 
     public @NotNull RapidSymbol getElement() {
@@ -55,16 +51,12 @@ public sealed abstract class Block {
         return instructions;
     }
 
-    public @NotNull EntryInstruction getEntryInstruction() {
-        return entryBlocks.get(StatementListType.STATEMENT_LIST);
-    }
-
-    public @Nullable EntryInstruction getEntryInstruction(@NotNull StatementListType scopeType) {
-        return entryBlocks.get(scopeType);
+    public @Nullable EntryInstruction getEntryInstruction(@NotNull BlockType scopeType) {
+        return entryPoints.get(scopeType);
     }
 
     public @NotNull Collection<EntryInstruction> getEntryInstructions() {
-        return entryBlocks.values();
+        return entryPoints.values();
     }
 
     public @NotNull List<ArgumentGroup> getArgumentGroups() {
@@ -95,21 +87,21 @@ public sealed abstract class Block {
         return null;
     }
 
-    public void setEntryInstruction(@NotNull StatementListType scopeType, @NotNull Instruction instruction) {
-        if (scopeType == StatementListType.ERROR_CLAUSE) {
+    public void setEntryInstruction(@NotNull BlockType scopeType, @NotNull Instruction instruction) {
+        if (scopeType == BlockType.ERROR_CLAUSE) {
             throw new IllegalArgumentException();
         }
         if (getEntryInstruction(scopeType) != null) {
             throw new IllegalStateException();
         }
-        entryBlocks.put(scopeType, new EntryInstruction(scopeType, instruction));
+        entryPoints.put(scopeType, new EntryInstruction(scopeType, instruction));
     }
 
     public void setErrorClause(@Nullable List<Integer> exceptions, @NotNull Instruction instruction) {
-        if (getEntryInstruction(StatementListType.ERROR_CLAUSE) != null) {
+        if (getEntryInstruction(BlockType.ERROR_CLAUSE) != null) {
             throw new IllegalStateException();
         }
-        entryBlocks.put(StatementListType.ERROR_CLAUSE, new EntryInstruction.ErrorEntryInstruction(instruction, exceptions));
+        entryPoints.put(BlockType.ERROR_CLAUSE, new EntryInstruction.ErrorEntryInstruction(instruction, exceptions));
     }
 
     public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {

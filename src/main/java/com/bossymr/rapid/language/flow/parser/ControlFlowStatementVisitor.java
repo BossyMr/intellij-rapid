@@ -133,10 +133,10 @@ class ControlFlowStatementVisitor extends RapidElementVisitor {
             builder.throwException(statement, expression);
             return;
         }
-        if (expression != null && statementList.getStatementListType() == StatementListType.ERROR_CLAUSE) {
+        if (expression != null && statementList.getStatementListType() == BlockType.ERROR_CLAUSE) {
             expression = null;
         }
-        if (expression == null && statementList.getStatementListType() != StatementListType.ERROR_CLAUSE) {
+        if (expression == null && statementList.getStatementListType() != BlockType.ERROR_CLAUSE) {
             expression = builder.error(statement, RapidPrimitiveType.NUMBER);
         }
         builder.throwException(statement, expression);

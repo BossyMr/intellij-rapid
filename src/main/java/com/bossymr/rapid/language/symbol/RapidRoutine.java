@@ -1,8 +1,8 @@
 package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.RapidIcons;
+import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.psi.RapidStatement;
-import com.bossymr.rapid.language.psi.StatementListType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.navigation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
@@ -54,11 +54,11 @@ public interface RapidRoutine extends RapidVisibleSymbol {
     /**
      * Returns the statements in the specified statement list in this routine.
      *
-     * @param statementListType the type of statement list.
+     * @param blockType the type of statement list.
      * @return the statements in the specified statement list, or {@code null} if this routine does not declare a
      * statement list of the specified type.
      */
-    @Nullable List<RapidStatement> getStatements(@NotNull StatementListType statementListType);
+    @Nullable List<RapidStatement> getStatements(@NotNull BlockType blockType);
 
     @Override
     default @NotNull TargetPresentation getTargetPresentation() {

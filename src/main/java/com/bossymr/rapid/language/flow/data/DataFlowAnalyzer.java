@@ -13,6 +13,7 @@ import com.bossymr.rapid.language.flow.value.ConstantExpression;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.intellij.openapi.progress.ProgressManager;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.*;
 import java.util.function.BiPredicate;
@@ -29,7 +30,6 @@ public class DataFlowAnalyzer {
     private final @NotNull DataFlowFunctionMap functionMap;
     private final @NotNull Deque<DataFlowBlock> workList;
 
-    private final @NotNull Set<BlockCycle> cycles;
     private final @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowBlock> consumer;
 
     public DataFlowAnalyzer(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull Deque<DataFlowBlock> workList, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowBlock> consumer) {
@@ -38,12 +38,11 @@ public class DataFlowAnalyzer {
         this.workList = workList;
         this.blocks = blocks;
         this.consumer = consumer;
-        this.cycles = getBlockCycles(functionBlock);
     }
 
-    public static @NotNull Map<Instruction, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowBlock> consumer) {
+    public static @NotNull Map<Instruction, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull Set<BlockCycle> cycles, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowBlock> consumer, @NotNull Set<PathCounter> counters) {
         List<Instruction> instructions = functionBlock.getInstructions();
-        Map<Instruction, DataFlowBlock> blocks = instructions.stream().collect(Collectors.toMap(block -> block, DataFlowBlock::new));
+        Map<Instruction, DataFlowBlock> blocks = instructions.stream().collect(Collectors.toMap(block -> block, instruction -> new DataFlowBlock(instruction, cycles, counters)));
         Deque<DataFlowBlock> workList = new ArrayDeque<>(instructions.size());
         for (Instruction basicBlock : instructions) {
             workList.add(blocks.get(basicBlock));
@@ -61,7 +60,7 @@ public class DataFlowAnalyzer {
         analyzer.process();
     }
 
-    private static @NotNull Set<BlockCycle> getBlockCycles(@NotNull Block block) {
+    public static @NotNull Set<BlockCycle> getBlockCycles(@NotNull Block block) {
         Set<BlockCycle> blockCycles = new HashSet<>();
         Set<List<Instruction>> cycles = getCycles(block);
         for (List<Instruction> cycle : cycles) {
@@ -90,7 +89,7 @@ public class DataFlowAnalyzer {
         return blockCycles;
     }
 
-    private static @NotNull Set<List<Instruction>> getCycles(@NotNull Block block) {
+    private static @NotNull @Unmodifiable Set<List<Instruction>> getCycles(@NotNull Block block) {
         Set<List<Instruction>> cycles = new HashSet<>();
         Map<Instruction, Set<List<Instruction>>> tails = new HashMap<>();
         Deque<Instruction> queue = new ArrayDeque<>();
@@ -126,45 +125,24 @@ public class DataFlowAnalyzer {
                 }
             }
         }
-        return cycles;
+        return Set.copyOf(cycles);
     }
 
     public Block.@NotNull FunctionBlock getFunctionBlock() {
         return functionBlock;
     }
 
-    public @NotNull Map<Instruction, Set<DataFlowState>> processCycle(@NotNull DataFlowBlock predecessorBlock, @NotNull DataFlowState successorState, @NotNull BlockCycle blockCycle) {
-        Map<Instruction, Set<DataFlowState>> exits = new HashMap<>();
-        Deque<DataFlowBlock> workList = new ArrayDeque<>();
-        DataFlowBlock firstBlock = blocks.get(blockCycle.instructions().get(0));
-        workList.add(firstBlock);
-        while (!(workList.isEmpty())) {
-            DataFlowBlock block = workList.removeLast();
-            Instruction instruction = block.getInstruction();
-            process(block);
-            if(blockCycle.exits().containsValue(instruction)) {
-                exits.computeIfAbsent(instruction, key -> new HashSet<>());
-                exits.get(instruction).addAll(block.getStates());
-            } else {
-                for (DataFlowEdge successor : block.getSuccessors()) {
-                    DataFlowBlock successorBlock = successor.getDestination();
-                    if (workList.contains(successorBlock)) {
-                        continue;
-                    }
-                    workList.add(successorBlock);
-                }
-            }
-        }
-        return exits;
-    }
-
     public void process() {
         while (!(workList.isEmpty())) {
             ProgressManager.checkCanceled();
             DataFlowBlock block = workList.removeFirst();
+            Set<DataFlowEdge> successors = Set.copyOf(block.getSuccessors());
             process(block);
             if (consumer.test(blocks, block)) {
                 for (DataFlowEdge successor : block.getSuccessors()) {
+                    if (successors.contains(successor)) {
+                        continue;
+                    }
                     DataFlowBlock successorBlock = successor.getDestination();
                     if (workList.contains(successorBlock)) {
                         continue;
@@ -176,20 +154,19 @@ public class DataFlowAnalyzer {
     }
 
     private void process(@NotNull DataFlowBlock block) {
-        block.getStates().clear();
-        for (DataFlowEdge successor : block.getSuccessors()) {
-            successor.getDestination().getPredecessors().remove(successor);
-        }
-        block.getSuccessors().clear();
-        for (DataFlowEdge predecessors : block.getPredecessors()) {
-            block.getStates().add(predecessors.getState());
-        }
         Instruction instruction = block.getInstruction();
-        DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(this, block, blocks, cycles, functionMap);
-        if (block.getStates().isEmpty()) {
+
+        if (block.getPredecessors().isEmpty()) {
+            /*
+             * This block does not have any predecessor. Add a new state with all variables initialized.
+             */
+            block.getStates().clear();
             Collection<EntryInstruction> entries = instruction.getBlock().getEntryInstructions();
             if (entries.stream().anyMatch(entry -> entry.getInstruction().equals(instruction))) {
-                block.getStates().add(DataFlowState.createState(block));
+                DataFlowState state = DataFlowState.createState(block);
+                block.getStates().add(state);
+                DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(this, block, state, blocks, functionMap);
+                instruction.accept(visitor);
             } else {
                 /*
                  * This block has no predecessors and is not the entry point of a function, as such, assume that any
@@ -197,12 +174,47 @@ public class DataFlowAnalyzer {
                  * this block would extend into other blocks, which are reachable.
                  */
                 block.getStates().add(DataFlowState.createUnknownState(block));
-                return;
+
+            }
+            return;
+        }
+
+        /*
+         * Find all new predecessors by checking whether a state exists, which is a successor to the predecessor.
+         */
+        for (DataFlowEdge predecessor : block.getPredecessors()) {
+            DataFlowState predecessorState = predecessor.getState();
+            if (block.getStates().stream().noneMatch(state -> state.isAncestor(predecessorState))) {
+                /*
+                 * There exists no state in the block which is a successor to this predecessor.
+                 * As a result, it must be a new predecessor.
+                 */
+                block.getStates().add(predecessorState);
+                DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(this, block, predecessorState, blocks, functionMap);
+                instruction.accept(visitor);
             }
         }
-        instruction.accept(visitor);
-        for (DataFlowEdge successor : block.getSuccessors()) {
-            successor.getDestination().getPredecessors().add(successor);
+
+        /*
+         * Find all removed predecessors by checking whether a predecessor exists for each state.
+         */
+        for (ListIterator<DataFlowState> iterator = block.getStates().listIterator(); iterator.hasNext(); ) {
+            DataFlowState state = iterator.next();
+            if (block.getPredecessors().stream().noneMatch(predecessor -> state.isAncestor(predecessor.getState()))) {
+                /*
+                 * There exists no predecessor which this state is an ancestor of.
+                 * As a result, it must have been removed.
+                 */
+                iterator.remove();
+                block.getSuccessors().removeIf(successor -> {
+                    // This successor is an ancestor to this state.
+                    boolean isAncestor = successor.getState().isAncestor(state);
+                    if (isAncestor) {
+                        successor.getDestination().getPredecessors().remove(successor);
+                    }
+                    return isAncestor;
+                });
+            }
         }
     }
 }

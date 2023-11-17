@@ -351,8 +351,8 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
 
     @Override
     public @NotNull String visitBinaryExpression(@NotNull BinaryExpression expression) {
-        String leftValue = expression.getLeft().accept(this);
-        String rightValue = expression.getRight().accept(this);
+        String leftValue = visitExpression(expression, expression.getLeft());
+        String rightValue = visitExpression(expression, expression.getRight());
         return leftValue + " " + switch (expression.getOperator()) {
             case ADD -> "+";
             case SUBTRACT -> "-";
@@ -372,11 +372,24 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
         } + " " + rightValue;
     }
 
+    private @NotNull String visitExpression(@NotNull Expression parent, @NotNull Expression child) {
+        if (!(child instanceof BinaryExpression) && !(child instanceof UnaryExpression)) {
+            return child.accept(this);
+        }
+        if (parent instanceof UnaryExpression) {
+            return "(" + child.accept(this) + ")";
+        } else if (parent instanceof BinaryExpression) {
+            return "(" + child.accept(this) + ")";
+        }
+        return child.accept(this);
+    }
+
     @Override
     public @NotNull String visitUnaryExpression(@NotNull UnaryExpression expression) {
         return switch (expression.getOperator()) {
             case NOT -> "NOT ";
             case NEGATE -> "-";
-        } + expression.getExpression().accept(this);
+            case PRESENT -> "IsPresent ";
+        } + visitExpression(expression, expression.getExpression());
     }
 }

@@ -13,7 +13,6 @@ public final class DataFlowEdge {
     private final @NotNull DataFlowBlock destination;
 
     private DataFlowState state;
-    private DataFlowState copy;
 
     public DataFlowEdge(@NotNull DataFlowBlock source, @NotNull DataFlowBlock destination, @NotNull DataFlowState state) {
         this.source = source;
@@ -30,8 +29,7 @@ public final class DataFlowEdge {
     }
 
     public @NotNull DataFlowState getState() {
-        copy = DataFlowState.copy(state);
-        return copy;
+        return state;
     }
 
     public void setState(@NotNull DataFlowState state) {

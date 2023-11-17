@@ -55,6 +55,9 @@ public class ControlFlowBlockBuilder {
     }
 
     public void goTo(@NotNull ControlFlowLabel instruction) {
+        if (currentScope == null) {
+            return;
+        }
         Instruction label = instruction.getInstruction();
         if (label == null) {
             Scope copy = currentScope != null ? currentScope.copy() : new Scope(new ArrayDeque<>());

@@ -1,7 +1,9 @@
 package com.bossymr.rapid.language.symbol.resolve;
 
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
+import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.ControlFlow;
+import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
@@ -141,14 +143,15 @@ public final class RapidResolveService {
     }
 
     public @Nullable RapidSymbol findCustomSymbol(@NotNull String @NotNull [] sections) {
-        try {
-            HardcodedContract contract = HardcodedContract.valueOf(sections[1].toUpperCase());
-            RapidRoutine element = contract.getFunction().getBlock().getElement();
+        ControlFlow controlFlow = ControlFlowService.getControlFlow();
+        Block block = controlFlow.getBlock("", sections[1]);
+        if (block != null) {
+            RapidSymbol element = block.getElement();
             if (sections.length == 3) {
                 return findChild(element, sections[2]);
             }
             return element;
-        } catch (IllegalArgumentException ignored) {}
+        }
         return switch (sections[1]) {
             case "num" -> RapidPrimitiveType.NUMBER.getStructure();
             case "dnum" -> RapidPrimitiveType.DOUBLE.getStructure();
