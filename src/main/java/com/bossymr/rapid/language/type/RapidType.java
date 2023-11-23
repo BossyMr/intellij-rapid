@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.type;
 
 import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.ValueType;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,6 +17,7 @@ public interface RapidType {
      * @param type the type.
      * @return whether the specified type is assignable to this type.
      */
+    @Contract(pure = true)
     default boolean isAssignable(@NotNull RapidType type) {
         if(type.equals(this)) {
             return true;

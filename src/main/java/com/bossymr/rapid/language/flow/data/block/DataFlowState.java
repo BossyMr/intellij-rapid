@@ -48,29 +48,24 @@ import java.util.function.Function;
 public class DataFlowState {
 
     private final @Nullable DataFlowState predecessor;
-    private @Nullable DataFlowBlock block;
-
     private final @NotNull Block functionBlock;
-
     /**
      * The conditions for all variables.
      */
     private final @NotNull List<Expression> conditions;
-
     /**
      * The latest snapshot of each variable. The latest snapshot for a given variable also represents the variable.
      */
     private final @NotNull Map<Field, SnapshotExpression> snapshots;
-
     /**
      * The first snapshot of each variable.
      */
     private final @NotNull Map<Field, SnapshotExpression> roots;
-
     /**
      * The constraints for all variables.
      */
     private final @NotNull Map<SnapshotExpression, Optionality> optionality;
+    private @Nullable DataFlowBlock block;
 
     private DataFlowState(@Nullable DataFlowBlock block, @NotNull Block functionBlock, @Nullable DataFlowState predecessor) {
         this.predecessor = predecessor;
@@ -378,7 +373,7 @@ public class DataFlowState {
     }
 
     public void assign(@NotNull ReferenceExpression variable, @Nullable Expression expression) {
-        if(expression == null) {
+        if (expression == null) {
             createSnapshot(variable);
             return;
         }
@@ -576,6 +571,31 @@ public class DataFlowState {
         return expressions;
     }
 
+    public @NotNull List<Expression> getAllExpressions(@NotNull ReferenceExpression variable) {
+        SnapshotExpression snapshot = getSnapshot(variable);
+        List<Expression> expressions = new ArrayList<>();
+        getAllExpressions(expressions);
+        expressions.removeIf(expr -> !(expr.getComponents().contains(snapshot != null ? snapshot : variable)));
+        return expressions;
+    }
+
+    public @NotNull Expression getExpression(@NotNull ReferenceExpression variable) {
+        SnapshotExpression snapshot = getSnapshot(variable);
+        variable = snapshot != null ? snapshot : variable;
+        List<Expression> expressions = getAllExpressions(variable);
+        // TODO: 2023-11-23 This algorithm will only return the first expression
+        for (Expression expression : expressions) {
+            if (expression instanceof BinaryExpression binaryExpression) {
+                if (binaryExpression.getOperator() == BinaryOperator.EQUAL_TO) {
+                    if (binaryExpression.getLeft() == variable) {
+                        return binaryExpression.getRight();
+                    }
+                }
+            }
+        }
+        return variable;
+    }
+
     private void getAllExpressions(@NotNull List<Expression> expressions) {
         for (int i = getExpressions().size() - 1; i >= 0; i--) {
             Expression expression = getExpressions().get(i);
@@ -746,7 +766,7 @@ public class DataFlowState {
     private @NotNull Expression getSnapshot(@NotNull Expression value) {
         if (value instanceof ReferenceExpression referenceValue) {
             SnapshotExpression snapshot = getSnapshot(referenceValue);
-            if (snapshot !=null) {
+            if (snapshot != null) {
                 return snapshot;
             }
         }

@@ -26,7 +26,8 @@ public class BinaryExpression implements Expression {
     public BinaryExpression(@Nullable RapidExpression expression, @NotNull BinaryOperator operator, @NotNull Expression left, @NotNull Expression right) {
         this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
         this.operator = operator;
-        this.type = Objects.requireNonNull(getType(operator, left, right));
+        this.type = Objects.requireNonNull(getType(operator, left, right),
+                "Could not create expression: (" + left + ")[" + left.getType() + "] " + operator.getText() + " (" + right + ")[" + right.getType() + "]");
         this.left = left;
         this.right = right;
     }

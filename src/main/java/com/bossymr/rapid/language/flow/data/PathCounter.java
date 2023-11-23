@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
@@ -11,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 
-public record PathCounter(@NotNull BlockCycle cycle, @NotNull ReferenceExpression variable, @NotNull Set<DataFlowState> increment, @NotNull Set<DataFlowState> reset) implements SnapshotExpression {
+public record PathCounter(@NotNull ReferenceExpression variable, @NotNull BlockCycle increment, @NotNull Set<BlockCycle> reset) implements SnapshotExpression {
 
     @Override
     public @Nullable ReferenceExpression getUnderlyingVariable() {
@@ -30,6 +29,6 @@ public record PathCounter(@NotNull BlockCycle cycle, @NotNull ReferenceExpressio
 
     @Override
     public String toString() {
-        return "K{" + cycle + ", " + variable + "}";
+        return "K{" + increment + ", " + reset + "}";
     }
 }

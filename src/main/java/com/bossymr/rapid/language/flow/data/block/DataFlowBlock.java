@@ -115,11 +115,6 @@ public class DataFlowBlock {
              */
             state.assign(variable, getCyclicExpression(state, variable, expression));
         } else {
-            for (PathCounter counter : counters) {
-                if (counter.variable().equals(variable)) {
-                    counter.reset().add(state);
-                }
-            }
             state.assign(variable, expression);
         }
     }
@@ -135,7 +130,7 @@ public class DataFlowBlock {
             if (previousCycleSnapshot == null || !(isCyclicAssignment(state, previousCycleSnapshot, expression))) {
                 continue;
             }
-            PathCounter pathCounter = new PathCounter(cycle, variable, new HashSet<>(), new HashSet<>());
+            PathCounter pathCounter = new PathCounter(variable, cycle, new HashSet<>());
             counters.add(pathCounter);
             SnapshotExpression originalSnapshot = Objects.requireNonNull(previousCycle.getRoot(variable));
             Expression delta = new BinaryExpression(BinaryOperator.SUBTRACT, Objects.requireNonNull(state.getRoot(variable)), originalSnapshot);
@@ -144,7 +139,7 @@ public class DataFlowBlock {
                 return null;
             }
             BinaryExpression multiply = new BinaryExpression(BinaryOperator.MULTIPLY, delta, pathCounter);
-            expressions.add(new BinaryExpression(BinaryOperator.ADD, originalSnapshot, multiply));
+            expressions.add(new BinaryExpression(BinaryOperator.ADD, previousCycleSnapshot, multiply));
         }
         if (expressions.isEmpty()) {
             return expression;
@@ -304,13 +299,6 @@ public class DataFlowBlock {
             int count = getCycles(successor, successorState, blockCycle);
             if (count >= 2) {
                 anyMatch = true;
-            }
-            if (count >= 1 && getCycles(this, null, blockCycle) > count) {
-                for (PathCounter counter : counters) {
-                    if (counter.cycle().equals(blockCycle)) {
-                        counter.increment().add(state);
-                    }
-                }
             }
         }
         if (anyMatch) {
