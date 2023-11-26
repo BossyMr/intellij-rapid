@@ -34,6 +34,10 @@ public class ControlFlow {
         return map.values();
     }
 
+    public void add(@NotNull BlockDescriptor descriptor, @NotNull Block block) {
+        map.put(descriptor, block);
+    }
+
     /**
      * Returns the block in this control flow graph with the specified name, and which was declared in a module with the
      * specified name.

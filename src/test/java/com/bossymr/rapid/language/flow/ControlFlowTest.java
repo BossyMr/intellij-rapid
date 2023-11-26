@@ -63,7 +63,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	4: _0 := _0 - 1.0;
                 	   goto -> [6];
                                 
-                	5: _0 := _0 * 2.0 + 2.0;
+                	5: _0 := (_0 * 2.0) + 2.0;
                 	6: return _0;
                 }
                 """);
@@ -246,11 +246,11 @@ public class ControlFlowTest extends BasePlatformTestCase {
                                 
                 	2: return 0.0;
                                 
-                	3: if(_0 = 1.0 OR _0 = 3.0) -> [true: 4, false: 5]
+                	3: if((_0 = 1.0) OR (_0 = 3.0)) -> [true: 4, false: 5]
                                 
                 	4: return 1.0;
                                 
-                	5: if(_0 = 4.0 OR _0 = 5.0 OR _0 = 6.0) -> [true: 6, false: 7]
+                	5: if(((_0 = 4.0) OR (_0 = 5.0)) OR (_0 = 6.0)) -> [true: 6, false: 7]
                                 
                 	6: return 3.0;
                                 
@@ -307,17 +307,14 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 proc foo:bar(\\input num _0 [a]) {
-                	bool _1;
-                                
                 	STATEMENT_LIST:
-                	0: _1 := :Present(_0 := _0);
-                	1: if(_1) -> [true: 2, false: 3]
+                	0: if(IsPresent _0) -> [true: 1, false: 2]
                                 
-                	2: conditional(_a := _0);
-                	   goto -> [4];
+                	1: conditional(_a := _0);
+                	   goto -> [3];
                                 
-                	3: conditional();
-                	4: return;
+                	2: conditional();
+                	3: return;
                 }
                                 
                 proc foo:conditional(\\input num _0 [a]) {
@@ -338,31 +335,24 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 proc foo:bar(\\input num _0 [a], \\input num _1 [b]) {
-                	bool _2;
-                	bool _3;
-                	bool _4;
-                                
                 	STATEMENT_LIST:
-                	0: _2 := :Present(_0 := _0);
-                	1: if(_2) -> [true: 2, false: 6]
+                	0: if(IsPresent _0) -> [true: 1, false: 4]
                                 
-                	2: _3 := :Present(_0 := _1);
-                	3: if(_3) -> [true: 4, false: 5]
+                	1: if(IsPresent _1) -> [true: 2, false: 3]
                                 
-                	4: conditional(_a := _0, _b := _1);
-                	   goto -> [10];
+                	2: conditional(_a := _0, _b := _1);
+                	   goto -> [7];
                                 
-                	5: conditional(_a := _0);
-                	   goto -> [10];
+                	3: conditional(_a := _0);
+                	   goto -> [7];
                                 
-                	6: _4 := :Present(_0 := _1);
-                	7: if(_4) -> [true: 8, false: 9]
+                	4: if(IsPresent _1) -> [true: 5, false: 6]
                                 
-                	8: conditional(_b := _1);
-                	   goto -> [10];
+                	5: conditional(_b := _1);
+                	   goto -> [7];
                                 
-                	9: conditional();
-                	10: return;
+                	6: conditional();
+                	7: return;
                 }
                                 
                 proc foo:conditional(\\input num _0 [a], \\input num _1 [b]) {

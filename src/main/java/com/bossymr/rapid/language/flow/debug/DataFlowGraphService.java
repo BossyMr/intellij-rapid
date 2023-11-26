@@ -119,7 +119,9 @@ public class DataFlowGraphService extends AnAction {
             if (block != null) {
                 for (DataFlowState state : block.getStates()) {
                     writeState(stringBuilder, blocks, states, block, state);
-                    stringBuilder.append(getEntryBlockName(functionBlock)).append(" -> ").append(getDataFlowStateName(functionBlock, states, state)).append(";\n");
+                    if (state.getPredecessor() == null) {
+                        stringBuilder.append(getEntryBlockName(functionBlock)).append(" -> ").append(getDataFlowStateName(functionBlock, states, state)).append(";\n");
+                    }
                 }
             }
         }
@@ -161,7 +163,9 @@ public class DataFlowGraphService extends AnAction {
         }
         for (DataFlowEdge predecessor : block.getPredecessors()) {
             writeState(stringBuilder, blocks, states, block, predecessor.getState());
-            writeBlock(stringBuilder, blocks, states, predecessor.getSource());
+            if (predecessor.getSource() != null) {
+                writeBlock(stringBuilder, blocks, states, predecessor.getSource());
+            }
         }
     }
 

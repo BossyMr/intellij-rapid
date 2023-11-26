@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.builder.Label;
-import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
@@ -113,10 +112,6 @@ public class ControlFlowVisitor<R> {
 
     public R visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
         return visitReferenceExpression(snapshot);
-    }
-
-    public R visitPathCounterExpression(@NotNull PathCounter pathCounter) {
-        return visitSnapshotExpression(pathCounter);
     }
 
     public R visitConstantExpression(@NotNull ConstantExpression expression) {

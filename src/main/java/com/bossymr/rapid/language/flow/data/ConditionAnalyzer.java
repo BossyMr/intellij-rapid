@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
@@ -10,7 +9,6 @@ import com.bossymr.rapid.language.type.RapidType;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,22 +16,22 @@ import java.util.Map;
 public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
 
     private final @NotNull Context context;
-    private final @NotNull Solver solver;
-    private final @NotNull DataFlowState state;
 
-    private final @NotNull List<SnapshotExpression> snapshots = new ArrayList<>();
     private final @NotNull Map<ReferenceExpression, Expr<?>> symbols = new HashMap<>();
 
-    private ConditionAnalyzer(@NotNull Context context, @NotNull Solver solver, @NotNull DataFlowState state) {
+    private final @NotNull Map<VariableSnapshot, Expr<?>> optionality = new HashMap<>();
+    private final @NotNull EnumSort<?> optionalitySort;
+
+    private ConditionAnalyzer(@NotNull Context context) {
         this.context = context;
-        this.solver = solver;
-        this.state = state;
+        this.optionalitySort = context.mkEnumSort("optionality", "present", "missing");
     }
 
     public static boolean isSatisfiable(@NotNull DataFlowState state) {
         try (Context context = new Context()) {
             Solver solver = context.mkSolver();
             getSolver(context, state, solver);
+            System.out.println(solver);
             return switch (solver.check()) {
                 case UNSATISFIABLE -> false;
                 case UNKNOWN, SATISFIABLE -> true;
@@ -41,32 +39,8 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public static boolean isConstant(@NotNull DataFlowState state, @NotNull Expression expression) {
-        try (Context context = new Context()) {
-            Solver solver = context.mkSolver();
-            VariableSnapshot snapshot = new VariableSnapshot(RapidPrimitiveType.NUMBER);
-            BinaryExpression equality = new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, expression);
-            ConditionAnalyzer conditionAnalyzer = getSolver(context, state, solver);
-            solver.add((Expr<BoolSort>) equality.accept(conditionAnalyzer));
-            Expr<?> variable = snapshot.accept(conditionAnalyzer);
-            if (solver.check() != Status.SATISFIABLE) {
-                return false;
-            }
-            Expr<?> firstValue = solver.getModel().eval(variable, true);
-            if (firstValue == null) {
-                return false;
-            }
-            if (solver.check(context.mkNot(context.mkEq(variable, firstValue))) != Status.SATISFIABLE) {
-                return true;
-            }
-            Expr<?> secondValue = solver.getModel().eval(variable, true);
-            return solver.check(context.mkEq(firstValue, secondValue)) == Status.SATISFIABLE;
-        }
-    }
-
-    private static @NotNull ConditionAnalyzer getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull Solver solver) {
-        ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context, solver, state);
+    private static void getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull Solver solver) {
+        ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context);
         List<Expression> expressions = state.getAllExpressions();
         for (int i = expressions.size() - 1; i >= 0; i--) {
             Expression expression = expressions.get(i);
@@ -75,7 +49,6 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                 solver.add(conditionAnalyzer.getAsBoolean(expr));
             }
         }
-        return conditionAnalyzer;
     }
 
     @Override
@@ -161,23 +134,9 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             case NOT -> context.mkNot(getAsBoolean(expr));
             case NEGATE -> context.mkMul(getAsNumber(expr), context.mkReal(-1));
             case PRESENT -> {
-                if (expression instanceof ReferenceExpression variable) {
-                    Optionality optionality = state.getOptionality(variable);
-                    yield switch (optionality) {
-                        case PRESENT -> context.mkBool(true);
-                        case MISSING -> context.mkBool(false);
-                        case UNKNOWN -> {
-                            snapshots.add(null);
-                            yield context.mkConst(context.mkSymbol(snapshots.size() - 1), context.mkBoolSort());
-                        }
-                        case NO_VALUE -> {
-                            snapshots.add(null);
-                            Expr<BoolSort> result = context.mkConst(context.mkSymbol(snapshots.size() - 1), context.mkBoolSort());
-                            solver.add(context.mkEq(result, context.mkBool(true)));
-                            solver.add(context.mkEq(result, context.mkBool(false)));
-                            yield result;
-                        }
-                    };
+                if (component instanceof VariableSnapshot variable) {
+                    Expr<?> handle = optionality.computeIfAbsent(variable, unused -> context.mkConst("~" + variable.hashCode() + "*", optionalitySort));
+                    yield context.mkEq(handle, optionalitySort.getConst(0));
                 }
                 yield context.mkBool(true);
             }
@@ -189,54 +148,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         if (symbols.containsKey(expression)) {
             return symbols.get(expression);
         }
-        snapshots.add(expression);
         String name = "~" + expression.hashCode();
-        if (expression instanceof PathCounter pathCounter) {
-            Expr<IntSort> expr = context.mkConst(name, context.mkIntSort());
-            symbols.put(expression, expr);
-            solver.add(context.mkGe(expr, context.mkInt(0)));
-            if (pathCounter.reset().contains(pathCounter.increment())) {
-                solver.add(context.mkLe(expr, context.mkInt(1)));
-            }
-            StringSymbol symbol = context.mkSymbol("n");
-            Sort[] sorts = {context.getIntSort()};
-            Symbol[] symbols = {symbol};
-            IntExpr n = context.mkIntConst(symbol);
-            VariableSnapshot snapshot = new VariableSnapshot(RapidPrimitiveType.NUMBER);
-            snapshots.add(snapshot);
-            this.symbols.put(snapshot, n);
-            List<BoolExpr> exits = new ArrayList<>();
-            for (Expression value : pathCounter.increment().guards().values()) {
-                if (value == null) {
-                    continue;
-                }
-                value = value.replace(e -> {
-                    if (!(e instanceof ReferenceExpression variable)) {
-                        return e;
-                    }
-                    Expression definition = state.getExpression(variable);
-                    if (definition.getComponents().contains(pathCounter)) {
-                        return definition.replace(component -> component == pathCounter ? snapshot : component);
-                    }
-                    SnapshotExpression result = state.getSnapshot(variable);
-                    return result != null ? result : e;
-                });
-                BoolExpr result = getAsBoolean(value.accept(this));
-                exits.add(result);
-            }
-            if (!exits.isEmpty()) {
-                BoolExpr boundInside = context.mkAnd(context.mkGe(n, context.mkInt(0)), context.mkLt(n, expr));
-                BoolExpr boundOutside = context.mkGt(n, expr);
-                BoolExpr impliesInside = context.mkImplies(boundInside, exits.size() > 1 ? context.mkAnd(exits.stream()
-                                                                                                              .map(exit -> context.mkEq(exit, context.mkTrue())).toArray(BoolExpr[]::new)) : context.mkEq(exits.get(0), context.mkTrue()));
-                BoolExpr impliesOutside = context.mkImplies(boundOutside, exits.size() > 1 ? context.mkAnd(exits.stream()
-                                                                                                                .map(exit -> context.mkEq(exit, context.mkFalse())).toArray(BoolExpr[]::new)) : context.mkEq(exits.get(0), context.mkFalse()));
-                BoolExpr implies = context.mkAnd(impliesInside, impliesOutside);
-                Quantifier quantifier = context.mkForall(sorts, symbols, implies, 1, null, null, null, null);
-                solver.add(quantifier);
-            }
-            return expr;
-        }
         RapidType type = expression.getType();
         if (type.isAssignable(RapidPrimitiveType.STRING)) {
             Expr<SeqSort<CharSort>> expr = context.mkConst(name, context.mkStringSort());

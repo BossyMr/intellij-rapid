@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.data.block;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -9,18 +10,18 @@ import java.util.Objects;
  */
 public final class DataFlowEdge {
 
-    private final @NotNull DataFlowBlock source;
+    private final @Nullable DataFlowBlock source;
     private final @NotNull DataFlowBlock destination;
 
     private DataFlowState state;
 
-    public DataFlowEdge(@NotNull DataFlowBlock source, @NotNull DataFlowBlock destination, @NotNull DataFlowState state) {
+    public DataFlowEdge(@Nullable DataFlowBlock source, @NotNull DataFlowBlock destination, @NotNull DataFlowState state) {
         this.source = source;
         this.destination = destination;
         this.state = state;
     }
 
-    public @NotNull DataFlowBlock getSource() {
+    public @Nullable DataFlowBlock getSource() {
         return source;
     }
 

@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
@@ -84,9 +83,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
                 } else {
                     value = variableExpression;
                 }
-                Optionality optionality = successorState.getOptionality(expression);
                 successorState.assign(expression, value);
-                successorState.forceOptionality(value, optionality);
             }
         }
 

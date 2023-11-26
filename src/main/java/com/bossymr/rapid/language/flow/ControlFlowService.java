@@ -1,7 +1,10 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.flow.data.*;
+import com.bossymr.rapid.language.flow.data.BlockCycle;
+import com.bossymr.rapid.language.flow.data.DataFlow;
+import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
+import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
@@ -53,7 +56,6 @@ public final class ControlFlowService {
                 .collect(Collectors.toMap(BlockDescriptor::getBlockKey, block -> block));
         Deque<DataFlowBlock> workList = new ArrayDeque<>();
         Map<Block, Set<BlockCycle>> cycles = new HashMap<>();
-        Set<PathCounter> counters = new HashSet<>();
         DataFlowFunctionMap functionMap = new DataFlowFunctionMap(descriptorMap, workList, (function, map) -> {
             if (function.moduleName().isEmpty()) {
                 if (methods.add(function.name())) {
@@ -66,9 +68,9 @@ public final class ControlFlowService {
                     }
                     Block functionBlock = cache.getBlock("", function.name());
                     if (functionBlock instanceof Block.FunctionBlock) {
-                        controlFlow.getBlocks().add(functionBlock);
+                        controlFlow.add(function, functionBlock);
                         descriptorMap.put(function, (Block.FunctionBlock) functionBlock);
-                        analyzeBlock(controlFlow, consumer, ((Block.FunctionBlock) functionBlock), map, cycles, dataFlow, counters);
+                        analyzeBlock(controlFlow, consumer, ((Block.FunctionBlock) functionBlock), map, cycles, dataFlow);
                     }
                 }
             }
@@ -77,7 +79,7 @@ public final class ControlFlowService {
             if (!(block instanceof Block.FunctionBlock functionBlock)) {
                 continue;
             }
-            analyzeBlock(controlFlow, consumer, functionBlock, functionMap, cycles, dataFlow, counters);
+            analyzeBlock(controlFlow, consumer, functionBlock, functionMap, cycles, dataFlow);
         }
         for (DataFlowBlock entry : workList) {
             reanalyzeBlock(controlFlow, consumer, entry, functionMap, dataFlow);
@@ -107,12 +109,12 @@ public final class ControlFlowService {
         });
     }
 
-    private static void analyzeBlock(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer, Block.FunctionBlock functionBlock, DataFlowFunctionMap functionMap, @NotNull Map<Block, Set<BlockCycle>> cycles, @NotNull Map<Instruction, DataFlowBlock> dataFlow, @NotNull Set<PathCounter> counters) {
+    private static void analyzeBlock(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer, Block.FunctionBlock functionBlock, DataFlowFunctionMap functionMap, @NotNull Map<Block, Set<BlockCycle>> cycles, @NotNull Map<Instruction, DataFlowBlock> dataFlow) {
         Map<Instruction, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap, cycles.computeIfAbsent(functionBlock, DataFlowAnalyzer::getBlockCycles), (returnValue, value) -> {
             Map<Instruction, DataFlowBlock> copyMap = new HashMap<>(Map.copyOf(dataFlow));
             copyMap.putAll(returnValue);
             return consumer.test(createDataFlow(controlFlow, copyMap, functionMap.getUsages()), value);
-        }, counters);
+        });
         dataFlow.putAll(result);
     }
 

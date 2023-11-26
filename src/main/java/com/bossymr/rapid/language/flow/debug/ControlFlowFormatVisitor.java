@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.flow.debug;
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
@@ -286,11 +285,6 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     @Override
     public String visitVariableSnapshotExpression(VariableSnapshot snapshot) {
         return super.visitVariableSnapshotExpression(snapshot);
-    }
-
-    @Override
-    public String visitPathCounterExpression(@NotNull PathCounter pathCounter) {
-        return super.visitPathCounterExpression(pathCounter);
     }
 
     @Override

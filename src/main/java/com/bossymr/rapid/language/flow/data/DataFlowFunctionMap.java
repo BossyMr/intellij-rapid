@@ -58,7 +58,6 @@ public class DataFlowFunctionMap {
      */
     private final @NotNull BiConsumer<BlockDescriptor, DataFlowFunctionMap> consumer;
 
-
     public DataFlowFunctionMap(@NotNull Map<BlockDescriptor, Block.FunctionBlock> descriptorMap, @NotNull Deque<DataFlowBlock> workList, @NotNull BiConsumer<BlockDescriptor, DataFlowFunctionMap> consumer) {
         this.descriptorMap = descriptorMap;
         this.consumer = consumer;
@@ -120,6 +119,11 @@ public class DataFlowFunctionMap {
             return Optional.ofNullable(functionMap.get(blockDescriptor));
         }
         if (!(descriptorMap.containsKey(blockDescriptor))) {
+            if (blockDescriptor.moduleName().isEmpty()) {
+                consumer.accept(blockDescriptor, this);
+            }
+        }
+        if (!(descriptorMap.containsKey(blockDescriptor))) {
             return Optional.empty();
         }
         Block.FunctionBlock functionBlock = descriptorMap.get(blockDescriptor);
@@ -166,7 +170,6 @@ public class DataFlowFunctionMap {
             }
             DataFlowState copy = DataFlowState.copy(state);
             entry.state().getExpressions().forEach(copy::add);
-            entry.state().getOptionality().forEach(copy::setOptionality);
             entry.state().getSnapshots().forEach((field, snapshot) -> copy.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new VariableExpression(field), snapshot)));
             return copy.isSatisfiable();
         }

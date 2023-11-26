@@ -3,8 +3,6 @@ package com.bossymr.rapid.language.flow.data.block;
 import com.bossymr.rapid.language.flow.BooleanValue;
 import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.BlockCycle;
-import com.bossymr.rapid.language.flow.data.ConditionAnalyzer;
-import com.bossymr.rapid.language.flow.data.PathCounter;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
@@ -12,22 +10,23 @@ import com.bossymr.rapid.language.flow.value.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class DataFlowBlock {
 
     private final @NotNull Instruction instruction;
     private final @NotNull List<DataFlowState> states = new ArrayList<>();
     private final @NotNull Set<BlockCycle> cycles;
-    private final @NotNull Set<PathCounter> counters;
 
     private final @NotNull Set<DataFlowEdge> successors = new HashSet<>();
     private final @NotNull Set<DataFlowEdge> predecessors = new HashSet<>();
 
-    public DataFlowBlock(@NotNull Instruction instruction, @NotNull Set<BlockCycle> cycles, @NotNull Set<PathCounter> counters) {
+    public DataFlowBlock(@NotNull Instruction instruction, @NotNull Set<BlockCycle> cycles) {
         this.instruction = instruction;
         this.cycles = cycles;
-        this.counters = counters;
     }
 
     public static @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {
@@ -108,57 +107,11 @@ public class DataFlowBlock {
              * which is newer than the root snapshot of the previous iteration) of the variable which is being
              * assigned in the expression. For example, x2 := x1 + 1 or x3 := x1 + 1 (if x1 is the latest snapshot
              * for x at that point).
-             *
-             * If this assignment is cyclic: calculate how much the value increased per cycle using z3 maximum and
-             * minimum operations (if the same: is linear; otherwise: is non-linear, assign to [any]).
-             * Rewrite as: x2 := (delta x) * n.
              */
-            state.assign(variable, getCyclicExpression(state, variable, expression));
+            state.assign(variable, null);
         } else {
             state.assign(variable, expression);
         }
-    }
-
-    private @Nullable Expression getCyclicExpression(@NotNull DataFlowState state, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
-        List<Expression> expressions = new ArrayList<>();
-        for (BlockCycle cycle : cycles) {
-            DataFlowState previousCycle = getPreviousCycle(state, cycle);
-            if (previousCycle == null) {
-                continue;
-            }
-            SnapshotExpression previousCycleSnapshot = previousCycle.getSnapshot(variable);
-            if (previousCycleSnapshot == null || !(isCyclicAssignment(state, previousCycleSnapshot, expression))) {
-                continue;
-            }
-            PathCounter pathCounter = new PathCounter(variable, cycle, new HashSet<>());
-            counters.add(pathCounter);
-            SnapshotExpression originalSnapshot = Objects.requireNonNull(previousCycle.getRoot(variable));
-            Expression delta = new BinaryExpression(BinaryOperator.SUBTRACT, Objects.requireNonNull(state.getRoot(variable)), originalSnapshot);
-            boolean isConstant = ConditionAnalyzer.isConstant(state, delta);
-            if (!(isConstant)) {
-                return null;
-            }
-            BinaryExpression multiply = new BinaryExpression(BinaryOperator.MULTIPLY, delta, pathCounter);
-            expressions.add(new BinaryExpression(BinaryOperator.ADD, previousCycleSnapshot, multiply));
-        }
-        if (expressions.isEmpty()) {
-            return expression;
-        }
-        Expression result = expressions.get(0);
-        for (int i = 1; i < expressions.size(); i++) {
-            result = new BinaryExpression(BinaryOperator.ADD, result, expressions.get(0));
-        }
-        return result;
-    }
-
-    private boolean isCyclicAssignment(@NotNull DataFlowState state, @NotNull ReferenceExpression snapshot, @NotNull Expression expression) {
-        List<? extends Expression> components = expression.getComponents().stream()
-                                                          .filter(component -> component instanceof ReferenceExpression)
-                                                          .map(component -> (ReferenceExpression) component)
-                                                          .map(state::getSnapshot)
-                                                          .filter(Objects::nonNull)
-                                                          .toList();
-        return components.contains(snapshot);
     }
 
 

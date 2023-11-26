@@ -40,9 +40,9 @@ public class DataFlowAnalyzer {
         this.consumer = consumer;
     }
 
-    public static @NotNull Map<Instruction, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull Set<BlockCycle> cycles, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowBlock> consumer, @NotNull Set<PathCounter> counters) {
+    public static @NotNull Map<Instruction, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull Set<BlockCycle> cycles, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowBlock> consumer) {
         List<Instruction> instructions = functionBlock.getInstructions();
-        Map<Instruction, DataFlowBlock> blocks = instructions.stream().collect(Collectors.toMap(block -> block, instruction -> new DataFlowBlock(instruction, cycles, counters)));
+        Map<Instruction, DataFlowBlock> blocks = instructions.stream().collect(Collectors.toMap(block -> block, instruction -> new DataFlowBlock(instruction, cycles)));
         Deque<DataFlowBlock> workList = new ArrayDeque<>(instructions.size());
         for (Instruction basicBlock : instructions) {
             workList.add(blocks.get(basicBlock));
@@ -53,10 +53,10 @@ public class DataFlowAnalyzer {
     }
 
     public static void reanalyze(@NotNull DataFlowBlock block, @NotNull DataFlowFunctionMap functionMap, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowBlock> consumer) {
-        Deque<DataFlowBlock> deque = new ArrayDeque<>();
-        deque.addLast(block);
+        Deque<DataFlowBlock> workList = new ArrayDeque<>();
+        workList.addLast(block);
         Block.FunctionBlock functionBlock = (Block.FunctionBlock) block.getInstruction().getBlock();
-        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(functionBlock, functionMap, blocks, deque, consumer);
+        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(functionBlock, functionMap, blocks, workList, consumer);
         analyzer.process();
     }
 
@@ -86,6 +86,7 @@ public class DataFlowAnalyzer {
                 }
             }
         }
+        System.out.println(blockCycles);
         return blockCycles;
     }
 
@@ -163,10 +164,8 @@ public class DataFlowAnalyzer {
             block.getStates().clear();
             Collection<EntryInstruction> entries = instruction.getBlock().getEntryInstructions();
             if (entries.stream().anyMatch(entry -> entry.getInstruction().equals(instruction))) {
-                DataFlowState state = DataFlowState.createState(block);
-                block.getStates().add(state);
-                DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(this, block, state, blocks, functionMap);
-                instruction.accept(visitor);
+                DataFlowEdge edge = new DataFlowEdge(null, block, DataFlowState.createState(block));
+                block.getPredecessors().add(edge);
             } else {
                 /*
                  * This block has no predecessors and is not the entry point of a function, as such, assume that any
@@ -174,9 +173,8 @@ public class DataFlowAnalyzer {
                  * this block would extend into other blocks, which are reachable.
                  */
                 block.getStates().add(DataFlowState.createUnknownState(block));
-
+                return;
             }
-            return;
         }
 
         /*
