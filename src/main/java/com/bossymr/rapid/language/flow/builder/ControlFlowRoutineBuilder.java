@@ -33,10 +33,10 @@ public class ControlFlowRoutineBuilder implements RapidRoutineBuilder {
         }
         VirtualParameterGroup parameterGroup = new VirtualParameterGroup(routine, isOptional, new ArrayList<>());
         ArgumentGroup argumentGroup = new ArgumentGroup(isOptional, new ArrayList<>());
-        ControlFlowParameterGroupBuilder builder = new ControlFlowParameterGroupBuilder(block, parameterGroup, argumentGroup);
-        consumer.accept(builder);
         block.getArgumentGroups().add(argumentGroup);
         parameters.add(parameterGroup);
+        ControlFlowParameterGroupBuilder builder = new ControlFlowParameterGroupBuilder(block, parameterGroup, argumentGroup);
+        consumer.accept(builder);
         return this;
     }
 

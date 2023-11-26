@@ -11,6 +11,7 @@ import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
+import org.codehaus.plexus.util.cli.Arg;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -384,7 +385,7 @@ public class DataFlowState {
             }
         }
         expression = expression.replace(this::getSnapshot);
-        Optional<SnapshotExpression> snapshot = createSnapshot(variable, Optionality.UNKNOWN);
+        Optional<SnapshotExpression> snapshot = createSnapshot(variable, Optionality.PRESENT);
         if (snapshot.isEmpty()) {
             return;
         }
@@ -468,6 +469,71 @@ public class DataFlowState {
 
     public @NotNull Map<SnapshotExpression, Optionality> getOptionality() {
         return optionality;
+    }
+
+    public void setOptionality(@NotNull ReferenceExpression expression, @NotNull Optionality optionality) {
+        ReferenceExpression snapshot = getSnapshot(expression);
+        if (snapshot == null) {
+            snapshot = expression;
+        }
+        if(optionality == Optionality.PRESENT) {
+            Field field = getField(expression);
+            // TODO: 2023-11-26 This needs to be encoded into z3 -> these arguments are distinct, only one can be present
+            if(field instanceof Argument argument) {
+                ArgumentGroup argumentGroup = argument.getArgumentGroup(functionBlock);
+                if(argumentGroup != null) {
+                    for (Argument sibling : argumentGroup.arguments()) {
+                        if(sibling.equals(argument)) {
+                            continue;
+                        }
+                        setOptionality(new VariableExpression(sibling), Optionality.MISSING);
+                    }
+                }
+            }
+        }
+        UnaryExpression isPresent = new UnaryExpression(UnaryOperator.PRESENT, snapshot);
+        switch (optionality) {
+            case NO_VALUE -> {
+                conditions.add(new BinaryExpression(BinaryOperator.EQUAL_TO, isPresent, new ConstantExpression(true)));
+                conditions.add(new BinaryExpression(BinaryOperator.EQUAL_TO, isPresent, new ConstantExpression(false)));
+            }
+            case MISSING ->
+                    conditions.add(new BinaryExpression(BinaryOperator.EQUAL_TO, isPresent, new ConstantExpression(false)));
+            case PRESENT ->
+                    conditions.add(new BinaryExpression(BinaryOperator.EQUAL_TO, isPresent, new ConstantExpression(true)));
+        }
+    }
+
+    private @Nullable Field getField(@NotNull ReferenceExpression expression) {
+        return expression.accept(new ControlFlowVisitor<>() {
+            @Override
+            public Field visitIndexExpression(@NotNull IndexExpression expression) {
+                return getField(expression.getVariable());
+            }
+
+            @Override
+            public Field visitComponentExpression(@NotNull ComponentExpression expression) {
+                return getField(expression.getVariable());
+            }
+
+            @Override
+            public Field visitFieldExpression(@NotNull FieldExpression expression) {
+                return null;
+            }
+
+            @Override
+            public Field visitVariableExpression(@NotNull VariableExpression expression) {
+                return expression.getField();
+            }
+
+            @Override
+            public Field visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
+                if (snapshot.getUnderlyingVariable() != null) {
+                    return getField(snapshot.getUnderlyingVariable());
+                }
+                return null;
+            }
+        });
     }
 
     public @NotNull BooleanValue getConstraint(@NotNull Expression expression) {
@@ -560,16 +626,7 @@ public class DataFlowState {
             return Optional.of(variableSnapshot);
         }
         SnapshotExpression snapshot = createSnapshot(variable.getType(), variable);
-        switch (optionality) {
-            case NO_VALUE -> {
-                conditions.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new ConstantExpression(true)));
-                conditions.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new ConstantExpression(false)));
-            }
-            case MISSING ->
-                    conditions.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new ConstantExpression(false)));
-            case PRESENT ->
-                    conditions.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new ConstantExpression(true)));
-        }
+        setOptionality(snapshot, optionality);
         return Optional.of(snapshot);
     }
 

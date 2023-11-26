@@ -74,6 +74,41 @@ class DataFlowGraphTest {
     }
 
     @Test
+    void mutuallyExclusiveArgument(TestInfo testInfo) throws IOException, ExecutionException {
+        /*
+         *  MODULE foo
+         *      PROC bar(\num x | num y)
+         *          VAR num z := 0;
+         *          IF Present(x) THEN
+         *              z := y + x;
+         *          ELSE
+         *               z := y - x;
+         *          ENDIF
+         *      ENDPROC
+         *  ENDMODULE
+         *
+         */
+        check(testInfo, builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withProcedure("bar", routineBuilder -> routineBuilder
+                                .withParameterGroup(true, parameterGroupBuilder -> parameterGroupBuilder
+                                        .withParameter("x", ParameterType.INPUT, RapidPrimitiveType.NUMBER)
+                                        .withParameter("y", ParameterType.INPUT, RapidPrimitiveType.NUMBER))
+                                .withCode(codeBuilder -> {
+                                    ReferenceExpression x = codeBuilder.getArgument("x");
+                                    ReferenceExpression y = codeBuilder.getArgument("y");
+                                    ReferenceExpression z = codeBuilder.createVariable("z", RapidPrimitiveType.NUMBER);
+                                    Expression expression = codeBuilder.call(":Present", RapidPrimitiveType.BOOLEAN, argumentBuilder -> argumentBuilder
+                                            .withRequiredArgument(x));
+                                    codeBuilder.ifThenElse(expression,
+                                            thenConsumer -> thenConsumer
+                                                    .assign(z, thenConsumer.binary(BinaryOperator.ADD, y, x))
+                                            , elseConsumer -> elseConsumer
+                                                    .assign(z, elseConsumer.binary(BinaryOperator.SUBTRACT, y, x)));
+                                }))));
+    }
+
+    @Test
     void missingVariable(TestInfo testInfo) throws IOException, ExecutionException {
         /*
          *  MODULE foo

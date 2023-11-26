@@ -3,8 +3,10 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
+import com.bossymr.rapid.language.flow.value.BinaryExpression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.flow.value.VariableExpression;
@@ -37,8 +39,8 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
          * Add all conditions from the result state to that state, but modify all variables and snapshots:
          *      1. Parameters should be replaced by their respective arguments.
          *
-         * Modify the snapshot for the target variable:
-         *      - Assign the return variable of the result state to the target variable of the calling state.
+         * Modify the snapshot for the callerVariable calleeVariable:
+         *      - Assign the return calleeVariable of the result state to the callerVariable calleeVariable of the calling state.
          *
          * Modify snapshots for arguments to parameters which are not of type INPUT:
          *      - Assign argument to the modified snapshot of the snapshot for the parameter.
@@ -53,39 +55,26 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
         Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
         for (Argument argument : arguments.keySet()) {
             ReferenceExpression expression = arguments.get(argument);
+            SnapshotExpression calleeSnapshot = result.state().getSnapshot(new VariableExpression(argument));
+            SnapshotExpression callerSnapshot = state.getSnapshot(expression);
             modifications.put(new VariableExpression(argument), expression);
+            if(calleeSnapshot != null && callerSnapshot != null) {
+                modifications.put(calleeSnapshot, callerSnapshot);
+            }
+        }
+
+        ReferenceExpression calleeVariable = result.variable();
+        ReferenceExpression callerVariable = instruction.getReturnValue();
+        if (calleeVariable != null && callerVariable != null) {
+            SnapshotExpression calleeSnapshot = result.state().getSnapshot(calleeVariable);
+            SnapshotExpression callerSnapshot = state.createSnapshot(callerVariable, Optionality.PRESENT).orElse(null);
+            modifications.put(calleeVariable, callerVariable);
+            if(calleeSnapshot != null && callerSnapshot != null) {
+                modifications.put(calleeSnapshot, callerSnapshot);
+            }
         }
 
         DataFlowState successorState = state.merge(result.state(), modifications);
-
-        // Assign target to the output of the result.
-        ReferenceExpression variable = result.variable();
-        ReferenceExpression target = instruction.getReturnValue();
-        if (variable != null && target != null) {
-            SnapshotExpression expression = result.state().getSnapshot(variable);
-            ReferenceExpression value;
-            if (expression != null) {
-                value = modifications.getOrDefault(expression, expression);
-            } else {
-                value = variable;
-            }
-            successorState.assign(target, value);
-        }
-
-        for (Argument argument : arguments.keySet()) {
-            ReferenceExpression expression = arguments.get(argument);
-            if (argument.getParameterType() != ParameterType.INPUT) {
-                VariableExpression variableExpression = new VariableExpression(argument);
-                SnapshotExpression snapshot = result.state().getSnapshot(variableExpression);
-                ReferenceExpression value;
-                if (snapshot != null) {
-                    value = modifications.getOrDefault(snapshot, snapshot);
-                } else {
-                    value = variableExpression;
-                }
-                successorState.assign(expression, value);
-            }
-        }
 
         // Check if the result is satisfiable.
         // If it is not satisfiable, this function will not be called.
@@ -97,10 +86,10 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
             return new Result.Exit(successorState);
         }
         if (result instanceof Result.Success) {
-            return new Result.Success(successorState, modifications.getOrDefault(variable, variable));
+            return new Result.Success(successorState, modifications.getOrDefault(calleeVariable, calleeVariable));
         }
         if (result instanceof Result.Error) {
-            return new Result.Error(successorState, modifications.getOrDefault(variable, variable));
+            return new Result.Error(successorState, modifications.getOrDefault(calleeVariable, calleeVariable));
         }
         return null;
     }

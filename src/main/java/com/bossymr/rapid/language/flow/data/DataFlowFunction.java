@@ -14,8 +14,22 @@ import java.util.Set;
  */
 public interface DataFlowFunction {
 
+    /**
+     * Returns the block of this function.
+     *
+     * @return the block of this function.
+     */
     @NotNull Block.FunctionBlock getBlock();
 
+    /**
+     * Create all possible outputs of this function, if called by the specified instruction in the specified state. The
+     * state stored in each returned result is a successor of the specified state. Additionally, each parameter for this
+     * function is replaced by the corresponding snapshot in the specified state.
+     *
+     * @param state the state where this function is called.
+     * @param instruction the instruction which calls this function.
+     * @return all possible outputs of this function.
+     */
     @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull CallInstruction instruction);
 
     sealed interface Result {

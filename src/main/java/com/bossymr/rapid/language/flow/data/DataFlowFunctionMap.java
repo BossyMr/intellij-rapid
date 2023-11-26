@@ -115,13 +115,13 @@ public class DataFlowFunctionMap {
     }
 
     public @NotNull Optional<DataFlowFunction> get(@NotNull BlockDescriptor blockDescriptor) {
-        if (functionMap.containsKey(blockDescriptor)) {
-            return Optional.ofNullable(functionMap.get(blockDescriptor));
-        }
         if (!(descriptorMap.containsKey(blockDescriptor))) {
             if (blockDescriptor.moduleName().isEmpty()) {
                 consumer.accept(blockDescriptor, this);
             }
+        }
+        if (functionMap.containsKey(blockDescriptor)) {
+            return Optional.ofNullable(functionMap.get(blockDescriptor));
         }
         if (!(descriptorMap.containsKey(blockDescriptor))) {
             return Optional.empty();
