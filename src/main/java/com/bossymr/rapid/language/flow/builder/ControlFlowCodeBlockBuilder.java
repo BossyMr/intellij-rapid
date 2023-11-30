@@ -70,7 +70,10 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
     public @NotNull RapidCodeBlockBuilder ifThenElse(@Nullable RapidElement element, @NotNull Expression expression, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer, @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer) {
         ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, element, expression);
         builder.continueScope(instruction);
-        ControlFlowBlockBuilder.Scope scope = Objects.requireNonNull(builder.exitScope());
+        ControlFlowBlockBuilder.Scope scope = builder.exitScope();
+        if (scope == null) {
+            return this;
+        }
 
         // Visit the "then" branch
         builder.enterScope(scope.copy());

@@ -32,12 +32,29 @@ public class BinaryExpression implements Expression {
         this.right = right;
     }
 
-    private static @Nullable RapidType getType(@NotNull BinaryOperator operator, @NotNull Expression left, @NotNull Expression right) {
+    public static @Nullable RapidType getType(@NotNull BinaryOperator operator, @NotNull Expression left, @NotNull Expression right) {
         return switch (operator) {
             case ADD, SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> {
                 if (operator == BinaryOperator.ADD) {
                     if (left.getType().isAssignable(RapidPrimitiveType.STRING) && left.getType().isAssignable(RapidPrimitiveType.STRING)) {
                         yield RapidPrimitiveType.STRING;
+                    }
+                }
+                if (operator == BinaryOperator.ADD || operator == BinaryOperator.SUBTRACT) {
+                    if (left.getType().isAssignable(RapidPrimitiveType.POSITION) && left.getType().isAssignable(RapidPrimitiveType.POSITION)) {
+                        yield RapidPrimitiveType.POSITION;
+                    }
+                }
+                if (operator == BinaryOperator.MULTIPLY) {
+                    if (left.getType().isAssignable(RapidPrimitiveType.POSITION)) {
+                        if (right.getType().isAssignable(RapidPrimitiveType.POSITION) || right.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                            yield RapidPrimitiveType.POSITION;
+                        }
+                    }
+                    if (right.getType().isAssignable(RapidPrimitiveType.POSITION)) {
+                        if (left.getType().isAssignable(RapidPrimitiveType.POSITION) || left.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                            yield RapidPrimitiveType.POSITION;
+                        }
                     }
                 }
                 if (!(left.getType().isAssignable(RapidPrimitiveType.NUMBER) || left.getType().isAssignable(RapidPrimitiveType.DOUBLE))) {

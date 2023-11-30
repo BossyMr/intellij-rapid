@@ -256,17 +256,17 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
             return result;
         }
         List<? extends RapidParameter> arguments = parameters.stream()
-                .flatMap(parameterGroup -> parameterGroup.getParameters().stream())
-                .toList();
+                                                             .flatMap(parameterGroup -> parameterGroup.getParameters().stream())
+                                                             .toList();
         values.forEach((index, value) -> {
             RapidParameter argument;
             if (index instanceof ArgumentDescriptor.Required required) {
                 argument = arguments.get(required.index());
             } else if (index instanceof ArgumentDescriptor.Optional optional) {
                 argument = arguments.stream()
-                        .filter(element -> Objects.equals(element.getName(), optional.name()))
-                        .findFirst()
-                        .orElseThrow();
+                                    .filter(element -> Objects.equals(element.getName(), optional.name()))
+                                    .findFirst()
+                                    .orElseThrow();
             } else {
                 throw new AssertionError();
             }

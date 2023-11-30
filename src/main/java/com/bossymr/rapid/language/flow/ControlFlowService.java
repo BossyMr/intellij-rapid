@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.flow.data.BlockCycle;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
@@ -15,6 +14,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
  */
 @Service(Service.Level.APP)
 public final class ControlFlowService {
+    private final @NotNull Logger logger = Logger.getInstance(ControlFlowService.class);
 
     private final @NotNull LazyInitializer.LazyValue<ControlFlow> controlFlow = LazyInitializer.create(HardcodedContract::getControlFlow);
 
@@ -46,7 +47,7 @@ public final class ControlFlowService {
     }
 
     @RequiresReadLock
-    public static @NotNull DataFlow getDataFlow(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer) {
+    public static @NotNull DataFlow calculateDataFlow(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer) {
         Set<String> methods = new HashSet<>();
         Map<Instruction, DataFlowBlock> dataFlow = new HashMap<>();
         Collection<Block> blocks = controlFlow.getBlocks();
@@ -55,7 +56,6 @@ public final class ControlFlowService {
                 .map(block -> (Block.FunctionBlock) block)
                 .collect(Collectors.toMap(BlockDescriptor::getBlockKey, block -> block));
         Deque<DataFlowBlock> workList = new ArrayDeque<>();
-        Map<Block, Set<BlockCycle>> cycles = new HashMap<>();
         DataFlowFunctionMap functionMap = new DataFlowFunctionMap(descriptorMap, workList, (function, map) -> {
             if (function.moduleName().isEmpty()) {
                 if (methods.add(function.name())) {
@@ -70,7 +70,7 @@ public final class ControlFlowService {
                     if (functionBlock instanceof Block.FunctionBlock) {
                         controlFlow.add(function, functionBlock);
                         descriptorMap.put(function, (Block.FunctionBlock) functionBlock);
-                        analyzeBlock(controlFlow, consumer, ((Block.FunctionBlock) functionBlock), map, cycles, dataFlow);
+                        analyzeBlock(controlFlow, consumer, ((Block.FunctionBlock) functionBlock), map, dataFlow);
                     }
                 }
             }
@@ -79,7 +79,7 @@ public final class ControlFlowService {
             if (!(block instanceof Block.FunctionBlock functionBlock)) {
                 continue;
             }
-            analyzeBlock(controlFlow, consumer, functionBlock, functionMap, cycles, dataFlow);
+            analyzeBlock(controlFlow, consumer, functionBlock, functionMap, dataFlow);
         }
         for (DataFlowBlock entry : workList) {
             reanalyzeBlock(controlFlow, consumer, entry, functionMap, dataFlow);
@@ -93,11 +93,24 @@ public final class ControlFlowService {
         return getDataFlow(project);
     }
 
+    private static void analyzeBlock(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer, Block.FunctionBlock functionBlock, DataFlowFunctionMap functionMap, @NotNull Map<Instruction, DataFlowBlock> dataFlow) {
+        Map<Instruction, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap, (returnValue, value) -> {
+            Map<Instruction, DataFlowBlock> copyMap = new HashMap<>(Map.copyOf(dataFlow));
+            copyMap.putAll(returnValue);
+            return consumer.test(createDataFlow(controlFlow, copyMap, functionMap.getUsages()), value);
+        });
+        dataFlow.putAll(result);
+    }
+
     @RequiresReadLock
     public @NotNull DataFlow getDataFlow(@NotNull Project project) {
         return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
+            long startTime = System.currentTimeMillis();
             ControlFlow controlFlow = calculateControlFlow(project);
-            return CachedValueProvider.Result.createSingleDependency(getDataFlow(controlFlow, (dataFlow, block) -> true), PsiModificationTracker.MODIFICATION_COUNT);
+            DataFlow result = calculateDataFlow(controlFlow, (dataFlow, block) -> true);
+            long difference = System.currentTimeMillis() - startTime;
+            logger.info("Computed data flow in: " + difference + "ms");
+            return CachedValueProvider.Result.createSingleDependency(result, PsiModificationTracker.MODIFICATION_COUNT);
         });
     }
 
@@ -109,13 +122,12 @@ public final class ControlFlowService {
         });
     }
 
-    private static void analyzeBlock(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer, Block.FunctionBlock functionBlock, DataFlowFunctionMap functionMap, @NotNull Map<Block, Set<BlockCycle>> cycles, @NotNull Map<Instruction, DataFlowBlock> dataFlow) {
-        Map<Instruction, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap, cycles.computeIfAbsent(functionBlock, DataFlowAnalyzer::getBlockCycles), (returnValue, value) -> {
-            Map<Instruction, DataFlowBlock> copyMap = new HashMap<>(Map.copyOf(dataFlow));
-            copyMap.putAll(returnValue);
-            return consumer.test(createDataFlow(controlFlow, copyMap, functionMap.getUsages()), value);
+    @RequiresReadLock
+    public @NotNull DataFlow getDataFlow(@NotNull Project project, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer) {
+        return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
+            ControlFlow controlFlow = calculateControlFlow(project);
+            return CachedValueProvider.Result.createSingleDependency(calculateDataFlow(controlFlow, consumer), PsiModificationTracker.MODIFICATION_COUNT);
         });
-        dataFlow.putAll(result);
     }
 
     public @NotNull ControlFlow getControlFlow() {

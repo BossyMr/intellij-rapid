@@ -36,7 +36,11 @@ class ControlFlowStatementVisitor extends RapidElementVisitor {
             return;
         }
         Expression right = ControlFlowExpressionVisitor.getExpression(statement.getRight(), builder);
-        builder.assign(statement, referenceExpression, right);
+        if (!(left.getType().isAssignable(right.getType()))) {
+            builder.assign(statement, referenceExpression, builder.error(statement.getRight(), left.getType()));
+        } else {
+            builder.assign(statement, referenceExpression, right);
+        }
     }
 
     @Override
@@ -204,6 +208,7 @@ class ControlFlowStatementVisitor extends RapidElementVisitor {
                     if (statement.getStatementList() != null) {
                         ControlFlowElementBuilder.processExpression(routine, statement.getStatementList(), codeBuilder);
                     }
+                    codeBuilder.assign(index, codeBuilder.binary(BinaryOperator.ADD, index, stepExpression));
                     codeBuilder.goTo(label);
                 });
     }

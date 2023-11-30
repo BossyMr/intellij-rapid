@@ -10,6 +10,7 @@ import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.FieldType;
+import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.physical.*;
@@ -93,7 +94,12 @@ public class ControlFlowElementBuilder {
             if (element instanceof PhysicalField field) {
                 ReferenceExpression variable = builder.createVariable(field.getName(), field.getFieldType(), field.getType() != null ? field.getType() : RapidPrimitiveType.ANYTYPE);
                 if (field.getInitializer() != null) {
-                    builder.assign(variable, ControlFlowExpressionVisitor.getExpression(field.getInitializer(), builder));
+                    Expression expression = ControlFlowExpressionVisitor.getExpression(field.getInitializer(), builder);
+                    if (!(variable.getType().isAssignable(expression.getType()))) {
+                        builder.assign(variable, builder.error(field.getInitializer(), variable.getType()));
+                    } else {
+                        builder.assign(variable, expression);
+                    }
                 }
             }
             if (element instanceof RapidStatement statement) {
@@ -153,11 +159,25 @@ public class ControlFlowElementBuilder {
                 BlockType blockType = statementList.getStatementListType();
                 if (blockType == BlockType.ERROR_CLAUSE) {
                     List<Integer> exceptions = getExceptions(statementList.getExpressions());
-                    builder.withCode(exceptions, codeBuilder -> processExpression(routine, statementList, codeBuilder));
+                    builder.withCode(exceptions, codeBuilder -> {
+                        processExpression(routine, statementList, codeBuilder);
+                        closeScope(routine, codeBuilder);
+                    });
                 } else {
-                    builder.withCode(blockType, codeBuilder -> processExpression(routine, statementList, codeBuilder));
+                    builder.withCode(blockType, codeBuilder -> {
+                        processExpression(routine, statementList, codeBuilder);
+                        closeScope(routine, codeBuilder);
+                    });
                 }
             }
         };
+    }
+
+    private void closeScope(@NotNull RapidRoutine routine, @NotNull RapidCodeBlockBuilder builder) {
+        if (routine.getType() != null) {
+            builder.returnValue(builder.error(null, routine.getType()));
+        } else {
+            builder.returnValue();
+        }
     }
 }

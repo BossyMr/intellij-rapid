@@ -12,7 +12,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * A snapshot based on a record, which itself has snapshots for each component of the record.
@@ -30,7 +29,7 @@ public class RecordSnapshot implements SnapshotExpression {
     public RecordSnapshot(@NotNull RapidType type, @Nullable ReferenceExpression underlyingVariable) {
         this.type = type;
         this.underlyingVariable = underlyingVariable;
-        if (!(underlyingVariable.getType().getActualStructure() instanceof RapidRecord record)) {
+        if (!(type.getActualStructure() instanceof RapidRecord record)) {
             throw new IllegalArgumentException();
         }
         this.components = new HashMap<>();
@@ -92,15 +91,12 @@ public class RecordSnapshot implements SnapshotExpression {
 
     @Override
     public boolean equals(Object object) {
-        if (this == object) return true;
-        if (object == null || getClass() != object.getClass()) return false;
-        RecordSnapshot that = (RecordSnapshot) object;
-        return Objects.equals(type, that.type) && Objects.equals(underlyingVariable, that.underlyingVariable) && Objects.equals(components, that.components) && Objects.equals(snapshots, that.snapshots);
+        return super.equals(object);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, underlyingVariable, components, snapshots);
+        return super.hashCode();
     }
 
     @Override

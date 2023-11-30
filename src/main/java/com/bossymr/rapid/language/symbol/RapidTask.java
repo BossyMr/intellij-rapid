@@ -27,9 +27,9 @@ import java.util.Set;
 @SuppressWarnings("UnstableApiUsage")
 public class RapidTask implements RapidSymbol {
 
-    private final String name;
-    private final File directory;
-    private final Set<File> files;
+    private final @NotNull String name;
+    private final @NotNull File directory;
+    private final @NotNull Set<File> files;
 
     public RapidTask(@NotNull String name, @NotNull File directory, @NotNull Set<File> files) {
         this.name = name;

@@ -231,8 +231,8 @@ public class RapidValidator {
 
     private void checkAggregateType(@NotNull RapidType type, @NotNull RapidAggregateExpression aggregate) {
         RapidStructure structure = type.getStructure();
-        RapidType arrayType = type.createArrayType(type.getDimensions() - 1);
         if (type.getDimensions() > 0) {
+            RapidType arrayType = type.createArrayType(type.getDimensions() - 1);
             for (RapidExpression expression : aggregate.getExpressions()) {
                 if (expression instanceof RapidAggregateExpression) {
                     checkAggregateType(arrayType, (RapidAggregateExpression) expression);

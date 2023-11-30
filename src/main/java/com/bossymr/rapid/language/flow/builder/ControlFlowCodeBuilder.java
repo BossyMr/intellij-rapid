@@ -4,6 +4,7 @@ import com.bossymr.rapid.language.builder.RapidCodeBuilder;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.Variable;
+import com.bossymr.rapid.language.flow.data.snapshots.ErrorSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.ReturnInstruction;
 import com.bossymr.rapid.language.flow.value.*;
@@ -62,7 +63,6 @@ public class ControlFlowCodeBuilder implements RapidCodeBuilder {
         if (variable.getType().getDimensions() < 1) {
             throw new IllegalArgumentException();
         }
-        // TODO: 2023-10-16 Double should be assignable to num and so no
         if (!(index.getType().isAssignable(RapidPrimitiveType.NUMBER))) {
             throw new IllegalArgumentException();
         }
@@ -71,9 +71,6 @@ public class ControlFlowCodeBuilder implements RapidCodeBuilder {
 
     @Override
     public @NotNull Expression component(@Nullable RapidReferenceExpression element, @NotNull RapidType type, @NotNull ReferenceExpression variable, @NotNull String name) {
-        if (variable.getType().getDimensions() < 1) {
-            throw new IllegalArgumentException();
-        }
         return new ComponentExpression(element, type, variable, name);
     }
 
@@ -99,7 +96,7 @@ public class ControlFlowCodeBuilder implements RapidCodeBuilder {
 
     @Override
     public @NotNull Expression error(@Nullable RapidElement element, @NotNull RapidType type) {
-        return new VariableSnapshot(type);
+        return new ErrorSnapshot(type);
     }
 
     @Override

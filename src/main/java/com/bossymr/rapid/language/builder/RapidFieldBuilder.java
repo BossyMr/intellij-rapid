@@ -6,6 +6,6 @@ import java.util.function.Consumer;
 
 public interface RapidFieldBuilder {
 
-    @NotNull RapidFieldBuilder withInitializer(@NotNull Consumer<RapidCodeBuilder> consumer);
+    @NotNull RapidFieldBuilder withInitializer(@NotNull Consumer<RapidCodeBlockBuilder> consumer);
 
 }

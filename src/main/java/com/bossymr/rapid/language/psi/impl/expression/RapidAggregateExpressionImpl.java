@@ -5,8 +5,8 @@ import com.bossymr.rapid.language.psi.RapidAssignmentStatement;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
-import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.RapidVariable;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
@@ -44,7 +44,11 @@ public class RapidAggregateExpressionImpl extends RapidExpressionImpl implements
             if (parentType == null) {
                 return null;
             }
-            return parentType.createArrayType(parentType.getDimensions() - 1);
+            int dimensions = parentType.getDimensions();
+            if (dimensions < 1) {
+                return null;
+            }
+            return parentType.createArrayType(dimensions - 1);
         } else if (getParent() instanceof RapidAssignmentStatement) {
             RapidExpression left = ((RapidAssignmentStatement) getParent()).getLeft();
             return left != null ? left.getType() : null;

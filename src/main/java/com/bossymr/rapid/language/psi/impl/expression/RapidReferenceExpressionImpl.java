@@ -165,7 +165,7 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
     @Override
     public @Nullable RapidSymbol getSymbol() {
         List<RapidSymbol> symbols = getSymbols();
-        return symbols.size() > 0 ? symbols.get(0) : null;
+        return symbols.isEmpty() ? null : symbols.get(0);
     }
 
     @Override

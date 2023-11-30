@@ -327,7 +327,12 @@ public class DataFlowGraphService extends AnAction {
                 @Override
                 public void run(@NotNull ProgressIndicator indicator) {
                     ControlFlowService service = ControlFlowService.getInstance();
-                    DataFlow dataFlow = ReadAction.compute(() -> service.getDataFlow(project));
+                    DataFlow dataFlow = ReadAction.compute(() -> service.getDataFlow(project, (result, block) -> {
+                        Instruction instruction = block.getInstruction();
+                        Block functionBlock = instruction.getBlock();
+                        indicator.setText2("Processing: " + functionBlock.getModuleName() + ":" + functionBlock.getName() + " - Instruction #" + instruction.getIndex());
+                        return true;
+                    }));
                     try {
                         convert(wrapper.getFile(), dataFlow);
                         NotificationGroupManager.getInstance()

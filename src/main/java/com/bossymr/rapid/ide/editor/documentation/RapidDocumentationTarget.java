@@ -3,6 +3,7 @@ package com.bossymr.rapid.ide.editor.documentation;
 import com.bossymr.rapid.ide.editor.highlight.RapidColor;
 import com.bossymr.rapid.language.RapidLanguage;
 import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.RapidTargetVariable;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.codeInsight.daemon.impl.HighlightInfoType;
@@ -81,6 +82,9 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
         if (symbol instanceof RapidParameter parameter) {
             return getPresentableText(parameter);
         }
+        if (symbol instanceof RapidTargetVariable targetVariable) {
+            return getPresentableText(targetVariable);
+        }
         throw new IllegalStateException("Unexpected symbol: " + symbol);
     }
 
@@ -145,6 +149,13 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
             appendText(stringBuilder, RapidColor.OPERATOR_SIGN, " := ");
             HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), field.getInitializer().getText(), 1);
         }
+        appendText(stringBuilder, RapidColor.SEMICOLON, ";");
+        return stringBuilder.toString();
+    }
+
+    private @NotNull String getPresentableText(@NotNull RapidTargetVariable variable) {
+        StringBuilder stringBuilder = new StringBuilder();
+        appendText(stringBuilder, RapidColor.VARIABLE, variable.getPresentableName());
         appendText(stringBuilder, RapidColor.SEMICOLON, ";");
         return stringBuilder.toString();
     }

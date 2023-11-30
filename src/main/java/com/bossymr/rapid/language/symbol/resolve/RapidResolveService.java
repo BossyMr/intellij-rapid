@@ -73,7 +73,7 @@ public final class RapidResolveService {
         if (identifier == null) {
             return List.of();
         }
-        String name = expression.getText();
+        String name = identifier.getText();
         List<RapidSymbol> symbols = findQualifier(expression, name);
         if (symbols != null) {
             return symbols;

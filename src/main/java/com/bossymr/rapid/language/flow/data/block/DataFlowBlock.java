@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.BooleanValue;
 import com.bossymr.rapid.language.flow.Optionality;
-import com.bossymr.rapid.language.flow.data.BlockCycle;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
@@ -19,14 +18,12 @@ public class DataFlowBlock {
 
     private final @NotNull Instruction instruction;
     private final @NotNull List<DataFlowState> states = new ArrayList<>();
-    private final @NotNull Set<BlockCycle> cycles;
 
     private final @NotNull Set<DataFlowEdge> successors = new HashSet<>();
     private final @NotNull Set<DataFlowEdge> predecessors = new HashSet<>();
 
-    public DataFlowBlock(@NotNull Instruction instruction, @NotNull Set<BlockCycle> cycles) {
+    public DataFlowBlock(@NotNull Instruction instruction) {
         this.instruction = instruction;
-        this.cycles = cycles;
     }
 
     public static @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {
@@ -46,36 +43,12 @@ public class DataFlowBlock {
         return null;
     }
 
-    public static @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state, @NotNull BlockCycle cycle) {
-        int index = -1;
-        int origin = -1;
-        for (; state != null; state = state.getPredecessor()) {
-            DataFlowBlock block = state.getBlock();
-            if (block == null) {
-                continue;
-            }
-            int newIndex = cycle.sequences().indexOf(block.getInstruction());
-            if (index == 0) {
-                // If the last instruction was the first instruction in the cycle, the next instruction should be the
-                // last instruction.
-                index = cycle.sequences().size();
-            }
-            if (index > 0) {
-                if (newIndex != (index - 1)) {
-                    return null;
-                }
-            }
-            if (origin > 0) {
-                if (origin == newIndex) {
-                    return state;
-                }
-            }
-            if (origin < 0) {
-                origin = newIndex;
-            }
-            index = newIndex;
+    public static int getPreviousCycles(@NotNull DataFlowState state) {
+        int count = 0;
+        while ((state = getPreviousCycle(state)) != null) {
+            count++;
         }
-        return null;
+        return count;
     }
 
     public @NotNull Instruction getInstruction() {
@@ -116,21 +89,24 @@ public class DataFlowBlock {
 
 
     private void separate(@NotNull DataFlowState state, @NotNull Expression expression) {
+        states.remove(state);
         List<DataFlowState> results = new ArrayList<>();
+        results.add(state);
         for (Expression component : expression.getComponents()) {
             if (!(component instanceof IndexExpression indexExpression)) {
                 continue;
             }
             indexExpression.iterate(child -> {
                 if (child instanceof IndexExpression) {
-                    results.addAll(separate(state, ((IndexExpression) child)));
+                    List<DataFlowState> copy = new ArrayList<>();
+                    for (DataFlowState result : results) {
+                        copy.addAll(separate(result, ((IndexExpression) child)));
+                    }
+                    results.clear();
+                    results.addAll(copy);
                 }
             });
         }
-        if (results.isEmpty()) {
-            return;
-        }
-        states.clear();
         states.addAll(results);
     }
 
@@ -139,7 +115,7 @@ public class DataFlowBlock {
         ReferenceExpression variable = expression.getVariable();
         SnapshotExpression snapshot = state.getSnapshot(variable);
         if (!(snapshot instanceof ArraySnapshot arraySnapshot)) {
-            throw new IllegalStateException("Expected state: " + state + " to create ArraySnapshot for variable: " + variable);
+            return List.of();
         }
         List<ArrayEntry> assignments = arraySnapshot.getAssignments(state, expression.getIndex());
         if (assignments.size() == 1) {
@@ -191,7 +167,8 @@ public class DataFlowBlock {
             if (optionality == null) {
                 optionality = state.getOptionality(expression);
             } else {
-                optionality = optionality.or(state.getOptionality(expression));
+                Optionality result = state.getOptionality(expression);
+                optionality = optionality.or(result);
             }
         }
         if (optionality == null) {
@@ -208,53 +185,14 @@ public class DataFlowBlock {
         return booleanValue;
     }
 
-    private int getCycles(@NotNull DataFlowBlock successorBlock, @Nullable DataFlowState successorState, @NotNull BlockCycle blockCycle) {
-        int longestCycle = 0;
-        List<DataFlowState> copy = new ArrayList<>(successorBlock.getStates());
-        if (successorState != null) copy.add(successorState);
-        for (DataFlowState state : copy) {
-            int currentCycle = 0;
-            DataFlowState previousCycle = state;
-            while ((previousCycle = DataFlowBlock.getPreviousCycle(previousCycle, blockCycle)) != null) {
-                currentCycle += 1;
-            }
-            longestCycle = Math.max(longestCycle, currentCycle);
-        }
-        return longestCycle;
-    }
-
     public void addSuccessor(@NotNull DataFlowBlock successor, @NotNull DataFlowState state) {
-        Instruction successorInstruction = successor.getInstruction();
         DataFlowBlock block = state.getBlock();
         if (block != null) {
             if (block != successor) {
                 state = DataFlowState.createSuccessorState(successor, state);
             }
         }
-        DataFlowState successorState = state;
-        List<BlockCycle> blockCycles = new ArrayList<>();
-        for (BlockCycle blockCycle : cycles) {
-            if (blockCycle.sequences().contains(successorInstruction)) {
-                Instruction next;
-                int index = blockCycle.sequences().indexOf(instruction);
-                if (index < 0 || index + 1 == blockCycle.sequences().size()) {
-                    next = blockCycle.sequences().get(0);
-                } else {
-                    next = blockCycle.sequences().get(index + 1);
-                }
-                if (successor.getInstruction().equals(next)) {
-                    blockCycles.add(blockCycle);
-                }
-            }
-        }
-        boolean anyMatch = false;
-        for (BlockCycle blockCycle : blockCycles) {
-            int count = getCycles(successor, successorState, blockCycle);
-            if (count >= 2) {
-                anyMatch = true;
-            }
-        }
-        if (anyMatch) {
+        if (getPreviousCycles(state) >= 2) {
             return;
         }
         DataFlowEdge edge = new DataFlowEdge(this, successor, state);

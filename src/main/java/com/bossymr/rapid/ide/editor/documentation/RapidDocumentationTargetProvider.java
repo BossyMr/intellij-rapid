@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.editor.documentation;
 
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
@@ -7,28 +8,53 @@ import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.codeInsight.documentation.DocumentationManagerProtocol;
+import com.intellij.lang.ASTNode;
 import com.intellij.model.Symbol;
+import com.intellij.model.psi.PsiSymbolDeclaration;
+import com.intellij.model.psi.PsiSymbolReference;
 import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
 import com.intellij.platform.backend.documentation.DocumentationLinkHandler;
 import com.intellij.platform.backend.documentation.DocumentationTarget;
+import com.intellij.platform.backend.documentation.DocumentationTargetProvider;
 import com.intellij.platform.backend.documentation.LinkResolveResult;
-import com.intellij.platform.backend.documentation.SymbolDocumentationTargetProvider;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings("UnstableApiUsage")
-public class RapidDocumentationTargetProvider implements SymbolDocumentationTargetProvider, DocumentationLinkHandler {
+public class RapidDocumentationTargetProvider implements DocumentationTargetProvider, DocumentationLinkHandler {
 
     @Override
-    public @Nullable DocumentationTarget documentationTarget(@NotNull Project project, @NotNull Symbol symbol) {
-        if (symbol instanceof RapidSymbol target) {
-            return target.getDocumentationTarget(project);
+    public @NotNull List<? extends @NotNull DocumentationTarget> documentationTargets(@NotNull PsiFile file, int offset) {
+        PsiElement element = file.findElementAt(offset);
+        if (element == null) {
+            return List.of();
         }
-        return null;
+        ASTNode elementNode = element.getNode();
+        IElementType elementType = elementNode.getElementType();
+        if (elementType == RapidTokenTypes.IDENTIFIER) {
+            element = element.getParent();
+        }
+        List<Symbol> symbols = new ArrayList<>();
+        for (PsiSymbolDeclaration declaration : element.getOwnDeclarations()) {
+            symbols.add(declaration.getSymbol());
+        }
+        for (PsiSymbolReference reference : element.getOwnReferences()) {
+            symbols.addAll(reference.resolveReference());
+        }
+        Project project = file.getProject();
+        return symbols.stream()
+                      .filter(symbol -> symbol instanceof RapidSymbol)
+                      .map(symbol -> (RapidSymbol) symbol)
+                      .map(symbol -> symbol.getDocumentationTarget(project))
+                      .toList();
     }
 
     @Override

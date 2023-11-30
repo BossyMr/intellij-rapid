@@ -61,12 +61,12 @@ public class RapidAliasType implements RapidType {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RapidAliasType that = (RapidAliasType) o;
-        return Objects.equals(alias, that.alias);
+        return Objects.equals(alias.getName(), that.alias.getName());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(alias);
+        return Objects.hash(alias.getName());
     }
 
     @Override

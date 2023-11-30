@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.*;
+import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
@@ -9,14 +10,11 @@ import com.bossymr.rapid.language.type.RapidType;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
 
     private final @NotNull Context context;
-
     private final @NotNull Map<ReferenceExpression, Expr<?>> symbols = new HashMap<>();
 
     private final @NotNull Map<VariableSnapshot, Expr<?>> optionality = new HashMap<>();
@@ -31,7 +29,6 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         try (Context context = new Context()) {
             Solver solver = context.mkSolver();
             getSolver(context, state, solver);
-            System.out.println(solver);
             return switch (solver.check()) {
                 case UNSATISFIABLE -> false;
                 case UNKNOWN, SATISFIABLE -> true;
@@ -39,8 +36,61 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
     }
 
-    private static void getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull Solver solver) {
+    public static @NotNull BooleanValue getBooleanValue(@NotNull DataFlowState state, @NotNull Expression expression) {
+        try (Context context = new Context()) {
+            Solver solver = context.mkSolver();
+            ConditionAnalyzer conditionAnalyzer = getSolver(context, state, solver);
+            BoolExpr isPresentExpression = conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new ConstantExpression(true)).accept(conditionAnalyzer));
+            boolean isTrue = solver.check(isPresentExpression) != Status.UNSATISFIABLE;
+            BoolExpr isFalseExpression = conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new ConstantExpression(false)).accept(conditionAnalyzer));
+            boolean isFalse = solver.check(isFalseExpression) != Status.UNSATISFIABLE;
+            if (isTrue && isFalse) {
+                return BooleanValue.ANY_VALUE;
+            }
+            if (isTrue) {
+                return BooleanValue.ALWAYS_TRUE;
+            }
+            if (isFalse) {
+                return BooleanValue.ALWAYS_FALSE;
+            }
+            return BooleanValue.NO_VALUE;
+        }
+    }
+
+    public static @NotNull Optionality getOptionality(@NotNull DataFlowState state, @NotNull ReferenceExpression variable) {
+        BooleanValue booleanValue = getBooleanValue(state, new UnaryExpression(UnaryOperator.PRESENT, variable));
+        return switch (booleanValue) {
+            case ANY_VALUE -> Optionality.UNKNOWN;
+            case ALWAYS_TRUE -> Optionality.PRESENT;
+            case ALWAYS_FALSE -> Optionality.MISSING;
+            case NO_VALUE -> Optionality.NO_VALUE;
+        };
+    }
+
+    private static @NotNull ConditionAnalyzer getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull Solver solver) {
         ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context);
+        DataFlowBlock block = state.getBlock();
+        if (block != null) {
+            Block functionBlock = block.getInstruction().getBlock();
+            List<ArgumentGroup> argumentGroups = functionBlock.getArgumentGroups();
+            DataFlowState predecessor = Objects.requireNonNullElse(state.getFirstPredecessor(), state);
+            for (ArgumentGroup argumentGroup : argumentGroups) {
+                if (!(argumentGroup.isOptional()) || argumentGroup.arguments().size() <= 1) {
+                    continue;
+                }
+                List<Expr<BoolSort>> isOptional = new ArrayList<>();
+                for (Argument argument : argumentGroup.arguments()) {
+                    SnapshotExpression snapshot = predecessor.getSnapshot(new VariableExpression(argument));
+                    Objects.requireNonNull(snapshot);
+                    UnaryExpression present = new UnaryExpression(UnaryOperator.PRESENT, snapshot);
+                    BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, present, new ConstantExpression(true));
+                    isOptional.add(conditionAnalyzer.getAsBoolean(expression.accept(conditionAnalyzer)));
+                }
+                @SuppressWarnings("unchecked")
+                Expr<BoolSort>[] array = isOptional.toArray(Expr[]::new);
+                solver.add(context.mkAtMost(array, 1));
+            }
+        }
         List<Expression> expressions = state.getAllExpressions();
         for (int i = expressions.size() - 1; i >= 0; i--) {
             Expression expression = expressions.get(i);
@@ -49,6 +99,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                 solver.add(conditionAnalyzer.getAsBoolean(expr));
             }
         }
+        return conditionAnalyzer;
     }
 
     @Override

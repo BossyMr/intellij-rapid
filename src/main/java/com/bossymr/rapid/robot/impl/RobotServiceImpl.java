@@ -112,7 +112,7 @@ public class RobotServiceImpl implements RobotService {
             Project[] projects = ProjectManager.getInstance().getOpenProjects();
             for (Project project : projects) {
                 Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(project));
-                PsiDocumentManager.getInstance(project).reparseFiles(virtualFiles, true);
+                WriteAction.run(() -> PsiDocumentManager.getInstance(project).reparseFiles(virtualFiles, true));
             }
         });
     }

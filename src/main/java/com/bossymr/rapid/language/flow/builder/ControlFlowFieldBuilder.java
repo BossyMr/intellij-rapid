@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.flow.builder;
 
-import com.bossymr.rapid.language.builder.RapidCodeBuilder;
+import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
 import com.bossymr.rapid.language.builder.RapidFieldBuilder;
 import com.bossymr.rapid.language.flow.Block;
 import org.jetbrains.annotations.NotNull;
@@ -16,9 +16,9 @@ public class ControlFlowFieldBuilder implements RapidFieldBuilder {
     }
 
     @Override
-    public @NotNull RapidFieldBuilder withInitializer(@NotNull Consumer<RapidCodeBuilder> consumer) {
+    public @NotNull RapidFieldBuilder withInitializer(@NotNull Consumer<RapidCodeBlockBuilder> consumer) {
         ControlFlowBlockBuilder builder = new ControlFlowBlockBuilder(block);
-        consumer.accept(new ControlFlowCodeBuilder(block, builder));
+        consumer.accept(new ControlFlowCodeBlockBuilder(block, builder));
         if(builder.isInScope()) {
             throw new IllegalArgumentException();
         }

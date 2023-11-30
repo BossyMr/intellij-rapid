@@ -106,8 +106,7 @@
         <platform.backend.documentation.linkHandler
                 implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
 
-        <!--suppress PluginXmlValidity -->
-        <platform.backend.documentation.symbolTargetProvider
+        <platform.backend.documentation.targetProvider
                 implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
 
         <!-- Search -->
@@ -118,8 +117,6 @@
                   implementationClass="com.bossymr.rapid.ide.editor.refactoring.RapidRenameUsageSearcher"/>
 
         <!-- PsiElement  -->
-
-        <lang.codeReferenceSearcher implementation="com.bossymr.rapid.ide.search.RapidCodeReferenceSearcher"/>
 
         <stubElementTypeHolder externalIdPrefix="rapid." class="com.bossymr.rapid.language.psi.RapidStubElementTypes"/>
 

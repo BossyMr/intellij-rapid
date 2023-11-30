@@ -12,10 +12,12 @@ import com.intellij.model.search.SearchContext;
 import com.intellij.model.search.SearchService;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.search.SearchScope;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.Query;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,7 +36,12 @@ public class RapidSymbolUsageSearcher implements UsageSearcher {
 
     @Contract(pure = true)
     private static @NotNull Collection<? extends PsiSymbolReference> collectReferences(@NotNull RapidSymbol symbol, @NotNull LeafOccurrence occurrence) {
-        return List.of();
+        List<PsiSymbolReference> references = new ArrayList<>();
+        PsiTreeUtil.treeWalkUp(occurrence.getStart(), occurrence.getScope(), (element, previous) -> {
+            references.addAll(element.getOwnReferences());
+            return references.isEmpty();
+        });
+        return references;
     }
 
     @Override

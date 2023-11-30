@@ -58,12 +58,12 @@ public class RapidRecordType implements RapidType {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RapidRecordType that = (RapidRecordType) o;
-        return Objects.equals(record, that.record);
+        return Objects.equals(record.getName(), that.record.getName());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(record);
+        return Objects.hash(record.getName());
     }
 
     @Override

@@ -5,15 +5,9 @@ import com.bossymr.rapid.language.flow.EntryInstruction;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowEdge;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
-import com.bossymr.rapid.language.flow.instruction.ConditionalBranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.value.BinaryExpression;
-import com.bossymr.rapid.language.flow.value.BinaryOperator;
-import com.bossymr.rapid.language.flow.value.ConstantExpression;
-import com.bossymr.rapid.language.flow.value.Expression;
 import com.intellij.openapi.progress.ProgressManager;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.*;
 import java.util.function.BiPredicate;
@@ -40,9 +34,9 @@ public class DataFlowAnalyzer {
         this.consumer = consumer;
     }
 
-    public static @NotNull Map<Instruction, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull Set<BlockCycle> cycles, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowBlock> consumer) {
+    public static @NotNull Map<Instruction, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowBlock> consumer) {
         List<Instruction> instructions = functionBlock.getInstructions();
-        Map<Instruction, DataFlowBlock> blocks = instructions.stream().collect(Collectors.toMap(block -> block, instruction -> new DataFlowBlock(instruction, cycles)));
+        Map<Instruction, DataFlowBlock> blocks = instructions.stream().collect(Collectors.toMap(block -> block, DataFlowBlock::new));
         Deque<DataFlowBlock> workList = new ArrayDeque<>(instructions.size());
         for (Instruction basicBlock : instructions) {
             workList.add(blocks.get(basicBlock));
@@ -60,76 +54,7 @@ public class DataFlowAnalyzer {
         analyzer.process();
     }
 
-    public static @NotNull Set<BlockCycle> getBlockCycles(@NotNull Block block) {
-        Set<BlockCycle> blockCycles = new HashSet<>();
-        Set<List<Instruction>> cycles = getCycles(block);
-        for (List<Instruction> cycle : cycles) {
-            BlockCycle blockCycle = new BlockCycle(cycle, new HashMap<>(), new HashMap<>());
-            blockCycles.add(blockCycle);
-            for (Instruction instruction : cycle) {
-                if (instruction instanceof ConditionalBranchingInstruction branchingInstruction) {
-                    Expression condition = branchingInstruction.getCondition();
-                    int nextIndex = cycle.indexOf(instruction) + 1;
-                    Instruction nextInstruction = cycle.size() > nextIndex ? cycle.get(nextIndex) : cycle.get(0);
-                    if (branchingInstruction.getTrue() != null && branchingInstruction.getTrue().equals(nextInstruction)) {
-                        blockCycle.guards().put(branchingInstruction, new BinaryExpression(BinaryOperator.EQUAL_TO, condition, new ConstantExpression(true)));
-                        if (branchingInstruction.getFalse() != null) {
-                            blockCycle.exits().put(instruction, branchingInstruction.getFalse());
-                        }
-                    }
-                    if (branchingInstruction.getFalse() != null && branchingInstruction.getFalse().equals(nextInstruction)) {
-                        blockCycle.guards().put(branchingInstruction, new BinaryExpression(BinaryOperator.EQUAL_TO, condition, new ConstantExpression(false)));
-                        if (branchingInstruction.getTrue() != null) {
-                            blockCycle.exits().put(instruction, branchingInstruction.getTrue());
-                        }
-                    }
-                }
-            }
-        }
-        System.out.println(blockCycles);
-        return blockCycles;
-    }
-
-    private static @NotNull @Unmodifiable Set<List<Instruction>> getCycles(@NotNull Block block) {
-        Set<List<Instruction>> cycles = new HashSet<>();
-        Map<Instruction, Set<List<Instruction>>> tails = new HashMap<>();
-        Deque<Instruction> queue = new ArrayDeque<>();
-        for (EntryInstruction entryInstruction : block.getEntryInstructions()) {
-            queue.add(entryInstruction.getInstruction());
-        }
-        while (!(queue.isEmpty())) {
-            Instruction instruction = queue.removeFirst();
-            // If this an entry instruction.
-            tails.computeIfAbsent(instruction, unused -> new HashSet<>());
-            for (Instruction successor : instruction.getSuccessors()) {
-                tails.computeIfAbsent(successor, unused -> new HashSet<>());
-                if (tails.get(instruction).isEmpty()) {
-                    // If this an entry instruction.
-                    tails.get(successor).add(List.of(instruction));
-                } else {
-                    for (List<Instruction> sequence : tails.get(instruction)) {
-                        List<Instruction> copy = new ArrayList<>(sequence);
-                        copy.add(instruction);
-                        tails.get(successor).add(copy);
-                    }
-                }
-                List<List<Instruction>> deleteQueue = new ArrayList<>();
-                for (List<Instruction> sequence : tails.get(successor)) {
-                    if (sequence.contains(successor)) {
-                        deleteQueue.add(sequence);
-                        cycles.add(sequence.subList(sequence.indexOf(successor), sequence.size()));
-                    }
-                }
-                deleteQueue.forEach(tails.get(successor)::remove);
-                if (deleteQueue.isEmpty()) {
-                    queue.add(successor);
-                }
-            }
-        }
-        return Set.copyOf(cycles);
-    }
-
-    public Block.@NotNull FunctionBlock getFunctionBlock() {
+    public @NotNull Block.FunctionBlock getFunctionBlock() {
         return functionBlock;
     }
 

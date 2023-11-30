@@ -57,12 +57,12 @@ public class RapidAtomicType implements RapidType {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RapidAtomicType that = (RapidAtomicType) o;
-        return Objects.equals(atomic, that.atomic);
+        return Objects.equals(atomic.getName(), that.atomic.getName());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(atomic);
+        return Objects.hash(atomic.getName());
     }
 
     @Override

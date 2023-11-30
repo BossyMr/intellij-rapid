@@ -59,10 +59,10 @@ public class ConstantValueInspection extends LocalInspectionTool {
                         if (parent != null) {
                             Optionality optionality = block.getOptionality(referenceExpression);
                             if (optionality == Optionality.MISSING) {
-                                holder.registerProblem(object, RapidBundle.message("inspection.message.missing.variable", object.getCanonicalText()));
+                                holder.registerProblem(object, RapidBundle.message("inspection.message.missing.variable", object.getText()));
                             }
                             if (optionality == Optionality.UNKNOWN) {
-                                holder.registerProblem(object, RapidBundle.message("inspection.message.unknown.variable", object.getCanonicalText()));
+                                holder.registerProblem(object, RapidBundle.message("inspection.message.unknown.variable", object.getText()));
                             }
                         }
                     }

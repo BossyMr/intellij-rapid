@@ -11,6 +11,8 @@ plugins {
     id("org.jetbrains.intellij") version "1.16.0"
     // Gradle GrammarKit Plugin
     id("org.jetbrains.grammarkit") version "2022.3.1"
+    // Gradle Sentry Plugin
+    id("io.sentry.jvm.gradle") version "3.12.0"
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
@@ -47,7 +49,6 @@ configurations {
 
 dependencies {
     implementation(project(mapOf("path" to ":network")))
-    implementation("io.sentry:sentry:6.14.0")
     implementation("org.slf4j:slf4j-jdk14:2.0.5")
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
     testImplementation(platform("org.junit:junit-bom:5.9.0"))
@@ -55,6 +56,17 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.9.0")
     testImplementation("org.junit.platform:junit-platform-launcher:1.9.0")
+}
+
+sentry {
+    // Generates a JVM (Java, Kotlin, etc.) source bundle and uploads your source code to Sentry.
+    // This enables source context, allowing you to see your source
+    // code as part of your stack traces in Sentry.
+    includeSourceContext = true
+
+    org = "sentry"
+    projectName = "intellij-rapid"
+    authToken = System.getenv("SENTRY_AUTH_TOKEN")
 }
 
 tasks {

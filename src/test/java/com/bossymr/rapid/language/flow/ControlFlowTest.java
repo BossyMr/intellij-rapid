@@ -10,7 +10,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
     private void check(@NotNull String text, @NotNull String expected) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
         ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(myFixture.getProject());
-        assertTextEquals(expected.replaceAll(" {4}", "\t"), ControlFlowFormatVisitor.format(controlFlow));
+        assertTextEquals(expected.replaceAll(" {4}", "\t"), ControlFlowFormatVisitor.format(controlFlow).replaceAll(" {4}", "\t"));
     }
 
     public void testSimpleFunction() {
@@ -171,12 +171,13 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	   goto -> [8];
                                 
                 	7: _3 := _1 < 10.0;
-                	8: if(_3) -> [true: 9, false: 10]
+                	8: if(_3) -> [true: 9, false: 11]
                                 
                 	9: _0 := _0 + 1.0;
-                	   goto -> [5];
+                	10: _1 := _1 + _2;
+                	    goto -> [5];
                                 
-                	10: return _0;
+                	11: return _0;
                 }
                 """);
     }
@@ -207,12 +208,13 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	   goto -> [5];
                                 
                 	4: _2 := _1 < 10.0;
-                	5: if(_2) -> [true: 6, false: 7]
+                	5: if(_2) -> [true: 6, false: 8]
                                 
                 	6: _0 := _0 + 1.0;
+                	7: _1 := _1 + 5.0;
                 	   goto -> [2];
                                 
-                	7: return _0;
+                	8: return _0;
                 }
                 """);
     }

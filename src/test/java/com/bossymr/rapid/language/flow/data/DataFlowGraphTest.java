@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
+import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.builder.RapidBuilder;
 import com.bossymr.rapid.language.builder.RapidCodeBuilder;
 import com.bossymr.rapid.language.flow.Block;
@@ -33,6 +34,7 @@ class DataFlowGraphTest {
 
     private static final int MAX_PASSES = -1;
     private static final boolean DRAW_EACH_PASS = false;
+    private static final boolean DRAW_FINAL_PASS = false;
 
     private void check(@NotNull TestInfo testInfo, @NotNull Consumer<RapidBuilder> consumer) throws IOException, ExecutionException {
         ControlFlowBuilder builder = new ControlFlowBuilder();
@@ -40,24 +42,26 @@ class DataFlowGraphTest {
         ControlFlow controlFlow = builder.getControlFlow();
         String name = testInfo.getTestMethod().orElseThrow().getName();
         File outputDirectory = Path.of(System.getProperty("user.home"), "graph", name).toFile();
-        if (outputDirectory.exists()) {
-            FileUtil.delete(outputDirectory);
-        }
-        if (!(outputDirectory.exists() || outputDirectory.mkdirs())) {
-            throw new IOException("Could not create output folder");
+        Path path = outputDirectory.toPath();
+        if (DRAW_FINAL_PASS) {
+            if (outputDirectory.exists()) {
+                FileUtil.delete(outputDirectory);
+            }
+            if (!(outputDirectory.exists() || outputDirectory.mkdirs())) {
+                throw new IOException("Could not create output folder");
+            }
+            String output = ControlFlowFormatVisitor.format(controlFlow);
+            FileUtil.writeToFile(path.resolve("flow.txt").toFile(), output);
         }
         Map<Instruction, AtomicInteger> passes = new HashMap<>();
-        String output = ControlFlowFormatVisitor.format(controlFlow);
-        Path path = outputDirectory.toPath();
-        FileUtil.writeToFile(path.resolve("flow.txt").toFile(), output);
         AtomicInteger total = new AtomicInteger();
-        DataFlow result = ControlFlowService.getDataFlow(controlFlow, (dataFlow, block) -> {
+        DataFlow result = ControlFlowService.calculateDataFlow(controlFlow, (dataFlow, block) -> {
             Instruction instruction = block.getInstruction();
             Block functionBlock = instruction.getBlock();
             passes.computeIfAbsent(instruction, key -> new AtomicInteger());
             int pass = passes.get(instruction).getAndIncrement();
             if (DRAW_EACH_PASS) {
-                File outputFile = path.resolve(total.getAndIncrement() + " " + functionBlock.getModuleName() + "-" + functionBlock.getName() + " Pass #" + pass + " Block #" + block.getInstruction().getIndex() + ".svg").toFile();
+                File outputFile = path.resolve(total.getAndIncrement() + "_" + functionBlock.getModuleName() + "-" + functionBlock.getName() + "_Pass_#" + pass + "_Block_#" + block.getInstruction().getIndex() + ".svg").toFile();
                 try {
                     DataFlowGraphService.convert(outputFile, dataFlow);
                 } catch (IOException | ExecutionException e) {
@@ -69,8 +73,37 @@ class DataFlowGraphTest {
             }
             return pass <= MAX_PASSES;
         });
-        File outputFile = path.resolve("complete.svg").toFile();
-        DataFlowGraphService.convert(outputFile, result);
+        if (DRAW_FINAL_PASS) {
+            File outputFile = path.resolve("complete.svg").toFile();
+            DataFlowGraphService.convert(outputFile, result);
+        }
+    }
+
+    @Test
+    void infiniteLoop(TestInfo testInfo) throws IOException, ExecutionException {
+        check(testInfo, builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withProcedure("bar", routineBuilder -> routineBuilder
+                                .withCode(codeBuilder -> {
+                                    codeBuilder.loop(codeBuilder.literal(true), loopBuilder -> {
+                                        ReferenceExpression stepVariable = loopBuilder.createVariable(RapidPrimitiveType.NUMBER);
+                                        ReferenceExpression indexVariable = loopBuilder.createVariable(RapidPrimitiveType.NUMBER);
+                                        loopBuilder.assign(indexVariable, codeBuilder.literal(1));
+                                        loopBuilder.ifThenElse(loopBuilder.binary(BinaryOperator.LESS_THAN, indexVariable, loopBuilder.literal(3)),
+                                                thenBuilder -> thenBuilder.assign(stepVariable, codeBuilder.literal(1)),
+                                                elseBuilder -> elseBuilder.assign(stepVariable, codeBuilder.literal(-1)));
+                                        Label label = loopBuilder.createLabel();
+                                        ReferenceExpression breakVariable = loopBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
+                                        loopBuilder.ifThenElse(loopBuilder.binary(BinaryOperator.LESS_THAN, stepVariable, loopBuilder.literal(0)),
+                                                thenBuilder -> thenBuilder.assign(breakVariable, thenBuilder.binary(BinaryOperator.GREATER_THAN, indexVariable, thenBuilder.literal(3))),
+                                                elseBuilder -> elseBuilder.assign(breakVariable, elseBuilder.binary(BinaryOperator.LESS_THAN, indexVariable, elseBuilder.literal(3))));
+                                        loopBuilder.ifThen(breakVariable,
+                                                innerBuilder -> {
+                                                    innerBuilder.assign(indexVariable, innerBuilder.binary(BinaryOperator.ADD, indexVariable, stepVariable));
+                                                    innerBuilder.goTo(label);
+                                                });
+                                    });
+                                }))));
     }
 
     @Test

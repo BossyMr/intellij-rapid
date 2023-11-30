@@ -40,7 +40,7 @@ import java.util.List;
 @SuppressWarnings("deprecation")
 public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
 
-    private static final @NotNull String SENTRY_URL = "https://695867e6cecb4232a39f8db866b46897@sentry.bossymr.com/2";
+    private static final @NotNull String SENTRY_URL = "https://770a26d5df85543f57313f65d4474df5@sentry.bossymr.com/2";
 
     static {
         Sentry.init(options -> {
@@ -52,8 +52,8 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
              */
             options.setEnableUncaughtExceptionHandler(false);
             options.setEnableAutoSessionTracking(false);
-            boolean internal = ApplicationManager.getApplication().isInternal();
-            options.setEnvironment(internal ? "development" : "production");
+            boolean isInternal = ApplicationManager.getApplication().isInternal();
+            options.setEnvironment(isInternal ? "development" : "production");
         });
     }
 
@@ -100,7 +100,7 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
                     SentryId sentryId = Sentry.captureEvent(sentryEvent, Hint.withAttachments(attachments));
 
                     if (!(sentryId.equals(SentryId.EMPTY_ID)))
-                        if (additionalInfo != null && additionalInfo.length() > 0) {
+                        if (additionalInfo != null && !(additionalInfo.isEmpty())) {
                             UserFeedback userFeedback = new UserFeedback(sentryId);
                             userFeedback.setComments(additionalInfo);
                             Sentry.captureUserFeedback(userFeedback);

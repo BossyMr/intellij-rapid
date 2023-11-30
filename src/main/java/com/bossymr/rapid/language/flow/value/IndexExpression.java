@@ -23,6 +23,9 @@ public class IndexExpression implements ReferenceExpression {
     }
 
     public IndexExpression(@Nullable RapidIndexExpression expression, @NotNull ReferenceExpression variable, @NotNull Expression index) {
+        if (variable.getType().getDimensions() < 1) {
+            throw new IllegalArgumentException("Cannot create index expression for variable: " + variable + " of type: " + variable.getType());
+        }
         this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
         RapidType variableType = variable.getType();
         this.type = variableType instanceof RapidArrayType arrayType ? arrayType.getUnderlyingType() : variableType;

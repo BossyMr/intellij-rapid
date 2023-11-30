@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow.parser;
 
 import com.bossymr.rapid.language.builder.RapidArgumentBuilder;
 import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
-import com.bossymr.rapid.language.builder.RapidCodeBuilder;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
@@ -23,25 +22,21 @@ import java.util.function.Consumer;
 
 class ControlFlowExpressionVisitor extends RapidElementVisitor {
 
-    private final @NotNull RapidCodeBuilder builder;
+    private final @NotNull RapidCodeBlockBuilder builder;
 
     private final @NotNull AtomicReference<Expression> result = new AtomicReference<>();
 
-    public ControlFlowExpressionVisitor(@NotNull RapidCodeBuilder builder) {
+    public ControlFlowExpressionVisitor(@NotNull RapidCodeBlockBuilder builder) {
         this.builder = builder;
     }
 
-    public static @NotNull Expression getExpression(@NotNull RapidExpression expression, @NotNull RapidCodeBuilder builder) {
+    public static @NotNull Expression getExpression(@NotNull RapidExpression expression, @NotNull RapidCodeBlockBuilder builder) {
         ControlFlowExpressionVisitor visitor = new ControlFlowExpressionVisitor(builder);
         expression.accept(visitor);
         return Objects.requireNonNull(visitor.getResult());
     }
 
-    public @NotNull Expression getResult() {
-        return Objects.requireNonNull(result.get());
-    }
-
-    public static @NotNull Consumer<RapidArgumentBuilder> getArgumentBuilder(@NotNull RapidCodeBuilder builder, @NotNull RapidArgumentList argumentList) {
+    public static @NotNull Consumer<RapidArgumentBuilder> getArgumentBuilder(@NotNull RapidCodeBlockBuilder builder, @NotNull RapidArgumentList argumentList) {
         return argumentBuilder -> {
             for (RapidArgument argument : argumentList.getArguments()) {
                 if (argument instanceof RapidRequiredArgument requiredArgument) {
@@ -52,7 +47,7 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
                     RapidReferenceExpression parameter = conditionalArgument.getParameter();
                     RapidExpression value = conditionalArgument.getArgument();
                     Expression input = value != null ? getExpression(value, builder) : builder.error(null, RapidPrimitiveType.ANYTYPE);
-                    ReferenceExpression referenceExpression = builder.getArgument(parameter.getCanonicalText());
+                    ReferenceExpression referenceExpression = builder.getArgument(parameter.getText());
                     if (!(referenceExpression instanceof VariableExpression variableExpression) || !(variableExpression.getField() instanceof Argument)) {
                         return;
                     }
@@ -62,10 +57,14 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
                     RapidReferenceExpression parameter = optionalArgument.getParameter();
                     RapidExpression value = optionalArgument.getArgument();
                     Expression input = value != null ? getExpression(value, builder) : builder.error(null, RapidPrimitiveType.ANYTYPE);
-                    argumentBuilder.withOptionalArgument(parameter.getCanonicalText(), input);
+                    argumentBuilder.withOptionalArgument(parameter.getText(), input);
                 }
             }
         };
+    }
+
+    public @NotNull Expression getResult() {
+        return Objects.requireNonNull(result.get());
     }
 
     @Override
@@ -76,8 +75,8 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         List<Expression> expressions = expression.getExpressions().stream()
-                .map(component -> getExpression(component, builder))
-                .toList();
+                                                 .map(component -> getExpression(component, builder))
+                                                 .toList();
         result.set(builder.aggregate(type, expressions));
     }
 
@@ -96,6 +95,20 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         Expression component = getExpression(componentExpression, builder);
+        switch (unaryOperator) {
+            case NOT -> {
+                if (!component.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                    result.set(builder.error(expression, RapidPrimitiveType.BOOLEAN));
+                    return;
+                }
+            }
+            case NEGATE -> {
+                if (!component.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                    result.set(builder.error(expression, RapidPrimitiveType.NUMBER));
+                    return;
+                }
+            }
+        }
         result.set(builder.unary(expression, unaryOperator, component));
     }
 
@@ -120,7 +133,114 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
         }
         Expression left = getExpression(expression.getLeft(), builder);
         Expression right = expression.getRight() != null ? getExpression(expression.getRight(), builder) : builder.error(null, RapidPrimitiveType.ANYTYPE);
+        switch (binaryOperator) {
+            case ADD, SUBTRACT, MULTIPLY, DIVIDE, INTEGER_DIVIDE, MODULO -> {
+                if (binaryOperator == BinaryOperator.ADD) {
+                    if (left.getType().isAssignable(RapidPrimitiveType.STRING) && right.getType().isAssignable(RapidPrimitiveType.STRING)) {
+                        break;
+                    }
+                }
+                if (binaryOperator == BinaryOperator.ADD || binaryOperator == BinaryOperator.SUBTRACT) {
+                    if (left.getType().isAssignable(RapidPrimitiveType.POSITION) && right.getType().isAssignable(RapidPrimitiveType.POSITION)) {
+                        break;
+                    }
+                }
+                if (binaryOperator == BinaryOperator.MULTIPLY || binaryOperator == BinaryOperator.DIVIDE) {
+                    if (left.getType().isAssignable(RapidPrimitiveType.POSITION)) {
+                        if (right.getType().isAssignable(RapidPrimitiveType.POSITION)) {
+                            if (binaryOperator == BinaryOperator.MULTIPLY) {
+                                result.set(doVectorProduct(left, right));
+                                break;
+                            }
+                        } else if (right.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                            if (binaryOperator == BinaryOperator.MULTIPLY) {
+                                result.set(doScalarVectorMultiply(left, right));
+                            } else {
+                                result.set(doScalarVectorDivision(left, right));
+                            }
+                            break;
+                        }
+                    } else if (right.getType().isAssignable(RapidPrimitiveType.POSITION)) {
+                        if (left.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                            if (binaryOperator == BinaryOperator.MULTIPLY) {
+                                result.set(doScalarVectorMultiply(right, left));
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!(left.getType().isAssignable(RapidPrimitiveType.NUMBER)) || !(right.getType().isAssignable(RapidPrimitiveType.NUMBER))) {
+                    result.set(builder.error(expression, RapidPrimitiveType.NUMBER));
+                    return;
+                }
+            }
+            case LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL -> {
+                if (!left.getType().isAssignable(RapidPrimitiveType.NUMBER) || !right.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                    result.set(builder.error(expression, RapidPrimitiveType.BOOLEAN));
+                    return;
+                }
+            }
+            case EQUAL_TO -> {
+                if (!left.getType().isAssignable(right.getType())) {
+                    result.set(builder.literal(false));
+                    return;
+                }
+            }
+            case NOT_EQUAL_TO -> {
+                if (!left.getType().isAssignable(right.getType())) {
+                    result.set(builder.literal(true));
+                    return;
+                }
+            }
+            case AND, XOR, OR -> {
+                if (!left.getType().isAssignable(RapidPrimitiveType.BOOLEAN) || !right.getType().isAssignable(RapidPrimitiveType.BOOLEAN)) {
+                    result.set(builder.error(expression, RapidPrimitiveType.BOOLEAN));
+                    return;
+                }
+            }
+        }
         result.set(builder.binary(expression, binaryOperator, left, right));
+    }
+
+    private @NotNull Expression doScalarVectorMultiply(@NotNull Expression vector, @NotNull Expression scalar) {
+        ReferenceExpression variable = getAsVariable(vector);
+        ReferenceExpression result = builder.createVariable(RapidPrimitiveType.POSITION);
+        builder.assign(getComponentExpression(result, "x"), new BinaryExpression(BinaryOperator.MULTIPLY, getComponentExpression(variable, "x"), scalar));
+        builder.assign(getComponentExpression(result, "y"), new BinaryExpression(BinaryOperator.MULTIPLY, getComponentExpression(variable, "y"), scalar));
+        builder.assign(getComponentExpression(result, "z"), new BinaryExpression(BinaryOperator.MULTIPLY, getComponentExpression(variable, "z"), scalar));
+        return result;
+    }
+
+    private @NotNull Expression doScalarVectorDivision(@NotNull Expression vector, @NotNull Expression scalar) {
+        ReferenceExpression variable = getAsVariable(vector);
+        ReferenceExpression result = builder.createVariable(RapidPrimitiveType.POSITION);
+        builder.assign(getComponentExpression(result, "x"), new BinaryExpression(BinaryOperator.DIVIDE, getComponentExpression(variable, "x"), scalar));
+        builder.assign(getComponentExpression(result, "y"), new BinaryExpression(BinaryOperator.DIVIDE, getComponentExpression(variable, "y"), scalar));
+        builder.assign(getComponentExpression(result, "z"), new BinaryExpression(BinaryOperator.DIVIDE, getComponentExpression(variable, "z"), scalar));
+        return result;
+    }
+
+    private @NotNull Expression doVectorProduct(@NotNull Expression left, @NotNull Expression right) {
+        ReferenceExpression leftVariable = getAsVariable(left);
+        ReferenceExpression rightVariable = getAsVariable(right);
+        ReferenceExpression result = builder.createVariable(RapidPrimitiveType.POSITION);
+        builder.assign(getComponentExpression(result, "x"), new BinaryExpression(BinaryOperator.MULTIPLY, getComponentExpression(leftVariable, "x"), getComponentExpression(rightVariable, "x")));
+        builder.assign(getComponentExpression(result, "y"), new BinaryExpression(BinaryOperator.MULTIPLY, getComponentExpression(leftVariable, "y"), getComponentExpression(rightVariable, "y")));
+        builder.assign(getComponentExpression(result, "z"), new BinaryExpression(BinaryOperator.MULTIPLY, getComponentExpression(leftVariable, "z"), getComponentExpression(rightVariable, "z")));
+        return result;
+    }
+
+    private @NotNull ComponentExpression getComponentExpression(@NotNull ReferenceExpression variable, @NotNull String name) {
+        return new ComponentExpression(RapidPrimitiveType.NUMBER, variable, name);
+    }
+
+    private @NotNull ReferenceExpression getAsVariable(@NotNull Expression expression) {
+        if (expression instanceof ReferenceExpression referenceExpression) {
+            return referenceExpression;
+        }
+        ReferenceExpression variable = builder.createVariable(expression.getType());
+        builder.assign(variable, expression);
+        return variable;
     }
 
     private @Nullable BinaryOperator getBinaryOperator(@NotNull IElementType elementType) {
@@ -239,7 +359,7 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
             return;
         }
         RapidSymbol symbol = expression.getReferenceExpression().getSymbol();
-        if (!(builder instanceof RapidCodeBlockBuilder codeBlockBuilder) || !(symbol instanceof RapidRoutine)) {
+        if (!(symbol instanceof RapidRoutine)) {
             result.set(builder.error(expression, type));
             return;
         }
@@ -255,7 +375,7 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
             result.set(builder.error(expression, type));
             return;
         }
-        result.set(codeBlockBuilder.call(moduleName + ":" + routineName, type, getArgumentBuilder(builder, expression.getArgumentList())));
+        result.set(builder.call(moduleName + ":" + routineName, type, getArgumentBuilder(builder, expression.getArgumentList())));
     }
 
     @Override
