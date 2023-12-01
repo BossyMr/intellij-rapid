@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.parser;
 import com.bossymr.rapid.language.builder.RapidArgumentBuilder;
 import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
 import com.bossymr.rapid.language.flow.Argument;
+import com.bossymr.rapid.language.flow.builder.ControlFlowCodeBlockBuilder;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
@@ -14,6 +15,7 @@ import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.coverage.gnu.trove.TObjectDoubleHashMap;
 
 import java.util.List;
 import java.util.Objects;
@@ -22,12 +24,12 @@ import java.util.function.Consumer;
 
 class ControlFlowExpressionVisitor extends RapidElementVisitor {
 
-    private final @NotNull RapidCodeBlockBuilder builder;
+    private final @NotNull ControlFlowCodeBlockBuilder builder;
 
     private final @NotNull AtomicReference<Expression> result = new AtomicReference<>();
 
     public ControlFlowExpressionVisitor(@NotNull RapidCodeBlockBuilder builder) {
-        this.builder = builder;
+        this.builder = (ControlFlowCodeBlockBuilder) builder;
     }
 
     public static @NotNull Expression getExpression(@NotNull RapidExpression expression, @NotNull RapidCodeBlockBuilder builder) {
@@ -74,10 +76,13 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
             result.set(builder.error(expression, RapidPrimitiveType.ANYTYPE));
             return;
         }
-        List<Expression> expressions = expression.getExpressions().stream()
-                                                 .map(component -> getExpression(component, builder))
-                                                 .toList();
-        result.set(builder.aggregate(type, expressions));
+        if(type.getDimensions() > 0) {
+            // TODO: 2023-12-01
+        } else if(type.getActualStructure() instanceof RapidRecord record) {
+            // TODO: 2023-12-01
+        } else {
+            result.set(builder.error(expression, type));
+        }
     }
 
     @Override

@@ -50,8 +50,8 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     @Override
     public Void visitConditionalBranchingInstruction(@NotNull ConditionalBranchingInstruction instruction) {
         Expression value = instruction.getCondition();
-        visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(true)));
-        visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new ConstantExpression(false)));
+        visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(true)));
+        visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(false)));
         return null;
     }
 
@@ -128,7 +128,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     @Override
     public Void visitCallInstruction(@NotNull CallInstruction instruction) {
         Expression expression = instruction.getRoutineName();
-        if (!(expression instanceof ConstantExpression solution)) {
+        if (!(expression instanceof LiteralExpression solution)) {
             visitAnyCallInstruction(instruction, state);
             return null;
         }

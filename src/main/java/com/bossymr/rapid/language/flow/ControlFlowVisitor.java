@@ -114,7 +114,7 @@ public class ControlFlowVisitor<R> {
         return visitReferenceExpression(snapshot);
     }
 
-    public R visitConstantExpression(@NotNull ConstantExpression expression) {
+    public R visitConstantExpression(@NotNull LiteralExpression expression) {
         return visitExpression(expression);
     }
 

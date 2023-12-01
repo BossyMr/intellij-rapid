@@ -5,9 +5,9 @@ import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ErrorSnapshot extends VariableSnapshot {
+public class ErrorExpression extends VariableSnapshot {
 
-    public ErrorSnapshot(@NotNull RapidType type) {
+    public ErrorExpression(@NotNull RapidType type) {
         super(type);
     }
 

@@ -1,24 +1,64 @@
 package com.bossymr.rapid.language.flow.builder;
 
 import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.Field;
+import com.bossymr.rapid.language.flow.data.snapshots.ErrorExpression;
+import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.ControlFlowLabel;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.SnapshotExpression;
+import com.bossymr.rapid.language.psi.RapidExpression;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class ControlFlowBlockBuilder {
 
     private final @NotNull Deque<Command> commands = new ArrayDeque<>();
     private final @NotNull Block block;
+    private final @NotNull Map<Field, SnapshotExpression> snapshots = new HashMap<>();
 
     private @Nullable Scope currentScope;
 
     public ControlFlowBlockBuilder(@NotNull Block block) {
         this.block = block;
+    }
+
+    public @NotNull ReferenceExpression createSnapshot(@NotNull ReferenceExpression variable) {
+        if(variable instanceof SnapshotExpression snapshot) {
+            if (snapshots.containsValue(snapshot)) {
+                for (Field field : snapshots.keySet()) {
+                    if(snapshots.get(field).equals(snapshot)) {
+                        return createSnapshot(field);
+                    }
+                }
+            }
+            return new ErrorExpression(variable.getType());
+        }
+        return variable;
+    }
+
+    public @NotNull ReferenceExpression createSnapshot(@NotNull Field field) {
+        return createSnapshot(field, null);
+    }
+
+    public @NotNull ReferenceExpression createSnapshot(@NotNull Field field, @Nullable RapidExpression element) {
+        VariableSnapshot snapshot = new VariableSnapshot(field.getType(), element);
+        snapshots.put(field, snapshot);
+        return snapshot;
+    }
+
+    public @NotNull ReferenceExpression getSnapshot(@NotNull Field field) {
+        if(snapshots.containsKey(field)) {
+            return snapshots.get(field);
+        }
+        throw new IllegalArgumentException();
     }
 
     public void addCommand(@NotNull Command command) {

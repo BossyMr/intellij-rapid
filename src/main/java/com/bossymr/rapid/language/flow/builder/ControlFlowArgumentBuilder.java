@@ -5,22 +5,25 @@ import com.bossymr.rapid.language.builder.RapidArgumentBuilder;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.value.Expression;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ControlFlowArgumentBuilder implements RapidArgumentBuilder {
 
     private final @NotNull Map<ArgumentDescriptor, Expression> arguments;
-    private int index = 0;
+    private final @NotNull ControlFlowCodeBlockBuilder builder;
+    private final @NotNull AtomicInteger index = new AtomicInteger();
 
-    public ControlFlowArgumentBuilder(@NotNull Map<ArgumentDescriptor, Expression> arguments) {
+    public ControlFlowArgumentBuilder(@NotNull Map<ArgumentDescriptor, Expression> arguments, @NotNull ControlFlowCodeBlockBuilder builder) {
         this.arguments = arguments;
+        this.builder = builder;
     }
 
     @Override
     public @NotNull RapidArgumentBuilder withRequiredArgument(@NotNull Expression expression) {
-        arguments.put(new ArgumentDescriptor.Required(index), expression);
-        index += 1;
+        arguments.put(new ArgumentDescriptor.Required(index.getAndIncrement()), expression);
         return this;
     }
 
@@ -31,8 +34,8 @@ public class ControlFlowArgumentBuilder implements RapidArgumentBuilder {
     }
 
     @Override
-    public @NotNull RapidArgumentBuilder withConditionalArgument(@NotNull Argument argument, @NotNull Expression expression) {
-        arguments.put(new ArgumentDescriptor.Conditional(argument.getName()), expression);
+    public @NotNull RapidArgumentBuilder withConditionalArgument(@NotNull String name, @NotNull Argument argument) {
+        arguments.put(new ArgumentDescriptor.Conditional(name), builder.getReference(argument));
         return this;
     }
 }

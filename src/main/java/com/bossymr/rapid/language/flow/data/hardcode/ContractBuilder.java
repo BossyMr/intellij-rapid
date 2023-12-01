@@ -123,6 +123,13 @@ public class ContractBuilder {
             int size = functionBlock.getArgumentGroups().stream()
                     .mapToInt(argumentGroup -> argumentGroup.arguments().size())
                     .sum();
+            ArgumentGroup argumentGroup = getArgumentGroup(size);
+            functionBlock.getArgumentGroups().add(argumentGroup);
+            return ContractBuilder.this;
+        }
+
+        @NotNull
+        private ArgumentGroup getArgumentGroup(int size) {
             List<VirtualParameter> parameterList = parameterGroup.getParameters();
             List<Argument> arguments = new ArrayList<>(parameterList.size());
             for (int i = 0; i < parameterList.size(); i++) {
@@ -130,9 +137,7 @@ public class ContractBuilder {
                 Argument argument = new Argument(size + i, parameter.getParameterType(), parameter.getType(), parameter.getName());
                 arguments.add(argument);
             }
-            ArgumentGroup argumentGroup = new ArgumentGroup(parameterGroup.isOptional(), List.copyOf(arguments));
-            functionBlock.getArgumentGroups().add(argumentGroup);
-            return ContractBuilder.this;
+            return new ArgumentGroup(parameterGroup.isOptional(), List.copyOf(arguments));
         }
     }
 }

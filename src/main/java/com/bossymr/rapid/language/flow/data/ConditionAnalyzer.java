@@ -40,9 +40,9 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         try (Context context = new Context()) {
             Solver solver = context.mkSolver();
             ConditionAnalyzer conditionAnalyzer = getSolver(context, state, solver);
-            BoolExpr isPresentExpression = conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new ConstantExpression(true)).accept(conditionAnalyzer));
+            BoolExpr isPresentExpression = conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(true)).accept(conditionAnalyzer));
             boolean isTrue = solver.check(isPresentExpression) != Status.UNSATISFIABLE;
-            BoolExpr isFalseExpression = conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new ConstantExpression(false)).accept(conditionAnalyzer));
+            BoolExpr isFalseExpression = conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(false)).accept(conditionAnalyzer));
             boolean isFalse = solver.check(isFalseExpression) != Status.UNSATISFIABLE;
             if (isTrue && isFalse) {
                 return BooleanValue.ANY_VALUE;
@@ -83,7 +83,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                     SnapshotExpression snapshot = predecessor.getSnapshot(new VariableExpression(argument));
                     Objects.requireNonNull(snapshot);
                     UnaryExpression present = new UnaryExpression(UnaryOperator.PRESENT, snapshot);
-                    BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, present, new ConstantExpression(true));
+                    BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, present, new LiteralExpression(true));
                     isOptional.add(conditionAnalyzer.getAsBoolean(expression.accept(conditionAnalyzer)));
                 }
                 @SuppressWarnings("unchecked")
@@ -217,7 +217,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     }
 
     @Override
-    public Expr<?> visitConstantExpression(@NotNull ConstantExpression expression) {
+    public Expr<?> visitConstantExpression(@NotNull LiteralExpression expression) {
         Object object = expression.getValue();
         if (object instanceof String value) {
             return context.mkString(value);

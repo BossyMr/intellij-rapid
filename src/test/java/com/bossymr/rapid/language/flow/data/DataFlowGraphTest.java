@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.builder.RapidBuilder;
-import com.bossymr.rapid.language.builder.RapidCodeBuilder;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.ControlFlowService;
@@ -85,7 +84,7 @@ class DataFlowGraphTest {
                 .withModule("foo", moduleBuilder -> moduleBuilder
                         .withProcedure("bar", routineBuilder -> routineBuilder
                                 .withCode(codeBuilder -> {
-                                    codeBuilder.loop(codeBuilder.literal(true), loopBuilder -> {
+                                    codeBuilder.whileLoop(codeBuilder.literal(true), loopBuilder -> {
                                         ReferenceExpression stepVariable = loopBuilder.createVariable(RapidPrimitiveType.NUMBER);
                                         ReferenceExpression indexVariable = loopBuilder.createVariable(RapidPrimitiveType.NUMBER);
                                         loopBuilder.assign(indexVariable, codeBuilder.literal(1));
@@ -203,7 +202,7 @@ class DataFlowGraphTest {
                                 ReferenceExpression i = codeBuilder.createVariable("i", RapidPrimitiveType.NUMBER);
                                 ReferenceExpression n = codeBuilder.getArgument("n");
                                 codeBuilder.assign(i, codeBuilder.literal(3));
-                                codeBuilder.loop(codeBuilder.binary(BinaryOperator.LESS_THAN, i, n), loopBuilder -> loopBuilder
+                                codeBuilder.whileLoop(codeBuilder.binary(BinaryOperator.LESS_THAN, i, n), loopBuilder -> loopBuilder
                                                    .assign(i, loopBuilder.binary(BinaryOperator.ADD, i, loopBuilder.literal(4))))
                                            .ifThenElse(codeBuilder.binary(BinaryOperator.EQUAL_TO, i, codeBuilder.literal(15)),
                                                    RapidCodeBuilder::returnValue, RapidCodeBuilder::returnValue);
@@ -241,7 +240,7 @@ class DataFlowGraphTest {
                                     ReferenceExpression n = codeBuilder.getArgument("n");
                                     ReferenceExpression a = codeBuilder.getArgument("A");
                                     ReferenceExpression x = codeBuilder.getArgument("x");
-                                    codeBuilder.loop(codeBuilder.binary(BinaryOperator.LESS_THAN, i, n), blockBuilder -> {
+                                    codeBuilder.whileLoop(codeBuilder.binary(BinaryOperator.LESS_THAN, i, n), blockBuilder -> {
                                         IndexExpression index = codeBuilder.index(a, i);
                                         blockBuilder.ifThenElse(blockBuilder.binary(BinaryOperator.EQUAL_TO, index, x),
                                                 thenConsumer -> thenConsumer

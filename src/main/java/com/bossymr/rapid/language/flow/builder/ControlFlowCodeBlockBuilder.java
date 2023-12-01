@@ -4,13 +4,15 @@ import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.builder.RapidArgumentBuilder;
 import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
+import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.Variable;
+import com.bossymr.rapid.language.flow.data.snapshots.ErrorExpression;
 import com.bossymr.rapid.language.flow.instruction.*;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.ReferenceExpression;
-import com.bossymr.rapid.language.flow.value.UnaryExpression;
-import com.bossymr.rapid.language.flow.value.UnaryOperator;
-import com.bossymr.rapid.language.psi.RapidElement;
+import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.symbol.FieldType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,13 +20,95 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Consumer;
 
-public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implements RapidCodeBlockBuilder {
+public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
+    protected final @NotNull Block block;
+    protected final @NotNull ControlFlowBlockBuilder builder;
     private final @NotNull Map<String, ControlFlowLabel> labels = new HashMap<>();
 
     public ControlFlowCodeBlockBuilder(@NotNull Block block, @NotNull ControlFlowBlockBuilder builder) {
-        super(block, builder);
+        this.block = block;
+        this.builder = builder;
     }
+
+    @Override
+    public @NotNull ReferenceExpression createVariable(@Nullable String name,
+                                                       @Nullable FieldType fieldType,
+                                                       @NotNull RapidType type) {
+        Variable variable = block.createVariable(name, fieldType, type);
+        return new VariableExpression(variable);
+    }
+
+    @Override
+    public @NotNull ReferenceExpression getVariable(@Nullable RapidReferenceExpression expression, @NotNull String name) {
+        Variable variable = block.findVariable(name);
+        if (variable == null) {
+            return new ErrorExpression(RapidPrimitiveType.ANYTYPE);
+        }
+        return builder.getSnapshot(variable);
+    }
+
+    @Override
+    public @NotNull ReferenceExpression getArgument(@Nullable RapidReferenceExpression expression, @NotNull String name) {
+        Argument argument = block.findArgument(name);
+        if (argument == null) {
+            return new ErrorExpression(RapidPrimitiveType.ANYTYPE);
+        }
+        return builder.getSnapshot(argument);
+    }
+
+    @Override
+    public @NotNull ReferenceExpression getField(@Nullable RapidReferenceExpression expression, @NotNull String moduleName, @NotNull String name, @NotNull RapidType valueType) {
+        return new FieldExpression(expression, valueType, moduleName, name);
+    }
+
+    @Override
+    public @NotNull IndexExpression index(@Nullable RapidIndexExpression element, @NotNull ReferenceExpression variable, @NotNull Expression index) {
+        if (variable.getType().getDimensions() < 1) {
+            throw new IllegalArgumentException();
+        }
+        if (!(index.getType().isAssignable(RapidPrimitiveType.NUMBER))) {
+            throw new IllegalArgumentException();
+        }
+        return new IndexExpression(element, variable, index);
+    }
+
+    @Override
+    public @NotNull Expression component(@Nullable RapidReferenceExpression element, @NotNull RapidType type, @NotNull ReferenceExpression variable, @NotNull String name) {
+        return new ComponentExpression(element, type, variable, name);
+    }
+
+    @Override
+    public @NotNull Expression aggregate(@Nullable RapidAggregateExpression element, @NotNull RapidType aggregateType, @NotNull List<? extends Expression> expressions) {
+        return new AggregateExpression(element, aggregateType, expressions);
+    }
+
+    @Override
+    public @NotNull Expression literal(@Nullable RapidLiteralExpression element, @NotNull Object value) {
+        return new LiteralExpression(element, value);
+    }
+
+    @Override
+    public @NotNull Expression binary(@Nullable RapidBinaryExpression element, @NotNull BinaryOperator operator, @NotNull Expression left, @NotNull Expression right) {
+        return new BinaryExpression(element, operator, left, right);
+    }
+
+    @Override
+    public @NotNull Expression unary(@Nullable RapidUnaryExpression element, @NotNull UnaryOperator operator, @NotNull Expression expression) {
+        return new UnaryExpression(element, operator, expression);
+    }
+
+    @Override
+    public @NotNull Expression error(@Nullable RapidElement element, @NotNull RapidType type) {
+        return new ErrorExpression(type);
+    }
+
+    @Override
+    public void returnValue(@Nullable RapidReturnStatement statement, @Nullable Expression expression) {
+        builder.continueScope(new ReturnInstruction(block, statement, expression));
+        builder.exitScope();
+    }
+
 
     @Override
     public @NotNull Label createLabel(@Nullable String name) {
@@ -162,7 +246,7 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
 
     @Override
     public @NotNull RapidCodeBlockBuilder assign(@Nullable RapidElement element, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
-        builder.continueScope(new AssignmentInstruction(block, element, variable, expression));
+        builder.continueScope(new AssignmentInstruction(block, element, builder.createSnapshot(variable), expression));
         return this;
     }
 
@@ -175,7 +259,7 @@ public class ControlFlowCodeBlockBuilder extends ControlFlowCodeBuilder implemen
     @Override
     public @NotNull Expression call(@Nullable RapidElement element, @NotNull Expression routine, @NotNull RapidType returnType, @NotNull Consumer<RapidArgumentBuilder> arguments) {
         Map<ArgumentDescriptor, Expression> result = new HashMap<>();
-        ControlFlowArgumentBuilder builder = new ControlFlowArgumentBuilder(result);
+        ControlFlowArgumentBuilder builder = new ControlFlowArgumentBuilder(result, this);
         arguments.accept(builder);
         ReferenceExpression variable = createVariable(returnType);
         call(element, routine, variable, result);

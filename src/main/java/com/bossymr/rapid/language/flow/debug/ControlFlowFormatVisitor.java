@@ -236,7 +236,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
             stringBuilder.append(" := ");
         }
         Expression routine = instruction.getRoutineName();
-        if (routine instanceof ConstantExpression constant && constant.getValue() instanceof String) {
+        if (routine instanceof LiteralExpression constant && constant.getValue() instanceof String) {
             stringBuilder.append(constant.getValue());
         } else {
             stringBuilder.append(routine.accept(this));
@@ -288,7 +288,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     }
 
     @Override
-    public String visitConstantExpression(@NotNull ConstantExpression expression) {
+    public String visitConstantExpression(@NotNull LiteralExpression expression) {
         if (expression.getValue() instanceof String) {
             return "\"" + expression.getValue() + "\"";
         } else {

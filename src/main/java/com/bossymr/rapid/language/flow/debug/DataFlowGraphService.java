@@ -290,7 +290,7 @@ public class DataFlowGraphService extends AnAction {
                     }
                 } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
                     if (defaultValue.defaultValue() instanceof SnapshotExpression referenceValue) {
-                        writeSnapshot(stringBuilder, state, new IndexExpression(arraySnapshot, new ConstantExpression("[default]")), referenceValue, snapshots);
+                        writeSnapshot(stringBuilder, state, new IndexExpression(arraySnapshot, new LiteralExpression("[default]")), referenceValue, snapshots);
                     }
                 }
             }

@@ -68,6 +68,10 @@ public class ControlFlowElementBuilder {
                     Expression expression = ControlFlowExpressionVisitor.getExpression(initializer, codeBuilder);
                     codeBuilder.returnValue(expression);
                 });
+            } else {
+                fieldBuilder.withInitializer(codeBuilder -> {
+                    // TODO: 2023-12-01 Get default initialization
+                });
             }
         });
     }

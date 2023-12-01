@@ -11,17 +11,17 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class ConstantExpression implements Expression {
+public class LiteralExpression implements Expression {
 
     private final @Nullable SmartPsiElementPointer<RapidExpression> expression;
     private final @NotNull RapidType type;
     private final @NotNull Object value;
 
-    public ConstantExpression(@NotNull Object value) {
+    public LiteralExpression(@NotNull Object value) {
         this(null, value);
     }
 
-    public ConstantExpression(@Nullable RapidExpression expression, @NotNull Object value) {
+    public LiteralExpression(@Nullable RapidExpression expression, @NotNull Object value) {
         this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
         this.type = Objects.requireNonNull(getType(value));
         this.value = value;
@@ -66,7 +66,7 @@ public class ConstantExpression implements Expression {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ConstantExpression that = (ConstantExpression) o;
+        LiteralExpression that = (LiteralExpression) o;
         return Objects.equals(type, that.type) && Objects.equals(value, that.value);
     }
 

@@ -148,12 +148,12 @@ class ControlFlowStatementVisitor extends RapidElementVisitor {
 
     @Override
     public void visitRetryStatement(@NotNull RapidRetryStatement statement) {
-        builder.retryInstruction(statement);
+        builder.retry(statement);
     }
 
     @Override
     public void visitTryNextStatement(@NotNull RapidTryNextStatement statement) {
-        builder.tryNextInstruction(statement);
+        builder.tryNext(statement);
     }
 
     @Override

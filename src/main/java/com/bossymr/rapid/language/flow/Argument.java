@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.symbol.ParameterType;
+import com.bossymr.rapid.language.symbol.RapidParameter;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -8,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 
 public class Argument implements Field {
+
     private final int index;
     private final @NotNull ParameterType parameterType;
     private final @NotNull RapidType type;
@@ -18,15 +20,6 @@ public class Argument implements Field {
         this.parameterType = parameterType;
         this.type = type;
         this.name = name;
-    }
-
-    public @Nullable ArgumentGroup getArgumentGroup(@NotNull Block block) {
-        for (ArgumentGroup argumentGroup : block.getArgumentGroups()) {
-            if (argumentGroup.arguments().contains(this)) {
-                return argumentGroup;
-            }
-        }
-        return null;
     }
 
     @Override
