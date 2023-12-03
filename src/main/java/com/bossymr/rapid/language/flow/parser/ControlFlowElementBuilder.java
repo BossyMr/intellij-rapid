@@ -37,18 +37,7 @@ public class ControlFlowElementBuilder {
     }
 
     public void process(@NotNull PhysicalModule module) {
-        String name = module.getName();
-        if (name == null) {
-            name = RapidSymbol.getDefaultText();
-        }
-        builder.withModule(name, builder -> {
-            for (PhysicalField field : module.getFields()) {
-                process(field, builder);
-            }
-            for (PhysicalRoutine routine : module.getRoutines()) {
-                process(routine, builder);
-            }
-        });
+        builder.withModule(module);
     }
 
     private void process(@NotNull PhysicalField field, @NotNull RapidModuleBuilder builder) {

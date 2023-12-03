@@ -22,43 +22,10 @@ public class ControlFlowBlockBuilder {
 
     private final @NotNull Deque<Command> commands = new ArrayDeque<>();
     private final @NotNull Block block;
-    private final @NotNull Map<Field, SnapshotExpression> snapshots = new HashMap<>();
-
     private @Nullable Scope currentScope;
 
     public ControlFlowBlockBuilder(@NotNull Block block) {
         this.block = block;
-    }
-
-    public @NotNull ReferenceExpression createSnapshot(@NotNull ReferenceExpression variable) {
-        if(variable instanceof SnapshotExpression snapshot) {
-            if (snapshots.containsValue(snapshot)) {
-                for (Field field : snapshots.keySet()) {
-                    if(snapshots.get(field).equals(snapshot)) {
-                        return createSnapshot(field);
-                    }
-                }
-            }
-            return new ErrorExpression(variable.getType());
-        }
-        return variable;
-    }
-
-    public @NotNull ReferenceExpression createSnapshot(@NotNull Field field) {
-        return createSnapshot(field, null);
-    }
-
-    public @NotNull ReferenceExpression createSnapshot(@NotNull Field field, @Nullable RapidExpression element) {
-        VariableSnapshot snapshot = new VariableSnapshot(field.getType(), element);
-        snapshots.put(field, snapshot);
-        return snapshot;
-    }
-
-    public @NotNull ReferenceExpression getSnapshot(@NotNull Field field) {
-        if(snapshots.containsKey(field)) {
-            return snapshots.get(field);
-        }
-        throw new IllegalArgumentException();
     }
 
     public void addCommand(@NotNull Command command) {

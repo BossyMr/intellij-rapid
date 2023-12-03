@@ -29,7 +29,7 @@ public class RecordSnapshot implements SnapshotExpression {
     public RecordSnapshot(@NotNull RapidType type, @Nullable ReferenceExpression underlyingVariable) {
         this.type = type;
         this.underlyingVariable = underlyingVariable;
-        if (!(type.getActualStructure() instanceof RapidRecord record)) {
+        if (!(type.getRootStructure() instanceof RapidRecord record)) {
             throw new IllegalArgumentException();
         }
         this.components = new HashMap<>();

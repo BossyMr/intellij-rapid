@@ -39,8 +39,8 @@ public class RapidArrayType implements RapidType {
     }
 
     @Override
-    public @Nullable RapidStructure getActualStructure() {
-        return underlyingType.getActualStructure();
+    public @Nullable RapidStructure getRootStructure() {
+        return underlyingType.getRootStructure();
     }
 
     @Override

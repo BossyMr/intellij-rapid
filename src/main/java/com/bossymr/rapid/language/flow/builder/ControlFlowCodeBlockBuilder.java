@@ -6,19 +6,27 @@ import com.bossymr.rapid.language.builder.RapidArgumentBuilder;
 import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.Field;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.data.snapshots.ErrorExpression;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.symbol.FieldType;
+import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.symbol.physical.PhysicalField;
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
+import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
+import com.intellij.psi.tree.IElementType;
+import kotlinx.html.SUB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
@@ -32,70 +40,421 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     }
 
     @Override
-    public @NotNull ReferenceExpression createVariable(@Nullable String name,
-                                                       @Nullable FieldType fieldType,
-                                                       @NotNull RapidType type) {
-        Variable variable = block.createVariable(name, fieldType, type);
-        return new VariableExpression(variable);
+    public @NotNull Variable createVariable(@NotNull RapidType type) {
+        return block.createVariable(null, null, type);
     }
 
     @Override
-    public @NotNull ReferenceExpression getVariable(@Nullable RapidReferenceExpression expression, @NotNull String name) {
-        Variable variable = block.findVariable(name);
-        if (variable == null) {
-            return new ErrorExpression(RapidPrimitiveType.ANYTYPE);
+    public @NotNull Variable createVariable(@NotNull RapidField field) {
+        RapidType type = Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE);
+        return block.createVariable(field.getName(), field.getFieldType(), type);
+    }
+
+    @Override
+    public @Nullable Argument getArgument(@NotNull String name) {
+        return null;
+    }
+
+    @Override
+    public @NotNull ReferenceExpression getReference(@NotNull Field field) {
+        return new VariableExpression(field);
+    }
+
+    @Override
+    public @Nullable ReferenceExpression getReference(@NotNull RapidReferenceExpression expression) {
+        if (expression.getQualifier() != null) {
+            return component(expression);
         }
-        return builder.getSnapshot(variable);
-    }
-
-    @Override
-    public @NotNull ReferenceExpression getArgument(@Nullable RapidReferenceExpression expression, @NotNull String name) {
-        Argument argument = block.findArgument(name);
-        if (argument == null) {
-            return new ErrorExpression(RapidPrimitiveType.ANYTYPE);
+        RapidSymbol symbol = expression.getSymbol();
+        if (symbol == null) {
+            return null;
         }
-        return builder.getSnapshot(argument);
+        if (symbol instanceof RapidField field) {
+            return getFieldReference(expression, field);
+        }
+        if (symbol instanceof RapidParameter parameter) {
+            return getVariableReference(expression, parameter, block::findArgument);
+        }
+        if (symbol instanceof RapidTargetVariable variable) {
+            return getVariableReference(expression, variable, block::findVariable);
+        }
+        return null;
+    }
+
+    private @Nullable ReferenceExpression getVariableReference(@NotNull RapidReferenceExpression expression, @NotNull RapidVariable parameter, @NotNull Function<@NotNull String, @Nullable Field> function) {
+        String name = parameter.getName();
+        if (name == null) {
+            return null;
+        }
+        Field field = function.apply(name);
+        if (field == null) {
+            return null;
+        }
+        return new VariableExpression(expression, field);
+    }
+
+    private @Nullable ReferenceExpression getFieldReference(@NotNull RapidReferenceExpression expression, @NotNull RapidField field) {
+        String name = field.getName();
+        if (name == null) {
+            return null;
+        }
+        RapidType type = Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE);
+        if (field instanceof PhysicalField physicalField) {
+            PhysicalRoutine routine = PhysicalRoutine.getRoutine(physicalField);
+            if (routine != null) {
+                Variable variable = block.findVariable(name);
+                if (variable == null) {
+                    return null;
+                }
+                return new VariableExpression(expression, variable);
+            }
+            PhysicalModule module = PhysicalModule.getModule(physicalField);
+            String moduleName;
+            if (module == null || (moduleName = module.getName()) == null) {
+                return null;
+            }
+            return new FieldExpression(expression, type, moduleName, name);
+        }
+        return new FieldExpression(expression, type, "", name);
     }
 
     @Override
-    public @NotNull ReferenceExpression getField(@Nullable RapidReferenceExpression expression, @NotNull String moduleName, @NotNull String name, @NotNull RapidType valueType) {
-        return new FieldExpression(expression, valueType, moduleName, name);
+    public @NotNull ReferenceExpression getReference(@NotNull RapidType type, @NotNull String moduleName, @NotNull String name) {
+        return new FieldExpression(type, moduleName, name);
     }
 
     @Override
-    public @NotNull IndexExpression index(@Nullable RapidIndexExpression element, @NotNull ReferenceExpression variable, @NotNull Expression index) {
-        if (variable.getType().getDimensions() < 1) {
-            throw new IllegalArgumentException();
+    public @NotNull ReferenceExpression index(@NotNull ReferenceExpression variable, @NotNull Expression index) {
+        if (variable.getType().getDimensions() <= 0) {
+            throw new IllegalArgumentException("Cannot create index expression for variable of type: " + variable.getType());
         }
         if (!(index.getType().isAssignable(RapidPrimitiveType.NUMBER))) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Cannot reference index of type: " + index.getType());
         }
-        return new IndexExpression(element, variable, index);
+        return new IndexExpression(variable, index);
     }
 
     @Override
-    public @NotNull Expression component(@Nullable RapidReferenceExpression element, @NotNull RapidType type, @NotNull ReferenceExpression variable, @NotNull String name) {
-        return new ComponentExpression(element, type, variable, name);
+    public @Nullable ReferenceExpression index(@NotNull RapidIndexExpression expression) {
+        if (!(expression.getExpression() instanceof RapidReferenceExpression referenceExpression)) {
+            return null;
+        }
+        ReferenceExpression variable = getReference(referenceExpression);
+        if (variable == null) {
+            return null;
+        }
+        List<RapidExpression> dimensions = expression.getArray().getDimensions();
+        if (dimensions.isEmpty()) {
+            return null;
+        }
+        RapidType type = Objects.requireNonNullElseGet(variable.getType(), () -> RapidPrimitiveType.ANYTYPE.createArrayType(dimensions.size()));
+        if (type.getDimensions() < dimensions.size()) {
+            return null;
+        }
+        List<Expression> expressions = dimensions.stream()
+                .map(this::expression)
+                .toList();
+        if (expressions.contains(null)) {
+            return null;
+        }
+        IndexExpression indexExpression = new IndexExpression(expression, variable, expressions.get(0));
+        for (int i = 1; i < expressions.size(); i++) {
+            indexExpression = new IndexExpression(expression, indexExpression, expressions.get(i));
+        }
+        return indexExpression;
     }
 
     @Override
-    public @NotNull Expression aggregate(@Nullable RapidAggregateExpression element, @NotNull RapidType aggregateType, @NotNull List<? extends Expression> expressions) {
-        return new AggregateExpression(element, aggregateType, expressions);
+    public @NotNull ReferenceExpression component(@NotNull ReferenceExpression variable, @NotNull String name) {
+        RapidType type = variable.getType();
+        if (!(type.getRootStructure() instanceof RapidRecord record)) {
+            throw new IllegalArgumentException("Cannot create component expression for variable of type: " + type);
+        }
+        for (RapidComponent component : record.getComponents()) {
+            if (name.equals(component.getName())) {
+                return new ComponentExpression(Objects.requireNonNullElse(component.getType(), RapidPrimitiveType.ANYTYPE), variable, name);
+            }
+        }
+        throw new IllegalArgumentException("Record: " + record.getName() + " does not have a component: " + name);
     }
 
     @Override
-    public @NotNull Expression literal(@Nullable RapidLiteralExpression element, @NotNull Object value) {
-        return new LiteralExpression(element, value);
+    public @Nullable ReferenceExpression component(@NotNull RapidReferenceExpression expression) {
+        RapidExpression qualifier = expression.getQualifier();
+        if (!(qualifier instanceof RapidReferenceExpression referenceExpression)) {
+            return null;
+        }
+        ReferenceExpression variable = getReference(referenceExpression);
+        if (variable == null) {
+            return null;
+        }
+        RapidSymbol symbol = expression.getSymbol();
+        if (!(symbol instanceof RapidComponent component)) {
+            return null;
+        }
+        String name = symbol.getName();
+        if (name == null) {
+            return null;
+        }
+        RapidType type = Objects.requireNonNullElse(component.getType(), RapidPrimitiveType.ANYTYPE);
+        return new ComponentExpression(expression, type, variable, name);
     }
 
     @Override
-    public @NotNull Expression binary(@Nullable RapidBinaryExpression element, @NotNull BinaryOperator operator, @NotNull Expression left, @NotNull Expression right) {
-        return new BinaryExpression(element, operator, left, right);
+    public @NotNull Expression aggregate(@NotNull RapidType aggregateType, @NotNull List<? extends Expression> expressions) {
+        return new AggregateExpression(aggregateType, expressions);
     }
 
     @Override
-    public @NotNull Expression unary(@Nullable RapidUnaryExpression element, @NotNull UnaryOperator operator, @NotNull Expression expression) {
-        return new UnaryExpression(element, operator, expression);
+    public @Nullable Expression aggregate(@NotNull RapidAggregateExpression expression) {
+        RapidType type = expression.getType();
+        if (type == null) {
+            return null;
+        }
+        List<Expression> expressions = expression.getExpressions().stream()
+                .map(this::expression)
+                .toList();
+        if (type.getDimensions() > 0) {
+            if (expressions.stream().anyMatch(component -> !(type.isAssignable(component.getType().createArrayType(1))))) {
+                return null;
+            }
+        } else if (type.getRootStructure() instanceof RapidRecord record) {
+            List<RapidComponent> components = record.getComponents();
+            for (int i = 0; i < components.size(); i++) {
+                if (i >= expressions.size()) {
+                    return null;
+                }
+                RapidType componentType = components.get(i).getType();
+                if (componentType == null) {
+                    continue;
+                }
+                if (!(componentType.isAssignable(expressions.get(i).getType()))) {
+                    return null;
+                }
+            }
+        }
+        return new AggregateExpression(expression, type, expressions);
+    }
+
+    @Override
+    public @NotNull Expression literal(@NotNull Object value) {
+        return new LiteralExpression(value);
+    }
+
+    @Override
+    public @Nullable Expression literal(@NotNull RapidLiteralExpression expression) {
+        Object value = expression.getValue();
+        if (value == null) {
+            return null;
+        }
+        return new LiteralExpression(expression, value);
+    }
+
+    @Override
+    public @NotNull Expression binary(@NotNull BinaryOperator operator, @NotNull Expression left, @NotNull Expression right) {
+        return new BinaryExpression(operator, left, right);
+    }
+
+    @Override
+    public @Nullable Expression binary(@NotNull RapidBinaryExpression expression) {
+        IElementType operatorType = expression.getSign().getNode().getElementType();
+        BinaryOperator binaryOperator = getBinaryOperator(operatorType);
+        if (binaryOperator == null) {
+            return null;
+        }
+        Expression left = expression(expression.getLeft());
+        if (expression.getRight() == null) {
+            return null;
+        }
+        Expression right = expression(expression.getRight());
+        if (left == null || right == null) {
+            return null;
+        }
+        if (EnumSet.of(BinaryOperator.ADD, BinaryOperator.SUBTRACT, BinaryOperator.MULTIPLY, BinaryOperator.DIVIDE, BinaryOperator.INTEGER_DIVIDE, BinaryOperator.MODULO, BinaryOperator.LESS_THAN, BinaryOperator.LESS_THAN_OR_EQUAL, BinaryOperator.GREATER_THAN, BinaryOperator.GREATER_THAN_OR_EQUAL).contains(binaryOperator)) {
+            if (left.getType().isAssignable(RapidPrimitiveType.NUMBER) && right.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                return new BinaryExpression(expression, binaryOperator, left, right);
+            }
+        }
+        if (binaryOperator == BinaryOperator.ADD) {
+            if (left.getType().isAssignable(RapidPrimitiveType.STRING) && right.getType().isAssignable(RapidPrimitiveType.STRING)) {
+                return new BinaryExpression(expression, binaryOperator, left, right);
+            }
+        }
+        if(binaryOperator == BinaryOperator.EQUAL_TO || binaryOperator == BinaryOperator.NOT_EQUAL_TO) {
+            return new BinaryExpression(expression, binaryOperator, left, right);
+        }
+        if(binaryOperator == BinaryOperator.AND || binaryOperator == BinaryOperator.XOR || binaryOperator == BinaryOperator.OR) {
+            if (left.getType().isAssignable(RapidPrimitiveType.BOOLEAN) && right.getType().isAssignable(RapidPrimitiveType.BOOLEAN)) {
+                return new BinaryExpression(expression, binaryOperator, left, right);
+            }
+        }
+        if (left.getType().isAssignable(RapidPrimitiveType.POSITION) && right.getType().isAssignable(RapidPrimitiveType.POSITION)) {
+            if(binaryOperator == BinaryOperator.ADD) {
+                return doVectorCompute(left, right, BinaryOperator.ADD);
+            }
+            if(binaryOperator == BinaryOperator.SUBTRACT) {
+                return doVectorCompute(left, right, BinaryOperator.SUBTRACT);
+            }
+            if(binaryOperator == BinaryOperator.MULTIPLY) {
+                return doVectorCompute(left, right, BinaryOperator.MULTIPLY);
+            }
+        }
+        if (left.getType().isAssignable(RapidPrimitiveType.ORIENTATION) && right.getType().isAssignable(RapidPrimitiveType.ORIENTATION)) {
+            if(binaryOperator == BinaryOperator.MULTIPLY) {
+                return doMultiplicationProduct(left, right);
+            }
+        }
+        if (left.getType().isAssignable(RapidPrimitiveType.NUMBER) && right.getType().isAssignable(RapidPrimitiveType.POSITION)) {
+            if(binaryOperator == BinaryOperator.MULTIPLY) {
+                return doScalarCompute(right, left, BinaryOperator.MULTIPLY);
+            }
+        }
+        if (left.getType().isAssignable(RapidPrimitiveType.POSITION) && right.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+            if(binaryOperator == BinaryOperator.MULTIPLY) {
+                return doScalarCompute(left, right, BinaryOperator.MULTIPLY);
+            }
+            if(binaryOperator == BinaryOperator.DIVIDE) {
+                return doScalarCompute(left, right, BinaryOperator.DIVIDE);
+            }
+        }
+        return null;
+    }
+
+    private @NotNull Expression doVectorCompute(@NotNull Expression left, @NotNull Expression right, @NotNull BinaryOperator binaryOperator) {
+        ReferenceExpression leftVariable = getAsVariable(left);
+        ReferenceExpression rightVariable = getAsVariable(right);
+        ReferenceExpression result = getReference(createVariable(RapidPrimitiveType.POSITION));
+        assign(component(result, "x"), binary(binaryOperator, component(leftVariable, "x"), component(rightVariable, "x")));
+        assign(component(result, "y"), binary(binaryOperator, component(leftVariable, "y"), component(rightVariable, "y")));
+        assign(component(result, "z"), binary(binaryOperator, component(leftVariable, "z"), component(rightVariable, "z")));
+        return result;
+    }
+
+    private @NotNull Expression doScalarCompute(@NotNull Expression vector, @NotNull Expression scalar, @NotNull BinaryOperator binaryOperator) {
+        ReferenceExpression variable = getAsVariable(vector);
+        ReferenceExpression result = getReference(createVariable(RapidPrimitiveType.POSITION));
+        assign(component(result, "x"), binary(binaryOperator, component(variable, "x"), scalar));
+        assign(component(result, "y"), binary(binaryOperator, component(variable, "y"), scalar));
+        assign(component(result, "z"), binary(binaryOperator, component(variable, "z"), scalar));
+        return result;
+    }
+
+    private @NotNull Expression doMultiplicationProduct(@NotNull Expression left, @NotNull Expression right) {
+        ReferenceExpression leftVariable = getAsVariable(left);
+        ReferenceExpression rightVariable = getAsVariable(right);
+        ReferenceExpression result = getReference(createVariable(RapidPrimitiveType.ORIENTATION));
+        BiFunction<String, String, Expression> calculate = (leftName, rightName) -> binary(BinaryOperator.MULTIPLY, component(leftVariable, leftName), component(rightVariable, rightName));
+        assign(component(result, "q1"), doCalculate(calculate.apply("q1", "q1"), BinaryOperator.SUBTRACT, calculate.apply("q2", "q2"), BinaryOperator.SUBTRACT, calculate.apply("q3", "q3"), BinaryOperator.SUBTRACT, calculate.apply("q4", "q4")));
+        assign(component(result, "q2"), doCalculate(calculate.apply("q1", "q2"), BinaryOperator.ADD, calculate.apply("q2", "q1"), BinaryOperator.ADD, calculate.apply("q3", "q4"), BinaryOperator.SUBTRACT, calculate.apply("q4", "q3")));
+        assign(component(result, "q3"), doCalculate(calculate.apply("q1", "q3"), BinaryOperator.ADD, calculate.apply("q3", "q1"), BinaryOperator.ADD, calculate.apply("q4", "q2"), BinaryOperator.SUBTRACT, calculate.apply("q2", "q4")));
+        assign(component(result, "q4"), doCalculate(calculate.apply("q1", "q4"), BinaryOperator.ADD, calculate.apply("q4", "q1"), BinaryOperator.ADD, calculate.apply("q2", "q3"), BinaryOperator.SUBTRACT, calculate.apply("q3", "q2")));
+        return result;
+    }
+
+    private @NotNull Expression doCalculate(@NotNull Expression variable1, @NotNull BinaryOperator operator1, @NotNull Expression variable2, @NotNull BinaryOperator operator2, @NotNull Expression variable3, @NotNull BinaryOperator operator3, @NotNull Expression variable4) {
+        return binary(operator3, binary(operator2, binary(operator1, variable1, variable2), variable3), variable4);
+    }
+
+    private @NotNull ReferenceExpression getAsVariable(@NotNull Expression expression) {
+        if (expression instanceof ReferenceExpression referenceExpression) {
+            return referenceExpression;
+        }
+        Variable variable = createVariable(expression.getType());
+        ReferenceExpression reference = getReference(variable);
+        assign(reference, expression);
+        return reference;
+    }
+
+
+    private @Nullable BinaryOperator getBinaryOperator(@NotNull IElementType elementType) {
+        if (elementType == RapidTokenTypes.PLUS) {
+            return BinaryOperator.ADD;
+        } else if (elementType == RapidTokenTypes.MINUS) {
+            return BinaryOperator.SUBTRACT;
+        } else if (elementType == RapidTokenTypes.ASTERISK) {
+            return BinaryOperator.MULTIPLY;
+        } else if (elementType == RapidTokenTypes.DIV) {
+            return BinaryOperator.DIVIDE;
+        } else if (elementType == RapidTokenTypes.DIV_KEYWORD) {
+            return BinaryOperator.INTEGER_DIVIDE;
+        } else if (elementType == RapidTokenTypes.MOD_KEYWORD) {
+            return BinaryOperator.MODULO;
+        } else if (elementType == RapidTokenTypes.LT) {
+            return BinaryOperator.LESS_THAN;
+        } else if (elementType == RapidTokenTypes.EQ) {
+            return BinaryOperator.EQUAL_TO;
+        } else if (elementType == RapidTokenTypes.GT) {
+            return BinaryOperator.GREATER_THAN;
+        } else if (elementType == RapidTokenTypes.LTGT) {
+            return BinaryOperator.NOT_EQUAL_TO;
+        } else if (elementType == RapidTokenTypes.LE) {
+            return BinaryOperator.LESS_THAN_OR_EQUAL;
+        } else if (elementType == RapidTokenTypes.GE) {
+            return BinaryOperator.GREATER_THAN_OR_EQUAL;
+        } else if (elementType == RapidTokenTypes.AND_KEYWORD) {
+            return BinaryOperator.AND;
+        } else if (elementType == RapidTokenTypes.XOR_KEYWORD) {
+            return BinaryOperator.XOR;
+        } else if (elementType == RapidTokenTypes.OR_KEYWORD) {
+            return BinaryOperator.OR;
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public @NotNull Expression unary(@NotNull UnaryOperator operator, @NotNull Expression expression) {
+        return new UnaryExpression(operator, expression);
+    }
+
+    @Override
+    public @Nullable Expression unary(@NotNull RapidUnaryExpression expression) {
+        IElementType operatorType = expression.getSign().getNode().getElementType();
+        UnaryOperator unaryOperator = getUnaryOperator(operatorType);
+        if(unaryOperator == null) {
+            return null;
+        }
+        if(expression.getExpression() == null) {
+            return null;
+        }
+        Expression component = expression(expression.getExpression());
+        if(component == null) {
+            return null;
+        }
+        if(unaryOperator == UnaryOperator.NEGATE) {
+            if (component.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
+                return new UnaryExpression(expression, unaryOperator, component);
+            }
+        }
+        if(unaryOperator == UnaryOperator.NOT) {
+            if (component.getType().isAssignable(RapidPrimitiveType.BOOLEAN)) {
+                return new UnaryExpression(expression, unaryOperator, component);
+            }
+        }
+        if(unaryOperator == UnaryOperator.PRESENT) {
+            return new UnaryExpression(expression, unaryOperator, component);
+        }
+        return null;
+    }
+
+    private @Nullable UnaryOperator getUnaryOperator(@NotNull IElementType elementType) {
+        if (elementType == RapidTokenTypes.MINUS) {
+            return UnaryOperator.NEGATE;
+        } else if (elementType == RapidTokenTypes.NOT_KEYWORD) {
+            return UnaryOperator.NOT;
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public @NotNull Expression call(@NotNull Expression routine, @NotNull RapidType returnType, @NotNull Consumer<RapidArgumentBuilder> arguments) {
+        return null;
+    }
+
+    @Override
+    public @NotNull Expression call(@NotNull RapidFunctionCallExpression expression) {
+        return null;
     }
 
     @Override
@@ -145,14 +504,16 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     }
 
     @Override
-    public @NotNull RapidCodeBlockBuilder ifThen(@Nullable RapidElement element, @NotNull Expression expression, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer) {
-        return ifThenElse(element, expression, thenConsumer, builder -> {
-        });
+    public @NotNull RapidCodeBlockBuilder ifThen(@NotNull Expression expression, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer) {
+        return ifThenElse(expression, thenConsumer, builder -> {});
     }
 
     @Override
-    public @NotNull RapidCodeBlockBuilder ifThenElse(@Nullable RapidElement element, @NotNull Expression expression, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer, @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer) {
-        ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, element, expression);
+    public @NotNull RapidCodeBlockBuilder ifThenElse(@NotNull Expression condition, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer, @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer) {
+        if (!(condition.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
+            condition = any(RapidPrimitiveType.BOOLEAN);
+        }
+        ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, null, condition);
         builder.continueScope(instruction);
         ControlFlowBlockBuilder.Scope scope = builder.exitScope();
         if (scope == null) {
@@ -319,8 +680,8 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     private @NotNull Optional<ArgumentDescriptor.Conditional> getConditionalArgument(@NotNull Map<ArgumentDescriptor, ?> arguments) {
         return arguments.keySet().stream()
-                        .filter(argument -> argument instanceof ArgumentDescriptor.Conditional)
-                        .map(argument -> (ArgumentDescriptor.Conditional) argument)
-                        .findFirst();
+                .filter(argument -> argument instanceof ArgumentDescriptor.Conditional)
+                .map(argument -> (ArgumentDescriptor.Conditional) argument)
+                .findFirst();
     }
 }

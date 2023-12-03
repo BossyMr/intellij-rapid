@@ -15,9 +15,7 @@ import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.coverage.gnu.trove.TObjectDoubleHashMap;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -78,7 +76,7 @@ class ControlFlowExpressionVisitor extends RapidElementVisitor {
         }
         if(type.getDimensions() > 0) {
             // TODO: 2023-12-01
-        } else if(type.getActualStructure() instanceof RapidRecord record) {
+        } else if(type.getRootStructure() instanceof RapidRecord record) {
             // TODO: 2023-12-01
         } else {
             result.set(builder.error(expression, type));

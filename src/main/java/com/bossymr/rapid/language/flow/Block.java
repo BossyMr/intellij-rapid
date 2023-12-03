@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.flow.instruction.Instruction;
+import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.type.RapidType;
@@ -97,7 +98,7 @@ public sealed abstract class Block {
         entryPoints.put(scopeType, new EntryInstruction(scopeType, instruction));
     }
 
-    public void setErrorClause(@Nullable List<Integer> exceptions, @NotNull Instruction instruction) {
+    public void setErrorClause(@NotNull List<Expression> exceptions, @NotNull Instruction instruction) {
         if (getEntryInstruction(BlockType.ERROR_CLAUSE) != null) {
             throw new IllegalStateException();
         }

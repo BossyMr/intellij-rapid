@@ -67,7 +67,7 @@ public enum RapidPrimitiveType implements RapidType {
     }
 
     @Override
-    public @NotNull VirtualStructure getActualStructure() {
+    public @NotNull VirtualStructure getRootStructure() {
         return getStructure();
     }
 

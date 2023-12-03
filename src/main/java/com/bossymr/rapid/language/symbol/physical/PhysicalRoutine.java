@@ -108,6 +108,15 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
         return statementList != null ? statementList.getStatements() : null;
     }
 
+    @Override
+    public @Nullable List<RapidExpression> getErrorClause() {
+        RapidStatementList statementList = getStatementList(BlockType.ERROR_CLAUSE);
+        if(statementList == null) {
+            return null;
+        }
+        return statementList.getExpressions();
+    }
+
     public @Nullable RapidStatementList getStatementList(@NotNull BlockType blockType) {
         List<RapidStatementList> statementLists = findChildrenByType(RapidElementTypes.STATEMENT_LIST);
         for (RapidStatementList statementList : statementLists) {

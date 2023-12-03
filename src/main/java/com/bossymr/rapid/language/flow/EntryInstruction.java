@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.flow.instruction.Instruction;
+import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.psi.BlockType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,14 +50,14 @@ public class EntryInstruction {
 
     public static class ErrorEntryInstruction extends EntryInstruction {
 
-        private final @Nullable List<Integer> exceptions;
+        private final @Nullable List<Expression> exceptions;
 
-        public ErrorEntryInstruction(@NotNull Instruction instruction, @Nullable List<Integer> exceptions) {
+        public ErrorEntryInstruction(@NotNull Instruction instruction, @NotNull List<Expression> exceptions) {
             super(BlockType.ERROR_CLAUSE, instruction);
             this.exceptions = exceptions;
         }
 
-        public @Nullable List<Integer> getExceptions() {
+        public @NotNull List<Expression> getExceptions() {
             return exceptions;
         }
 

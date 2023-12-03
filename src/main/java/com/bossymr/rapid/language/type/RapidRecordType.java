@@ -22,7 +22,7 @@ public class RapidRecordType implements RapidType {
     }
 
     @Override
-    public @NotNull RapidRecord getActualStructure() {
+    public @NotNull RapidRecord getRootStructure() {
         return record;
     }
 

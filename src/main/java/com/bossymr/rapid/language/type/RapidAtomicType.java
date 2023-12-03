@@ -29,10 +29,10 @@ public class RapidAtomicType implements RapidType {
     }
 
     @Override
-    public @Nullable RapidStructure getActualStructure() {
+    public @Nullable RapidStructure getRootStructure() {
         RapidType underlyingType = getUnderlyingType();
         if(underlyingType != null) {
-            return underlyingType.getActualStructure();
+            return underlyingType.getRootStructure();
         } else {
             return getStructure();
         }

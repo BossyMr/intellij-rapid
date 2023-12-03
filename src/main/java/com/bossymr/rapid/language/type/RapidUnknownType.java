@@ -21,7 +21,7 @@ public class RapidUnknownType implements RapidType {
     }
 
     @Override
-    public @Nullable RapidStructure getActualStructure() {
+    public @Nullable RapidStructure getRootStructure() {
         return null;
     }
 

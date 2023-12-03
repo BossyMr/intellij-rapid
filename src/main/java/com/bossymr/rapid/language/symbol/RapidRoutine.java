@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.psi.BlockType;
+import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidStatement;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.navigation.TargetPresentation;
@@ -59,6 +60,8 @@ public interface RapidRoutine extends RapidVisibleSymbol {
      * statement list of the specified type.
      */
     @Nullable List<RapidStatement> getStatements(@NotNull BlockType blockType);
+
+    @Nullable List<RapidExpression> getErrorClause();
 
     @Override
     default @NotNull TargetPresentation getTargetPresentation() {

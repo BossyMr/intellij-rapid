@@ -18,7 +18,7 @@ public class AggregateExpression implements Expression {
     private final @NotNull RapidType type;
     private final @NotNull List<? extends Expression> expressions;
 
-    public AggregateExpression(@NotNull RapidType type, @NotNull List<Expression> expressions) {
+    public AggregateExpression(@NotNull RapidType type, @NotNull List<? extends Expression> expressions) {
         this(null, type, expressions);
     }
 

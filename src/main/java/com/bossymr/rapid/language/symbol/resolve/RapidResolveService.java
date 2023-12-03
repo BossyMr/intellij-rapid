@@ -90,7 +90,7 @@ public final class RapidResolveService {
         if (dataType == null) {
             return null;
         }
-        RapidStructure structure = dataType.getActualStructure();
+        RapidStructure structure = dataType.getRootStructure();
         if (!(structure instanceof RapidRecord record)) {
             return null;
         }

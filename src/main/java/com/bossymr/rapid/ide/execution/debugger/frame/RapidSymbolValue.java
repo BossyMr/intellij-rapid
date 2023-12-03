@@ -81,7 +81,7 @@ public class RapidSymbolValue extends XNamedValue {
         try {
             String value = getValue();
             RapidType dataType = symbol.getType();
-            boolean hasChildren = dataType != null && dataType.getActualStructure() instanceof RapidRecord record && record.getComponents().size() > 0;
+            boolean hasChildren = dataType != null && dataType.getRootStructure() instanceof RapidRecord record && record.getComponents().size() > 0;
             node.setPresentation(symbol.getTargetPresentation().getIcon(), new RapidValuePresentation(dataType, value), hasChildren);
         } catch (IOException e) {
             node.setPresentation(null, new XErrorValuePresentation(e.getLocalizedMessage()), false);
@@ -134,7 +134,7 @@ public class RapidSymbolValue extends XNamedValue {
 
     @Override
     public void computeChildren(@NotNull XCompositeNode node) {
-        if (symbol.getType() != null && symbol.getType().getActualStructure() instanceof RapidRecord record) {
+        if (symbol.getType() != null && symbol.getType().getRootStructure() instanceof RapidRecord record) {
             XValueChildrenList childrenList = new XValueChildrenList();
             List<RapidComponent> components = record.getComponents();
             for (int i = 0; i < components.size(); i++) {

@@ -1,10 +1,13 @@
 package com.bossymr.rapid.language.builder;
 
+import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.psi.BlockType;
+import com.bossymr.rapid.language.symbol.RapidParameterGroup;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * A builder for {@code Rapid} routines.
@@ -19,6 +22,14 @@ public interface RapidRoutineBuilder {
      * @return this builder.
      */
     @NotNull RapidRoutineBuilder withParameterGroup(boolean isOptional, @NotNull Consumer<RapidParameterGroupBuilder> consumer);
+
+    /**
+     * Adds the specified parameter group to this routine.
+     *
+     * @param parameterGroup the parameter group.
+     * @return this builder.
+     */
+    @NotNull RapidRoutineBuilder withParameterGroup(@NotNull RapidParameterGroup parameterGroup);
 
     /**
      * Adds a code block to this routine.
@@ -48,6 +59,6 @@ public interface RapidRoutineBuilder {
      * @param consumer the handler which can define the code block.
      * @return this builder.
      */
-    @NotNull RapidRoutineBuilder withCode(@NotNull List<Integer> exceptions,
+    @NotNull RapidRoutineBuilder withCode(@NotNull Function<RapidCodeBlockBuilder, List<Expression>> exceptions,
                                           @NotNull Consumer<RapidCodeBlockBuilder> consumer);
 }

@@ -240,7 +240,7 @@ public class DataFlowState {
             ArraySnapshot snapshot = new ArraySnapshot((parent) -> createDefaultSnapshot(new IndexExpression(parent, new VariableSnapshot(RapidPrimitiveType.NUMBER))), variable.getType(), variable);
             add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new LiteralExpression(true)));
             return snapshot;
-        } else if (type.getActualStructure() instanceof RapidRecord record) {
+        } else if (type.getRootStructure() instanceof RapidRecord record) {
             RecordSnapshot snapshot = new RecordSnapshot(variable.getType(), variable);
             add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new LiteralExpression(true)));
             for (RapidComponent component : record.getComponents()) {
@@ -433,7 +433,7 @@ public class DataFlowState {
                             assign(indexExpression, component);
                         }
                         return;
-                    } else if (referenceExpression.getType().getActualStructure() instanceof RapidRecord record) {
+                    } else if (referenceExpression.getType().getRootStructure() instanceof RapidRecord record) {
                         List<RapidComponent> fields = record.getComponents();
                         if (fields.size() != components.size()) {
                             throw new IllegalArgumentException("Cannot add expression: " + expression);
@@ -574,7 +574,7 @@ public class DataFlowState {
                 IndexExpression indexExpression = new IndexExpression(arraySnapshot, indexSnapshot);
                 return createSnapshot(indexExpression).orElseThrow();
             }, snapshotType, underlyingExpression);
-        } else if (snapshotType.getActualStructure() instanceof RapidRecord record) {
+        } else if (snapshotType.getRootStructure() instanceof RapidRecord record) {
             RecordSnapshot recordSnapshot = new RecordSnapshot(snapshotType, underlyingExpression);
             snapshot = recordSnapshot;
             for (RapidComponent component : record.getComponents()) {

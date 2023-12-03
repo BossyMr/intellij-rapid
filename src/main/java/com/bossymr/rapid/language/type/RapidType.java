@@ -25,8 +25,8 @@ public interface RapidType {
         if(getDimensions() != type.getDimensions()) {
             return false;
         }
-        RapidStructure thisStructure = getActualStructure();
-        RapidStructure otherStructure = type.getActualStructure();
+        RapidStructure thisStructure = getRootStructure();
+        RapidStructure otherStructure = type.getRootStructure();
         if(thisStructure == null || otherStructure == null) {
             return getText().equals(type.getText());
         }
@@ -67,7 +67,7 @@ public interface RapidType {
      * Returns the underlying structure of this type.
      *
      * @return the structure of this type.
-     * @see #getActualStructure()
+     * @see #getRootStructure()
      */
     @Nullable RapidStructure getStructure();
 
@@ -78,7 +78,7 @@ public interface RapidType {
      *
      * @return the structure of this type.
      */
-    @Nullable RapidStructure getActualStructure();
+    @Nullable RapidStructure getRootStructure();
 
     /**
      * Returns the value type of this type, which represents whether this type can be represented, either wholly or
