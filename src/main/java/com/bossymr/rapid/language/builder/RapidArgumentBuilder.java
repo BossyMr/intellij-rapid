@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.builder;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.value.Expression;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * A builder for a {@code Rapid} routine call.
@@ -21,7 +20,7 @@ public interface RapidArgumentBuilder {
     /**
      * Adds a new optional argument to this routine call.
      *
-     * @param name the name of the argument.
+     * @param name the name of the parameter which this argument refers to.
      * @param expression the value of the argument.
      * @return this builder.
      */
@@ -30,8 +29,9 @@ public interface RapidArgumentBuilder {
     /**
      * Adds a new conditional argument to this routine call.
      *
-     * @param name the name of the argument.
-     * @param argument the value of the argument.
+     * @param name the name of the parameter which this argument refers to.
+     * @param argument the argument, if this argument is present this argument is added to the function call, otherwise
+     * it is left out.
      * @return this builder.
      */
     @NotNull RapidArgumentBuilder withConditionalArgument(@NotNull String name, @NotNull Argument argument);

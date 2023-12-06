@@ -19,7 +19,6 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.tree.IElementType;
-import kotlinx.html.SUB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -280,40 +279,40 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                 return new BinaryExpression(expression, binaryOperator, left, right);
             }
         }
-        if(binaryOperator == BinaryOperator.EQUAL_TO || binaryOperator == BinaryOperator.NOT_EQUAL_TO) {
+        if (binaryOperator == BinaryOperator.EQUAL_TO || binaryOperator == BinaryOperator.NOT_EQUAL_TO) {
             return new BinaryExpression(expression, binaryOperator, left, right);
         }
-        if(binaryOperator == BinaryOperator.AND || binaryOperator == BinaryOperator.XOR || binaryOperator == BinaryOperator.OR) {
+        if (binaryOperator == BinaryOperator.AND || binaryOperator == BinaryOperator.XOR || binaryOperator == BinaryOperator.OR) {
             if (left.getType().isAssignable(RapidPrimitiveType.BOOLEAN) && right.getType().isAssignable(RapidPrimitiveType.BOOLEAN)) {
                 return new BinaryExpression(expression, binaryOperator, left, right);
             }
         }
         if (left.getType().isAssignable(RapidPrimitiveType.POSITION) && right.getType().isAssignable(RapidPrimitiveType.POSITION)) {
-            if(binaryOperator == BinaryOperator.ADD) {
+            if (binaryOperator == BinaryOperator.ADD) {
                 return doVectorCompute(left, right, BinaryOperator.ADD);
             }
-            if(binaryOperator == BinaryOperator.SUBTRACT) {
+            if (binaryOperator == BinaryOperator.SUBTRACT) {
                 return doVectorCompute(left, right, BinaryOperator.SUBTRACT);
             }
-            if(binaryOperator == BinaryOperator.MULTIPLY) {
+            if (binaryOperator == BinaryOperator.MULTIPLY) {
                 return doVectorCompute(left, right, BinaryOperator.MULTIPLY);
             }
         }
         if (left.getType().isAssignable(RapidPrimitiveType.ORIENTATION) && right.getType().isAssignable(RapidPrimitiveType.ORIENTATION)) {
-            if(binaryOperator == BinaryOperator.MULTIPLY) {
+            if (binaryOperator == BinaryOperator.MULTIPLY) {
                 return doMultiplicationProduct(left, right);
             }
         }
         if (left.getType().isAssignable(RapidPrimitiveType.NUMBER) && right.getType().isAssignable(RapidPrimitiveType.POSITION)) {
-            if(binaryOperator == BinaryOperator.MULTIPLY) {
+            if (binaryOperator == BinaryOperator.MULTIPLY) {
                 return doScalarCompute(right, left, BinaryOperator.MULTIPLY);
             }
         }
         if (left.getType().isAssignable(RapidPrimitiveType.POSITION) && right.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
-            if(binaryOperator == BinaryOperator.MULTIPLY) {
+            if (binaryOperator == BinaryOperator.MULTIPLY) {
                 return doScalarCompute(left, right, BinaryOperator.MULTIPLY);
             }
-            if(binaryOperator == BinaryOperator.DIVIDE) {
+            if (binaryOperator == BinaryOperator.DIVIDE) {
                 return doScalarCompute(left, right, BinaryOperator.DIVIDE);
             }
         }
@@ -411,27 +410,27 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     public @Nullable Expression unary(@NotNull RapidUnaryExpression expression) {
         IElementType operatorType = expression.getSign().getNode().getElementType();
         UnaryOperator unaryOperator = getUnaryOperator(operatorType);
-        if(unaryOperator == null) {
+        if (unaryOperator == null) {
             return null;
         }
-        if(expression.getExpression() == null) {
+        if (expression.getExpression() == null) {
             return null;
         }
         Expression component = expression(expression.getExpression());
-        if(component == null) {
+        if (component == null) {
             return null;
         }
-        if(unaryOperator == UnaryOperator.NEGATE) {
+        if (unaryOperator == UnaryOperator.NEGATE) {
             if (component.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
                 return new UnaryExpression(expression, unaryOperator, component);
             }
         }
-        if(unaryOperator == UnaryOperator.NOT) {
+        if (unaryOperator == UnaryOperator.NOT) {
             if (component.getType().isAssignable(RapidPrimitiveType.BOOLEAN)) {
                 return new UnaryExpression(expression, unaryOperator, component);
             }
         }
-        if(unaryOperator == UnaryOperator.PRESENT) {
+        if (unaryOperator == UnaryOperator.PRESENT) {
             return new UnaryExpression(expression, unaryOperator, component);
         }
         return null;
@@ -449,17 +448,154 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull Expression call(@NotNull Expression routine, @NotNull RapidType returnType, @NotNull Consumer<RapidArgumentBuilder> arguments) {
-        return null;
+        Map<ArgumentDescriptor, Expression> result = new HashMap<>();
+        ControlFlowArgumentBuilder argumentBuilder = new ControlFlowArgumentBuilder(result, this);
+        arguments.accept(argumentBuilder);
+        Variable variable = createVariable(returnType);
+        ReferenceExpression reference = getReference(variable);
+        call(null, routine, reference, result);
+        return reference;
     }
 
     @Override
-    public @NotNull Expression call(@NotNull RapidFunctionCallExpression expression) {
-        return null;
+    public @Nullable Expression call(@NotNull RapidFunctionCallExpression expression) {
+        RapidType returnType = expression.getType();
+        if(returnType == null) {
+            return null;
+        }
+        RapidSymbol symbol = expression.getReferenceExpression().getSymbol();
+        if(!(symbol instanceof RapidRoutine routine)) {
+            return null;
+        }
+        String routineName = symbol.getName();
+        String moduleName;
+        if(symbol instanceof PhysicalElement element) {
+            PhysicalModule module = PhysicalModule.getModule(element);
+            moduleName = module != null ? module.getName() : null;
+        } else {
+            moduleName = "";
+        }
+        if(routineName == null || moduleName == null) {
+            return null;
+        }
+        Map<ArgumentDescriptor, Expression> result = new HashMap<>();
+        ControlFlowArgumentBuilder argumentBuilder = new ControlFlowArgumentBuilder(result, this);
+        getArgumentConsumer(expression.getArgumentList()).accept(argumentBuilder);
+        Variable variable = createVariable(returnType);
+        ReferenceExpression reference = getReference(variable);
+        call(expression, literal(moduleName + ":" + routineName), reference, result);
+        return reference;
+    }
+
+    private @NotNull Consumer<RapidArgumentBuilder> getArgumentConsumer(@NotNull RapidArgumentList argumentList) {
+        return builder -> {
+            List<RapidArgument> arguments = argumentList.getArguments();
+            for (RapidArgument argument : arguments) {
+                if(argument instanceof RapidRequiredArgument requiredArgument) {
+                    RapidExpression value = requiredArgument.getArgument();
+                    builder.withRequiredArgument(Objects.requireNonNullElseGet(expression(value), () -> any(value.getType())));
+                } else if(argument instanceof RapidConditionalArgument conditionalArgument) {
+                    RapidSymbol parameter = conditionalArgument.getParameter().getSymbol();
+                    if(!(parameter instanceof RapidParameter parameterSymbol)) {
+                        continue;
+                    }
+                    RapidExpression value = conditionalArgument.getArgument();
+                    if(!(value instanceof RapidReferenceExpression referenceExpression) || !(referenceExpression.getSymbol() instanceof RapidParameter argumentSymbol)) {
+                        continue;
+                    }
+                    String parameterName = parameterSymbol.getName();
+                    String argumentName = argumentSymbol.getName();
+                    if(parameterName == null || argumentName == null) {
+                        continue;
+                    }
+                    Argument argumentValue = getArgument(argumentSymbol.getName());
+                    if(argumentValue == null) {
+                        continue;
+                    }
+                    builder.withConditionalArgument(parameterName, argumentValue);
+                } else if(argument instanceof RapidOptionalArgument optionalArgument) {
+                    RapidSymbol parameter = optionalArgument.getParameter().getSymbol();
+                    if(!(parameter instanceof RapidParameter parameterSymbol)) {
+                        continue;
+                    }
+                    RapidExpression value = optionalArgument.getArgument();
+                    if(value == null) {
+                        continue;
+                    }
+                    String name = parameterSymbol.getName();
+                    if(name == null) {
+                        continue;
+                    }
+                    builder.withOptionalArgument(name, Objects.requireNonNullElseGet(expression(value), () -> any(value.getType())));
+                }
+            }
+        };
+    }
+    
+    private void call(@Nullable RapidElement element, @NotNull Expression routine, @Nullable ReferenceExpression returnVariable, @NotNull Map<ArgumentDescriptor, Expression> arguments) {
+        ArgumentDescriptor.Conditional conditional = getConditionalArgument(arguments);
+        if (conditional == null) {
+            // This function call does not reference any conditional arguments.
+            builder.continueScope(new CallInstruction(block, element, routine, returnVariable, getArgumentVariables(arguments)));
+            return;
+        }
+        // The argument which the conditional argument is based on, i.e. the argument is present if this parameter is present.
+        Argument argument = getArgument(conditional.name());
+        Expression condition;
+        if (argument == null) {
+            // The parameter does not exist.
+            condition = any(RapidPrimitiveType.BOOLEAN);
+        } else {
+            ReferenceExpression reference = getReference(argument);
+            condition = new UnaryExpression(UnaryOperator.PRESENT, reference);
+        }
+        ifThenElse(condition,
+                builder -> {
+                    // The argument is present, change it into an optional argument.
+                    Expression expression = arguments.get(conditional);
+                    Map<ArgumentDescriptor, Expression> copy = new HashMap<>(arguments);
+                    copy.remove(conditional);
+                    copy.put(new ArgumentDescriptor.Optional(conditional.name()), expression);
+                    ((ControlFlowCodeBlockBuilder) builder).call(element, routine, returnVariable, copy);
+                }, builder -> {
+                    // The argument is not present, remove it.
+                    Map<ArgumentDescriptor, Expression> copy = new HashMap<>(arguments);
+                    copy.remove(conditional);
+                    ((ControlFlowCodeBlockBuilder) builder).call(element, routine, returnVariable, copy);
+                });
+    }
+
+
+    private @NotNull Map<ArgumentDescriptor, ReferenceExpression> getArgumentVariables(@NotNull Map<ArgumentDescriptor, Expression> arguments) {
+        Map<ArgumentDescriptor, ReferenceExpression> variables = new HashMap<>();
+        arguments.forEach((descriptor, expression) -> {
+            if (expression instanceof ReferenceExpression referenceExpression) {
+                variables.put(descriptor, referenceExpression);
+            } else {
+                /*
+                 * It's a lot easier to handle call instructions if all of its arguments are variables, instead of
+                 * regular expressions.
+                 */
+                Variable variable = createVariable(expression.getType());
+                ReferenceExpression reference = getReference(variable);
+                assign(reference, expression);
+                variables.put(descriptor, reference);
+            }
+        });
+        return variables;
+    }
+
+    private @Nullable ArgumentDescriptor.Conditional getConditionalArgument(@NotNull Map<ArgumentDescriptor, ?> arguments) {
+        return arguments.keySet().stream()
+                .filter(argument -> argument instanceof ArgumentDescriptor.Conditional)
+                .map(argument -> (ArgumentDescriptor.Conditional) argument)
+                .findFirst().orElse(null);
     }
 
     @Override
-    public @NotNull Expression error(@Nullable RapidElement element, @NotNull RapidType type) {
-        return new ErrorExpression(type);
+    public @NotNull Expression any(@Nullable RapidType type) {
+        // TODO: 2023-12-04 Replace usages of method with custom, to provide PsiElement
+        return new ErrorExpression(Objects.requireNonNullElse(type, RapidPrimitiveType.ANYTYPE));
     }
 
     @Override
@@ -634,54 +770,5 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         arguments.accept(builder);
         call(element, routine, null, result);
         return this;
-    }
-
-    private void call(@Nullable RapidElement element, @NotNull Expression routine, @Nullable ReferenceExpression returnVariable, @NotNull Map<ArgumentDescriptor, Expression> arguments) {
-        Optional<ArgumentDescriptor.Conditional> optional = getConditionalArgument(arguments);
-        if (optional.isEmpty()) {
-            builder.continueScope(new CallInstruction(block, element, routine, returnVariable, getArgumentVariables(arguments)));
-            return;
-        }
-        ArgumentDescriptor.Conditional conditional = optional.orElseThrow();
-        ReferenceExpression argument = getArgument(conditional.name());
-        Expression isPresent = new UnaryExpression(UnaryOperator.PRESENT, argument);
-        ifThenElse(isPresent,
-                builder -> {
-                    Expression expression = arguments.get(conditional);
-                    if (expression == null) {
-                        builder.error(null);
-                        return;
-                    }
-                    Map<ArgumentDescriptor, Expression> copy = new HashMap<>(arguments);
-                    copy.remove(conditional);
-                    copy.put(new ArgumentDescriptor.Optional(conditional.name()), expression);
-                    ((ControlFlowCodeBlockBuilder) builder).call(element, routine, returnVariable, copy);
-                }, builder -> {
-                    Map<ArgumentDescriptor, Expression> copy = new HashMap<>(arguments);
-                    copy.remove(conditional);
-                    ((ControlFlowCodeBlockBuilder) builder).call(element, routine, returnVariable, copy);
-                });
-    }
-
-
-    private @NotNull Map<ArgumentDescriptor, ReferenceExpression> getArgumentVariables(@NotNull Map<ArgumentDescriptor, Expression> arguments) {
-        Map<ArgumentDescriptor, ReferenceExpression> variables = new HashMap<>();
-        arguments.forEach((descriptor, expression) -> {
-            if (expression instanceof ReferenceExpression referenceExpression) {
-                variables.put(descriptor, referenceExpression);
-            } else {
-                ReferenceExpression variable = createVariable(expression.getType());
-                assign(variable, expression);
-                variables.put(descriptor, variable);
-            }
-        });
-        return variables;
-    }
-
-    private @NotNull Optional<ArgumentDescriptor.Conditional> getConditionalArgument(@NotNull Map<ArgumentDescriptor, ?> arguments) {
-        return arguments.keySet().stream()
-                .filter(argument -> argument instanceof ArgumentDescriptor.Conditional)
-                .map(argument -> (ArgumentDescriptor.Conditional) argument)
-                .findFirst();
     }
 }

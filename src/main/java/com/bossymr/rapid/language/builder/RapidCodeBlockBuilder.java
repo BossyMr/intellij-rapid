@@ -3,14 +3,16 @@ package com.bossymr.rapid.language.builder;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Field;
 import com.bossymr.rapid.language.flow.Variable;
-import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.flow.value.BinaryOperator;
+import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.UnaryOperator;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.sql.Ref;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -114,7 +116,7 @@ public interface RapidCodeBlockBuilder {
      * @return a new aggregate expression.
      */
     @NotNull Expression aggregate(@NotNull RapidType aggregateType,
-                                           @NotNull List<? extends Expression> expressions);
+                                  @NotNull List<? extends Expression> expressions);
 
     /**
      * Returns a reference which matches the specified expression.
@@ -149,8 +151,8 @@ public interface RapidCodeBlockBuilder {
      * @return a new binary expression.
      */
     @NotNull Expression binary(@NotNull BinaryOperator operator,
-                                     @NotNull Expression left,
-                                     @NotNull Expression right);
+                               @NotNull Expression left,
+                               @NotNull Expression right);
 
     /**
      * Returns a reference which matches the specified expression.
@@ -168,7 +170,7 @@ public interface RapidCodeBlockBuilder {
      * @return a new unary expression.
      */
     @NotNull Expression unary(@NotNull UnaryOperator operator,
-                                   @NotNull Expression expression);
+                              @NotNull Expression expression);
 
     /**
      * Returns a reference which matches the specified expression.
@@ -205,12 +207,21 @@ public interface RapidCodeBlockBuilder {
                              @NotNull Consumer<RapidArgumentBuilder> arguments);
 
     /**
-     * Adds the specified expression to this code block.
+     * Returns an expression which matches the specified expression.
      *
-     * @param expression the expression.
-     * @return the expression.
+     * @param expression the expression
+     * @return an expression which matches the specified expression.
      */
-    @NotNull Expression call(@NotNull RapidFunctionCallExpression expression);
+    @Nullable Expression call(@NotNull RapidFunctionCallExpression expression);
+
+    /**
+     * Creates a new expression which can be equal to any value of any type.
+     *
+     * @return a new expression.
+     */
+    default @NotNull Expression any() {
+        return any(null);
+    }
 
     /**
      * Creates a new expression which can be equal to any value of the specified type.
@@ -218,7 +229,7 @@ public interface RapidCodeBlockBuilder {
      * @param type the type.
      * @return a new expression.
      */
-    @NotNull Expression any(@NotNull RapidType type);
+    @NotNull Expression any(@Nullable RapidType type);
 
     /**
      * Returns an expression which matches the specified expression.
