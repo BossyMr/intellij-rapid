@@ -22,6 +22,9 @@ public interface RapidType {
         if(type.equals(this)) {
             return true;
         }
+        if (type.equals(RapidPrimitiveType.ANYTYPE)) {
+            return true;
+        }
         if(getDimensions() != type.getDimensions()) {
             return false;
         }

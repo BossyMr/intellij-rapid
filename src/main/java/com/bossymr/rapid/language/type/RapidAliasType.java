@@ -57,6 +57,15 @@ public class RapidAliasType implements RapidType {
     }
 
     @Override
+    public @NotNull RapidType createArrayType(int dimensions) {
+        RapidType underlyingType = getUnderlyingType();
+        if (underlyingType != null) {
+            return underlyingType.createArrayType(dimensions);
+        }
+        return RapidType.super.createArrayType(dimensions);
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

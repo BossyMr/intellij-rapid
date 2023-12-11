@@ -9,6 +9,7 @@ import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.UnaryOperator;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.RapidField;
+import com.bossymr.rapid.language.symbol.RapidLabelStatement;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +30,15 @@ public interface RapidCodeBlockBuilder {
      * @return the variable.
      */
     @NotNull Variable createVariable(@NotNull RapidType type);
+
+    /**
+     * Adds a new variable to this code block.
+     *
+     * @param name the name of the variable.
+     * @param type the type of the variable.
+     * @return the variable.
+     */
+    @NotNull Variable createVariable(@NotNull String name, @NotNull RapidType type);
 
     /**
      * Adds the specified field to this code block.
@@ -96,8 +106,7 @@ public interface RapidCodeBlockBuilder {
      * @param name the name of the component.
      * @return a reference to the specified component of the specified variable.
      */
-    @NotNull ReferenceExpression component(@NotNull ReferenceExpression variable,
-                                           @NotNull String name);
+    @NotNull ReferenceExpression component(@NotNull Expression variable, @NotNull String name);
 
     /**
      * Returns a reference which matches the specified expression.
@@ -245,11 +254,11 @@ public interface RapidCodeBlockBuilder {
      * @return the label.
      */
     default @NotNull Label createLabel() {
-        return createLabel(null);
+        return createLabel((String) null);
     }
 
     /**
-     * Creats a new label with the specified name.
+     * Creates a new label with the specified name.
      *
      * @param name the name of the label.
      * @return the label.
@@ -257,12 +266,20 @@ public interface RapidCodeBlockBuilder {
     @NotNull Label createLabel(@Nullable String name);
 
     /**
+     * Creates a new label.
+     *
+     * @param statement the label.
+     * @return the label.
+     */
+    @NotNull Label createLabel(@NotNull RapidLabelStatement statement);
+
+    /**
      * Returns the label with the specified name.
      *
      * @param name the name of the label.
-     * @return the label, or {@code null} if no label with the specified name was found.
+     * @return the label.
      */
-    @Nullable Label getLabel(@NotNull String name);
+    @NotNull Label getLabel(@NotNull String name);
 
     /**
      * Adds a new return statement to this code block.
@@ -346,15 +363,13 @@ public interface RapidCodeBlockBuilder {
     /**
      * Adds a new for loop to this code block.
      *
-     * @param name the name of the index variable.
      * @param fromExpression the start expression.
      * @param toExpression the end expression.
      * @param stepExpression the step expression.
      * @param consumer the handler which can define the body of the loop.
      * @return this builder.
      */
-    @NotNull RapidCodeBlockBuilder forLoop(@Nullable String name,
-                                           @NotNull Expression fromExpression,
+    @NotNull RapidCodeBlockBuilder forLoop(@NotNull Expression fromExpression,
                                            @NotNull Expression toExpression,
                                            @Nullable Expression stepExpression,
                                            @NotNull BiConsumer<Variable, RapidCodeBlockBuilder> consumer);

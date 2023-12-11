@@ -7,8 +7,6 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.LiteralExpression;
-import com.bossymr.rapid.language.flow.value.VariableExpression;
 import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidStatement;
@@ -21,10 +19,7 @@ import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class ControlFlowModuleBuilder implements RapidModuleBuilder {
@@ -46,7 +41,7 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
         consumer.accept(builder);
         // If the initializer does not return a value, return an error expression.
         // If the initializer has returned a value, this statement will not be added.
-        builder.returnValue(builder.error(null, valueType));
+        builder.returnValue(builder.any(valueType));
         controlFlow.put(blockDescriptor, block);
         return this;
     }
@@ -69,9 +64,9 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
         RapidType type = Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE);
         RapidExpression initializer = field.getInitializer();
         if (initializer != null) {
-            return Objects.requireNonNullElseGet(builder.expression(initializer), () -> builder.error(initializer, type));
+            return builder.expression(initializer);
         } else {
-            return Objects.requireNonNullElseGet(getDefaultValue(builder, type), () -> builder.error(null, type));
+            return Objects.requireNonNullElseGet(getDefaultValue(builder, type), () -> builder.any(type));
         }
     }
 
@@ -116,6 +111,10 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
         }
         BlockDescriptor blockDescriptor = new BlockDescriptor(moduleName, name);
         Block.FunctionBlock block = new Block.FunctionBlock(routine, moduleName);
+        Map<RapidField, Variable> variables = new HashMap<>();
+        for (RapidField field : routine.getFields()) {
+            variables.put(field, block.createVariable(field.getName(), field.getFieldType(), Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE)));
+        }
         ControlFlowRoutineBuilder builder = new ControlFlowRoutineBuilder(block, routine);
         List<? extends RapidParameterGroup> parameters = routine.getParameters();
         if (parameters != null) {
@@ -130,9 +129,9 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
                     List<RapidExpression> errorClause = Objects.requireNonNullElseGet(routine.getErrorClause(), ArrayList::new);
                     builder.withCode(codeBuilder -> errorClause.stream()
                             .map(codeBuilder::expression)
-                            .toList(), getConsumer(routine, statements));
+                                                               .toList(), getConsumer(variables, routine, statements));
                 } else {
-                    builder.withCode(blockType, getConsumer(routine, statements));
+                    builder.withCode(blockType, getConsumer(variables, routine, statements));
                 }
             }
         }
@@ -140,8 +139,19 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
         return this;
     }
 
-    private @NotNull Consumer<RapidCodeBlockBuilder> getConsumer(@NotNull RapidRoutine routine, @NotNull List<RapidStatement> statements) {
+    private @NotNull Consumer<RapidCodeBlockBuilder> getConsumer(@NotNull Map<RapidField, Variable> variables, @NotNull RapidRoutine routine, @NotNull List<RapidStatement> statements) {
         return builder -> {
+            for (RapidField field : variables.keySet()) {
+                Variable variable = variables.get(field);
+                RapidExpression initializer = field.getInitializer();
+                if (initializer != null) {
+                    Expression expression = builder.expression(initializer);
+                    if (expression == null || !(variable.getType().isAssignable(expression.getType()))) {
+                        expression = builder.any(variable.getType());
+                    }
+                    builder.assign(builder.getReference(variable), expression);
+                }
+            }
             for (RapidStatement statement : statements) {
                 builder.statement(statement);
             }

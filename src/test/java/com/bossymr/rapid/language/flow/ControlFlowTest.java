@@ -152,7 +152,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
-                	var num _1 [i];
+                	num _1;
                 	num _2;
                 	bool _3;
                                 
@@ -175,7 +175,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                                 
                 	9: _0 := _0 + 1.0;
                 	10: _1 := _1 + _2;
-                	    goto -> [5];
+                		goto -> [5];
                                 
                 	11: return _0;
                 }
@@ -196,7 +196,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
-                	var num _1 [i];
+                	num _1;
                 	bool _2;
                                 
                 	STATEMENT_LIST:
@@ -261,7 +261,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testFunctionCallExpression() {
+    public void testProcedureCall() {
         check("""
                 MODULE foo
                     FUNC num bar()
@@ -298,7 +298,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testFunctionCallExpressionWithConditionalArgument() {
+    public void testProcedureCallWithConditionalArgument() {
         check("""
                 MODULE foo
                     PROC bar(\\num a)
@@ -312,10 +312,10 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	STATEMENT_LIST:
                 	0: if(IsPresent _0) -> [true: 1, false: 2]
                                 
-                	1: conditional(_a := _0);
+                	1: foo:conditional(_a := _0);
                 	   goto -> [3];
                                 
-                	2: conditional();
+                	2: foo:conditional();
                 	3: return;
                 }
                                 
@@ -342,18 +342,18 @@ public class ControlFlowTest extends BasePlatformTestCase {
                                 
                 	1: if(IsPresent _1) -> [true: 2, false: 3]
                                 
-                	2: conditional(_a := _0, _b := _1);
+                	2: foo:conditional(_a := _0, _b := _1);
                 	   goto -> [7];
                                 
-                	3: conditional(_a := _0);
+                	3: foo:conditional(_a := _0);
                 	   goto -> [7];
                                 
                 	4: if(IsPresent _1) -> [true: 5, false: 6]
                                 
-                	5: conditional(_b := _1);
+                	5: foo:conditional(_b := _1);
                 	   goto -> [7];
                                 
-                	6: conditional();
+                	6: foo:conditional();
                 	7: return;
                 }
                                 

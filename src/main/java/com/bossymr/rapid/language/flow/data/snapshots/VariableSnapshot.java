@@ -1,8 +1,8 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
-import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,21 +21,25 @@ import org.jetbrains.annotations.Nullable;
  */
 public class VariableSnapshot implements SnapshotExpression {
 
-    private final @Nullable RapidExpression expression;
+    private final @Nullable ReferenceExpression underlyingVariable;
     private final @NotNull RapidType type;
 
     public VariableSnapshot(@NotNull RapidType type) {
         this(type, null);
     }
 
-    public VariableSnapshot(@NotNull RapidType type, @Nullable RapidExpression expression) {
+    public VariableSnapshot(@NotNull ReferenceExpression underlyingVariable) {
+        this(underlyingVariable.getType(), underlyingVariable);
+    }
+
+    public VariableSnapshot(@NotNull RapidType type, @Nullable ReferenceExpression underlyingVariable) {
+        this.underlyingVariable = underlyingVariable;
         this.type = type;
-        this.expression = expression;
     }
 
     @Override
-    public @Nullable RapidExpression getElement() {
-        return expression;
+    public @Nullable ReferenceExpression getUnderlyingVariable() {
+        return underlyingVariable;
     }
 
     @Override

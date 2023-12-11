@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
@@ -8,7 +9,6 @@ import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.parser.ControlFlowElementBuilder;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.openapi.application.Application;
@@ -169,17 +169,17 @@ public final class ControlFlowService {
 
     @RequiresReadLock
     private @NotNull ControlFlow calculateControlFlow(@NotNull Project project) {
-        ControlFlowElementBuilder analyzer = new ControlFlowElementBuilder();
+        ControlFlowBuilder builder = new ControlFlowBuilder();
         PsiManager manager = PsiManager.getInstance(project);
         Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(project));
         for (VirtualFile virtualFile : virtualFiles) {
             if (manager.findFile(virtualFile) instanceof RapidFile file) {
                 for (PhysicalModule module : file.getModules()) {
-                    analyzer.process(module);
+                    builder.withModule(module);
                 }
             }
         }
-        return analyzer.getControlFlow();
+        return builder.getControlFlow();
     }
 
 }

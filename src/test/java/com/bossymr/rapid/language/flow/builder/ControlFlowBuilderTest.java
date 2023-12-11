@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.flow.builder;
 
 import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.builder.RapidBuilder;
+import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
@@ -13,6 +14,7 @@ import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,18 +35,14 @@ class ControlFlowBuilderTest {
 
     @Test
     void assign() {
-        check(builder -> {
-            builder.withModule("foo", moduleBuilder -> {
-                moduleBuilder.withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> {
-                    routineBuilder.withCode(codeBuilder -> {
-                        ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
-                        codeBuilder.assign(x, codeBuilder.literal(0));
-                        ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
-                        codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.EQUAL_TO, x, codeBuilder.literal(0)));
-                    });
-                });
-            });
-        }, """
+        check(builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> routineBuilder.withCode(codeBuilder -> {
+                            ReferenceExpression x = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.NUMBER));
+                            codeBuilder.assign(x, codeBuilder.literal(0));
+                            ReferenceExpression y = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN));
+                            codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.EQUAL_TO, x, codeBuilder.literal(0)));
+                        }))), """
                 proc foo:bar() {
                 	num _0;
                 	bool _1;
@@ -59,20 +57,17 @@ class ControlFlowBuilderTest {
 
     @Test
     void ifThen() {
-        check(builder -> {
-            builder.withModule("foo", moduleBuilder -> {
-                moduleBuilder.withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> {
-                    routineBuilder.withCode(codeBuilder -> {
-                        ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
-                        codeBuilder.assign(x, codeBuilder.literal(0));
-                        ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
-                        codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.EQUAL_TO, x, codeBuilder.literal(0)));
-                        codeBuilder.ifThen(y, ifThenBuilder -> ifThenBuilder.assign(x, ifThenBuilder.literal(1)));
-                        codeBuilder.assign(x, codeBuilder.literal(-1));
-                    });
-                });
-            });
-        }, """
+        check(builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> routineBuilder
+                                .withCode(codeBuilder -> {
+                                    ReferenceExpression x = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.NUMBER));
+                                    codeBuilder.assign(x, codeBuilder.literal(0));
+                                    ReferenceExpression y = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN));
+                                    codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.EQUAL_TO, x, codeBuilder.literal(0)));
+                                    codeBuilder.ifThen(y, ifThenBuilder -> ifThenBuilder.assign(x, ifThenBuilder.literal(1)));
+                                    codeBuilder.assign(x, codeBuilder.literal(-1));
+                                }))), """
                 proc foo:bar() {
                 	num _0;
                 	bool _1;
@@ -91,21 +86,18 @@ class ControlFlowBuilderTest {
 
     @Test
     void ifThenElseNoFallThrough() {
-        check(builder -> {
-            builder.withModule("foo", moduleBuilder -> {
-                moduleBuilder.withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> {
-                    routineBuilder.withCode(codeBuilder -> {
-                        ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
-                        codeBuilder.assign(x, codeBuilder.literal(0));
-                        ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
-                        codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
-                        codeBuilder.ifThenElse(y,
-                                ifThenBuilder -> ifThenBuilder.returnValue(ifThenBuilder.unary(UnaryOperator.NEGATE, x)),
-                                ifThenBuilder -> ifThenBuilder.returnValue(x));
-                    });
-                });
-            });
-        }, """
+        check(builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
+                                .withCode(codeBuilder -> {
+                                    ReferenceExpression x = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.NUMBER));
+                                    codeBuilder.assign(x, codeBuilder.literal(0));
+                                    ReferenceExpression y = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN));
+                                    codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
+                                    codeBuilder.ifThenElse(y,
+                                            ifThenBuilder -> ifThenBuilder.returnValue(ifThenBuilder.unary(UnaryOperator.NEGATE, x)),
+                                            ifThenBuilder -> ifThenBuilder.returnValue(x));
+                                }))), """
                 func num foo:bar() {
                 	num _0;
                 	bool _1;
@@ -124,21 +116,18 @@ class ControlFlowBuilderTest {
 
     @Test
     void goToUnknownLabel() {
-        check(builder -> {
-            builder.withModule("foo", moduleBuilder -> {
-                moduleBuilder.withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> {
-                    routineBuilder.withCode(codeBuilder -> {
-                        codeBuilder.goTo(codeBuilder.getLabel("label"));
-                        codeBuilder.assign(codeBuilder.createVariable(RapidPrimitiveType.NUMBER), codeBuilder.literal(0));
-                        codeBuilder.createLabel("label");
-                        codeBuilder.exit();
-                    });
-                });
-            });
-        }, """
+        check(builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> routineBuilder
+                                .withCode(codeBuilder -> {
+                                    codeBuilder.goTo(codeBuilder.getLabel("label"));
+                                    codeBuilder.assign(codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.NUMBER)), codeBuilder.literal(0));
+                                    codeBuilder.createLabel("label");
+                                    codeBuilder.exit();
+                                }))), """
                 proc foo:bar() {
                     num _0;
-                
+                                
                 	STATEMENT_LIST:
                 	0: exit;
                 }
@@ -147,22 +136,19 @@ class ControlFlowBuilderTest {
 
     @Test
     void ifThenElseEmptyBlock() {
-        check(builder -> {
-            builder.withModule("foo", moduleBuilder -> {
-                moduleBuilder.withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> {
-                    routineBuilder.withCode(codeBuilder -> {
-                        ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
-                        codeBuilder.assign(x, codeBuilder.literal(0));
-                        ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
-                        codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
-                        codeBuilder.ifThenElse(y,
-                                ifThenBuilder -> {},
-                                ifThenBuilder -> ifThenBuilder.returnValue(x));
-                        codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
-                    });
-                });
-            });
-        }, """
+        check(builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
+                                .withCode(codeBuilder -> {
+                                    ReferenceExpression x = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.NUMBER));
+                                    codeBuilder.assign(x, codeBuilder.literal(0));
+                                    ReferenceExpression y = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN));
+                                    codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
+                                    codeBuilder.ifThenElse(y,
+                                            ifThenBuilder -> {},
+                                            ifThenBuilder -> ifThenBuilder.returnValue(x));
+                                    codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
+                                }))), """
                 func num foo:bar() {
                 	num _0;
                 	bool _1;
@@ -181,23 +167,20 @@ class ControlFlowBuilderTest {
 
     @Test
     void ifThenElseGotoBlock() {
-        check(builder -> {
-            builder.withModule("foo", moduleBuilder -> {
-                moduleBuilder.withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> {
-                    routineBuilder.withCode(codeBuilder -> {
-                        ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
-                        Label label = codeBuilder.createLabel();
-                        codeBuilder.assign(x, codeBuilder.literal(0));
-                        ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
-                        codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
-                        codeBuilder.ifThenElse(y,
-                                ifThenBuilder -> ifThenBuilder.goTo(label),
-                                ifThenBuilder -> ifThenBuilder.returnValue(x));
-                        codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
-                    });
-                });
-            });
-        }, """
+        check(builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
+                                .withCode(codeBuilder -> {
+                                    ReferenceExpression x = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.NUMBER));
+                                    Label label = codeBuilder.createLabel();
+                                    codeBuilder.assign(x, codeBuilder.literal(0));
+                                    ReferenceExpression y = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN));
+                                    codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
+                                    codeBuilder.ifThenElse(y,
+                                            ifThenBuilder -> ifThenBuilder.goTo(label),
+                                            ifThenBuilder -> ifThenBuilder.returnValue(x));
+                                    codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
+                                }))), """
                 func num foo:bar() {
                 	num _0;
                 	bool _1;
@@ -212,57 +195,49 @@ class ControlFlowBuilderTest {
                 """);
     }
 
+    @SuppressWarnings("SuspiciousNameCombination")
     @Test
     void ifThenGoTo() {
-        check(builder -> {
-            builder.withModule("foo", moduleBuilder -> {
-                moduleBuilder.withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> {
-                    routineBuilder.withCode(codeBuilder -> {
-                        ReferenceExpression x = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
-                        ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.NUMBER);
-                        codeBuilder.assign(x, codeBuilder.literal(0));
-                        codeBuilder.assign(y, codeBuilder.literal(5));
-                        Label label = codeBuilder.createLabel();
-                        codeBuilder.ifThen(codeBuilder.binary(BinaryOperator.GREATER_THAN, y, codeBuilder.literal(0)),
-                                ifThenBuilder -> {
-                                    ifThenBuilder.assign(x, ifThenBuilder.binary(BinaryOperator.ADD, x, ifThenBuilder.literal(1)));
-                                    ifThenBuilder.assign(y, ifThenBuilder.binary(BinaryOperator.SUBTRACT, y, ifThenBuilder.literal(1)));
-                                    ifThenBuilder.goTo(label);
-                                });
-                        codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
-                    });
-                });
-            });
-        }, """
+        check(builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
+                                .withCode(codeBuilder -> {
+                                    ReferenceExpression x = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.NUMBER));
+                                    ReferenceExpression y = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.NUMBER));
+                                    codeBuilder.assign(x, codeBuilder.literal(0));
+                                    codeBuilder.assign(y, codeBuilder.literal(5));
+                                    Label label = codeBuilder.createLabel();
+                                    codeBuilder.ifThen(codeBuilder.binary(BinaryOperator.GREATER_THAN, y, codeBuilder.literal(0)),
+                                            ifThenBuilder -> {
+                                                ifThenBuilder.assign(x, ifThenBuilder.binary(BinaryOperator.ADD, x, ifThenBuilder.literal(1)));
+                                                ifThenBuilder.assign(y, ifThenBuilder.binary(BinaryOperator.SUBTRACT, y, ifThenBuilder.literal(1)));
+                                                ifThenBuilder.goTo(label);
+                                            });
+                                    codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
+                                }))), """
                 """);
     }
 
     @Test
     void call() {
-        check(builder -> {
-            builder.withModule("foo", moduleBuilder -> {
-                moduleBuilder.withRoutine("Abs", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> {
-                    routineBuilder.withParameterGroup(false, parameterGroupBuilder -> {
-                                parameterGroupBuilder.withParameter("x", ParameterType.INPUT, RapidPrimitiveType.NUMBER);
-                            })
-                            .withCode(codeBuilder -> {
-                                ReferenceExpression x = codeBuilder.getArgument("x");
-                                codeBuilder.assign(x, codeBuilder.literal(0));
-                                ReferenceExpression y = codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
-                                codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
-                                codeBuilder.ifThenElse(y,
-                                        ifThenBuilder -> ifThenBuilder.returnValue(ifThenBuilder.unary(UnaryOperator.NEGATE, x)),
-                                        ifThenBuilder -> ifThenBuilder.returnValue(x));
-                            });
-                }).withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> {
-                    routineBuilder.withCode(codeBuilder -> {
-                        codeBuilder.returnValue(codeBuilder.call("foo:Abs", RapidPrimitiveType.NUMBER, argumentBuilder -> {
-                            argumentBuilder.withRequiredArgument(codeBuilder.literal(-1));
-                        }));
-                    });
-                });
-            });
-        }, """
+        check(builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withRoutine("Abs", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
+                                .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
+                                        .withParameter("x", ParameterType.INPUT, RapidPrimitiveType.NUMBER))
+                                .withCode(codeBuilder -> {
+                                    Argument argument = Objects.requireNonNull(codeBuilder.getArgument("x"));
+                                    ReferenceExpression x = codeBuilder.getReference(argument);
+                                    codeBuilder.assign(x, codeBuilder.literal(0));
+                                    ReferenceExpression y = codeBuilder.getReference(codeBuilder.createVariable(RapidPrimitiveType.BOOLEAN));
+                                    codeBuilder.assign(y, codeBuilder.binary(BinaryOperator.LESS_THAN, x, codeBuilder.literal(0)));
+                                    codeBuilder.ifThenElse(y,
+                                            ifThenBuilder -> ifThenBuilder.returnValue(ifThenBuilder.unary(UnaryOperator.NEGATE, x)),
+                                            ifThenBuilder -> ifThenBuilder.returnValue(x));
+                                })).withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> routineBuilder
+                                .withCode(codeBuilder -> codeBuilder
+                                        .returnValue(codeBuilder.call("foo:Abs", RapidPrimitiveType.NUMBER, argumentBuilder -> argumentBuilder
+                                                .withRequiredArgument(codeBuilder.literal(-1))))))), """
                 func num foo:Abs(input num _0 [x]) {
                 	bool _1;
                                 

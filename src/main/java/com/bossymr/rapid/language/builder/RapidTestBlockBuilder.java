@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.builder;
 import com.bossymr.rapid.language.flow.value.Expression;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -13,11 +14,11 @@ public interface RapidTestBlockBuilder {
     /**
      * Adds a new test case to this test block.
      *
-     * @param condition the condition.
+     * @param conditions the conditions.
      * @param consumer the handler which can define the body of the test case.
      * @return this builder.
      */
-    @NotNull RapidTestBlockBuilder withCase(@NotNull Expression condition,
+    @NotNull RapidTestBlockBuilder withCase(@NotNull List<Expression> conditions,
                                             @NotNull Consumer<RapidCodeBlockBuilder> consumer);
 
     /**

@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.builder.RapidBuilder;
+import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.ControlFlowService;
@@ -11,7 +12,6 @@ import com.bossymr.rapid.language.flow.debug.DataFlowGraphService;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.IndexExpression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -42,7 +43,7 @@ class DataFlowGraphTest {
         String name = testInfo.getTestMethod().orElseThrow().getName();
         File outputDirectory = Path.of(System.getProperty("user.home"), "graph", name).toFile();
         Path path = outputDirectory.toPath();
-        if (DRAW_FINAL_PASS) {
+        if (DRAW_FINAL_PASS || DRAW_EACH_PASS) {
             if (outputDirectory.exists()) {
                 FileUtil.delete(outputDirectory);
             }
@@ -83,28 +84,27 @@ class DataFlowGraphTest {
         check(testInfo, builder -> builder
                 .withModule("foo", moduleBuilder -> moduleBuilder
                         .withProcedure("bar", routineBuilder -> routineBuilder
-                                .withCode(codeBuilder -> {
-                                    codeBuilder.whileLoop(codeBuilder.literal(true), loopBuilder -> {
-                                        ReferenceExpression stepVariable = loopBuilder.createVariable(RapidPrimitiveType.NUMBER);
-                                        ReferenceExpression indexVariable = loopBuilder.createVariable(RapidPrimitiveType.NUMBER);
-                                        loopBuilder.assign(indexVariable, codeBuilder.literal(1));
-                                        loopBuilder.ifThenElse(loopBuilder.binary(BinaryOperator.LESS_THAN, indexVariable, loopBuilder.literal(3)),
-                                                thenBuilder -> thenBuilder.assign(stepVariable, codeBuilder.literal(1)),
-                                                elseBuilder -> elseBuilder.assign(stepVariable, codeBuilder.literal(-1)));
-                                        Label label = loopBuilder.createLabel();
-                                        ReferenceExpression breakVariable = loopBuilder.createVariable(RapidPrimitiveType.BOOLEAN);
-                                        loopBuilder.ifThenElse(loopBuilder.binary(BinaryOperator.LESS_THAN, stepVariable, loopBuilder.literal(0)),
-                                                thenBuilder -> thenBuilder.assign(breakVariable, thenBuilder.binary(BinaryOperator.GREATER_THAN, indexVariable, thenBuilder.literal(3))),
-                                                elseBuilder -> elseBuilder.assign(breakVariable, elseBuilder.binary(BinaryOperator.LESS_THAN, indexVariable, elseBuilder.literal(3))));
-                                        loopBuilder.ifThen(breakVariable,
-                                                innerBuilder -> {
-                                                    innerBuilder.assign(indexVariable, innerBuilder.binary(BinaryOperator.ADD, indexVariable, stepVariable));
-                                                    innerBuilder.goTo(label);
-                                                });
-                                    });
-                                }))));
+                                .withCode(codeBuilder -> codeBuilder.whileLoop(codeBuilder.literal(true), loopBuilder -> {
+                                    ReferenceExpression stepVariable = loopBuilder.getReference(loopBuilder.createVariable(RapidPrimitiveType.NUMBER));
+                                    ReferenceExpression indexVariable = loopBuilder.getReference(loopBuilder.createVariable(RapidPrimitiveType.NUMBER));
+                                    loopBuilder.assign(indexVariable, codeBuilder.literal(1));
+                                    loopBuilder.ifThenElse(loopBuilder.binary(BinaryOperator.LESS_THAN, indexVariable, loopBuilder.literal(3)),
+                                            thenBuilder -> thenBuilder.assign(stepVariable, codeBuilder.literal(1)),
+                                            elseBuilder -> elseBuilder.assign(stepVariable, codeBuilder.literal(-1)));
+                                    Label label = loopBuilder.createLabel();
+                                    ReferenceExpression breakVariable = loopBuilder.getReference(loopBuilder.createVariable(RapidPrimitiveType.BOOLEAN));
+                                    loopBuilder.ifThenElse(loopBuilder.binary(BinaryOperator.LESS_THAN, stepVariable, loopBuilder.literal(0)),
+                                            thenBuilder -> thenBuilder.assign(breakVariable, thenBuilder.binary(BinaryOperator.GREATER_THAN, indexVariable, thenBuilder.literal(3))),
+                                            elseBuilder -> elseBuilder.assign(breakVariable, elseBuilder.binary(BinaryOperator.LESS_THAN, indexVariable, elseBuilder.literal(3))));
+                                    loopBuilder.ifThen(breakVariable,
+                                            innerBuilder -> {
+                                                innerBuilder.assign(indexVariable, innerBuilder.binary(BinaryOperator.ADD, indexVariable, stepVariable));
+                                                innerBuilder.goTo(label);
+                                            });
+                                })))));
     }
 
+    @SuppressWarnings("SuspiciousNameCombination")
     @Test
     void mutuallyExclusiveArgument(TestInfo testInfo) throws IOException, ExecutionException {
         /*
@@ -127,9 +127,9 @@ class DataFlowGraphTest {
                                         .withParameter("x", ParameterType.INPUT, RapidPrimitiveType.NUMBER)
                                         .withParameter("y", ParameterType.INPUT, RapidPrimitiveType.NUMBER))
                                 .withCode(codeBuilder -> {
-                                    ReferenceExpression x = codeBuilder.getArgument("x");
-                                    ReferenceExpression y = codeBuilder.getArgument("y");
-                                    ReferenceExpression z = codeBuilder.createVariable("z", RapidPrimitiveType.NUMBER);
+                                    ReferenceExpression x = codeBuilder.getReference(Objects.requireNonNull(codeBuilder.getArgument("x")));
+                                    ReferenceExpression y = codeBuilder.getReference(Objects.requireNonNull(codeBuilder.getArgument("y")));
+                                    ReferenceExpression z = codeBuilder.getReference(codeBuilder.createVariable("z", RapidPrimitiveType.NUMBER));
                                     Expression expression = codeBuilder.call(":Present", RapidPrimitiveType.BOOLEAN, argumentBuilder -> argumentBuilder
                                             .withRequiredArgument(x));
                                     codeBuilder.ifThenElse(expression,
@@ -140,6 +140,7 @@ class DataFlowGraphTest {
                                 }))));
     }
 
+    @SuppressWarnings("SuspiciousNameCombination")
     @Test
     void missingVariable(TestInfo testInfo) throws IOException, ExecutionException {
         /*
@@ -162,9 +163,9 @@ class DataFlowGraphTest {
                                 .withParameterGroup(true, parameterGroupBuilder -> parameterGroupBuilder
                                         .withParameter("x", ParameterType.INPUT, RapidPrimitiveType.NUMBER))
                                 .withCode(codeBuilder -> {
-                                    ReferenceExpression x = codeBuilder.getArgument("x");
-                                    ReferenceExpression y = codeBuilder.createVariable("y", RapidPrimitiveType.NUMBER);
-                                    ReferenceExpression z = codeBuilder.createVariable("z", RapidPrimitiveType.NUMBER);
+                                    ReferenceExpression x = codeBuilder.getReference(Objects.requireNonNull(codeBuilder.getArgument("x")));
+                                    ReferenceExpression y = codeBuilder.getReference(codeBuilder.createVariable("y", RapidPrimitiveType.NUMBER));
+                                    ReferenceExpression z = codeBuilder.getReference(codeBuilder.createVariable("z", RapidPrimitiveType.NUMBER));
                                     Expression expression = codeBuilder.call(":Present", RapidPrimitiveType.BOOLEAN, argumentBuilder -> argumentBuilder
                                             .withRequiredArgument(x));
                                     codeBuilder.ifThenElse(expression,
@@ -199,13 +200,13 @@ class DataFlowGraphTest {
                             routineBuilder.withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
                                     .withParameter("n", ParameterType.INPUT, RapidPrimitiveType.NUMBER));
                             routineBuilder.withCode(codeBuilder -> {
-                                ReferenceExpression i = codeBuilder.createVariable("i", RapidPrimitiveType.NUMBER);
-                                ReferenceExpression n = codeBuilder.getArgument("n");
+                                ReferenceExpression i = codeBuilder.getReference(codeBuilder.createVariable("i", RapidPrimitiveType.NUMBER));
+                                ReferenceExpression n = codeBuilder.getReference(Objects.requireNonNull(codeBuilder.getArgument("n")));
                                 codeBuilder.assign(i, codeBuilder.literal(3));
                                 codeBuilder.whileLoop(codeBuilder.binary(BinaryOperator.LESS_THAN, i, n), loopBuilder -> loopBuilder
                                                    .assign(i, loopBuilder.binary(BinaryOperator.ADD, i, loopBuilder.literal(4))))
                                            .ifThenElse(codeBuilder.binary(BinaryOperator.EQUAL_TO, i, codeBuilder.literal(15)),
-                                                   RapidCodeBuilder::returnValue, RapidCodeBuilder::returnValue);
+                                                   RapidCodeBlockBuilder::returnValue, RapidCodeBlockBuilder::returnValue);
                             });
                         })));
     }
@@ -236,12 +237,12 @@ class DataFlowGraphTest {
                                         .withParameter("n", ParameterType.INPUT, RapidPrimitiveType.NUMBER))
                                 .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
                                         .withParameter("x", ParameterType.INPUT, RapidPrimitiveType.NUMBER)).withCode(codeBuilder -> {
-                                    ReferenceExpression i = codeBuilder.createVariable("i", RapidPrimitiveType.NUMBER);
-                                    ReferenceExpression n = codeBuilder.getArgument("n");
-                                    ReferenceExpression a = codeBuilder.getArgument("A");
-                                    ReferenceExpression x = codeBuilder.getArgument("x");
+                                    ReferenceExpression i = codeBuilder.getReference(codeBuilder.createVariable("i", RapidPrimitiveType.NUMBER));
+                                    ReferenceExpression n = codeBuilder.getReference(Objects.requireNonNull(codeBuilder.getArgument("n")));
+                                    ReferenceExpression a = codeBuilder.getReference(Objects.requireNonNull(codeBuilder.getArgument("A")));
+                                    ReferenceExpression x = codeBuilder.getReference(Objects.requireNonNull(codeBuilder.getArgument("x")));
                                     codeBuilder.whileLoop(codeBuilder.binary(BinaryOperator.LESS_THAN, i, n), blockBuilder -> {
-                                        IndexExpression index = codeBuilder.index(a, i);
+                                        ReferenceExpression index = codeBuilder.index(a, i);
                                         blockBuilder.ifThenElse(blockBuilder.binary(BinaryOperator.EQUAL_TO, index, x),
                                                 thenConsumer -> thenConsumer
                                                         .returnValue(i),

@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.psi.impl.statement;
 
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -36,24 +35,5 @@ public class RapidAssignmentStatementImpl extends PhysicalElement implements Rap
     @Override
     public String toString() {
         return "RapidAssignmentStatement:" + getText();
-    }
-
-    @Override
-    public @Nullable RapidType getType() {
-        RapidExpression left = getLeft();
-        if (left == null) {
-            return null;
-        }
-        return left.getType();
-    }
-
-    @Override
-    public boolean isConstant() {
-        return false;
-    }
-
-    @Override
-    public boolean isConditional() {
-        return false;
     }
 }

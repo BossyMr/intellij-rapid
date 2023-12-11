@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.psi;
 
 import org.jetbrains.annotations.Nullable;
 
-public interface RapidAssignmentStatement extends RapidStatement, RapidExpression {
+public interface RapidAssignmentStatement extends RapidStatement {
 
     /**
      * Returns the expression to the left of the assignment.
