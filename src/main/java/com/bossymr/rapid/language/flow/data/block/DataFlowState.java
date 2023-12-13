@@ -2,7 +2,10 @@ package com.bossymr.rapid.language.flow.data.block;
 
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.ConditionAnalyzer;
-import com.bossymr.rapid.language.flow.data.snapshots.*;
+import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
+import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
@@ -396,6 +399,22 @@ public class DataFlowState {
             return;
         }
         expression = expression.replace(this::getSnapshot);
+        if (expression instanceof LiteralExpression) {
+            if (variable instanceof IndexExpression index) {
+                SnapshotExpression snapshot = getSnapshot(index.getVariable());
+                if (snapshot instanceof ArraySnapshot arraySnapshot) {
+                    arraySnapshot.assign(getSnapshot(index.getIndex()), expression);
+                    return;
+                }
+            }
+            if (variable instanceof ComponentExpression component) {
+                SnapshotExpression snapshot = getSnapshot(component.getVariable());
+                if (snapshot instanceof RecordSnapshot recordSnapshot) {
+                    recordSnapshot.assign(component.getComponent(), expression);
+                    return;
+                }
+            }
+        }
         Optional<SnapshotExpression> snapshot = createSnapshot(variable, Optionality.PRESENT);
         if (snapshot.isEmpty()) {
             return;
@@ -429,7 +448,7 @@ public class DataFlowState {
                     if (referenceExpression.getType().getDimensions() > 0) {
                         for (int i = 0; i < components.size(); i++) {
                             Expression component = components.get(i);
-                            IndexExpression indexExpression = new IndexExpression(referenceExpression, new LiteralExpression(i));
+                            IndexExpression indexExpression = new IndexExpression(referenceExpression, new LiteralExpression(i + 1));
                             assign(indexExpression, component);
                         }
                         return;
@@ -452,6 +471,9 @@ public class DataFlowState {
                     }
                 }
             }
+        }
+        if (expression.getComponents().stream().anyMatch(expr -> expr instanceof IndexExpression || expr instanceof ComponentExpression)) {
+            throw new IllegalArgumentException("Cannot add expression: " + expression);
         }
         conditions.add(expression);
     }
@@ -515,7 +537,7 @@ public class DataFlowState {
     }
 
     public @NotNull Optionality getOptionality(@NotNull ReferenceExpression variable) {
-        if (variable instanceof FieldExpression || variable instanceof ErrorExpression) {
+        if (variable instanceof FieldExpression) {
             return Optionality.PRESENT;
         }
         SnapshotExpression snapshot = getSnapshot(variable);
@@ -567,29 +589,7 @@ public class DataFlowState {
     }
 
     public @NotNull SnapshotExpression createSnapshot(@NotNull RapidType snapshotType, @Nullable ReferenceExpression underlyingExpression) {
-        SnapshotExpression snapshot;
-        if (snapshotType.getDimensions() > 0) {
-            snapshot = new ArraySnapshot((arraySnapshot) -> {
-                VariableSnapshot indexSnapshot = new VariableSnapshot(RapidPrimitiveType.NUMBER);
-                IndexExpression indexExpression = new IndexExpression(arraySnapshot, indexSnapshot);
-                return createSnapshot(indexExpression).orElseThrow();
-            }, snapshotType, underlyingExpression);
-        } else if (snapshotType.getRootStructure() instanceof RapidRecord record) {
-            RecordSnapshot recordSnapshot = new RecordSnapshot(snapshotType, underlyingExpression);
-            snapshot = recordSnapshot;
-            for (RapidComponent component : record.getComponents()) {
-                String componentName = component.getName();
-                RapidType componentType = component.getType();
-                if (componentName == null || componentType == null) {
-                    continue;
-                }
-                ComponentExpression componentExpression = new ComponentExpression(componentType, recordSnapshot, componentName);
-                SnapshotExpression componentSnapshot = createSnapshot(componentExpression).orElseThrow();
-                recordSnapshot.assign(componentName, componentSnapshot);
-            }
-        } else {
-            snapshot = new VariableSnapshot(snapshotType, underlyingExpression);
-        }
+        SnapshotExpression snapshot = SnapshotExpression.createSnapshot(snapshotType, underlyingExpression);
         if (underlyingExpression instanceof VariableExpression variableValue) {
             snapshots.put(variableValue.getField(), snapshot);
         }
@@ -696,35 +696,49 @@ public class DataFlowState {
                 }
                 Expression indexSnapshot = getSnapshot(expression.getIndex());
                 List<ArrayEntry> assignments = arraySnapshot.getAssignments(DataFlowState.this, indexSnapshot);
-                if (assignments.size() > 1) {
-                    throw new IllegalStateException("Array: " + arraySnapshot + " provided " + assignments.size() + " assignments for index " + indexSnapshot);
-                } else if (assignments.isEmpty()) {
-                    throw new IllegalStateException("Array: " + arraySnapshot + " provided no assignments for index " + indexSnapshot);
-                }
-                ArrayEntry arrayEntry = assignments.get(0);
-                if (arrayEntry instanceof ArrayEntry.DefaultValue defaultAssignment) {
-                    Expression value = defaultAssignment.defaultValue();
-                    if (!(value instanceof ReferenceExpression defaultValue)) {
-                        VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
-                        add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
-                        return variableSnapshot;
+                if (assignments.size() == 1) {
+                    ArrayEntry entry = assignments.get(0);
+                    if (entry instanceof ArrayEntry.DefaultValue defaultAssignment) {
+                        Expression value = defaultAssignment.defaultValue();
+                        if (!(value instanceof ReferenceExpression defaultValue)) {
+                            SnapshotExpression variableSnapshot = createSnapshot(value.getType(), null);
+                            add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
+                            return variableSnapshot;
+                        }
+                        SnapshotExpression defaultSnapshot = getSnapshot(defaultValue);
+                        if (defaultSnapshot != null) {
+                            arraySnapshot.assign(indexSnapshot, defaultSnapshot);
+                        }
+                        return defaultSnapshot;
                     }
-                    SnapshotExpression defaultSnapshot = getSnapshot(defaultValue);
-                    if (defaultSnapshot != null) {
-                        arraySnapshot.assign(indexSnapshot, defaultSnapshot);
+                    if (entry instanceof ArrayEntry.Assignment assignment) {
+                        Expression value = assignment.value();
+                        if (!(value instanceof ReferenceExpression assignmentValue)) {
+                            SnapshotExpression variableSnapshot = createSnapshot(value.getType(), null);
+                            add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
+                            return variableSnapshot;
+                        }
+                        return getSnapshot(assignmentValue);
                     }
-                    return defaultSnapshot;
                 }
-                if (arrayEntry instanceof ArrayEntry.Assignment assignment) {
-                    Expression value = assignment.value();
-                    if (!(value instanceof ReferenceExpression assignmentValue)) {
-                        VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
-                        add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
-                        return variableSnapshot;
+                SnapshotExpression result = createSnapshot(expression.getType(), null);
+                for (int i = 0; i < assignments.size(); i++) {
+                    ArrayEntry entry = assignments.get(i);
+                    Expression expr;
+                    BinaryExpression resultEquality = new BinaryExpression(BinaryOperator.EQUAL_TO, result, entry.getValue());
+                    if (entry instanceof ArrayEntry.Assignment assignment) {
+                        expr = new BinaryExpression(BinaryOperator.EQUAL_TO, indexSnapshot, getSnapshot(assignment.index()));
+                        expr = new BinaryExpression(BinaryOperator.AND, expr, resultEquality);
+                    } else {
+                        expr = resultEquality;
                     }
-                    return getSnapshot(assignmentValue);
+                    for (int j = 0; j < i; j++) {
+                        if (entry instanceof ArrayEntry.Assignment assignment) {
+                            expr = new BinaryExpression(BinaryOperator.AND, expr, new BinaryExpression(BinaryOperator.NOT_EQUAL_TO, getSnapshot(assignment.index()), indexSnapshot));
+                        }
+                    }
                 }
-                throw new IllegalArgumentException();
+                return result;
             }
 
             @Override

@@ -13,8 +13,10 @@ import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.UnaryOperator;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.execution.ExecutionException;
 import com.intellij.openapi.util.io.FileUtil;
 import org.jetbrains.annotations.NotNull;
@@ -25,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,8 +36,8 @@ import java.util.function.Consumer;
 class DataFlowGraphTest {
 
     private static final int MAX_PASSES = -1;
-    private static final boolean DRAW_EACH_PASS = false;
-    private static final boolean DRAW_FINAL_PASS = false;
+    private static final boolean DRAW_EACH_PASS = true;
+    private static final boolean DRAW_FINAL_PASS = true;
 
     private void check(@NotNull TestInfo testInfo, @NotNull Consumer<RapidBuilder> consumer) throws IOException, ExecutionException {
         ControlFlowBuilder builder = new ControlFlowBuilder();
@@ -77,6 +80,48 @@ class DataFlowGraphTest {
             File outputFile = path.resolve("complete.svg").toFile();
             DataFlowGraphService.convert(outputFile, result);
         }
+    }
+
+    @Test
+    void functionCall(TestInfo testInfo) throws IOException, ExecutionException {
+        /*
+         * MODULE foo
+         *      PROC bar()
+         *          VAR num variable := 0;
+         *          variable := Abs(-1);
+         *          IF <warning descr="Value of expression is always true">variable = 1</warning> THEN
+         *          ENDIF
+         *      ENDPROC
+         *
+         *      FUNC num Abs(num value)
+         *          IF value >= 0 THEN
+         *              return value;
+         *          ELSE
+         *              return -value;
+         *          ENDIF
+         *      ENDFUNC
+         *  ENDMODULE
+         */
+        check(testInfo, builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withProcedure("bar", routineBuilder -> routineBuilder
+                                .withCode(codeBuilder -> {
+                                    ReferenceExpression reference = codeBuilder.getReference(codeBuilder.createVariable("variable", RapidPrimitiveType.NUMBER));
+                                    codeBuilder.assign(reference, codeBuilder.literal(0))
+                                               .assign(reference, codeBuilder.call("foo:Abs", RapidPrimitiveType.NUMBER, argumentBuilder -> argumentBuilder
+                                                       .withRequiredArgument(codeBuilder.literal(-1))))
+                                               .ifThen(codeBuilder.binary(BinaryOperator.EQUAL_TO, reference, codeBuilder.literal(1)),
+                                                       thenBuilder -> {});
+                                }))
+                        .withFunction("Abs", RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
+                                .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
+                                        .withParameter("value", ParameterType.INPUT, RapidPrimitiveType.NUMBER))
+                                .withCode(codeBuilder -> {
+                                    ReferenceExpression argument = codeBuilder.getReference(Objects.requireNonNull(codeBuilder.getArgument("value")));
+                                    codeBuilder.ifThenElse(codeBuilder.binary(BinaryOperator.GREATER_THAN_OR_EQUAL, argument, codeBuilder.literal(0)),
+                                            thenBuilder -> thenBuilder.returnValue(argument),
+                                            elseBuilder -> elseBuilder.returnValue(elseBuilder.unary(UnaryOperator.NEGATE, argument)));
+                                }))));
     }
 
     @Test
@@ -249,6 +294,39 @@ class DataFlowGraphTest {
                                                 elseConsumer -> elseConsumer
                                                         .assign(i, elseConsumer.binary(BinaryOperator.ADD, i, elseConsumer.literal(1))));
                                     }).returnValue(codeBuilder.literal(-1));
+                                }))));
+    }
+
+    @Test
+    void array(TestInfo testInfo) throws IOException, ExecutionException {
+        /*
+         *  MODULE foo
+         *      PROC bar(num x)
+         *          VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];
+         *          IF <warning descr="Value of expression is always true">(variable{1, 3} * variable{2, 2}) = 8</warning> THEN
+         *          ENDIF
+         *      ENDPROC
+         *  ENDMODULE
+         */
+        check(testInfo, builder -> builder
+                .withModule("foo", moduleBuilder -> moduleBuilder
+                        .withProcedure("bar", routineBuilder -> routineBuilder
+                                .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
+                                        .withParameter("x", ParameterType.INPUT, RapidPrimitiveType.NUMBER))
+                                .withCode(codeBuilder -> {
+                                    RapidType arrayType = RapidPrimitiveType.NUMBER.createArrayType(2);
+                                    RapidType componentType = RapidPrimitiveType.NUMBER.createArrayType(1);
+                                    ReferenceExpression variable = codeBuilder.getReference(codeBuilder.createVariable("variable", arrayType));
+                                    Expression aggregate1 = codeBuilder.aggregate(componentType,
+                                            List.of(codeBuilder.literal(0), codeBuilder.literal(1), codeBuilder.literal(2)));
+                                    Expression aggregate2 = codeBuilder.aggregate(componentType,
+                                            List.of(codeBuilder.literal(3), codeBuilder.literal(4), codeBuilder.literal(5)));
+                                    List<Expression> expressions = List.of(aggregate1, aggregate2);
+                                    codeBuilder.assign(variable, codeBuilder.aggregate(arrayType, expressions));
+                                    Expression multiply = codeBuilder.binary(BinaryOperator.MULTIPLY,
+                                            codeBuilder.index(codeBuilder.index(variable, codeBuilder.literal(1)), codeBuilder.literal(3)),
+                                            codeBuilder.index(codeBuilder.index(variable, codeBuilder.literal(2)), codeBuilder.literal(2)));
+                                    codeBuilder.ifThen(codeBuilder.binary(BinaryOperator.EQUAL_TO, multiply, codeBuilder.literal(8)), thenBuilder -> {});
                                 }))));
     }
 }

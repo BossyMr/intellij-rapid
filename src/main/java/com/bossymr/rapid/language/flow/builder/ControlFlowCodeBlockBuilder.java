@@ -1,11 +1,7 @@
 package com.bossymr.rapid.language.flow.builder;
 
 import com.bossymr.rapid.language.builder.*;
-import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.Field;
-import com.bossymr.rapid.language.flow.Variable;
-import com.bossymr.rapid.language.flow.data.snapshots.ErrorExpression;
+import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
@@ -13,6 +9,7 @@ import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
+import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.tree.IElementType;
@@ -474,7 +471,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         }
         String routineName = symbol.getName();
         String moduleName;
-        if (symbol instanceof PhysicalElement element) {
+        if (symbol instanceof PhysicalSymbol element) {
             PhysicalModule module = PhysicalModule.getModule(element);
             moduleName = module != null ? module.getName() : null;
         } else {
@@ -599,7 +596,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull Expression any(@Nullable RapidType type) {
-        return new ErrorExpression(Objects.requireNonNullElse(type, RapidPrimitiveType.ANYTYPE));
+        return SnapshotExpression.createSnapshot(Objects.requireNonNullElse(type, RapidPrimitiveType.ANYTYPE));
     }
 
     private @NotNull Expression any(@Nullable RapidExpression expression) {
@@ -611,26 +608,28 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     }
 
     private @NotNull Expression any(@Nullable RapidExpression expression, @Nullable RapidType type) {
-        return new ErrorExpression(expression, Objects.requireNonNullElse(type, RapidPrimitiveType.ANYTYPE));
+        RapidType valueType = Objects.requireNonNullElse(type, RapidPrimitiveType.ANYTYPE);
+        return Objects.requireNonNull(SnapshotExpression.createSnapshot(valueType, new ReferenceExpression() {
+            @Override
+            public @NotNull RapidType getType() {
+                return valueType;
+            }
+
+            @Override
+            public @Nullable RapidExpression getElement() {
+                return expression;
+            }
+
+            @Override
+            public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
+                return visitor.visitReferenceExpression(this);
+            }
+        }));
     }
 
     @Override
     public @NotNull Expression expression(@NotNull RapidExpression expression) {
         if (expression instanceof RapidReferenceExpression referenceExpression) {
-            RapidSymbol symbol = referenceExpression.getSymbol();
-            if (symbol instanceof RapidRoutine routine) {
-                String name = routine.getName();
-                String moduleName = "";
-                if (routine instanceof PhysicalRoutine physicalRoutine) {
-                    PhysicalModule module = PhysicalModule.getModule(physicalRoutine);
-                    if (module != null) {
-                        moduleName = module.getName();
-                    }
-                }
-                if (moduleName != null && name != null) {
-                    return literal(moduleName + ":" + name);
-                }
-            }
             return getReference(referenceExpression);
         }
         if (expression instanceof RapidIndexExpression indexExpression) {
@@ -676,11 +675,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         if (expression == null) {
             return any(null, type);
         }
-        Expression expr = expression(expression);
-        if (expr instanceof ErrorExpression) {
-            return any(expression, type);
-        }
-        return expr;
+        return expression(expression);
     }
 
     @Override
@@ -1049,8 +1044,27 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         Map<ArgumentDescriptor, Expression> result = new HashMap<>();
         ControlFlowArgumentBuilder argumentBuilder = new ControlFlowArgumentBuilder(result, this);
         getArgumentConsumer(statement.getArgumentList()).accept(argumentBuilder);
-        Expression routine = expressionOrError(statement.getReferenceExpression(), RapidPrimitiveType.STRING);
-        call(null, routine, null, result);
+        Expression expression = null;
+        if (statement.getReferenceExpression() instanceof RapidReferenceExpression referenceExpression) {
+            RapidSymbol symbol = referenceExpression.getSymbol();
+            if (symbol instanceof RapidRoutine routine) {
+                String name = routine.getName();
+                String moduleName = "";
+                if (routine instanceof PhysicalRoutine physicalRoutine) {
+                    PhysicalModule module = PhysicalModule.getModule(physicalRoutine);
+                    if (module != null) {
+                        moduleName = module.getName();
+                    }
+                }
+                if (moduleName != null && name != null) {
+                    expression = literal(moduleName + ":" + name);
+                }
+            }
+        }
+        if (expression == null) {
+            expression = expressionOrError(statement.getReferenceExpression(), RapidPrimitiveType.STRING);
+        }
+        call(null, expression, null, result);
         return this;
     }
 

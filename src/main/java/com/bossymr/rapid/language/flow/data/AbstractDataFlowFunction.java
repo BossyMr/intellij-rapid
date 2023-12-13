@@ -3,14 +3,11 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
-import com.bossymr.rapid.language.flow.value.BinaryExpression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.flow.value.VariableExpression;
-import com.bossymr.rapid.language.symbol.ParameterType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,9 +62,10 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
 
         ReferenceExpression calleeVariable = result.variable();
         ReferenceExpression callerVariable = instruction.getReturnValue();
+        SnapshotExpression callerSnapshot = null;
         if (calleeVariable != null && callerVariable != null) {
             SnapshotExpression calleeSnapshot = result.state().getSnapshot(calleeVariable);
-            SnapshotExpression callerSnapshot = state.createSnapshot(callerVariable, Optionality.PRESENT).orElse(null);
+            callerSnapshot = SnapshotExpression.createSnapshot(callerVariable);
             modifications.put(calleeVariable, callerVariable);
             if(calleeSnapshot != null && callerSnapshot != null) {
                 modifications.put(calleeSnapshot, callerSnapshot);
@@ -75,6 +73,10 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
         }
 
         DataFlowState successorState = state.merge(result.state(), modifications);
+
+        if (callerVariable != null && callerSnapshot != null) {
+            successorState.assign(callerVariable, callerSnapshot);
+        }
 
         // Check if the result is satisfiable.
         // If it is not satisfiable, this function will not be called.

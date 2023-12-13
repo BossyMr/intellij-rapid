@@ -292,7 +292,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                                 
                 	STATEMENT_LIST:
                 	0: _1 := -1.0;
-                	1: _0 := :Abs(_0 := _1);
+                	1: _0 := foo:Abs(_0 := _1);
                 	2: return _0;
                 }
                 """);

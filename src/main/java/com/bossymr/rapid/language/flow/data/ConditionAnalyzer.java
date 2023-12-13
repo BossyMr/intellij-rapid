@@ -40,10 +40,12 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         try (Context context = new Context()) {
             Solver solver = context.mkSolver();
             ConditionAnalyzer conditionAnalyzer = getSolver(context, state, solver);
-            BoolExpr isPresentExpression = conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(true)).accept(conditionAnalyzer));
-            boolean isTrue = solver.check(isPresentExpression) != Status.UNSATISFIABLE;
-            BoolExpr isFalseExpression = conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(false)).accept(conditionAnalyzer));
-            boolean isFalse = solver.check(isFalseExpression) != Status.UNSATISFIABLE;
+            solver.push();
+            solver.add(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(true)).accept(conditionAnalyzer)));
+            boolean isTrue = solver.check() != Status.UNSATISFIABLE;
+            solver.pop();
+            solver.add(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(false)).accept(conditionAnalyzer)));
+            boolean isFalse = solver.check() != Status.UNSATISFIABLE;
             if (isTrue && isFalse) {
                 return BooleanValue.ANY_VALUE;
             }

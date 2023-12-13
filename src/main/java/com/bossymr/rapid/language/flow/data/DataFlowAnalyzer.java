@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.flow.EntryInstruction;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowEdge;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.intellij.openapi.progress.ProgressManager;
 import org.jetbrains.annotations.NotNull;
@@ -100,6 +101,20 @@ public class DataFlowAnalyzer {
                 block.getStates().add(DataFlowState.createUnknownState(block));
                 return;
             }
+        }
+
+        /*
+         * If this instruction is a call instruction, the target function might have been modified.
+         * This won't be detected by checking for new states - and this block won't be reprocessed.
+         * As a result, all states need to be removed to force this block to be reprocessed.
+         */
+        if (block.getInstruction() instanceof CallInstruction) {
+            block.getStates().clear();
+            for (DataFlowEdge successor : block.getSuccessors()) {
+                DataFlowBlock destination = successor.getDestination();
+                destination.getPredecessors().remove(successor);
+            }
+            block.getSuccessors().clear();
         }
 
         /*

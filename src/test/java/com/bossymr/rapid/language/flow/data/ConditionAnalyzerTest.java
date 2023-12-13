@@ -7,7 +7,6 @@ import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.BinaryExpression;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.LiteralExpression;
-import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
@@ -33,10 +32,10 @@ class ConditionAnalyzerTest {
         DataFlowState state = DataFlowState.createState(getEmptyFunctionBlock());
         VariableSnapshot x = new VariableSnapshot(RapidPrimitiveType.NUMBER);
         VariableSnapshot z = new VariableSnapshot(RapidPrimitiveType.BOOLEAN);
-        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, x, new LiteralExpression(0)));
         BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, x, new LiteralExpression(0));
-        Expression condition = new BinaryExpression(BinaryOperator.EQUAL_TO, z, expression);
-        BooleanValue value = state.getConstraint(condition);
+        state.add(expression);
+        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, z, expression));
+        BooleanValue value = state.getConstraint(z);
         Assertions.assertEquals(BooleanValue.ALWAYS_TRUE, value);
     }
 }

@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.data.snapshots;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
+import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,6 +34,12 @@ public class VariableSnapshot implements SnapshotExpression {
     }
 
     public VariableSnapshot(@NotNull RapidType type, @Nullable ReferenceExpression underlyingVariable) {
+        if (type.getDimensions() > 0) {
+            throw new IllegalArgumentException("Cannot create VariableSnapshot for variable of type: " + type);
+        }
+        if (type.getRootStructure() instanceof RapidRecord record) {
+            throw new IllegalArgumentException("Cannot create VariableSnapshot for variable of type: " + type);
+        }
         this.underlyingVariable = underlyingVariable;
         this.type = type;
     }
