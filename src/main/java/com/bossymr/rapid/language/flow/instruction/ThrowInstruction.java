@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.instruction;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +16,9 @@ public class ThrowInstruction extends Instruction {
 
     public ThrowInstruction(@NotNull Block block, @Nullable PsiElement element, @Nullable Expression exceptionValue) {
         super(block, element);
+        if (exceptionValue != null && !(RapidPrimitiveType.NUMBER.isAssignable(exceptionValue.getType()))) {
+            throw new IllegalArgumentException("Invalid exception type: " + exceptionValue.getType());
+        }
         this.exceptionValue = exceptionValue;
     }
 

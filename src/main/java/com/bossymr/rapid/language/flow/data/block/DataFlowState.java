@@ -7,6 +7,8 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
@@ -47,73 +49,32 @@ import java.util.function.Function;
  */
 public class DataFlowState {
 
-    private final @Nullable DataFlowState predecessor;
+    private final @NotNull List<DataFlowState> successors = new ArrayList<>();
     private final @NotNull Block functionBlock;
     /**
      * The conditions for all variables.
      */
-    private final @NotNull List<Expression> conditions;
+    private final @NotNull List<Expression> conditions = new ArrayList<>();
     /**
      * The latest snapshot of each variable. The latest snapshot for a given variable also represents the variable.
      */
-    private final @NotNull Map<Field, SnapshotExpression> snapshots;
+    private final @NotNull Map<Field, SnapshotExpression> snapshots = new HashMap<>();
     /**
      * The first snapshot of each variable.
      */
     private final @NotNull Map<Field, SnapshotExpression> roots;
-    /**
-     * The constraints for all variables.
-     */
-    private final @NotNull Map<SnapshotExpression, Optionality> optionality;
-    private @Nullable DataFlowBlock block;
+    private final @NotNull DataFlowBlock block;
+    private @Nullable DataFlowState predecessor;
 
-    private DataFlowState(@Nullable DataFlowBlock block, @NotNull Block functionBlock, @Nullable DataFlowState predecessor) {
+    private DataFlowState(@NotNull DataFlowBlock block, @NotNull Block functionBlock, @Nullable DataFlowState predecessor) {
         this.predecessor = predecessor;
         this.block = block;
         this.functionBlock = functionBlock;
-        this.conditions = new ArrayList<>();
-        this.snapshots = new HashMap<>();
-        this.optionality = new HashMap<>();
-        this.roots = new HashMap<>();
-    }
-
-    private DataFlowState(@NotNull DataFlowState state, @Nullable DataFlowState predecessor) {
-        this.block = state.block;
-        this.predecessor = predecessor;
-        this.functionBlock = state.functionBlock;
-        this.snapshots = new HashMap<>();
-        this.conditions = new ArrayList<>();
-        this.optionality = new HashMap<>();
-        this.roots = new HashMap<>();
-        Map<ReferenceExpression, ReferenceExpression> modifications = new HashMap<>();
-        state.roots.forEach((field, snapshot) -> roots.put(field, (SnapshotExpression) modifyExpression(snapshot, modifications)));
-        state.snapshots.forEach((field, snapshot) -> snapshots.put(field, (SnapshotExpression) modifyExpression(snapshot, modifications)));
-        for (Expression expression : state.conditions) {
-            add(expression.replace(component -> modifyExpression(component, modifications)));
+        this.roots = predecessor == null ? new HashMap<>() : Map.of();
+        block.getStates().add(this);
+        if (predecessor != null) {
+            predecessor.getSuccessors().add(this);
         }
-    }
-
-    /**
-     * Create a new copy of the specified state.
-     *
-     * @param state the state.
-     * @return the copy.
-     */
-    public static @NotNull DataFlowState copy(@NotNull DataFlowState state) {
-        return new DataFlowState(state, state.getPredecessor());
-    }
-
-    /**
-     * Create a new state for the specified block. All variables are initialized to their default value, and all state
-     * are assigned to any value.
-     *
-     * @param block the block.
-     * @return the state.
-     */
-    public static @NotNull DataFlowState createState(@NotNull Block.FunctionBlock block) {
-        DataFlowState state = new DataFlowState(null, block, null);
-        state.initializeDefault();
-        return state;
     }
 
     public static @NotNull DataFlowState createState(@NotNull DataFlowBlock block) {
@@ -122,44 +83,13 @@ public class DataFlowState {
         return state;
     }
 
-    /**
-     * Create a new state for the specified block. All variables and state are assigned to any value. This method is
-     * used for if a block has no predecessor, but is not the entry point of a method, all variables should not be equal
-     * to zero.
-     *
-     * @param block the block.
-     * @return the state.
-     */
-    public static @NotNull DataFlowState createUnknownState(@NotNull Block.FunctionBlock block) {
-        DataFlowState state = new DataFlowState(null, block, null);
-        state.initializeUnknown();
-        return state;
-    }
-
-    public static @NotNull DataFlowState createUnknownState(@NotNull DataFlowBlock block) {
-        DataFlowState state = new DataFlowState(block, block.getInstruction().getBlock(), null);
-        state.initializeUnknown();
-        return state;
-    }
-
     public static @NotNull DataFlowState createSuccessorState(@NotNull DataFlowBlock block, @NotNull DataFlowState predecessor) {
         return new DataFlowState(block, block.getInstruction().getBlock(), predecessor);
     }
 
-    public static @NotNull DataFlowState createSuccessorState(@NotNull Block block, @NotNull DataFlowState predecessor) {
-        return new DataFlowState(null, block, predecessor);
-    }
-
-    public @NotNull DataFlowState createSuccessorState() {
-        if (block != null) {
-            return createSuccessorState(block, this);
-        } else {
-            return createSuccessorState(functionBlock, this);
-        }
-    }
-
     public @NotNull DataFlowState createCompactState() {
         DataFlowState successor = new DataFlowState(block, functionBlock, null);
+        block.getStates().remove(successor);
         DataFlowState state = this;
         List<DataFlowState> history = new ArrayList<>();
         while (state != null) {
@@ -170,13 +100,24 @@ public class DataFlowState {
             DataFlowState predecessor = history.get(i);
             successor.getSnapshots().putAll(predecessor.getSnapshots());
             successor.getExpressions().addAll(predecessor.getExpressions());
-            successor.getOptionality().putAll(predecessor.getOptionality());
         }
         return successor;
     }
 
+    public void close() {
+        if (predecessor != null) {
+            predecessor.getSuccessors().remove(this);
+        }
+        block.getStates().remove(this);
+        predecessor = null;
+    }
+
     public @Nullable DataFlowState getPredecessor() {
         return predecessor;
+    }
+
+    public @NotNull List<DataFlowState> getSuccessors() {
+        return successors;
     }
 
     public @Nullable DataFlowState getFirstPredecessor() {
@@ -189,25 +130,6 @@ public class DataFlowState {
                 return state;
             }
             state = state.predecessor;
-        }
-    }
-
-    public boolean isAncestor(@NotNull DataFlowState state) {
-        for (DataFlowState predecessor = this; predecessor != null; predecessor = predecessor.getPredecessor()) {
-            if (predecessor.equals(state)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void initializeUnknown() {
-        for (Variable variable : functionBlock.getVariables()) {
-            assign(new VariableExpression(variable), null);
-        }
-        initializeArguments();
-        for (Field field : snapshots.keySet()) {
-            roots.put(field, snapshots.get(field));
         }
     }
 
@@ -227,7 +149,7 @@ public class DataFlowState {
                 if (argumentGroup.isOptional()) {
                     createSnapshot(new VariableExpression(argument), Optionality.UNKNOWN);
                 } else {
-                    if ("".equalsIgnoreCase(functionBlock.getModuleName()) && "present".equalsIgnoreCase(functionBlock.getName())) {
+                    if (argument.getParameterType() == ParameterType.REFERENCE) {
                         createSnapshot(new VariableExpression(argument), Optionality.UNKNOWN);
                     } else {
                         createSnapshot(new VariableExpression(argument));
@@ -240,11 +162,11 @@ public class DataFlowState {
     public @NotNull SnapshotExpression createDefaultSnapshot(@NotNull ReferenceExpression variable) {
         RapidType type = variable.getType();
         if (type.getDimensions() > 0) {
-            ArraySnapshot snapshot = new ArraySnapshot((parent) -> createDefaultSnapshot(new IndexExpression(parent, new VariableSnapshot(RapidPrimitiveType.NUMBER))), variable.getType(), variable);
+            ArraySnapshot snapshot = new ArraySnapshot(variable.getType(), Optionality.PRESENT, (parent) -> createDefaultSnapshot(new IndexExpression(parent, new VariableSnapshot(RapidPrimitiveType.NUMBER, Optionality.PRESENT))));
             add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new LiteralExpression(true)));
             return snapshot;
         } else if (type.getRootStructure() instanceof RapidRecord record) {
-            RecordSnapshot snapshot = new RecordSnapshot(variable.getType(), variable);
+            RecordSnapshot snapshot = new RecordSnapshot(variable.getType(), Optionality.PRESENT);
             add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new LiteralExpression(true)));
             for (RapidComponent component : record.getComponents()) {
                 RapidType componentType = component.getType();
@@ -257,7 +179,7 @@ public class DataFlowState {
             }
             return snapshot;
         } else {
-            VariableSnapshot snapshot = new VariableSnapshot(variable);
+            VariableSnapshot snapshot = new VariableSnapshot(Optionality.PRESENT, variable);
             add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new LiteralExpression(true)));
             Object object = null;
             if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
@@ -274,12 +196,8 @@ public class DataFlowState {
         }
     }
 
-    public @Nullable DataFlowBlock getBlock() {
+    public @NotNull DataFlowBlock getBlock() {
         return block;
-    }
-
-    public void setBlock(@Nullable DataFlowBlock block) {
-        this.block = block;
     }
 
     private @NotNull Expression modifyExpression(@NotNull Expression previous, @NotNull Map<ReferenceExpression, ReferenceExpression> modifications) {
@@ -293,9 +211,6 @@ public class DataFlowState {
     private @NotNull ReferenceExpression modifyExpression(@NotNull ReferenceExpression previous, @NotNull Map<ReferenceExpression, ReferenceExpression> modifications) {
         if (modifications.containsKey(previous)) {
             return modifications.get(previous);
-        }
-        if (previous instanceof FieldExpression || previous instanceof VariableExpression) {
-            return previous;
         }
         if (previous instanceof IndexExpression indexExpression) {
             ReferenceExpression underlyingVariable = modifyExpression(indexExpression.getVariable(), modifications);
@@ -315,14 +230,14 @@ public class DataFlowState {
             return copy;
         }
         if (!(previous instanceof SnapshotExpression snapshotExpression)) {
-            throw new IllegalArgumentException("Unexpected expression: " + previous);
+            return previous;
         }
         if (isAssignedInChain(snapshotExpression)) {
             return snapshotExpression;
         }
         if (snapshotExpression instanceof RecordSnapshot recordSnapshot) {
             ReferenceExpression underlyingVariable = recordSnapshot.getUnderlyingVariable() != null ? modifyExpression(recordSnapshot.getUnderlyingVariable(), modifications) : null;
-            RecordSnapshot copy = new RecordSnapshot(recordSnapshot.getType(), underlyingVariable);
+            RecordSnapshot copy = new RecordSnapshot(recordSnapshot.getType(), recordSnapshot.getOptionality());
             modifications.put(recordSnapshot, copy);
             for (Map.Entry<String, Expression> entry : recordSnapshot.getSnapshots().entrySet()) {
                 copy.assign(entry.getKey(), modifyExpression(entry.getValue(), modifications));
@@ -332,7 +247,7 @@ public class DataFlowState {
         if (previous instanceof ArraySnapshot arraySnapshot) {
             ReferenceExpression underlyingVariable = arraySnapshot.getUnderlyingVariable() != null ? modifyExpression(arraySnapshot.getUnderlyingVariable(), modifications) : null;
             Function<ArraySnapshot, Expression> defaultValue = (snapshot) -> modifyExpression(arraySnapshot.getDefaultValue().get(), modifications);
-            ArraySnapshot copy = new ArraySnapshot(defaultValue, arraySnapshot.getType(), underlyingVariable);
+            ArraySnapshot copy = new ArraySnapshot(arraySnapshot.getType(), arraySnapshot.getOptionality(), defaultValue);
             modifications.put(arraySnapshot, copy);
             for (ArrayEntry.Assignment assignment : arraySnapshot.getAssignments()) {
                 Expression indexExpression = modifyExpression(assignment.index(), modifications);
@@ -347,11 +262,11 @@ public class DataFlowState {
             if (Objects.equals(underlyingVariable, variableSnapshot.getUnderlyingVariable()) && type.equals(variableSnapshot.getType())) {
                 return variableSnapshot;
             }
-            VariableSnapshot copy = new VariableSnapshot(type, underlyingVariable);
+            VariableSnapshot copy = new VariableSnapshot(type, variableSnapshot.getOptionality());
             modifications.put(variableSnapshot, copy);
             return copy;
         }
-        throw new AssertionError();
+        return previous;
     }
 
     private boolean isAssignedInChain(SnapshotExpression snapshotExpression) {
@@ -366,7 +281,7 @@ public class DataFlowState {
     }
 
     public @NotNull DataFlowState merge(@NotNull DataFlowState state, @NotNull Map<ReferenceExpression, ReferenceExpression> modifications) {
-        DataFlowState successorState = createSuccessorState();
+        DataFlowState successorState = DataFlowState.createSuccessorState(getBlock(), this);
         for (Expression expression : state.getExpressions()) {
             successorState.add(expression.replace(component -> {
                 if (component instanceof VariableExpression) {
@@ -389,15 +304,6 @@ public class DataFlowState {
             createSnapshot(variable);
             return;
         }
-        if (variable instanceof VariableExpression leftValue && expression instanceof ReferenceExpression rightValue) {
-            SnapshotExpression snapshot = getSnapshot(rightValue);
-            if (snapshot != null) {
-                snapshots.put(leftValue.getField(), snapshot);
-            } else {
-                createSnapshot(leftValue);
-            }
-            return;
-        }
         expression = expression.replace(this::getSnapshot);
         if (expression instanceof LiteralExpression) {
             if (variable instanceof IndexExpression index) {
@@ -415,11 +321,9 @@ public class DataFlowState {
                 }
             }
         }
-        Optional<SnapshotExpression> snapshot = createSnapshot(variable, Optionality.PRESENT);
-        if (snapshot.isEmpty()) {
-            return;
-        }
-        insert(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot.orElseThrow(), expression));
+        SnapshotExpression snapshot = createSnapshot(variable, Optionality.UNKNOWN);
+        insert(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, expression));
+        insert(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, snapshot), new UnaryExpression(UnaryOperator.PRESENT, expression)));
     }
 
     public void add(@NotNull Expression expression) {
@@ -430,9 +334,6 @@ public class DataFlowState {
     private void insert(@NotNull Expression expression) {
         if (!(expression.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             throw new IllegalArgumentException("Cannot add expression: " + expression);
-        }
-        if (expression.getComponents().stream().anyMatch(expr -> expr instanceof FieldExpression)) {
-            return;
         }
         if (expression instanceof BinaryExpression binaryExpression) {
             if (binaryExpression.getLeft() instanceof AggregateExpression || binaryExpression.getRight() instanceof AggregateExpression) {
@@ -482,46 +383,12 @@ public class DataFlowState {
         return conditions;
     }
 
-    public @NotNull List<Expression> getAllExpressions() {
-        List<Expression> expressions = new ArrayList<>();
-        getAllExpressions(expressions);
-        return expressions;
-    }
-
-    private void getAllExpressions(@NotNull List<Expression> expressions) {
-        for (int i = getExpressions().size() - 1; i >= 0; i--) {
-            Expression expression = getExpressions().get(i);
-            expressions.add(expression);
-        }
-        DataFlowState predecessor = getPredecessor();
-        if (predecessor != null) {
-            predecessor.getAllExpressions(expressions);
-        }
-    }
-
     public @NotNull Map<Field, SnapshotExpression> getSnapshots() {
         return snapshots;
     }
 
-    public @NotNull Map<SnapshotExpression, Optionality> getOptionality() {
-        return optionality;
-    }
-
-    public void setOptionality(@NotNull ReferenceExpression expression, @NotNull Optionality optionality) {
-        ReferenceExpression snapshot = getSnapshot(expression);
-        if (snapshot == null) {
-            snapshot = expression;
-        }
-        UnaryExpression isPresent = new UnaryExpression(UnaryOperator.PRESENT, snapshot);
-        switch (optionality) {
-            case NO_VALUE -> {
-                add(new BinaryExpression(BinaryOperator.EQUAL_TO, isPresent, new LiteralExpression(true)));
-                add(new BinaryExpression(BinaryOperator.EQUAL_TO, isPresent, new LiteralExpression(false)));
-            }
-            case MISSING ->
-                    add(new BinaryExpression(BinaryOperator.EQUAL_TO, isPresent, new LiteralExpression(false)));
-            case PRESENT -> add(new BinaryExpression(BinaryOperator.EQUAL_TO, isPresent, new LiteralExpression(true)));
-        }
+    public @NotNull Map<Field, SnapshotExpression> getRoots() {
+        return roots;
     }
 
     public @NotNull BooleanValue getConstraint(@NotNull Expression expression) {
@@ -532,64 +399,60 @@ public class DataFlowState {
         return ConditionAnalyzer.getBooleanValue(this, expression);
     }
 
-    public boolean isSatisfiable() {
-        return ConditionAnalyzer.isSatisfiable(this);
+    public boolean isSatisfiable(@NotNull Set<ReferenceExpression> targets) {
+        return ConditionAnalyzer.isSatisfiable(this, targets);
     }
 
     public @NotNull Optionality getOptionality(@NotNull ReferenceExpression variable) {
-        if (variable instanceof FieldExpression) {
-            return Optionality.PRESENT;
-        }
         SnapshotExpression snapshot = getSnapshot(variable);
         variable = snapshot != null ? snapshot : variable;
         return ConditionAnalyzer.getOptionality(this, variable);
     }
 
-    public @NotNull Optional<SnapshotExpression> createSnapshot(@NotNull ReferenceExpression expression) {
-        return createSnapshot(expression, Optionality.PRESENT);
+    public void createSnapshot(@NotNull ReferenceExpression expression) {
+        createSnapshot(expression, Optionality.PRESENT);
     }
 
-    public @NotNull Optional<SnapshotExpression> createSnapshot(@NotNull ReferenceExpression variable, @NotNull Optionality optionality) {
+    public @NotNull SnapshotExpression createSnapshot(@NotNull ReferenceExpression variable, @NotNull Optionality optionality) {
         if (variable instanceof SnapshotExpression snapshot) {
             /*
              * If the specified variable is a snapshot, try to create a snapshot for the underlying variable.
              */
             variable = snapshot.getUnderlyingVariable();
             if (variable == null) {
-                return Optional.empty();
+                return createSnapshot(snapshot.getType(), null);
             }
-        }
-        if (variable instanceof FieldExpression) {
-            return Optional.empty();
         }
         if (variable instanceof IndexExpression indexExpression) {
             SnapshotExpression snapshot = getSnapshot(indexExpression.getVariable());
             if (!(snapshot instanceof ArraySnapshot arraySnapshot)) {
-                return Optional.empty();
+                throw new IllegalArgumentException();
             }
             Expression indexSnapshot = getSnapshot(indexExpression.getIndex());
             IndexExpression underlyingExpression = new IndexExpression(arraySnapshot, indexSnapshot);
             SnapshotExpression variableSnapshot = createSnapshot(indexExpression.getType(), underlyingExpression);
             arraySnapshot.assign(indexSnapshot, variableSnapshot);
-            return Optional.of(variableSnapshot);
+            return variableSnapshot;
         }
         if (variable instanceof ComponentExpression componentExpression) {
             SnapshotExpression snapshot = getSnapshot(componentExpression.getVariable());
             if (!(snapshot instanceof RecordSnapshot recordSnapshot)) {
-                return Optional.empty();
+                throw new IllegalArgumentException();
             }
             ComponentExpression underlyingExpression = new ComponentExpression(componentExpression.getType(), recordSnapshot, componentExpression.getComponent());
             SnapshotExpression variableSnapshot = createSnapshot(componentExpression.getType(), underlyingExpression);
             recordSnapshot.assign(componentExpression.getComponent(), variableSnapshot);
-            return Optional.of(variableSnapshot);
+            return variableSnapshot;
         }
-        SnapshotExpression snapshot = createSnapshot(variable.getType(), variable);
-        setOptionality(snapshot, optionality);
-        return Optional.of(snapshot);
+        return createSnapshot(variable.getType(), optionality, variable);
     }
 
     public @NotNull SnapshotExpression createSnapshot(@NotNull RapidType snapshotType, @Nullable ReferenceExpression underlyingExpression) {
-        SnapshotExpression snapshot = SnapshotExpression.createSnapshot(snapshotType, underlyingExpression);
+        return createSnapshot(snapshotType, Optionality.PRESENT, underlyingExpression);
+    }
+
+    public @NotNull SnapshotExpression createSnapshot(@NotNull RapidType snapshotType, @NotNull Optionality optionality, @Nullable ReferenceExpression underlyingExpression) {
+        SnapshotExpression snapshot = SnapshotExpression.createSnapshot(snapshotType, optionality);
         if (underlyingExpression instanceof VariableExpression variableValue) {
             snapshots.put(variableValue.getField(), snapshot);
         }
@@ -601,11 +464,6 @@ public class DataFlowState {
             return predecessor.getSnapshot(expression);
         }
         return expression.accept(new ControlFlowVisitor<>() {
-            @Override
-            public SnapshotExpression visitFieldExpression(@NotNull FieldExpression expression) {
-                return null;
-            }
-
             @Override
             public SnapshotExpression visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
                 return snapshot;
@@ -627,7 +485,7 @@ public class DataFlowState {
                 if (defaultValue instanceof SnapshotExpression snapshotExpression) {
                     return snapshotExpression;
                 } else {
-                    VariableSnapshot variableSnapshot = new VariableSnapshot(defaultValue.getType());
+                    SnapshotExpression variableSnapshot = SnapshotExpression.createSnapshot(defaultValue.getType());
                     add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, defaultValue));
                     return variableSnapshot;
                 }
@@ -643,12 +501,41 @@ public class DataFlowState {
                 if (defaultValue instanceof SnapshotExpression snapshotExpression) {
                     return snapshotExpression;
                 } else {
-                    VariableSnapshot variableSnapshot = new VariableSnapshot(defaultValue.getType());
+                    SnapshotExpression variableSnapshot = SnapshotExpression.createSnapshot(defaultValue.getType());
                     add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, defaultValue));
                     return variableSnapshot;
                 }
             }
         });
+    }
+
+    public @Nullable SnapshotExpression getSnapshot(@NotNull RapidExpression expression) {
+        for (SnapshotExpression value : snapshots.values()) {
+            RapidExpression element = value.getElement();
+            if (element == null) {
+                continue;
+            }
+            if (element.isEquivalentTo(expression)) {
+                return value;
+            }
+        }
+        for (Expression condition : conditions) {
+            for (Expression component : condition.getComponents()) {
+                RapidExpression element = component.getElement();
+                if (element == null) {
+                    continue;
+                }
+                if (element.isEquivalentTo(expression)) {
+                    if (component instanceof SnapshotExpression reference) {
+                        return reference;
+                    }
+                    SnapshotExpression reference = SnapshotExpression.createSnapshot(component.getType());
+                    add(new BinaryExpression(BinaryOperator.EQUAL_TO, reference, component));
+                    return reference;
+                }
+            }
+        }
+        return null;
     }
 
     private @NotNull Expression getSnapshot(@NotNull Expression value) {
@@ -684,15 +571,16 @@ public class DataFlowState {
                 } else if (predecessor != null) {
                     return predecessor.getSnapshot(expression);
                 } else {
-                    return null;
+                    throw new IllegalArgumentException("Cannot find snapshot for: " + expression);
                 }
             }
 
             @Override
             public SnapshotExpression visitIndexExpression(@NotNull IndexExpression expression) {
-                SnapshotExpression snapshot = getSnapshot(expression.getVariable());
+                ReferenceExpression variable = expression.getVariable();
+                SnapshotExpression snapshot = getSnapshot(variable);
                 if (!(snapshot instanceof ArraySnapshot arraySnapshot)) {
-                    return null;
+                    throw new IllegalArgumentException("Unexpected snapshot: " + snapshot + " for variable of type: " + variable.getType());
                 }
                 Expression indexSnapshot = getSnapshot(expression.getIndex());
                 List<ArrayEntry> assignments = arraySnapshot.getAssignments(DataFlowState.this, indexSnapshot);
@@ -743,15 +631,16 @@ public class DataFlowState {
 
             @Override
             public SnapshotExpression visitComponentExpression(@NotNull ComponentExpression expression) {
-                SnapshotExpression snapshot = getSnapshot(expression.getVariable());
+                ReferenceExpression variable = expression.getVariable();
+                SnapshotExpression snapshot = getSnapshot(variable);
                 if (!(snapshot instanceof RecordSnapshot recordSnapshot)) {
-                    return null;
+                    throw new IllegalArgumentException("Unexpected snapshot: " + snapshot + " for variable of type: " + variable.getType());
                 }
                 Expression value = recordSnapshot.getValue(expression.getComponent());
-                if (value instanceof ReferenceExpression variable) {
-                    return getSnapshot(variable);
+                if (value instanceof ReferenceExpression referenceExpression) {
+                    return getSnapshot(referenceExpression);
                 } else {
-                    VariableSnapshot variableSnapshot = new VariableSnapshot(value.getType());
+                    SnapshotExpression variableSnapshot = SnapshotExpression.createSnapshot(value.getType());
                     add(new BinaryExpression(BinaryOperator.EQUAL_TO, variableSnapshot, value));
                     return variableSnapshot;
                 }
@@ -764,7 +653,6 @@ public class DataFlowState {
         return "DataFlowState{" +
                 "name=" + functionBlock.getModuleName() + ":" + functionBlock.getName() +
                 ", conditions=" + conditions.size() +
-                ", constraints=" + optionality.size() +
                 '}';
     }
 }

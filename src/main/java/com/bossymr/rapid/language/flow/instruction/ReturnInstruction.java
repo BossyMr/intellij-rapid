@@ -15,6 +15,17 @@ public class ReturnInstruction extends Instruction {
 
     public ReturnInstruction(@NotNull Block block, @Nullable PsiElement element, @Nullable Expression returnValue) {
         super(block, element);
+        if (block.getReturnType() == null && returnValue != null) {
+            throw new IllegalArgumentException("Cannot return value of type: " + returnValue.getType() + " from method: " + block);
+        }
+        if (block.getReturnType() != null) {
+            if (returnValue == null) {
+                throw new IllegalArgumentException("Cannot return without return value from method: " + block);
+            }
+            if (!(block.getReturnType().isAssignable(returnValue.getType()))) {
+                throw new IllegalArgumentException("Cannot return value of type: " + returnValue.getType() + " from method: " + block);
+            }
+        }
         this.returnValue = returnValue;
     }
 

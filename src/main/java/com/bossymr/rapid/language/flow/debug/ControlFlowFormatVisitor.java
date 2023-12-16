@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
-import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
@@ -315,18 +314,8 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     }
 
     @Override
-    public String visitFieldExpression(@NotNull FieldExpression expression) {
-        return expression.getModuleName() + ":" + expression.getName();
-    }
-
-    @Override
     public @NotNull String visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
         return "~" + snapshot.hashCode();
-    }
-
-    @Override
-    public String visitLabel(@NotNull Label label) {
-        return label.getName() + ":";
     }
 
     @Override

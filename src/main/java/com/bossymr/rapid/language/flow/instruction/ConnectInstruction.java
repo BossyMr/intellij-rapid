@@ -4,6 +4,7 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,6 +18,9 @@ public class ConnectInstruction extends Instruction {
 
     public ConnectInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
         super(block, element);
+        if (!(RapidPrimitiveType.NUMBER.isAssignable(expression.getType()))) {
+            throw new IllegalArgumentException("Invalid connect target type: " + expression.getType());
+        }
         this.variable = variable;
         this.expression = expression;
     }

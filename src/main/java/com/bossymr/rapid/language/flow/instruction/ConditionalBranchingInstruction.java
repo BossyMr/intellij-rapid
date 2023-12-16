@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.instruction;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +16,9 @@ public class ConditionalBranchingInstruction extends Instruction {
 
     public ConditionalBranchingInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull Expression condition) {
         super(block, element);
+        if (!(RapidPrimitiveType.BOOLEAN.isAssignable(condition.getType()))) {
+            throw new IllegalArgumentException("Invalid condition type: " + condition.getType());
+        }
         this.condition = condition;
     }
 

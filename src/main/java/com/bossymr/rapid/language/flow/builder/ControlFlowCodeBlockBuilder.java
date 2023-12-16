@@ -96,7 +96,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     private @NotNull ReferenceExpression getFieldReference(@NotNull RapidReferenceExpression expression, @NotNull RapidField field) {
         String name = field.getName();
         if (name == null) {
-            return getAsVariable(any());
+            return getAsVariable(any(expression));
         }
         RapidType type = Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE);
         if (field instanceof PhysicalField physicalField) {
@@ -104,23 +104,17 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
             if (routine != null) {
                 Variable variable = block.findVariable(name);
                 if (variable == null) {
-                    return getAsVariable(any());
+                    return getAsVariable(any(expression, type));
                 }
                 return new VariableExpression(expression, variable);
             }
-            PhysicalModule module = PhysicalModule.getModule(physicalField);
-            String moduleName;
-            if (module == null || (moduleName = module.getName()) == null) {
-                return getAsVariable(any());
-            }
-            return new FieldExpression(expression, type, moduleName, name);
         }
-        return new FieldExpression(expression, type, "", name);
+        return getAsVariable(any(expression, type));
     }
 
     @Override
     public @NotNull ReferenceExpression getReference(@NotNull RapidType type, @NotNull String moduleName, @NotNull String name) {
-        return new FieldExpression(type, moduleName, name);
+        return getAsVariable(any(type));
     }
 
     @Override
@@ -609,22 +603,8 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     private @NotNull Expression any(@Nullable RapidExpression expression, @Nullable RapidType type) {
         RapidType valueType = Objects.requireNonNullElse(type, RapidPrimitiveType.ANYTYPE);
-        return Objects.requireNonNull(SnapshotExpression.createSnapshot(valueType, new ReferenceExpression() {
-            @Override
-            public @NotNull RapidType getType() {
-                return valueType;
-            }
-
-            @Override
-            public @Nullable RapidExpression getElement() {
-                return expression;
-            }
-
-            @Override
-            public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-                return visitor.visitReferenceExpression(this);
-            }
-        }));
+        // TODO: This snapshot should always be PRESENT, perhaps add a field to each snapshot for prefered optionality?
+        return SnapshotExpression.createSnapshot(valueType, Optionality.PRESENT);
     }
 
     @Override
@@ -680,6 +660,16 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public void returnValue(@Nullable Expression expression) {
+        if (block.getReturnType() != null) {
+            if (expression == null) {
+                expression = any(block.getReturnType());
+            } else if (!(block.getReturnType().isAssignable(expression.getType()))) {
+                expression = any(expression.getElement(), block.getReturnType());
+            }
+        }
+        if (block.getReturnType() == null && expression != null) {
+            expression = null;
+        }
         builder.continueScope(new ReturnInstruction(block, null, expression));
         builder.exitScope();
     }

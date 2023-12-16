@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.DataFlowFunctionMap;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
+import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
@@ -47,7 +48,7 @@ public final class ControlFlowService {
     }
 
     @RequiresReadLock
-    public static @NotNull DataFlow calculateDataFlow(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer) {
+    public static @NotNull DataFlow calculateDataFlow(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowState> consumer) {
         Set<String> methods = new HashSet<>();
         Map<Instruction, DataFlowBlock> dataFlow = new HashMap<>();
         Collection<Block> blocks = controlFlow.getBlocks();
@@ -55,7 +56,7 @@ public final class ControlFlowService {
                 .filter(block -> block instanceof Block.FunctionBlock)
                 .map(block -> (Block.FunctionBlock) block)
                 .collect(Collectors.toMap(BlockDescriptor::getBlockKey, block -> block));
-        Deque<DataFlowBlock> workList = new ArrayDeque<>();
+        Deque<DataFlowState> workList = new ArrayDeque<>();
         DataFlowFunctionMap functionMap = new DataFlowFunctionMap(descriptorMap, workList, (function, map) -> {
             if (function.moduleName().isEmpty()) {
                 if (methods.add(function.name())) {
@@ -81,8 +82,9 @@ public final class ControlFlowService {
             }
             analyzeBlock(controlFlow, consumer, functionBlock, functionMap, dataFlow);
         }
-        for (DataFlowBlock entry : workList) {
-            reanalyzeBlock(controlFlow, consumer, entry, functionMap, dataFlow);
+        while (!(workList.isEmpty())) {
+            DataFlowState state = workList.removeFirst();
+            reanalyzeBlock(controlFlow, consumer, state, functionMap, dataFlow);
         }
         return createDataFlow(controlFlow, dataFlow, functionMap.getUsages());
     }
@@ -93,7 +95,7 @@ public final class ControlFlowService {
         return getDataFlow(project);
     }
 
-    private static void analyzeBlock(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer, Block.FunctionBlock functionBlock, DataFlowFunctionMap functionMap, @NotNull Map<Instruction, DataFlowBlock> dataFlow) {
+    private static void analyzeBlock(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowState> consumer, Block.FunctionBlock functionBlock, DataFlowFunctionMap functionMap, @NotNull Map<Instruction, DataFlowBlock> dataFlow) {
         Map<Instruction, DataFlowBlock> result = DataFlowAnalyzer.analyze(functionBlock, functionMap, (returnValue, value) -> {
             Map<Instruction, DataFlowBlock> copyMap = new HashMap<>(Map.copyOf(dataFlow));
             copyMap.putAll(returnValue);
@@ -114,7 +116,7 @@ public final class ControlFlowService {
         });
     }
 
-    private static void reanalyzeBlock(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer, @NotNull DataFlowBlock entry, DataFlowFunctionMap functionMap, Map<Instruction, DataFlowBlock> dataFlow) {
+    private static void reanalyzeBlock(@NotNull ControlFlow controlFlow, @NotNull BiPredicate<DataFlow, DataFlowState> consumer, @NotNull DataFlowState entry, DataFlowFunctionMap functionMap, Map<Instruction, DataFlowBlock> dataFlow) {
         DataFlowAnalyzer.reanalyze(entry, functionMap, dataFlow, (returnValue, value) -> {
             Map<Instruction, DataFlowBlock> copyMap = new HashMap<>(Map.copyOf(dataFlow));
             copyMap.putAll(returnValue);
@@ -122,20 +124,20 @@ public final class ControlFlowService {
         });
     }
 
-    @RequiresReadLock
-    public @NotNull DataFlow getDataFlow(@NotNull Project project, @NotNull BiPredicate<DataFlow, DataFlowBlock> consumer) {
-        return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
-            ControlFlow controlFlow = calculateControlFlow(project);
-            return CachedValueProvider.Result.createSingleDependency(calculateDataFlow(controlFlow, consumer), PsiModificationTracker.MODIFICATION_COUNT);
-        });
+    private static @NotNull DataFlow createDataFlow(@NotNull ControlFlow controlFlow, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull Map<DataFlowState, DataFlowUsage> usages) {
+        return new DataFlow(controlFlow, blocks, usages);
     }
 
     public @NotNull ControlFlow getControlFlow() {
         return controlFlow.get();
     }
 
-    private static @NotNull DataFlow createDataFlow(@NotNull ControlFlow controlFlow, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull Map<DataFlowBlock, DataFlowUsage> usages) {
-        return new DataFlow(controlFlow, blocks, usages);
+    @RequiresReadLock
+    public @NotNull DataFlow getDataFlow(@NotNull Project project, @NotNull BiPredicate<DataFlow, DataFlowState> consumer) {
+        return CachedValuesManager.getManager(project).getCachedValue(project, () -> {
+            ControlFlow controlFlow = calculateControlFlow(project);
+            return CachedValueProvider.Result.createSingleDependency(calculateDataFlow(controlFlow, consumer), PsiModificationTracker.MODIFICATION_COUNT);
+        });
     }
 
     /**

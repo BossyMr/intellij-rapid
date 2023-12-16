@@ -48,6 +48,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
          * A map which contains instructions to replace the key expression with the value expression.
          */
         Map<ReferenceExpression, ReferenceExpression> modifications = new HashMap<>();
+        Set<ReferenceExpression> targets = new HashSet<>();
 
         Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
         for (Argument argument : arguments.keySet()) {
@@ -57,6 +58,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
             modifications.put(new VariableExpression(argument), expression);
             if(calleeSnapshot != null && callerSnapshot != null) {
                 modifications.put(calleeSnapshot, callerSnapshot);
+                targets.add(callerSnapshot);
             }
         }
 
@@ -67,7 +69,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
             SnapshotExpression calleeSnapshot = result.state().getSnapshot(calleeVariable);
             callerSnapshot = SnapshotExpression.createSnapshot(callerVariable);
             modifications.put(calleeVariable, callerVariable);
-            if(calleeSnapshot != null && callerSnapshot != null) {
+            if (calleeSnapshot != null) {
                 modifications.put(calleeSnapshot, callerSnapshot);
             }
         }
@@ -80,10 +82,10 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
 
         // Check if the result is satisfiable.
         // If it is not satisfiable, this function will not be called.
-        if (!(successorState.isSatisfiable())) {
+        if (!(successorState.isSatisfiable(targets))) {
+            successorState.close();
             return null;
         }
-
         if (result instanceof Result.Exit) {
             return new Result.Exit(successorState);
         }

@@ -7,6 +7,7 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlow;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
+import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.bossymr.rapid.language.flow.debug.DataFlowGraphService;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
@@ -36,7 +37,7 @@ import java.util.function.Consumer;
 class DataFlowGraphTest {
 
     private static final int MAX_PASSES = -1;
-    private static final boolean DRAW_EACH_PASS = true;
+    private static final boolean DRAW_EACH_PASS = false;
     private static final boolean DRAW_FINAL_PASS = true;
 
     private void check(@NotNull TestInfo testInfo, @NotNull Consumer<RapidBuilder> consumer) throws IOException, ExecutionException {
@@ -58,7 +59,11 @@ class DataFlowGraphTest {
         }
         Map<Instruction, AtomicInteger> passes = new HashMap<>();
         AtomicInteger total = new AtomicInteger();
-        DataFlow result = ControlFlowService.calculateDataFlow(controlFlow, (dataFlow, block) -> {
+        DataFlow result = ControlFlowService.calculateDataFlow(controlFlow, (dataFlow, state) -> {
+            if (!(DRAW_EACH_PASS) && MAX_PASSES < 0) {
+                return true;
+            }
+            DataFlowBlock block = state.getBlock();
             Instruction instruction = block.getInstruction();
             Block functionBlock = instruction.getBlock();
             passes.computeIfAbsent(instruction, key -> new AtomicInteger());

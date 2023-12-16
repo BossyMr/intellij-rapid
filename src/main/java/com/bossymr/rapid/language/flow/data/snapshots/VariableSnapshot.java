@@ -1,12 +1,9 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
-import com.bossymr.rapid.language.flow.ControlFlowVisitor;
-import com.bossymr.rapid.language.flow.value.ReferenceExpression;
-import com.bossymr.rapid.language.flow.value.SnapshotExpression;
+import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * A {@code VariableSnapshot} represents the previous state of a variable. The below example shows how snapshots can be
@@ -20,38 +17,25 @@ import org.jetbrains.annotations.Nullable;
  * 3: x = 10                                // x2 = 10
  * }
  */
-public class VariableSnapshot implements SnapshotExpression {
+public class VariableSnapshot implements Snapshot {
 
-    private final @Nullable ReferenceExpression underlyingVariable;
     private final @NotNull RapidType type;
+    private final @NotNull Optionality optionality;
 
-    public VariableSnapshot(@NotNull RapidType type) {
-        this(type, null);
-    }
-
-    public VariableSnapshot(@NotNull ReferenceExpression underlyingVariable) {
-        this(underlyingVariable.getType(), underlyingVariable);
-    }
-
-    public VariableSnapshot(@NotNull RapidType type, @Nullable ReferenceExpression underlyingVariable) {
+    public VariableSnapshot(@NotNull RapidType type, @NotNull Optionality optionality) {
         if (type.getDimensions() > 0) {
             throw new IllegalArgumentException("Cannot create VariableSnapshot for variable of type: " + type);
         }
-        if (type.getRootStructure() instanceof RapidRecord record) {
+        if (type.getRootStructure() instanceof RapidRecord) {
             throw new IllegalArgumentException("Cannot create VariableSnapshot for variable of type: " + type);
         }
-        this.underlyingVariable = underlyingVariable;
         this.type = type;
+        this.optionality = optionality;
     }
 
     @Override
-    public @Nullable ReferenceExpression getUnderlyingVariable() {
-        return underlyingVariable;
-    }
-
-    @Override
-    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return visitor.visitVariableSnapshotExpression(this);
+    public @NotNull Optionality getOptionality() {
+        return optionality;
     }
 
     @Override

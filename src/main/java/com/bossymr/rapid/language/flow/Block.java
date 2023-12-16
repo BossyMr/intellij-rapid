@@ -12,7 +12,7 @@ import java.util.*;
 
 public sealed abstract class Block {
 
-    private final @Nullable String moduleName;
+    private final @NotNull String moduleName;
     private final @NotNull String name;
     private final @Nullable RapidType returnType;
 
@@ -22,7 +22,7 @@ public sealed abstract class Block {
     private final @NotNull List<Variable> variables;
     private final @NotNull RapidSymbol element;
 
-    public Block(@NotNull RapidSymbol element, @Nullable String moduleName, @NotNull String name, @Nullable RapidType returnType) {
+    public Block(@NotNull RapidSymbol element, @NotNull String moduleName, @NotNull String name, @Nullable RapidType returnType) {
         this.moduleName = moduleName;
         this.name = name;
         this.returnType = returnType;
@@ -36,7 +36,7 @@ public sealed abstract class Block {
         return element;
     }
 
-    public @Nullable String getModuleName() {
+    public @NotNull String getModuleName() {
         return moduleName;
     }
 
@@ -149,7 +149,7 @@ public sealed abstract class Block {
         private final @NotNull RoutineType routineType;
         private final @NotNull List<ArgumentGroup> argumentGroups;
 
-        public FunctionBlock(@NotNull RapidRoutine routine, @Nullable String moduleName) {
+        public FunctionBlock(@NotNull RapidRoutine routine, @NotNull String moduleName) {
             super(routine, moduleName, Objects.requireNonNull(routine.getName()), routine.getType());
             this.routineType = routine.getRoutineType();
             this.argumentGroups = routineType != RoutineType.TRAP ? new ArrayList<>() : List.of();
@@ -169,16 +169,9 @@ public sealed abstract class Block {
             return argumentGroups;
         }
 
-        public @NotNull Argument findArgument(int index) {
-            return getArgumentGroups().stream()
-                    .flatMap(argumentGroup -> argumentGroup.arguments().stream())
-                    .toList().get(index);
-        }
-
         @Override
         public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-            return
-                    visitor.visitFunctionBlock(this);
+            return visitor.visitFunctionBlock(this);
         }
 
         @Override

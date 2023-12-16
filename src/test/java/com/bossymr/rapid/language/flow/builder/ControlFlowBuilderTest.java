@@ -234,7 +234,8 @@ class ControlFlowBuilderTest {
                                     codeBuilder.ifThenElse(y,
                                             ifThenBuilder -> ifThenBuilder.returnValue(ifThenBuilder.unary(UnaryOperator.NEGATE, x)),
                                             ifThenBuilder -> ifThenBuilder.returnValue(x));
-                                })).withRoutine("bar", RoutineType.PROCEDURE, null, routineBuilder -> routineBuilder
+                                }))
+                        .withRoutine("bar", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
                                 .withCode(codeBuilder -> codeBuilder
                                         .returnValue(codeBuilder.call("foo:Abs", RapidPrimitiveType.NUMBER, argumentBuilder -> argumentBuilder
                                                 .withRequiredArgument(codeBuilder.literal(-1))))))), """
@@ -251,7 +252,7 @@ class ControlFlowBuilderTest {
                 	4: return _0;
                 }
                                 
-                proc foo:bar() {
+                func num foo:bar() {
                 	num _0;
                 	num _1;
                                 

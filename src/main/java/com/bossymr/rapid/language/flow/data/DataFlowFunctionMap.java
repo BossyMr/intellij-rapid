@@ -2,13 +2,12 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
-import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
-import com.bossymr.rapid.language.flow.value.BinaryExpression;
-import com.bossymr.rapid.language.flow.value.BinaryOperator;
-import com.bossymr.rapid.language.flow.value.VariableExpression;
+import com.bossymr.rapid.language.flow.instruction.Instruction;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
@@ -29,11 +28,9 @@ public class DataFlowFunctionMap {
     private final @NotNull Map<BlockDescriptor, DataFlowFunction> functionMap;
 
     /**
-     * A stack of blocks which should need to be reprocessed.
+     * A stack of states which should need to be reprocessed.
      */
-    private final @NotNull Deque<DataFlowBlock> workList;
-
-    private final @NotNull Map<DataFlowBlock, Set<DataFlowFunction.Result>> usages = new HashMap<>();
+    private final @NotNull Deque<DataFlowState> workList;
 
     /**
      * A map of references between a caller block and its entry. If the return block for a caller has not yet been
@@ -41,77 +38,98 @@ public class DataFlowFunctionMap {
      * cleared and added to the work-list to be reprocessed. When reprocessed, it will find the correct return block and
      * instead add the reference as a hard reference.
      */
-    private final @NotNull Map<DataFlowBlock, ResultEntry> softReferences = new HashMap<>();
+    private final @NotNull Map<DataFlowState, BlockDescriptor> softReferences = new HashMap<>();
 
     /**
      * A map of references between the return block and its usages.
      */
-    private final @NotNull Map<DataFlowBlock, DataFlowUsage> hardReferences = new HashMap<>();
+    private final @NotNull Map<DataFlowState, DataFlowUsage> hardReferences = new HashMap<>();
 
     /**
      * A map of references between the result of a function and the block where it is returned.
      */
-    private final @NotNull Map<DataFlowFunction.Result, DataFlowBlock> exitPoints = new HashMap<>();
+    private final @NotNull Map<DataFlowFunction.Result, DataFlowState> exitPoints = new HashMap<>();
 
     /**
      * A {@code Consumer} called for each declared usage to a function which has not been processed.
      */
     private final @NotNull BiConsumer<BlockDescriptor, DataFlowFunctionMap> consumer;
 
-    public DataFlowFunctionMap(@NotNull Map<BlockDescriptor, Block.FunctionBlock> descriptorMap, @NotNull Deque<DataFlowBlock> workList, @NotNull BiConsumer<BlockDescriptor, DataFlowFunctionMap> consumer) {
+    public DataFlowFunctionMap(@NotNull Map<BlockDescriptor, Block.FunctionBlock> descriptorMap, @NotNull Deque<DataFlowState> workList, @NotNull BiConsumer<BlockDescriptor, DataFlowFunctionMap> consumer) {
         this.descriptorMap = descriptorMap;
         this.consumer = consumer;
         this.functionMap = new HashMap<>();
         this.workList = workList;
     }
 
-    public @NotNull Map<DataFlowBlock, DataFlowUsage> getUsages() {
+    public @NotNull Deque<DataFlowState> getWorkList() {
+        return workList;
+    }
+
+    public @NotNull Map<DataFlowState, DataFlowUsage> getUsages() {
         return hardReferences;
     }
 
-    private void registerExit(@NotNull DataFlowBlock returnBlock, @NotNull DataFlowFunction.Result result) {
-        Block block = returnBlock.getInstruction().getBlock();
-        BlockDescriptor blockDescriptor = BlockDescriptor.getBlockKey(block);
-        ResultEntry outputEntry = new ResultEntry(blockDescriptor, result.state());
-        exitPoints.put(result, returnBlock);
-        for (DataFlowBlock callerBlock : softReferences.keySet()) {
-            ResultEntry resultEntry = softReferences.get(callerBlock);
-            if (resultEntry.isSimilar(outputEntry)) {
-                if (!(workList.contains(callerBlock))) {
-                    workList.add(callerBlock);
-                }
-            }
+    public @NotNull List<DataFlowState> getExitPoints(@NotNull Block block) {
+        DataFlowFunction function = functionMap.get(BlockDescriptor.getBlockKey(block));
+        if (function instanceof PhysicalDataFlowFunction physicalFunction) {
+            return physicalFunction.getResults().stream()
+                                   .map(exitPoints::get)
+                                   .toList();
         }
-        if (hardReferences.containsKey(returnBlock)) {
-            DataFlowUsage usage = hardReferences.get(returnBlock);
-            for (DataFlowBlock callerBlock : usage.usages()) {
-                if (!(workList.contains(callerBlock))) {
-                    workList.add(callerBlock);
-                }
-            }
-        }
+        return List.of();
     }
 
-    private void registerUsage(@NotNull DataFlowBlock callerBlock, @NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowFunction.Result result) {
-        if (exitPoints.containsKey(result)) {
-            softReferences.remove(callerBlock);
-            DataFlowBlock returnBlock = exitPoints.get(result);
-            if (hardReferences.containsKey(returnBlock)) {
-                DataFlowUsage usage = hardReferences.get(returnBlock);
-                usage.usages().add(callerBlock);
-            } else {
-                DataFlowUsage usage = new DataFlowUsage(getUsageType(result), new HashSet<>());
-                usage.usages().add(callerBlock);
-                hardReferences.put(returnBlock, usage);
+    /**
+     * Register a state where the routine halts' execution.
+     *
+     * @param returnState the state where the routine halt's execution.
+     * @param result the result.
+     */
+    private void registerExit(@NotNull DataFlowState returnState, @NotNull DataFlowFunction.Result result) {
+        Instruction instruction = returnState.getBlock().getInstruction();
+        Block block = instruction.getBlock();
+        BlockDescriptor calleeDescriptor = BlockDescriptor.getBlockKey(block);
+        exitPoints.put(result, returnState);
+        // Find calls which reference this state, but were processed before this state.
+        for (DataFlowState callerState : softReferences.keySet()) {
+            BlockDescriptor callerDescriptor = softReferences.get(callerState);
+            if (!(callerDescriptor.equals(calleeDescriptor))) {
+                continue;
             }
+            if (!(workList.contains(callerState))) {
+                workList.add(callerState);
+            }
+        }
+        if (hardReferences.containsKey(returnState)) {
+            DataFlowUsage usage = hardReferences.get(returnState);
+            for (DataFlowState callerState : usage.usages()) {
+                if (!(workList.contains(callerState))) {
+                    workList.add(callerState);
+                }
+            }
+            usage.usages().clear();
         } else {
-            softReferences.put(callerBlock, new ResultEntry(blockDescriptor, result.state()));
-            consumer.accept(blockDescriptor, this);
+            hardReferences.put(returnState, new DataFlowUsage(getUsageType(result), new HashSet<>()));
         }
     }
 
-    public @NotNull Set<DataFlowFunction.Result> getCalls(@NotNull DataFlowBlock block) {
-        return usages.getOrDefault(block, Set.of());
+    private void registerUsage(@NotNull DataFlowState callerState, @NotNull DataFlowFunction.Result result) {
+        DataFlowState resultState = exitPoints.get(result);
+        softReferences.remove(callerState);
+        if (hardReferences.containsKey(resultState)) {
+            DataFlowUsage usage = hardReferences.get(resultState);
+            usage.usages().add(callerState);
+        } else {
+            DataFlowUsage usage = new DataFlowUsage(getUsageType(result), new HashSet<>());
+            usage.usages().add(callerState);
+            hardReferences.put(resultState, usage);
+        }
+    }
+
+    private void registerUsage(@NotNull DataFlowState callerState, @NotNull BlockDescriptor blockDescriptor) {
+        softReferences.put(callerState, blockDescriptor);
+        consumer.accept(blockDescriptor, this);
     }
 
     public @NotNull Optional<DataFlowFunction> get(@NotNull BlockDescriptor blockDescriptor) {
@@ -130,7 +148,7 @@ public class DataFlowFunctionMap {
         return Optional.of(new PhysicalDataFlowFunction(functionBlock));
     }
 
-    public void set(@NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowBlock returnBlock, @NotNull DataFlowFunction.Result result) {
+    public void set(@NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowState returnState, @NotNull DataFlowFunction.Result result) {
         if (functionMap.containsKey(blockDescriptor)) {
             /*
              * The function has already been created. It should be modified to provide the specified result.
@@ -138,16 +156,38 @@ public class DataFlowFunctionMap {
             if (!(functionMap.get(blockDescriptor) instanceof PhysicalDataFlowFunction function)) {
                 throw new IllegalStateException();
             }
-            function.addResult(returnBlock, result);
+            function.addResult(returnState, result);
         } else {
             /*
              * The function has not been processed, and must be created.
              */
             PhysicalDataFlowFunction function = new PhysicalDataFlowFunction(descriptorMap.get(blockDescriptor));
-            function.addResult(returnBlock, result);
+            function.addResult(returnState, result);
             functionMap.put(blockDescriptor, function);
         }
-        registerExit(returnBlock, result);
+        registerExit(returnState, result);
+    }
+
+    public void unregisterState(@NotNull DataFlowState state) {
+        if (hardReferences.containsKey(state)) {
+            // This state is a return state
+            exitPoints.entrySet().removeIf(value -> value.equals(state));
+            DataFlowUsage usage = hardReferences.remove(state);
+            Set<DataFlowState> usages = usage.usages();
+            for (DataFlowState callerState : usages) {
+                if (!(workList.contains(callerState))) {
+                    workList.add(callerState);
+                }
+            }
+        }
+        Instruction instruction = state.getBlock().getInstruction();
+        softReferences.remove(state);
+        if (instruction instanceof CallInstruction) {
+            for (DataFlowState calleeState : hardReferences.keySet()) {
+                DataFlowUsage usage = hardReferences.get(calleeState);
+                usage.usages().removeIf(callerState -> callerState.equals(state));
+            }
+        }
     }
 
     private @NotNull DataFlowUsage.DataFlowUsageType getUsageType(DataFlowFunction.@NotNull Result result) {
@@ -162,40 +202,27 @@ public class DataFlowFunctionMap {
         }
     }
 
-    public record ResultEntry(@NotNull BlockDescriptor blockDescriptor, @NotNull DataFlowState state) {
-
-        public boolean isSimilar(@NotNull ResultEntry entry) {
-            if (!(blockDescriptor().equals(entry.blockDescriptor()))) {
-                return false;
-            }
-            DataFlowState copy = DataFlowState.copy(state);
-            entry.state().getExpressions().forEach(copy::add);
-            entry.state().getSnapshots().forEach((field, snapshot) -> copy.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new VariableExpression(field), snapshot)));
-            return copy.isSatisfiable();
-        }
-    }
-
     private final class PhysicalDataFlowFunction extends AbstractDataFlowFunction {
 
         private final @NotNull Block.FunctionBlock functionBlock;
-        private final @NotNull AtomicReference<Map<DataFlowBlock, Result>> result = new AtomicReference<>();
+        private final @NotNull AtomicReference<Map<DataFlowState, Result>> result = new AtomicReference<>();
 
         public PhysicalDataFlowFunction(@NotNull Block.FunctionBlock functionBlock) {
             this.functionBlock = functionBlock;
         }
 
-        public void setResult(@NotNull Map<DataFlowBlock, Result> result) {
+        public void setResult(@NotNull Map<DataFlowState, Result> result) {
             this.result.set(result);
         }
 
-        public void addResult(@NotNull DataFlowBlock returnBlock, @NotNull DataFlowFunction.Result value) {
-            Map<DataFlowBlock, Result> map = result.get();
+        public void addResult(@NotNull DataFlowState returnState, @NotNull DataFlowFunction.Result value) {
+            Map<DataFlowState, Result> map = result.get();
             if (map == null) {
-                Map<DataFlowBlock, Result> data = new HashMap<>();
-                data.put(returnBlock, value);
+                Map<DataFlowState, Result> data = new HashMap<>();
+                data.put(returnState, value);
                 setResult(data);
             } else {
-                map.put(returnBlock, value);
+                map.put(returnState, value);
             }
         }
 
@@ -207,7 +234,7 @@ public class DataFlowFunctionMap {
 
         @Override
         protected @NotNull Set<Result> getResults() {
-            Map<DataFlowBlock, Result> value = result.get();
+            Map<DataFlowState, Result> value = result.get();
             if (value != null) {
                 return new HashSet<>(value.values());
             }
@@ -216,29 +243,28 @@ public class DataFlowFunctionMap {
 
         @Override
         public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull CallInstruction instruction) {
-            Map<DataFlowBlock, Result> value = result.get();
+            Map<DataFlowState, Result> value = result.get();
             BlockDescriptor blockDescriptor = BlockDescriptor.getBlockKey(functionBlock);
-            DataFlowBlock block = state.getBlock();
             if (value != null) {
-                Set<Result> results = super.getOutput(state, instruction);
-                if (block != null) {
-                    usages.put(block, Set.copyOf(results));
-                    for (Result output : results) {
-                        registerUsage(block, blockDescriptor, output);
+                Set<DataFlowFunction.Result> results = new HashSet<>();
+                for (Result result : getResults()) {
+                    Result output = getOutput(result, state, instruction);
+                    if (output != null) {
+                        registerUsage(state, result);
+                        results.add(output);
                     }
                 }
                 return results;
             }
             RapidType returnType = functionBlock.getReturnType();
-            DataFlowState simpleState = DataFlowState.createUnknownState(getBlock());
-            Result output = new Result.Success(simpleState, returnType != null ? state.createSnapshot(returnType, null) : null);
-            Result actual = getOutput(output, state, instruction);
-            Set<Result> result = actual != null ? Set.of(actual) : Set.of();
-            if(block != null) {
-                usages.put(block, result);
-                registerUsage(block, blockDescriptor, output);
+            DataFlowState successorState = DataFlowState.createSuccessorState(state.getBlock(), state);
+            SnapshotExpression returnValue = returnType != null ? successorState.createSnapshot(returnType, null) : null;
+            for (ReferenceExpression variable : instruction.getArguments().values()) {
+                successorState.createSnapshot(variable);
             }
-            return result;
+            Result output = new Result.Success(successorState, returnValue);
+            registerUsage(state, blockDescriptor);
+            return Set.of(output);
         }
     }
 }

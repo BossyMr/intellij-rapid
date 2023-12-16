@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,6 +22,9 @@ public class CallInstruction extends Instruction {
 
     public CallInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull Expression routineName, @Nullable ReferenceExpression returnValue, @NotNull Map<ArgumentDescriptor, ReferenceExpression> arguments) {
         super(block, element);
+        if (!(RapidPrimitiveType.STRING.isAssignable(routineName.getType()))) {
+            throw new IllegalArgumentException("Invalid reference type: " + routineName.getType());
+        }
         this.routineName = routineName;
         this.returnValue = returnValue;
         this.arguments = arguments;

@@ -1,18 +1,18 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
 import com.bossymr.rapid.language.flow.BooleanValue;
-import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
-import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.flow.value.BinaryExpression;
+import com.bossymr.rapid.language.flow.value.BinaryOperator;
+import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.function.Consumer;
 
 /**
  * A snapshot based on an array. The index to assign a value does not need to be concrete; as a result, every
@@ -30,22 +30,23 @@ import java.util.function.Supplier;
  *              // z = 5 or 2
  * }</pre>
  */
-public class ArraySnapshot implements SnapshotExpression {
+public class ArraySnapshot implements Snapshot {
 
     private final @NotNull RapidType type;
-    private final @Nullable ReferenceExpression underlyingVariable;
-    private final @NotNull Function<ArraySnapshot, Expression> defaultValue;
+    private final @NotNull Optionality optionality;
+    private final @NotNull Consumer<Snapshot> defaultValue;
     private final @NotNull List<ArrayEntry.Assignment> assignments;
 
-    public ArraySnapshot(@NotNull Function<ArraySnapshot, Expression> defaultValue, @NotNull RapidType type, @Nullable ReferenceExpression underlyingVariable) {
+    public ArraySnapshot(@NotNull RapidType type, @NotNull Optionality optionality, @NotNull Consumer<Snapshot> defaultValue) {
         this.type = type;
-        this.underlyingVariable = underlyingVariable;
+        this.optionality = optionality;
         this.defaultValue = defaultValue;
         this.assignments = new ArrayList<>();
     }
 
-    public @NotNull Supplier<Expression> getDefaultValue() {
-        return () -> defaultValue.apply(this);
+    @Override
+    public @NotNull Optionality getOptionality() {
+        return optionality;
     }
 
     public @NotNull List<ArrayEntry.Assignment> getAssignments() {
@@ -60,11 +61,13 @@ public class ArraySnapshot implements SnapshotExpression {
         List<ArrayEntry> values = new ArrayList<>();
         for (ListIterator<ArrayEntry.Assignment> iterator = assignments.listIterator(assignments.size()); iterator.hasPrevious(); ) {
             ArrayEntry.Assignment assignment = iterator.previous();
-            if (isEqualToPrevious(values, assignment, state)) {
+            if (isDuplicate(values, assignment, state)) {
+                // A value with the same index was assigned after this index.
                 continue;
             }
             values.add(assignment);
             if (!(iterator.hasPrevious())) {
+                // This is the last index
                 values.add(new ArrayEntry.DefaultValue(defaultValue.apply(this)));
             }
         }
@@ -83,7 +86,7 @@ public class ArraySnapshot implements SnapshotExpression {
                 // The specified index cannot be equal to the current assignment, as such, this assignment should not be considered.
                 continue;
             }
-            if(isEqualToPrevious(values, assignment, state)) {
+            if (isDuplicate(values, assignment, state)) {
                 continue;
             }
             values.add(assignment);
@@ -101,7 +104,7 @@ public class ArraySnapshot implements SnapshotExpression {
         return values;
     }
 
-    private boolean isEqualToPrevious(@NotNull List<ArrayEntry> entries, @NotNull ArrayEntry.Assignment entry,  @NotNull DataFlowState state) {
+    private boolean isDuplicate(@NotNull List<ArrayEntry> entries, @NotNull ArrayEntry.Assignment entry, @NotNull DataFlowState state) {
         for (ArrayEntry previousEntry : entries) {
             if (previousEntry instanceof ArrayEntry.Assignment assignmentEntry) {
                 BooleanValue comparisonConstraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignmentEntry.index(), entry.index()));
@@ -112,16 +115,6 @@ public class ArraySnapshot implements SnapshotExpression {
             }
         }
         return false;
-    }
-
-    @Override
-    public @Nullable ReferenceExpression getUnderlyingVariable() {
-        return underlyingVariable;
-    }
-
-    @Override
-    public <R> R accept(@NotNull ControlFlowVisitor<R> visitor) {
-        return visitor.visitArraySnapshotExpression(this);
     }
 
     @Override

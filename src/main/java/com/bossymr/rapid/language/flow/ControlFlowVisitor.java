@@ -1,9 +1,5 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.builder.Label;
-import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
-import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
-import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
 import org.jetbrains.annotations.NotNull;
@@ -98,18 +94,6 @@ public class ControlFlowVisitor<R> {
         return null;
     }
 
-    public R visitArraySnapshotExpression(@NotNull ArraySnapshot snapshot) {
-        return visitSnapshotExpression(snapshot);
-    }
-
-    public R visitRecordSnapshotExpression(@NotNull RecordSnapshot snapshot) {
-        return visitSnapshotExpression(snapshot);
-    }
-
-    public R visitVariableSnapshotExpression(VariableSnapshot snapshot) {
-        return visitSnapshotExpression(snapshot);
-    }
-
     public R visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
         return visitReferenceExpression(snapshot);
     }
@@ -130,15 +114,7 @@ public class ControlFlowVisitor<R> {
         return visitReferenceExpression(expression);
     }
 
-    public R visitFieldExpression(@NotNull FieldExpression expression) {
-        return visitReferenceExpression(expression);
-    }
-
     public R visitReferenceExpression(@NotNull ReferenceExpression expression) {
         return visitExpression(expression);
-    }
-
-    public R visitLabel(@NotNull Label label) {
-        return null;
     }
 }

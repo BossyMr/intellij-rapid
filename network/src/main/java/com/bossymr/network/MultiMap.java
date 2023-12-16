@@ -41,6 +41,14 @@ public class MultiMap<K, V> extends AbstractMap<K, V> {
         return null;
     }
 
+    public void putAll(K key, Collection<V> values) {
+        delegate.computeIfAbsent(key, unused -> supplier.get());
+        Collection<Entry<K, V>> entries = delegate.get(key);
+        for (V value : values) {
+            entries.add(new Node<>(key, value));
+        }
+    }
+
     public void set(K key, V value) {
         delegate.computeIfAbsent(key, unused -> supplier.get());
         delegate.get(key).clear();

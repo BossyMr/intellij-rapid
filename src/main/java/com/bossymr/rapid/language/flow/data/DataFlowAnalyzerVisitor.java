@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
+import com.bossymr.rapid.language.flow.BooleanValue;
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
@@ -17,128 +18,142 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
+public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowState>> {
 
     private final @NotNull DataFlowAnalyzer analyzer;
 
-    private final @NotNull DataFlowBlock block;
     private final @NotNull DataFlowState state;
     private final @NotNull Map<Instruction, DataFlowBlock> blocks;
     private final @NotNull DataFlowFunctionMap functionMap;
 
-    public DataFlowAnalyzerVisitor(@NotNull DataFlowAnalyzer analyzer, @NotNull DataFlowBlock block, @NotNull DataFlowState state, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull DataFlowFunctionMap functionMap) {
+    public DataFlowAnalyzerVisitor(@NotNull DataFlowAnalyzer analyzer, @NotNull DataFlowState state, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull DataFlowFunctionMap functionMap) {
         this.analyzer = analyzer;
-        this.block = block;
         this.state = state;
         this.blocks = blocks;
         this.functionMap = functionMap;
     }
 
     @Override
-    public Void visitAssignmentInstruction(@NotNull AssignmentInstruction instruction) {
-        block.assign(state, instruction.getVariable(), instruction.getExpression());
-        addSuccessors(instruction);
-        return null;
+    public @NotNull List<DataFlowState> visitAssignmentInstruction(@NotNull AssignmentInstruction instruction) {
+        DataFlowState previousCycle = DataFlowAnalyzer.getPreviousCycle(state);
+        if (previousCycle != null) {
+            /*
+             * If this block is in a loop (i.e. a state with this instruction is a predecessor to this state) and
+             * this assignment is cyclic in nature: this assignment has the previous snapshot (or a snapshot
+             * which is newer than the root snapshot of the previous iteration) of the variable which is being
+             * assigned in the expression. For example, x2 := x1 + 1 or x3 := x1 + 1 (if x1 is the latest snapshot
+             * for x at that point).
+             */
+            state.assign(instruction.getVariable(), null);
+        } else {
+            state.assign(instruction.getVariable(), instruction.getExpression());
+        }
+        return getSuccessors(instruction);
     }
 
     @Override
-    public Void visitConnectInstruction(@NotNull ConnectInstruction instruction) {
-        addSuccessors(instruction);
-        return null;
+    public @NotNull List<DataFlowState> visitConnectInstruction(@NotNull ConnectInstruction instruction) {
+        return getSuccessors(instruction);
     }
 
     @Override
-    public Void visitConditionalBranchingInstruction(@NotNull ConditionalBranchingInstruction instruction) {
+    public @NotNull List<DataFlowState> visitConditionalBranchingInstruction(@NotNull ConditionalBranchingInstruction instruction) {
         Expression value = instruction.getCondition();
-        visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(true)));
-        visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(false)));
-        return null;
+        BooleanValue constraint = state.getConstraint(value);
+        List<DataFlowState> states = new ArrayList<>(2);
+        if (constraint == BooleanValue.ANY_VALUE || constraint == BooleanValue.ALWAYS_TRUE) {
+            states.add(visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(true))));
+        }
+        if (constraint == BooleanValue.ANY_VALUE || constraint == BooleanValue.ALWAYS_FALSE) {
+            states.add(visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(false))));
+        }
+        states.removeIf(Objects::isNull);
+        return states;
     }
 
-    private void visitBranch(@Nullable Instruction successor, @NotNull Expression condition) {
+    private @Nullable DataFlowState visitBranch(@Nullable Instruction successor, @NotNull Expression condition) {
         if (successor == null) {
-            return;
+            return null;
         }
         DataFlowBlock successorBlock = blocks.get(successor);
-        DataFlowState copy = DataFlowState.createSuccessorState(successorBlock, state);
-        copy.add(condition);
-        if (!(copy.isSatisfiable())) {
-            return;
-        }
-        addSuccessor(successor, copy);
+        DataFlowState successorState = DataFlowState.createSuccessorState(successorBlock, state);
+        successorState.add(condition);
+        return successorState;
     }
 
-    private void addSuccessors(@NotNull Instruction instruction) {
+    private @NotNull List<DataFlowState> getSuccessors(@NotNull Instruction instruction) {
+        List<DataFlowState> successors = new ArrayList<>();
         for (Instruction successor : instruction.getSuccessors()) {
             DataFlowBlock successorBlock = blocks.get(successor);
             DataFlowState successorState = DataFlowState.createSuccessorState(successorBlock, state);
-            addSuccessor(successor, successorState);
+            successors.add(successorState);
         }
-    }
-
-    private void addSuccessor(@NotNull Instruction successor, @NotNull DataFlowState successorState) {
-        DataFlowBlock successorBlock = blocks.get(successor);
-        block.addSuccessor(successorBlock, successorState);
+        return successors;
     }
 
     @Override
-    public Void visitReturnInstruction(@NotNull ReturnInstruction instruction) {
-        DataFlowState successor = state.createCompactState();
+    public @NotNull List<DataFlowState> visitReturnInstruction(@NotNull ReturnInstruction instruction) {
         Expression returnValue = instruction.getReturnValue();
-        if (returnValue != null) {
-            SnapshotExpression snapshot = successor.createSnapshot(returnValue.getType(), null);
-            successor.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, returnValue));
-            functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), block, new DataFlowFunction.Result.Success(successor, snapshot));
-        } else {
-            functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), block, new DataFlowFunction.Result.Success(successor, null));
-        }
-        return null;
+        ReferenceExpression snapshot = getReferenceExpression(returnValue);
+        DataFlowState compactState = state.createCompactState();
+        functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Success(compactState, snapshot));
+        return List.of();
     }
 
     @Override
-    public Void visitExitInstruction(@NotNull ExitInstruction instruction) {
+    public @NotNull List<DataFlowState> visitExitInstruction(@NotNull ExitInstruction instruction) {
         DataFlowState successor = state.createCompactState();
-        functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), block, new DataFlowFunction.Result.Exit(successor));
-        return null;
+        functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Exit(successor));
+        return List.of();
     }
 
     @Override
-    public Void visitThrowInstruction(@NotNull ThrowInstruction instruction) {
-        DataFlowState successor = state.createCompactState();
+    public @NotNull List<DataFlowState> visitThrowInstruction(@NotNull ThrowInstruction instruction) {
         Expression exceptionValue = instruction.getExceptionValue();
-        if (exceptionValue != null) {
-            SnapshotExpression snapshot = successor.createSnapshot(exceptionValue.getType(), null);
-            successor.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, exceptionValue));
-            functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), block, new DataFlowFunction.Result.Error(successor, snapshot));
-        } else {
-            functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), block, new DataFlowFunction.Result.Error(successor, null));
+        ReferenceExpression snapshot = getReferenceExpression(exceptionValue);
+        DataFlowState compactState = state.createCompactState();
+        functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Error(compactState, snapshot));
+        return List.of();
+    }
+
+    private @Nullable ReferenceExpression getReferenceExpression(Expression exceptionValue) {
+        if (exceptionValue == null) {
+            return null;
         }
-        return null;
+        ReferenceExpression snapshot = state.createSnapshot(exceptionValue.getType(), null);
+        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, exceptionValue));
+        return snapshot;
+    }
+
+    private @NotNull List<DataFlowState> createSuccessorState(@NotNull Instruction successor) {
+        DataFlowBlock successorBlock = blocks.get(successor);
+        DataFlowState successorState = DataFlowState.createSuccessorState(successorBlock, state);
+        return List.of(successorState);
     }
 
     @Override
-    public Void visitErrorInstruction(@NotNull ErrorInstruction instruction) {
-        DataFlowBlock successor = blocks.get(instruction.getSuccessor());
+    public @NotNull List<DataFlowState> visitErrorInstruction(@NotNull ErrorInstruction instruction) {
+        Instruction successor = instruction.getSuccessor();
         if (successor != null) {
-            block.addSuccessor(successor);
+            return createSuccessorState(successor);
         }
-        return null;
+        return List.of();
     }
 
     @Override
-    public Void visitCallInstruction(@NotNull CallInstruction instruction) {
+    public @NotNull List<DataFlowState> visitCallInstruction(@NotNull CallInstruction instruction) {
         Expression expression = instruction.getRoutineName();
         if (!(expression instanceof LiteralExpression solution)) {
             visitAnyCallInstruction(instruction, state);
-            return null;
+            return createSuccessorState(instruction.getSuccessor());
         }
         if (!(solution.getValue() instanceof String routineName)) {
-            return null;
+            return createSuccessorState(instruction.getSuccessor());
         }
         BlockDescriptor blockDescriptor = getBlockDescriptor(instruction.getElement(), routineName);
         if (blockDescriptor == null) {
-            functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, new DataFlowFunction.Result.Error(state, null));
-            return null;
+            functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Error(state, null));
+            return createSuccessorState(instruction.getSuccessor());
         }
         Optional<DataFlowFunction> optional = functionMap.get(blockDescriptor);
         RapidRoutine routine = getRoutine(instruction, blockDescriptor);
@@ -148,22 +163,24 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
             } else {
                 visitAnyCallInstruction(instruction, state);
             }
-            return null;
+            return createSuccessorState(instruction.getSuccessor());
         }
         DataFlowFunction function = optional.orElseThrow();
         Set<DataFlowFunction.Result> results = function.getOutput(state, instruction);
+        List<DataFlowState> successors = new ArrayList<>();
         for (DataFlowFunction.Result result : results) {
             if (result instanceof DataFlowFunction.Result.Exit) {
-                functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, result);
-                return null;
+                functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, result);
+                continue;
             }
             if (result instanceof DataFlowFunction.Result.Error) {
-                functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), this.block, result);
-                return null;
+                functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, result);
+                continue;
             }
-            addSuccessor(instruction.getSuccessor(), result.state());
+            DataFlowState successorState = DataFlowState.createSuccessorState(blocks.get(instruction.getSuccessor()), result.state());
+            successors.add(successorState);
         }
-        return null;
+        return successors;
     }
 
     private @Nullable RapidRoutine getRoutine(@NotNull CallInstruction instruction, @NotNull BlockDescriptor blockDescriptor) {
@@ -183,8 +200,6 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
     private void visitAnyCallInstruction(@NotNull CallInstruction instruction, @NotNull DataFlowState state, @NotNull RapidRoutine routine) {
         ReferenceExpression returnValue = instruction.getReturnValue();
         Map<RapidParameter, ReferenceExpression> parameters = getParameters(routine, instruction.getArguments());
-        DataFlowBlock successor = blocks.get(instruction.getSuccessor());
-        DataFlowState successorState = DataFlowState.createSuccessorState(successor, state);
         if (returnValue != null) {
             state.assign(returnValue, null);
         }
@@ -196,7 +211,6 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
                 }
             }
         }
-        addSuccessor(instruction.getSuccessor(), successorState);
     }
 
     private void visitAnyCallInstruction(@NotNull CallInstruction instruction, @NotNull DataFlowState state) {
@@ -209,7 +223,6 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<Void> {
                 state.assign(referenceExpression, null);
             }
         }
-        addSuccessor(instruction.getSuccessor(), state);
     }
 
     private @Nullable BlockDescriptor getBlockDescriptor(@Nullable PsiElement context, @NotNull String text) {

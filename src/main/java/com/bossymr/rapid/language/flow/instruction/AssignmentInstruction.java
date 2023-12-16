@@ -17,6 +17,9 @@ public class AssignmentInstruction extends Instruction {
 
     public AssignmentInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull ReferenceExpression variable, @NotNull Expression expression) {
         super(block, element);
+        if (!(variable.getType().isAssignable(expression.getType()))) {
+            throw new IllegalArgumentException("Cannot assign expression of type: " + expression.getType() + " to variable of type: " + variable.getType());
+        }
         this.variable = variable;
         this.expression = expression;
     }

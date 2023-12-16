@@ -10,8 +10,9 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * An expression represents an expression.
@@ -29,10 +30,62 @@ public interface Expression {
 
     @Nullable RapidExpression getElement();
 
-    default void iterate(@NotNull Consumer<Expression> consumer) {
-        replace(expression -> {
-            consumer.accept(expression);
-            return expression;
+    default void iterate(@NotNull Predicate<Expression> consumer) {
+        AtomicBoolean cancelled = new AtomicBoolean();
+        accept(new ControlFlowVisitor<>() {
+            @Override
+            public Void visitAggregateExpression(@NotNull AggregateExpression expression) {
+                for (Expression component : expression.getExpressions()) {
+                    component.accept(this);
+                    if (cancelled.get()) {
+                        return null;
+                    }
+                }
+                cancelled.set(cancelled.get() || consumer.test(expression));
+                return null;
+            }
+
+            @Override
+            public Void visitBinaryExpression(@NotNull BinaryExpression expression) {
+                expression.getLeft().accept(this);
+                if (cancelled.get()) {
+                    return null;
+                }
+                expression.getRight().accept(this);
+                cancelled.set(cancelled.get() || consumer.test(expression));
+                return null;
+            }
+
+            @Override
+            public Void visitUnaryExpression(@NotNull UnaryExpression expression) {
+                expression.getExpression().accept(this);
+                cancelled.set(cancelled.get() || consumer.test(expression));
+                return null;
+            }
+
+            @Override
+            public Void visitIndexExpression(@NotNull IndexExpression expression) {
+                expression.getVariable().accept(this);
+                if (cancelled.get()) {
+                    return null;
+                }
+                expression.getIndex().accept(this);
+                cancelled.set(cancelled.get() || consumer.test(expression));
+                return null;
+            }
+
+            @Override
+            public Void visitComponentExpression(@NotNull ComponentExpression expression) {
+                expression.getVariable().accept(this);
+                cancelled.set(cancelled.get() || consumer.test(expression));
+                return null;
+            }
+
+            @Override
+            public Void visitExpression(@NotNull Expression expression) {
+                cancelled.set(cancelled.get() || consumer.test(expression));
+                return null;
+            }
         });
     }
 
