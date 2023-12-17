@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import org.jetbrains.annotations.NotNull;
@@ -36,18 +37,18 @@ public interface DataFlowFunction {
 
         @NotNull DataFlowState state();
 
-        @Nullable ReferenceExpression variable();
+        @Nullable Snapshot variable();
 
-        record Success(@NotNull DataFlowState state, @Nullable ReferenceExpression variable) implements Result {}
+        record Success(@NotNull DataFlowState state, @Nullable Snapshot variable) implements Result {}
 
-        record Error(@NotNull DataFlowState state, @Nullable ReferenceExpression variable) implements Result {}
+        record Error(@NotNull DataFlowState state, @Nullable Snapshot variable) implements Result {}
 
         /**
          * This function terminated the program.
          */
         record Exit(@NotNull DataFlowState state) implements Result {
             @Override
-            public @Nullable ReferenceExpression variable() {
+            public @Nullable Snapshot variable() {
                 return null;
             }
         }

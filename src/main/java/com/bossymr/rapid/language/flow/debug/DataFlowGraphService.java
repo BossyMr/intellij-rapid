@@ -1,16 +1,14 @@
 package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.ControlFlow;
-import com.bossymr.rapid.language.flow.ControlFlowService;
-import com.bossymr.rapid.language.flow.EntryInstruction;
+import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.BlockType;
@@ -101,10 +99,10 @@ public class DataFlowGraphService extends AnAction {
             DataFlowUsage usage = usages.get(calleeState);
             for (DataFlowState callerState : usage.usages()) {
                 stringBuilder.append(getDataFlowStateName(states, calleeState))
-                             .append(" -> ")
-                             .append(getDataFlowStateName(states, callerState))
-                             .append("[name=").append(usage.usageType().toString().toLowerCase())
-                             .append("];\n");
+                        .append(" -> ")
+                        .append(getDataFlowStateName(states, callerState))
+                        .append("[name=").append(usage.usageType().toString().toLowerCase())
+                        .append("];\n");
             }
         }
         stringBuilder.append("}");
@@ -184,8 +182,8 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Instruction #").append(instruction.getIndex()).append("</td></tr>\n");
         writeInstruction(stringBuilder, instruction);
         stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Snapshots").append("</td></tr>\n");
-        Set<SnapshotExpression> snapshots = new HashSet<>();
-        for (var entry : state.getSnapshots().entrySet()) {
+        Set<Snapshot> snapshots = new HashSet<>();
+        for (Map.Entry<Field, Snapshot> entry : state.getSnapshots().entrySet()) {
             writeSnapshot(stringBuilder, state, new VariableExpression(entry.getKey()), entry.getValue(), snapshots);
         }
         stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Expressions").append("</td></tr>\n");
@@ -203,14 +201,14 @@ public class DataFlowGraphService extends AnAction {
         if (state.getPredecessor() != null) {
             writeState(stringBuilder, blocks, states, state.getPredecessor());
             stringBuilder.append(getDataFlowStateName(states, state.getPredecessor()))
-                         .append(" -> ")
-                         .append(getDataFlowStateName(states, state))
-                         .append(";\n");
+                    .append(" -> ")
+                    .append(getDataFlowStateName(states, state))
+                    .append(";\n");
         }
         writeBlock(stringBuilder, blocks, states, block);
     }
 
-    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceExpression variable, @NotNull SnapshotExpression snapshot, @NotNull Set<SnapshotExpression> snapshots) {
+    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceExpression variable, @NotNull Snapshot snapshot, @NotNull Set<Snapshot> snapshots) {
         if (!(snapshots.add(snapshot))) {
             return;
         }
@@ -218,32 +216,33 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("<tr>");
         stringBuilder.append("<td>");
         stringBuilder.append(variable.accept(visitor));
-        if (variable instanceof VariableExpression variableValue && variableValue.getField().getName() != null) {
-            stringBuilder.append("[");
-            stringBuilder.append(variableValue.getField().getName());
-            stringBuilder.append("]");
+        if (variable instanceof VariableExpression variableValue) {
+            String name = variableValue.getField().getName();
+            if (name != null) {
+                stringBuilder.append("[");
+                stringBuilder.append(name);
+                stringBuilder.append("]");
+            }
         }
         stringBuilder.append("</td>");
         stringBuilder.append("<td align=\"left\">");
-        stringBuilder.append(snapshot.accept(visitor));
+        stringBuilder.append(snapshot);
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");
         if (snapshot instanceof RecordSnapshot recordSnapshot) {
-            for (var component : recordSnapshot.getSnapshots().entrySet()) {
+            for (Map.Entry<String, Snapshot> component : recordSnapshot.getSnapshots().entrySet()) {
                 stringBuilder.append("<tr>");
                 stringBuilder.append("<td></td>");
                 stringBuilder.append("<td>");
                 stringBuilder.append(component.getKey());
                 stringBuilder.append("</td>");
                 stringBuilder.append("<td align=\"left\">");
-                stringBuilder.append(component.getValue().accept(visitor));
+                stringBuilder.append(component.getValue());
                 stringBuilder.append("</td>");
                 stringBuilder.append("</tr>\n");
             }
-            for (var entry : recordSnapshot.getSnapshots().entrySet()) {
-                if (entry.getValue() instanceof SnapshotExpression componentSnapshot) {
-                    writeSnapshot(stringBuilder, state, new ComponentExpression(componentSnapshot.getType(), recordSnapshot, entry.getKey()), componentSnapshot, snapshots);
-                }
+            for (Map.Entry<String, Snapshot> entry : recordSnapshot.getSnapshots().entrySet()) {
+                writeSnapshot(stringBuilder, state, new ComponentExpression(entry.getValue().getType(), variable, entry.getKey()), entry.getValue(), snapshots);
             }
         } else if (snapshot instanceof ArraySnapshot arraySnapshot) {
             for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments()) {
@@ -253,7 +252,7 @@ public class DataFlowGraphService extends AnAction {
                     stringBuilder.append(assignment.index().accept(visitor));
                     stringBuilder.append("</td>");
                     stringBuilder.append("<td align=\"left\">");
-                    stringBuilder.append(assignment.value().accept(visitor));
+                    stringBuilder.append(assignment.snapshot());
                     stringBuilder.append("</td>");
                     stringBuilder.append("</tr>\n");
                 } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
@@ -261,20 +260,16 @@ public class DataFlowGraphService extends AnAction {
                     stringBuilder.append("[default]");
                     stringBuilder.append("</td>");
                     stringBuilder.append("<td align=\"left\">");
-                    stringBuilder.append(defaultValue.defaultValue().accept(visitor));
+                    stringBuilder.append(defaultValue.snapshot());
                     stringBuilder.append("</td>");
                     stringBuilder.append("</tr>\n");
                 }
             }
             for (ArrayEntry assignmentEntry : arraySnapshot.getAllAssignments(state)) {
                 if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
-                    if (assignment.value() instanceof SnapshotExpression referenceValue) {
-                        writeSnapshot(stringBuilder, state, new IndexExpression(arraySnapshot, assignment.index()), referenceValue, snapshots);
-                    }
+                    writeSnapshot(stringBuilder, state, new IndexExpression(variable, assignment.index()), assignment.snapshot(), snapshots);
                 } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
-                    if (defaultValue.defaultValue() instanceof SnapshotExpression referenceValue) {
-                        writeSnapshot(stringBuilder, state, new IndexExpression(arraySnapshot, new LiteralExpression("[default]")), referenceValue, snapshots);
-                    }
+                    writeSnapshot(stringBuilder, state, new IndexExpression(variable, new LiteralExpression(-1)), defaultValue.snapshot(), snapshots);
                 }
             }
         }
@@ -319,14 +314,14 @@ public class DataFlowGraphService extends AnAction {
                     try {
                         convert(wrapper.getFile(), dataFlow);
                         NotificationGroupManager.getInstance()
-                                                .getNotificationGroup("Data flow diagrams")
-                                                .createNotification(RapidBundle.message("notification.group.data.flow.export.success"), wrapper.getFile().getAbsolutePath(), NotificationType.INFORMATION)
-                                                .notify(project);
+                                .getNotificationGroup("Data flow diagrams")
+                                .createNotification(RapidBundle.message("notification.group.data.flow.export.success"), wrapper.getFile().getAbsolutePath(), NotificationType.INFORMATION)
+                                .notify(project);
                     } catch (ExecutionException e) {
                         NotificationGroupManager.getInstance()
-                                                .getNotificationGroup("Data flow diagrams")
-                                                .createNotification(RapidBundle.message("notification.group.data.flow.export.error"), NotificationType.ERROR)
-                                                .notify(project);
+                                .getNotificationGroup("Data flow diagrams")
+                                .createNotification(RapidBundle.message("notification.group.data.flow.export.error"), NotificationType.ERROR)
+                                .notify(project);
                     } catch (IOException e) {
                         throw new UncheckedIOException(e);
                     }

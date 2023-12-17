@@ -5,20 +5,10 @@ import org.jetbrains.annotations.NotNull;
 
 public sealed interface ArrayEntry {
 
-    @NotNull Expression getValue();
+    @NotNull Snapshot snapshot();
 
-    record Assignment(@NotNull Expression index, @NotNull Expression value) implements ArrayEntry {
-        @Override
-        public @NotNull Expression getValue() {
-            return value;
-        }
-    }
+    record Assignment(@NotNull Expression index, @NotNull Snapshot snapshot) implements ArrayEntry {}
 
-    record DefaultValue(@NotNull Expression defaultValue) implements ArrayEntry {
-        @Override
-        public @NotNull Expression getValue() {
-            return defaultValue;
-        }
-    }
+    record DefaultValue(@NotNull Snapshot snapshot) implements ArrayEntry {}
 
 }

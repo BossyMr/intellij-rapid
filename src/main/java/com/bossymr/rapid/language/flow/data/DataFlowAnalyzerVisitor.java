@@ -94,9 +94,9 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     @Override
     public @NotNull List<DataFlowState> visitReturnInstruction(@NotNull ReturnInstruction instruction) {
         Expression returnValue = instruction.getReturnValue();
-        ReferenceExpression snapshot = getReferenceExpression(returnValue);
+        SnapshotExpression snapshot = getReferenceExpression(returnValue);
         DataFlowState compactState = state.createCompactState();
-        functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Success(compactState, snapshot));
+        functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Success(compactState, snapshot != null ? snapshot.getSnapshot() : null));
         return List.of();
     }
 
@@ -110,18 +110,21 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     @Override
     public @NotNull List<DataFlowState> visitThrowInstruction(@NotNull ThrowInstruction instruction) {
         Expression exceptionValue = instruction.getExceptionValue();
-        ReferenceExpression snapshot = getReferenceExpression(exceptionValue);
+        SnapshotExpression snapshot = getReferenceExpression(exceptionValue);
         DataFlowState compactState = state.createCompactState();
-        functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Error(compactState, snapshot));
+        functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Error(compactState, snapshot != null ? snapshot.getSnapshot() : null));
         return List.of();
     }
 
-    private @Nullable ReferenceExpression getReferenceExpression(Expression exceptionValue) {
-        if (exceptionValue == null) {
+    private @Nullable SnapshotExpression getReferenceExpression(@Nullable Expression value) {
+        if (value == null) {
             return null;
         }
-        ReferenceExpression snapshot = state.createSnapshot(exceptionValue.getType(), null);
-        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, exceptionValue));
+        if(value instanceof ReferenceExpression reference) {
+            return state.getSnapshot(reference);
+        }
+        SnapshotExpression snapshot = state.createSnapshot(value);
+        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, value));
         return snapshot;
     }
 

@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * A snapshot based on an array. The index to assign a value does not need to be concrete; as a result, every
@@ -34,10 +34,10 @@ public class ArraySnapshot implements Snapshot {
 
     private final @NotNull RapidType type;
     private final @NotNull Optionality optionality;
-    private final @NotNull Consumer<Snapshot> defaultValue;
+    private final @NotNull Function<DataFlowState, Snapshot> defaultValue;
     private final @NotNull List<ArrayEntry.Assignment> assignments;
 
-    public ArraySnapshot(@NotNull RapidType type, @NotNull Optionality optionality, @NotNull Consumer<Snapshot> defaultValue) {
+    public ArraySnapshot(@NotNull RapidType type, @NotNull Optionality optionality, @NotNull Function<DataFlowState, Snapshot> defaultValue) {
         this.type = type;
         this.optionality = optionality;
         this.defaultValue = defaultValue;
@@ -53,8 +53,8 @@ public class ArraySnapshot implements Snapshot {
         return assignments;
     }
 
-    public void assign(@NotNull Expression index, @NotNull Expression value) {
-        assignments.add(new ArrayEntry.Assignment(index, value));
+    public void assign(@NotNull Expression index, @NotNull Snapshot snapshot) {
+        assignments.add(new ArrayEntry.Assignment(index, snapshot));
     }
 
     public @NotNull List<ArrayEntry> getAllAssignments(@NotNull DataFlowState state) {
@@ -68,11 +68,11 @@ public class ArraySnapshot implements Snapshot {
             values.add(assignment);
             if (!(iterator.hasPrevious())) {
                 // This is the last index
-                values.add(new ArrayEntry.DefaultValue(defaultValue.apply(this)));
+                values.add(new ArrayEntry.DefaultValue(defaultValue.apply(state)));
             }
         }
         if (values.isEmpty()) {
-            values.add(new ArrayEntry.DefaultValue(defaultValue.apply(this)));
+            values.add(new ArrayEntry.DefaultValue(defaultValue.apply(state)));
         }
         return values;
     }
@@ -95,11 +95,11 @@ public class ArraySnapshot implements Snapshot {
                 break;
             }
             if (!(iterator.hasPrevious())) {
-                values.add(new ArrayEntry.DefaultValue(defaultValue.apply(this)));
+                values.add(new ArrayEntry.DefaultValue(defaultValue.apply(state)));
             }
         }
         if (values.isEmpty()) {
-            values.add(new ArrayEntry.DefaultValue(defaultValue.apply(this)));
+            values.add(new ArrayEntry.DefaultValue(defaultValue.apply(state)));
         }
         return values;
     }

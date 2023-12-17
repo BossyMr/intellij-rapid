@@ -17,13 +17,14 @@ public class RecordSnapshot implements Snapshot {
     private final @NotNull RapidType type;
     private final @NotNull Optionality optionality;
 
-    private final @NotNull Map<String, Expression> snapshots;
-    private final @NotNull Map<String, Expression> roots;
+    private final @NotNull Map<String, Snapshot> snapshots;
+    private final @NotNull Map<String, Snapshot> roots;
 
     public RecordSnapshot(@NotNull RapidType type, @NotNull Optionality optionality) {
         this.type = type;
         this.optionality = optionality;
-        if (!(type.getRootStructure() instanceof RapidRecord)) {
+        if (!(type.getRootStructure() instanceof RapidRecord
+        )) {
             throw new IllegalArgumentException();
         }
         this.snapshots = new HashMap<>();
@@ -35,29 +36,22 @@ public class RecordSnapshot implements Snapshot {
         return optionality;
     }
 
-    public @NotNull Map<String, Expression> getSnapshots() {
+    public @NotNull Map<String, Snapshot> getSnapshots() {
         return snapshots;
     }
 
-    public void assign(@NotNull String name, @NotNull Expression value) {
-        snapshots.put(name, value);
-        if (!(roots.containsKey(name))) {
-            roots.put(name, value);
+    public void assign(@NotNull String name, @NotNull Snapshot snapshot) {
+        snapshots.put(name, snapshot);
+        if(!(roots.containsKey(name))) {
+            roots.put(name, snapshot);
         }
     }
 
-    public @NotNull Expression getValue(@NotNull String name) {
+    public @NotNull Snapshot getSnapshot(@NotNull String name) {
         if (!(snapshots.containsKey(name))) {
             throw new IllegalArgumentException();
         }
         return snapshots.get(name);
-    }
-
-    public @NotNull Expression getRoot(@NotNull String name) {
-        if (!(roots.containsKey(name))) {
-            throw new IllegalArgumentException();
-        }
-        return roots.get(name);
     }
 
     @Override

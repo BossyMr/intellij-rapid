@@ -2,9 +2,6 @@ package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
-import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
-import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
 import org.jetbrains.annotations.NotNull;
@@ -269,21 +266,6 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
             throw new IllegalStateException();
         }
         return key;
-    }
-
-    @Override
-    public String visitArraySnapshotExpression(@NotNull ArraySnapshot snapshot) {
-        return super.visitArraySnapshotExpression(snapshot);
-    }
-
-    @Override
-    public String visitRecordSnapshotExpression(@NotNull RecordSnapshot snapshot) {
-        return super.visitRecordSnapshotExpression(snapshot);
-    }
-
-    @Override
-    public String visitVariableSnapshotExpression(VariableSnapshot snapshot) {
-        return super.visitVariableSnapshotExpression(snapshot);
     }
 
     @Override

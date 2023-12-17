@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.flow.builder;
 
 import com.bossymr.rapid.language.builder.*;
 import com.bossymr.rapid.language.flow.*;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
@@ -590,7 +591,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull Expression any(@Nullable RapidType type) {
-        return SnapshotExpression.createSnapshot(Objects.requireNonNullElse(type, RapidPrimitiveType.ANYTYPE));
+        return new SnapshotExpression(Snapshot.createSnapshot(type != null ? type : RapidPrimitiveType.ANYTYPE));
     }
 
     private @NotNull Expression any(@Nullable RapidExpression expression) {
@@ -603,8 +604,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     private @NotNull Expression any(@Nullable RapidExpression expression, @Nullable RapidType type) {
         RapidType valueType = Objects.requireNonNullElse(type, RapidPrimitiveType.ANYTYPE);
-        // TODO: This snapshot should always be PRESENT, perhaps add a field to each snapshot for prefered optionality?
-        return SnapshotExpression.createSnapshot(valueType, Optionality.PRESENT);
+        return new SnapshotExpression(Snapshot.createSnapshot(valueType, Optionality.PRESENT), expression);
     }
 
     @Override

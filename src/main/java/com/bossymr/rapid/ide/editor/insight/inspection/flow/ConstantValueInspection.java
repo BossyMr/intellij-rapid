@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
@@ -43,7 +44,7 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 if (functionBlock == null) {
                     return;
                 }
-                Map<DataFlowState, Expression> expressions = getExpressions(expression, functionBlock, dataFlow);
+                Map<DataFlowState, Snapshot> expressions = getExpressions(expression, functionBlock, dataFlow);
                 if (expressions.isEmpty()) {
                     return;
                 }
@@ -53,18 +54,14 @@ public class ConstantValueInspection extends LocalInspectionTool {
         };
     }
 
-    private void registerOptionality(@NotNull RapidExpression element, @NotNull Map<DataFlowState, Expression> expressions, @NotNull ProblemsHolder holder) {
+    private void registerOptionality(@NotNull RapidExpression element, @NotNull Map<DataFlowState, Snapshot> expressions, @NotNull ProblemsHolder holder) {
         if (!(element instanceof RapidReferenceExpression)) {
             return;
         }
         Optionality optionality = Optionality.PRESENT;
         for (DataFlowState state : expressions.keySet()) {
-            Expression expression = expressions.get(state);
-            if (expression instanceof ReferenceExpression reference) {
-                optionality = optionality.or(state.getOptionality(reference));
-            } else {
-                optionality = optionality.or(Optionality.PRESENT);
-            }
+            SnapshotExpression snapshot = new SnapshotExpression(expressions.get(state));
+            optionality = optionality.or(state.getOptionality(snapshot));
         }
         if (optionality == Optionality.MISSING) {
             holder.registerProblem(element, RapidBundle.message("inspection.message.missing.variable", element.getText()));
@@ -74,7 +71,7 @@ public class ConstantValueInspection extends LocalInspectionTool {
         }
     }
 
-    private void registerValue(@NotNull RapidExpression element, @NotNull Map<DataFlowState, Expression> expressions, @NotNull ProblemsHolder holder) {
+    private void registerValue(@NotNull RapidExpression element, @NotNull Map<DataFlowState, Snapshot> expressions, @NotNull ProblemsHolder holder) {
         PsiElement parent = element.getParent();
         if (!(parent instanceof RapidIfStatement)) {
             return;
@@ -85,7 +82,7 @@ public class ConstantValueInspection extends LocalInspectionTool {
             if (successors.isEmpty()) {
                 value = value.or(BooleanValue.NO_VALUE);
             } else if (successors.size() == 1) {
-                Expression expression = expressions.get(state);
+                SnapshotExpression expression = new SnapshotExpression(expressions.get(state));
                 value = value.or(state.getConstraint(expression));
             } else if (successors.size() == 2) {
                 value = value.or(BooleanValue.ANY_VALUE);
@@ -99,15 +96,15 @@ public class ConstantValueInspection extends LocalInspectionTool {
         }
     }
 
-    private @NotNull Map<DataFlowState, Expression> getExpressions(@NotNull RapidExpression expression, @NotNull Block functionBlock, @NotNull DataFlow dataFlow) {
-        Map<DataFlowState, Expression> states = new HashMap<>();
+    private @NotNull Map<DataFlowState, Snapshot> getExpressions(@NotNull RapidExpression expression, @NotNull Block functionBlock, @NotNull DataFlow dataFlow) {
+        Map<DataFlowState, Snapshot> states = new HashMap<>();
         for (Instruction instruction : functionBlock.getInstructions()) {
             DataFlowBlock block = dataFlow.getBlock(instruction);
             if (block == null) {
                 continue;
             }
             for (DataFlowState state : block.getStates()) {
-                SnapshotExpression snapshot = state.getSnapshot(expression);
+                Snapshot snapshot = state.getSnapshot(expression);
                 if (snapshot != null) {
                     states.put(state, snapshot);
                 }

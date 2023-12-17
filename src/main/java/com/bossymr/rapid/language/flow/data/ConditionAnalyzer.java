@@ -4,6 +4,7 @@ import com.bossymr.network.MultiMap;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
@@ -27,7 +28,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         this.solver = solver;
     }
 
-    public static boolean isSatisfiable(@NotNull DataFlowState state, @NotNull Set<ReferenceExpression> targets) {
+    public static boolean isSatisfiable(@NotNull DataFlowState state, @NotNull Set<Snapshot> targets) {
         if (targets.isEmpty()) {
             return true;
         }
@@ -43,10 +44,10 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
 
     public static @NotNull BooleanValue getBooleanValue(@NotNull DataFlowState state, @NotNull Expression expression) {
         try (Context context = new Context()) {
-            Set<ReferenceExpression> targets = new HashSet<>();
+            Set<Snapshot> targets = new HashSet<>();
             expression.iterate(expr -> {
-                if (expr instanceof ReferenceExpression target) {
-                    targets.add(target);
+                if (expr instanceof SnapshotExpression target) {
+                    targets.add(target.getSnapshot());
                 }
                 return false;
             });
@@ -81,7 +82,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         };
     }
 
-    private static @NotNull ConditionAnalyzer getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull Solver solver, @NotNull Set<ReferenceExpression> targets) {
+    private static @NotNull ConditionAnalyzer getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull Solver solver, @NotNull Set<Snapshot> targets) {
         ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context, solver);
         DataFlowBlock block = state.getBlock();
         Block functionBlock = block.getInstruction().getBlock();
@@ -107,7 +108,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         List<DataFlowState> states = new ArrayList<>();
         for (DataFlowState predecessor = state; predecessor != null; predecessor = predecessor.getPredecessor()) {
             states.add(predecessor);
-            if (targets.stream().filter(expr -> expr instanceof SnapshotExpression).allMatch(expr -> state.getSnapshots().containsValue(expr))) {
+            if (targets.stream().allMatch(snapshot -> state.getSnapshots().containsValue(snapshot))) {
                 break;
             }
             List<Expression> result = getAllExpressions(predecessor, targets);
@@ -133,25 +134,25 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
     }
 
-    private static @NotNull List<Expression> getAllExpressions(@NotNull DataFlowState state, @NotNull Set<ReferenceExpression> variables) {
-        MultiMap<ReferenceExpression, Expression> result = new MultiMap<>(HashSet::new);
-        MultiMap<Expression, ReferenceExpression> dependency = new MultiMap<>(HashSet::new);
+    private static @NotNull List<Expression> getAllExpressions(@NotNull DataFlowState state, @NotNull Set<Snapshot> variables) {
+        MultiMap<Snapshot, Expression> result = new MultiMap<>(HashSet::new);
+        MultiMap<Expression, Snapshot> dependency = new MultiMap<>(HashSet::new);
         for (Expression expression : state.getExpressions()) {
             expression.iterate(expr -> {
-                if (expr instanceof ReferenceExpression variable) {
-                    result.put(variable, expression);
-                    dependency.put(expression, variable);
+                if (expr instanceof SnapshotExpression variable) {
+                    result.put(variable.getSnapshot(), expression);
+                    dependency.put(expression, variable.getSnapshot());
                 }
                 return false;
             });
         }
         List<Expression> expressions = new ArrayList<>();
-        Deque<ReferenceExpression> workList = new ArrayDeque<>(variables);
+        Deque<Snapshot> workList = new ArrayDeque<>(variables);
         while (!(workList.isEmpty())) {
-            ReferenceExpression key = workList.removeLast();
+            Snapshot key = workList.removeLast();
             Collection<Expression> collection = result.getAll(key);
             for (Expression expression : collection) {
-                for (ReferenceExpression dependent : dependency.getAll(expression)) {
+                for (Snapshot dependent : dependency.getAll(expression)) {
                     if (variables.add(dependent)) {
                         workList.add(dependent);
                     }
@@ -279,7 +280,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
         Expr<RealSort> expr = context.mkConst(name, context.mkRealSort());
         symbols.put(expression, expr);
-        Optionality optionality = expression.getOptionality();
+        Optionality optionality = expression.getSnapshot().getOptionality();
         switch (optionality) {
             case PRESENT -> {
                 BinaryExpression binaryExpression = new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, expression), new LiteralExpression(true));

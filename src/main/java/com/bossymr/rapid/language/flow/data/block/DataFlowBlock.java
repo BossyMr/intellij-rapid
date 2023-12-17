@@ -1,11 +1,6 @@
 package com.bossymr.rapid.language.flow.data.block;
 
-import com.bossymr.rapid.language.flow.BooleanValue;
-import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.ReferenceExpression;
-import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -26,32 +21,6 @@ public class DataFlowBlock {
 
     public @NotNull List<DataFlowState> getStates() {
         return states;
-    }
-
-    public @NotNull Optionality getOptionality(@NotNull ReferenceExpression variable) {
-        Optionality optionality = null;
-        for (DataFlowState state : states) {
-            SnapshotExpression snapshot = state.getSnapshot(variable);
-            ReferenceExpression expression = snapshot != null ? snapshot : variable;
-            if (optionality == null) {
-                optionality = state.getOptionality(expression);
-            } else {
-                Optionality result = state.getOptionality(expression);
-                optionality = optionality.or(result);
-            }
-        }
-        if (optionality == null) {
-            return Optionality.NO_VALUE;
-        }
-        return optionality;
-    }
-
-    public @NotNull BooleanValue getConstraint(@NotNull Expression expression) {
-        BooleanValue booleanValue = BooleanValue.NO_VALUE;
-        for (DataFlowState state : states) {
-            booleanValue = booleanValue.or(state.getConstraint(expression));
-        }
-        return booleanValue;
     }
 
     @Override

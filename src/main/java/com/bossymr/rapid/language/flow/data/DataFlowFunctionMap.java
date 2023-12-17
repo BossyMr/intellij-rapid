@@ -3,11 +3,11 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
-import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
@@ -68,16 +68,6 @@ public class DataFlowFunctionMap {
 
     public @NotNull Map<DataFlowState, DataFlowUsage> getUsages() {
         return hardReferences;
-    }
-
-    public @NotNull List<DataFlowState> getExitPoints(@NotNull Block block) {
-        DataFlowFunction function = functionMap.get(BlockDescriptor.getBlockKey(block));
-        if (function instanceof PhysicalDataFlowFunction physicalFunction) {
-            return physicalFunction.getResults().stream()
-                                   .map(exitPoints::get)
-                                   .toList();
-        }
-        return List.of();
     }
 
     /**
@@ -258,7 +248,7 @@ public class DataFlowFunctionMap {
             }
             RapidType returnType = functionBlock.getReturnType();
             DataFlowState successorState = DataFlowState.createSuccessorState(state.getBlock(), state);
-            SnapshotExpression returnValue = returnType != null ? successorState.createSnapshot(returnType, null) : null;
+            Snapshot returnValue = returnType != null ? Snapshot.createSnapshot(returnType) : null;
             for (ReferenceExpression variable : instruction.getArguments().values()) {
                 successorState.createSnapshot(variable);
             }

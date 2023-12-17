@@ -4,10 +4,10 @@ import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
-import com.bossymr.rapid.language.flow.value.VariableExpression;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,37 +47,30 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
         /*
          * A map which contains instructions to replace the key expression with the value expression.
          */
-        Map<ReferenceExpression, ReferenceExpression> modifications = new HashMap<>();
-        Set<ReferenceExpression> targets = new HashSet<>();
+        Map<Snapshot, Snapshot> modifications = new HashMap<>();
+        Set<Snapshot> targets = new HashSet<>();
 
         Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
         for (Argument argument : arguments.keySet()) {
             ReferenceExpression expression = arguments.get(argument);
-            SnapshotExpression calleeSnapshot = result.state().getSnapshot(new VariableExpression(argument));
-            SnapshotExpression callerSnapshot = state.getSnapshot(expression);
-            modifications.put(new VariableExpression(argument), expression);
-            if(calleeSnapshot != null && callerSnapshot != null) {
-                modifications.put(calleeSnapshot, callerSnapshot);
-                targets.add(callerSnapshot);
-            }
+            Snapshot calleeSnapshot = result.state().getRoots().get(argument);
+            Snapshot callerSnapshot = state.getSnapshot(expression).getSnapshot();
+            modifications.put(calleeSnapshot, callerSnapshot);
+            targets.add(callerSnapshot);
         }
 
-        ReferenceExpression calleeVariable = result.variable();
+        Snapshot calleeSnapshot = result.variable();
         ReferenceExpression callerVariable = instruction.getReturnValue();
-        SnapshotExpression callerSnapshot = null;
-        if (calleeVariable != null && callerVariable != null) {
-            SnapshotExpression calleeSnapshot = result.state().getSnapshot(calleeVariable);
-            callerSnapshot = SnapshotExpression.createSnapshot(callerVariable);
-            modifications.put(calleeVariable, callerVariable);
-            if (calleeSnapshot != null) {
-                modifications.put(calleeSnapshot, callerSnapshot);
-            }
+        Snapshot callerSnapshot = null;
+        if (calleeSnapshot != null && callerVariable != null) {
+            callerSnapshot = state.createSnapshot(callerVariable).getSnapshot();
+            modifications.put(calleeSnapshot, callerSnapshot);
         }
 
         DataFlowState successorState = state.merge(result.state(), modifications);
 
         if (callerVariable != null && callerSnapshot != null) {
-            successorState.assign(callerVariable, callerSnapshot);
+            successorState.assign(callerVariable, new SnapshotExpression(callerSnapshot));
         }
 
         // Check if the result is satisfiable.
@@ -90,10 +83,10 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
             return new Result.Exit(successorState);
         }
         if (result instanceof Result.Success) {
-            return new Result.Success(successorState, modifications.getOrDefault(calleeVariable, calleeVariable));
+            return new Result.Success(successorState, modifications.getOrDefault(calleeSnapshot, calleeSnapshot));
         }
         if (result instanceof Result.Error) {
-            return new Result.Error(successorState, modifications.getOrDefault(calleeVariable, calleeVariable));
+            return new Result.Error(successorState, modifications.getOrDefault(calleeSnapshot, calleeSnapshot));
         }
         return null;
     }
