@@ -61,7 +61,7 @@ public class SnapshotExpression implements ReferenceExpression {
 
     @Override
     public int hashCode() {
-        return Objects.hash(snapshot);
+        return snapshot.hashCode();
     }
 
     @Override

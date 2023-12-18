@@ -134,6 +134,11 @@ public class ArraySnapshot implements Snapshot {
 
     @Override
     public String toString() {
-        return "~" + hashCode();
+        return "~" + hashCode() + "[" + switch (getOptionality()) {
+            case PRESENT -> "P";
+            case UNKNOWN -> "P/M";
+            case MISSING -> "M";
+            case NO_VALUE -> "";
+        } + "]";
     }
 }

@@ -735,6 +735,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         if (!(condition.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             condition = any(RapidPrimitiveType.BOOLEAN);
         }
+        condition = getAsVariable(condition);
         ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, null, condition);
         builder.continueScope(instruction);
         ControlFlowBlockBuilder.Scope scope = builder.exitScope();

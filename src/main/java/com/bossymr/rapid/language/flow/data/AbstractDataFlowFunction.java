@@ -59,18 +59,12 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
             targets.add(callerSnapshot);
         }
 
-        Snapshot calleeSnapshot = result.variable();
-        ReferenceExpression callerVariable = instruction.getReturnValue();
-        Snapshot callerSnapshot = null;
-        if (calleeSnapshot != null && callerVariable != null) {
-            callerSnapshot = state.createSnapshot(callerVariable).getSnapshot();
-            modifications.put(calleeSnapshot, callerSnapshot);
-        }
-
         DataFlowState successorState = state.merge(result.state(), modifications);
 
-        if (callerVariable != null && callerSnapshot != null) {
-            successorState.assign(callerVariable, new SnapshotExpression(callerSnapshot));
+        Snapshot calleeSnapshot = result.variable();
+        ReferenceExpression callerVariable = instruction.getReturnValue();
+        if (calleeSnapshot != null && callerVariable != null) {
+            successorState.assign(callerVariable, new SnapshotExpression(calleeSnapshot));
         }
 
         // Check if the result is satisfiable.

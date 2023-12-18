@@ -50,21 +50,25 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
+                	bool _1;
+                	bool _2;
                                 
                 	STATEMENT_LIST:
                 	0: _0 := 2.0 * 3.0;
-                	1: if(_0 > 4.0) -> [true: 2, false: 3]
+                	1: _1 := _0 > 4.0;
+                	2: if(_1) -> [true: 3, false: 4]
                                 
-                	2: _0 := _0 + 1.0;
-                	   goto -> [6];
+                	3: _0 := _0 + 1.0;
+                	   goto -> [8];
                                 
-                	3: if(_0 > 2.0) -> [true: 4, false: 5]
+                	4: _2 := _0 > 2.0;
+                	5: if(_2) -> [true: 6, false: 7]
                                 
-                	4: _0 := _0 - 1.0;
-                	   goto -> [6];
+                	6: _0 := _0 - 1.0;
+                	   goto -> [8];
                                 
-                	5: _0 := (_0 * 2.0) + 2.0;
-                	6: return _0;
+                	7: _0 := (_0 * 2.0) + 2.0;
+                	8: return _0;
                 }
                 """);
     }
@@ -83,15 +87,17 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
+                	bool _1;
                                 
                 	STATEMENT_LIST:
                 	0: _0 := 2.0 * 3.0;
-                	1: if(_0 > 0.0) -> [true: 2, false: 3]
+                	1: _1 := _0 > 0.0;
+                	2: if(_1) -> [true: 3, false: 4]
                                 
-                	2: _0 := _0 - 1.0;
+                	3: _0 := _0 - 1.0;
                 	   goto -> [1];
                                 
-                	3: return _0;
+                	4: return _0;
                 }
                 """);
     }
@@ -155,29 +161,33 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	num _1;
                 	num _2;
                 	bool _3;
+                	bool _4;
+                	bool _5;
                                 
                 	STATEMENT_LIST:
                 	0: _0 := 0.0;
                 	1: _1 := 0.0;
-                	2: if(_1 < 10.0) -> [true: 3, false: 4]
+                	2: _3 := _1 < 10.0;
+                	3: if(_3) -> [true: 4, false: 5]
                                 
-                	3: _2 := 1;
-                	   goto -> [5];
+                	4: _2 := 1;
+                	   goto -> [6];
                                 
-                	4: _2 := -1;
-                	5: if(_2 < 0) -> [true: 6, false: 7]
+                	5: _2 := -1;
+                	6: _5 := _2 < 0;
+                	7: if(_5) -> [true: 8, false: 9]
                                 
-                	6: _3 := _1 > 10.0;
-                	   goto -> [8];
+                	8: _4 := _1 > 10.0;
+                	   goto -> [10];
                                 
-                	7: _3 := _1 < 10.0;
-                	8: if(_3) -> [true: 9, false: 11]
+                	9: _4 := _1 < 10.0;
+                	10: if(_4) -> [true: 11, false: 13]
                                 
-                	9: _0 := _0 + 1.0;
-                	10: _1 := _1 + _2;
-                		goto -> [5];
+                	11: _0 := _0 + 1.0;
+                	12: _1 := _1 + _2;
+                		goto -> [6];
                                 
-                	11: return _0;
+                	13: return _0;
                 }
                 """);
     }
@@ -198,23 +208,25 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	var num _0 [value];
                 	num _1;
                 	bool _2;
+                	bool _3;
                                 
                 	STATEMENT_LIST:
                 	0: _0 := 0.0;
                 	1: _1 := 0.0;
-                	2: if(5.0 < 0) -> [true: 3, false: 4]
+                	2: _3 := 5.0 < 0;
+                	3: if(_3) -> [true: 4, false: 5]
                                 
-                	3: _2 := _1 > 10.0;
-                	   goto -> [5];
+                	4: _2 := _1 > 10.0;
+                	   goto -> [6];
                                 
-                	4: _2 := _1 < 10.0;
-                	5: if(_2) -> [true: 6, false: 8]
+                	5: _2 := _1 < 10.0;
+                	6: if(_2) -> [true: 7, false: 9]
                                 
-                	6: _0 := _0 + 1.0;
-                	7: _1 := _1 + 5.0;
+                	7: _0 := _0 + 1.0;
+                	8: _1 := _1 + 5.0;
                 	   goto -> [2];
                                 
-                	8: return _0;
+                	9: return _0;
                 }
                 """);
     }
@@ -241,22 +253,28 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
+                	bool _1;
+                	bool _2;
+                	bool _3;
                                 
                 	STATEMENT_LIST:
                 	0: _0 := 0.0;
-                	1: if(_0 = 0.0) -> [true: 2, false: 3]
+                	1: _1 := _0 = 0.0;
+                	2: if(_1) -> [true: 3, false: 4]
                                 
-                	2: return 0.0;
+                	3: return 0.0;
                                 
-                	3: if((_0 = 1.0) OR (_0 = 3.0)) -> [true: 4, false: 5]
+                	4: _2 := (_0 = 1.0) OR (_0 = 3.0);
+                	5: if(_2) -> [true: 6, false: 7]
                                 
-                	4: return 1.0;
+                	6: return 1.0;
                                 
-                	5: if(((_0 = 4.0) OR (_0 = 5.0)) OR (_0 = 6.0)) -> [true: 6, false: 7]
+                	7: _3 := ((_0 = 4.0) OR (_0 = 5.0)) OR (_0 = 6.0);
+                	8: if(_3) -> [true: 9, false: 10]
                                 
-                	6: return 3.0;
+                	9: return 3.0;
                                 
-                	7: return -1.0;
+                	10: return -1.0;
                 }
                 """);
     }
@@ -278,12 +296,15 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 func num foo:Abs(input num _0 [value]) {
+                	bool _1;
+                                
                 	STATEMENT_LIST:
-                	0: if(_0 >= 0.0) -> [true: 1, false: 2]
+                	0: _1 := _0 >= 0.0;
+                	1: if(_1) -> [true: 2, false: 3]
                                 
-                	1: return _0;
+                	2: return _0;
                                 
-                	2: return -_0;
+                	3: return -_0;
                 }
                                 
                 func num foo:bar() {
@@ -309,14 +330,17 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 proc foo:bar(\\input num _0 [a]) {
+                	bool _1;
+                                
                 	STATEMENT_LIST:
-                	0: if(IsPresent _0) -> [true: 1, false: 2]
+                	0: _1 := IsPresent _0;
+                	1: if(_1) -> [true: 2, false: 3]
                                 
-                	1: foo:conditional(_a := _0);
-                	   goto -> [3];
+                	2: foo:conditional(_a := _0);
+                	   goto -> [4];
                                 
-                	2: foo:conditional();
-                	3: return;
+                	3: foo:conditional();
+                	4: return;
                 }
                                 
                 proc foo:conditional(\\input num _0 [a]) {
@@ -337,24 +361,31 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 proc foo:bar(\\input num _0 [a], \\input num _1 [b]) {
+                	bool _2;
+                	bool _3;
+                	bool _4;
+                                
                 	STATEMENT_LIST:
-                	0: if(IsPresent _0) -> [true: 1, false: 4]
+                	0: _2 := IsPresent _0;
+                	1: if(_2) -> [true: 2, false: 6]
                                 
-                	1: if(IsPresent _1) -> [true: 2, false: 3]
+                	2: _3 := IsPresent _1;
+                	3: if(_3) -> [true: 4, false: 5]
                                 
-                	2: foo:conditional(_a := _0, _b := _1);
-                	   goto -> [7];
+                	4: foo:conditional(_a := _0, _b := _1);
+                	   goto -> [10];
                                 
-                	3: foo:conditional(_a := _0);
-                	   goto -> [7];
+                	5: foo:conditional(_a := _0);
+                	   goto -> [10];
                                 
-                	4: if(IsPresent _1) -> [true: 5, false: 6]
+                	6: _4 := IsPresent _1;
+                	7: if(_4) -> [true: 8, false: 9]
                                 
-                	5: foo:conditional(_b := _1);
-                	   goto -> [7];
+                	8: foo:conditional(_b := _1);
+                	   goto -> [10];
                                 
-                	6: foo:conditional();
-                	7: return;
+                	9: foo:conditional();
+                	10: return;
                 }
                                 
                 proc foo:conditional(\\input num _0 [a], \\input num _1 [b]) {

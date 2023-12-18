@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
 import com.bossymr.rapid.language.flow.Optionality;
-import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -42,7 +41,7 @@ public class RecordSnapshot implements Snapshot {
 
     public void assign(@NotNull String name, @NotNull Snapshot snapshot) {
         snapshots.put(name, snapshot);
-        if(!(roots.containsKey(name))) {
+        if (!(roots.containsKey(name))) {
             roots.put(name, snapshot);
         }
     }
@@ -71,6 +70,11 @@ public class RecordSnapshot implements Snapshot {
 
     @Override
     public String toString() {
-        return "~" + hashCode();
+        return "~" + hashCode() + "[" + switch (getOptionality()) {
+            case PRESENT -> "P";
+            case UNKNOWN -> "P/M";
+            case MISSING -> "M";
+            case NO_VALUE -> "";
+        } + "]";
     }
 }

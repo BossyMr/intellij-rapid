@@ -21,7 +21,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     private final @NotNull Solver solver;
     private final @NotNull Map<ReferenceExpression, Expr<?>> symbols = new HashMap<>();
     private final @NotNull Map<String, AtomicInteger> names = new HashMap<>();
-    private final @NotNull Map<VariableSnapshot, Expr<?>> optionality = new HashMap<>();
+    private final @NotNull Map<Snapshot, Expr<?>> optionality = new HashMap<>();
 
     private ConditionAnalyzer(@NotNull Context context, @NotNull Solver solver) {
         this.context = context;
@@ -246,8 +246,8 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             case NOT -> context.mkNot(getAsBoolean(expr));
             case NEGATE -> context.mkMul(getAsNumber(expr), context.mkReal(-1));
             case PRESENT -> {
-                if (component instanceof VariableSnapshot variable) {
-                    Expr<?> handle = optionality.computeIfAbsent(variable, unused -> context.mkBoolConst("~" + variable.hashCode() + "*"));
+                if (component instanceof SnapshotExpression variable) {
+                    Expr<?> handle = optionality.computeIfAbsent(variable.getSnapshot(), unused -> context.mkBoolConst("~" + variable.hashCode() + "*"));
                     yield context.mkEq(handle, context.mkTrue());
                 }
                 yield context.mkTrue();

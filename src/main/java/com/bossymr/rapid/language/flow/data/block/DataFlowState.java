@@ -313,8 +313,8 @@ public class DataFlowState {
     }
 
     public @NotNull SnapshotExpression createSnapshot(@NotNull Expression variable, @NotNull Optionality optionality) {
-        if (variable instanceof SnapshotExpression) {
-            throw new IllegalArgumentException();
+        if (variable instanceof SnapshotExpression expression) {
+            return new SnapshotExpression(expression.getSnapshot());
         }
         if (variable instanceof IndexExpression indexExpression) {
             SnapshotExpression variableSnapshot = getSnapshot(indexExpression.getVariable());

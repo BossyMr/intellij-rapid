@@ -32,9 +32,11 @@ public final class SymbolConverter {
         return new SymbolConverter(symbolModels).getSymbols();
     }
 
-    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolModel symbolModel) {
-        Map<String, VirtualSymbol> symbols = new SymbolConverter(List.of(symbolModel)).getSymbols();
-        return List.copyOf(symbols.values()).get(0);
+    public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolModel model) {
+        Map<String, VirtualSymbol> symbols = new SymbolConverter(List.of(model)).getSymbols();
+        Collection<VirtualSymbol> values = symbols.values();
+        Optional<VirtualSymbol> symbol = values.stream().findFirst();
+        return symbol.orElseThrow(() -> new IllegalArgumentException("Could not convert model: " + model + " into a symbol"));
     }
 
     private @NotNull String getName(@NotNull SymbolModel symbolModel) {
@@ -43,8 +45,11 @@ public final class SymbolConverter {
 
     private @NotNull Map<String, VirtualSymbol> getSymbols() {
         if (states.isEmpty()) return new HashMap<>();
-        for (String name : states.get("RAPID").keySet()) {
-            getSymbol(name);
+        Map<String, SymbolModel> objects = states.get("RAPID");
+        if(objects != null) {
+            for (String name : objects.keySet()) {
+                getSymbol(name);
+            }
         }
         return symbols;
     }

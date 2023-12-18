@@ -7,8 +7,6 @@ import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
@@ -58,7 +56,7 @@ public class ConstantValueInspection extends LocalInspectionTool {
         if (!(element instanceof RapidReferenceExpression)) {
             return;
         }
-        Optionality optionality = Optionality.PRESENT;
+        Optionality optionality = Optionality.NO_VALUE;
         for (DataFlowState state : expressions.keySet()) {
             SnapshotExpression snapshot = new SnapshotExpression(expressions.get(state));
             optionality = optionality.or(state.getOptionality(snapshot));
@@ -76,7 +74,7 @@ public class ConstantValueInspection extends LocalInspectionTool {
         if (!(parent instanceof RapidIfStatement)) {
             return;
         }
-        BooleanValue value = BooleanValue.ALWAYS_TRUE;
+        BooleanValue value = BooleanValue.NO_VALUE;
         for (DataFlowState state : expressions.keySet()) {
             List<DataFlowState> successors = state.getSuccessors();
             if (successors.isEmpty()) {

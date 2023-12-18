@@ -216,6 +216,8 @@ class DataFlowGraphTest {
                                     ReferenceExpression x = codeBuilder.getReference(Objects.requireNonNull(codeBuilder.getArgument("x")));
                                     ReferenceExpression y = codeBuilder.getReference(codeBuilder.createVariable("y", RapidPrimitiveType.NUMBER));
                                     ReferenceExpression z = codeBuilder.getReference(codeBuilder.createVariable("z", RapidPrimitiveType.NUMBER));
+                                    codeBuilder.assign(y, codeBuilder.literal(5))
+                                               .assign(z, codeBuilder.literal(0));
                                     Expression expression = codeBuilder.call(":Present", RapidPrimitiveType.BOOLEAN, argumentBuilder -> argumentBuilder
                                             .withRequiredArgument(x));
                                     codeBuilder.ifThenElse(expression,

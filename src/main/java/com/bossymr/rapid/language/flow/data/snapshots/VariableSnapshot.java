@@ -54,7 +54,12 @@ public class VariableSnapshot implements Snapshot {
     }
 
     @Override
-    public @NotNull String toString() {
-        return "~" + hashCode();
+    public String toString() {
+        return "~" + hashCode() + "[" + switch (getOptionality()) {
+            case PRESENT -> "P";
+            case UNKNOWN -> "P/M";
+            case MISSING -> "M";
+            case NO_VALUE -> "";
+        } + "]";
     }
 }
