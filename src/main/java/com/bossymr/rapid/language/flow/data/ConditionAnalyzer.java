@@ -1,16 +1,17 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.network.MultiMap;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
-import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.symbol.RapidComponent;
+import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -18,23 +19,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
 
     private final @NotNull Context context;
-    private final @NotNull Solver solver;
     private final @NotNull Map<ReferenceExpression, Expr<?>> symbols = new HashMap<>();
     private final @NotNull Map<String, AtomicInteger> names = new HashMap<>();
     private final @NotNull Map<Snapshot, Expr<?>> optionality = new HashMap<>();
 
-    private ConditionAnalyzer(@NotNull Context context, @NotNull Solver solver) {
+    private final @NotNull Deque<Expression> stack = new ArrayDeque<>();
+
+    private final @NotNull List<BoolExpr> queue;
+
+    private ConditionAnalyzer(@NotNull Context context, @NotNull List<BoolExpr> queue) {
         this.context = context;
-        this.solver = solver;
+        this.queue = queue;
     }
 
     public static boolean isSatisfiable(@NotNull DataFlowState state, @NotNull Set<Snapshot> targets) {
         if (targets.isEmpty()) {
             return true;
         }
-        try (Context context = new Context()) {
-            Solver solver = context.mkSolver();
-            getSolver(context, state, solver, targets);
+        try (LazyContext lazyContext = new LazyContext(state.getBlock().getContext())) {
+            Solver solver = lazyContext.getContext().mkSolver();
+            getSolver(lazyContext.getContext(), state, solver, targets);
             return switch (solver.check()) {
                 case UNSATISFIABLE -> false;
                 case UNKNOWN, SATISFIABLE -> true;
@@ -43,7 +47,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     }
 
     public static @NotNull BooleanValue getBooleanValue(@NotNull DataFlowState state, @NotNull Expression expression) {
-        try (Context context = new Context()) {
+        try (LazyContext lazyContext = new LazyContext(state.getBlock().getContext())) {
             Set<Snapshot> targets = new HashSet<>();
             expression.iterate(expr -> {
                 if (expr instanceof SnapshotExpression target) {
@@ -51,14 +55,10 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                 }
                 return false;
             });
-            Solver solver = context.mkSolver();
-            ConditionAnalyzer conditionAnalyzer = getSolver(context, state, solver, targets);
-            solver.push();
-            solver.add(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(true)).accept(conditionAnalyzer)));
-            boolean isTrue = solver.check() != Status.UNSATISFIABLE;
-            solver.pop();
-            solver.add(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(false)).accept(conditionAnalyzer)));
-            boolean isFalse = solver.check() != Status.UNSATISFIABLE;
+            Solver solver = lazyContext.getContext().mkSolver();
+            ConditionAnalyzer conditionAnalyzer = getSolver(lazyContext.getContext(), state, solver, targets);
+            boolean isTrue = solver.check(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(true)).accept(conditionAnalyzer))) != Status.UNSATISFIABLE;
+            boolean isFalse = solver.check(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(false)).accept(conditionAnalyzer))) != Status.UNSATISFIABLE;
             if (isTrue && isFalse) {
                 return BooleanValue.ANY_VALUE;
             }
@@ -83,7 +83,8 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     }
 
     private static @NotNull ConditionAnalyzer getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull Solver solver, @NotNull Set<Snapshot> targets) {
-        ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context, solver);
+        List<BoolExpr> queue = new ArrayList<>();
+        ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context, queue);
         DataFlowBlock block = state.getBlock();
         Block functionBlock = block.getInstruction().getBlock();
         List<ArgumentGroup> argumentGroups = functionBlock.getArgumentGroups();
@@ -104,69 +105,28 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             Expr<BoolSort>[] array = isOptional.toArray(Expr[]::new);
             solver.add(context.mkAtMost(array, 1));
         }
-        MultiMap<DataFlowState, Expression> expressions = new MultiMap<>(HashSet::new);
-        List<DataFlowState> states = new ArrayList<>();
-        for (DataFlowState predecessor = state; predecessor != null; predecessor = predecessor.getPredecessor()) {
-            states.add(predecessor);
-            if (targets.stream().allMatch(snapshot -> state.getSnapshots().containsValue(snapshot))) {
-                break;
+        DataFlowState compactState = state.createCompactState(targets);
+        for (Expression expression : compactState.getExpressions()) {
+            Expr<?> expr = expression.accept(conditionAnalyzer);
+            if (expr.getSort().equals(context.getBoolSort())) {
+                queue.add(conditionAnalyzer.getAsBoolean(expr));
             }
-            List<Expression> result = getAllExpressions(predecessor, targets);
-            expressions.putAll(predecessor, result);
-            insertExpressions(solver, result, conditionAnalyzer);
         }
-        for (int i = states.size() - 1; i >= 0; i--) {
-            DataFlowState predecessor = states.get(i);
-            List<Expression> result = getAllExpressions(predecessor, targets);
-            result.removeAll(expressions.getAll(predecessor));
-            insertExpressions(solver, result, conditionAnalyzer);
-        }
+        solver.add(queue.toArray(BoolExpr[]::new));
         return conditionAnalyzer;
     }
 
-    private static void insertExpressions(@NotNull Solver solver, @NotNull List<Expression> expressions, @NotNull ConditionAnalyzer conditionAnalyzer) {
-        for (int i = expressions.size() - 1; i >= 0; i--) {
-            Expression expression = expressions.get(i);
-            Expr<?> expr = expression.accept(conditionAnalyzer);
-            if (expr.getSort() instanceof BoolSort) {
-                solver.add(conditionAnalyzer.getAsBoolean(expr));
-            }
-        }
-    }
-
-    private static @NotNull List<Expression> getAllExpressions(@NotNull DataFlowState state, @NotNull Set<Snapshot> variables) {
-        MultiMap<Snapshot, Expression> result = new MultiMap<>(HashSet::new);
-        MultiMap<Expression, Snapshot> dependency = new MultiMap<>(HashSet::new);
-        for (Expression expression : state.getExpressions()) {
-            expression.iterate(expr -> {
-                if (expr instanceof SnapshotExpression variable) {
-                    result.put(variable.getSnapshot(), expression);
-                    dependency.put(expression, variable.getSnapshot());
-                }
-                return false;
-            });
-        }
-        List<Expression> expressions = new ArrayList<>();
-        Deque<Snapshot> workList = new ArrayDeque<>(variables);
-        while (!(workList.isEmpty())) {
-            Snapshot key = workList.removeLast();
-            Collection<Expression> collection = result.getAll(key);
-            for (Expression expression : collection) {
-                for (Snapshot dependent : dependency.getAll(expression)) {
-                    if (variables.add(dependent)) {
-                        workList.add(dependent);
-                    }
-                }
-            }
-            expressions.addAll(collection);
-        }
-        return expressions;
+    private @NotNull Expr<?> getExpression(@NotNull Expression expression, @NotNull Expression child) {
+        stack.add(expression);
+        Expr<?> expr = child.accept(this);
+        stack.removeLast();
+        return expr;
     }
 
     @Override
     public Expr<?> visitBinaryExpression(@NotNull BinaryExpression expression) {
-        Expr<?> left = expression.getLeft().accept(this);
-        Expr<?> right = expression.getRight().accept(this);
+        Expr<?> left = getExpression(expression, expression.getLeft());
+        Expr<?> right = getExpression(expression, expression.getRight());
         return switch (expression.getOperator()) {
             case ADD -> {
                 if (expression.getLeft().getType().isAssignable(RapidPrimitiveType.STRING) || expression.getRight().getType().isAssignable(RapidPrimitiveType.STRING)) {
@@ -183,19 +143,28 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             case LESS_THAN -> context.mkLt(getAsNumber(left), getAsNumber(right));
             case LESS_THAN_OR_EQUAL -> context.mkLe(getAsNumber(left), getAsNumber(right));
             case EQUAL_TO -> {
-                if (left.getSort().equals(right.getSort())) {
+                if (isEqualSort(left, right)) {
                     yield context.mkEq(left, right);
                 } else {
                     yield context.mkBool(false);
                 }
             }
-            case NOT_EQUAL_TO -> new UnaryExpression(UnaryOperator.NOT, expression).accept(this);
+            case NOT_EQUAL_TO -> getExpression(expression, new UnaryExpression(UnaryOperator.NOT, expression));
             case GREATER_THAN -> context.mkGt(getAsNumber(left), getAsNumber(right));
             case GREATER_THAN_OR_EQUAL -> context.mkGe(getAsNumber(left), getAsNumber(right));
             case AND -> context.mkAnd(getAsBoolean(left), getAsBoolean(right));
             case XOR -> context.mkXor(getAsBoolean(left), getAsBoolean(right));
             case OR -> context.mkOr(getAsBoolean(left), getAsBoolean(right));
         };
+    }
+
+    private boolean isEqualSort(Expr<?> left, Expr<?> right) {
+        if (left.getSort().equals(context.getIntSort()) || left.getSort().equals(context.getRealSort())) {
+            if (right.getSort().equals(context.getIntSort()) || right.getSort().equals(context.getRealSort())) {
+                return true;
+            }
+        }
+        return left.getSort().equals(right.getSort());
     }
 
     @SuppressWarnings("unchecked")
@@ -207,7 +176,6 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         throw new IllegalArgumentException("Unexpected sort: " + sort + " for expression: " + expr);
     }
 
-
     private @NotNull BoolExpr getAsBoolean(@NotNull Expr<?> expr) {
         Sort sort = expr.getSort();
         if (sort.equals(context.getBoolSort())) {
@@ -215,7 +183,6 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
         throw new IllegalArgumentException("Unexpected sort: " + sort + " for expression: " + expr);
     }
-
 
     @SuppressWarnings("unchecked")
     private @NotNull Expr<? extends ArithSort> getAsNumber(@NotNull Expr<?> expr) {
@@ -241,7 +208,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     @Override
     public Expr<?> visitUnaryExpression(@NotNull UnaryExpression expression) {
         Expression component = expression.getExpression();
-        Expr<?> expr = component.accept(this);
+        Expr<?> expr = getExpression(expression, component);
         return switch (expression.getOperator()) {
             case NOT -> context.mkNot(getAsBoolean(expr));
             case NEGATE -> context.mkMul(getAsNumber(expr), context.mkReal(-1));
@@ -255,48 +222,100 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         };
     }
 
-    @SuppressWarnings({"unchecked"})
+    private @NotNull RapidType getCorrectType(@NotNull Expression current) {
+        if (!(current.getType().equals(RapidPrimitiveType.ANYTYPE))) {
+            return current.getType();
+        }
+        Expression expression = stack.peekLast();
+        if (expression == null) {
+            return RapidPrimitiveType.BOOLEAN;
+        }
+        if (expression instanceof UnaryExpression unaryExpression) {
+            return switch (unaryExpression.getOperator()) {
+                case NOT, PRESENT -> RapidPrimitiveType.BOOLEAN;
+                case NEGATE -> RapidPrimitiveType.NUMBER;
+            };
+        }
+        if (expression instanceof BinaryExpression binaryExpression) {
+            Expression alternative = binaryExpression.getLeft().equals(current) ? binaryExpression.getRight() : binaryExpression.getLeft();
+            RapidType type = getCorrectType(alternative);
+            return switch (binaryExpression.getOperator()) {
+                case ADD -> {
+                    if (RapidPrimitiveType.STRING.isAssignable(type)) {
+                        yield RapidPrimitiveType.STRING;
+                    }
+                    yield RapidPrimitiveType.NUMBER;
+                }
+                case SUBTRACT, DIVIDE, MULTIPLY, MODULO, LESS_THAN, LESS_THAN_OR_EQUAL, INTEGER_DIVIDE, GREATER_THAN, GREATER_THAN_OR_EQUAL ->
+                        RapidPrimitiveType.NUMBER;
+                case EQUAL_TO, NOT_EQUAL_TO -> type;
+                case AND, XOR, OR -> RapidPrimitiveType.BOOLEAN;
+            };
+        }
+        if (expression instanceof AggregateExpression aggregateExpression) {
+            RapidType type = getCorrectType(expression);
+            if (type.getDimensions() > 0) {
+                return type.createArrayType(type.getDimensions() - 1);
+            }
+            if (type.getRootStructure() instanceof RapidRecord record) {
+                int index = aggregateExpression.getExpressions().indexOf(current);
+                List<RapidComponent> components = record.getComponents();
+                if (index < 0 || index >= components.size()) {
+                    return RapidPrimitiveType.BOOLEAN;
+                }
+                RapidType componentType = components.get(index).getType();
+                return Objects.requireNonNullElse(componentType, RapidPrimitiveType.BOOLEAN);
+            }
+        }
+        if (expression instanceof IndexExpression indexExpression) {
+            if (current.equals(indexExpression.getIndex())) {
+                return RapidPrimitiveType.NUMBER;
+            }
+            if (current.equals(indexExpression.getVariable())) {
+                RapidType correctType = getCorrectType(indexExpression);
+                return correctType.createArrayType(correctType.getDimensions() + 1);
+            }
+        }
+        return RapidPrimitiveType.BOOLEAN;
+    }
+
     @Override
     public Expr<?> visitSnapshotExpression(@NotNull SnapshotExpression expression) {
         if (symbols.containsKey(expression)) {
             return symbols.get(expression);
         }
+        RapidType correctType = getCorrectType(expression);
         String name = "~" + expression.hashCode();
         if (names.containsKey(name)) {
             name += ":" + names.get(name).getAndIncrement();
         } else {
             names.put(name, new AtomicInteger());
         }
-        RapidType type = expression.getType();
-        if (type.isAssignable(RapidPrimitiveType.STRING)) {
-            Expr<SeqSort<CharSort>> expr = context.mkConst(name, context.mkStringSort());
-            symbols.put(expression, expr);
-            return expr;
+        Expr<?> expr;
+        if (correctType.isAssignable(RapidPrimitiveType.STRING)) {
+            expr = context.mkConst(name, context.mkStringSort());
+        } else if (correctType.isAssignable(RapidPrimitiveType.BOOLEAN)) {
+            expr = context.mkConst(name, context.mkBoolSort());
+        } else {
+            expr = context.mkConst(name, context.mkRealSort());
         }
-        if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
-            Expr<BoolSort> expr = context.mkConst(name, context.mkBoolSort());
-            symbols.put(expression, expr);
-            return expr;
-        }
-        Expr<RealSort> expr = context.mkConst(name, context.mkRealSort());
         symbols.put(expression, expr);
-        Optionality optionality = expression.getSnapshot().getOptionality();
-        switch (optionality) {
+        switch (expression.getSnapshot().getOptionality()) {
             case PRESENT -> {
-                BinaryExpression binaryExpression = new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, expression), new LiteralExpression(true));
-                solver.add((Expr<BoolSort>) binaryExpression.accept(this));
+                Expr<?> handle = optionality.computeIfAbsent(expression.getSnapshot(), unused -> context.mkBoolConst("~" + expression.hashCode() + "*"));
+                queue.add(context.mkEq(handle, context.mkTrue()));
             }
             case MISSING -> {
-                BinaryExpression binaryExpression = new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.PRESENT, expression), new LiteralExpression(false));
-                solver.add((Expr<BoolSort>) binaryExpression.accept(this));
+                Expr<?> handle = optionality.computeIfAbsent(expression.getSnapshot(), unused -> context.mkBoolConst("~" + expression.hashCode() + "*"));
+                queue.add(context.mkEq(handle, context.mkFalse()));
             }
             case NO_VALUE -> {
-                UnaryExpression unaryExpression = new UnaryExpression(UnaryOperator.PRESENT, expression);
-                BinaryExpression isPresent = new BinaryExpression(BinaryOperator.EQUAL_TO, unaryExpression, new LiteralExpression(true));
-                BinaryExpression isMissing = new BinaryExpression(BinaryOperator.EQUAL_TO, unaryExpression, new LiteralExpression(true));
-                solver.add((Expr<BoolSort>) isPresent.accept(this), (Expr<BoolSort>) isMissing.accept(this));
+                queue.add(context.mkFalse());
             }
             case UNKNOWN -> {}
+        }
+        if (!(correctType.equals(expression.getType()))) {
+            symbols.remove(expression);
         }
         return expr;
     }
@@ -323,9 +342,30 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         throw new IllegalArgumentException("Cannot create expression for: " + expression);
     }
 
-
     @Override
     public Expr<?> visitExpression(@NotNull Expression expression) {
         throw new IllegalArgumentException("Cannot create expression for: " + expression);
+    }
+
+    private static class LazyContext implements AutoCloseable {
+
+        private final boolean doClose;
+        private final @NotNull Context context;
+
+        public LazyContext(@Nullable Context context) {
+            this.context = context != null ? context : new Context();
+            doClose = context == null;
+        }
+
+        public @NotNull Context getContext() {
+            return context;
+        }
+
+        @Override
+        public void close() {
+            if (doClose) {
+                context.close();
+            }
+        }
     }
 }

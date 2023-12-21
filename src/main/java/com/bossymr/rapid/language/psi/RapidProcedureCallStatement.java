@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Represents a procedure call statement.
  */
-public interface RapidProcedureCallStatement extends RapidStatement {
+public interface RapidProcedureCallStatement extends RapidStatement, RapidCallExpression {
 
     /**
      * Checks if the procedure is bound late to the value of the specified expression, or if it directly references the
@@ -21,6 +21,7 @@ public interface RapidProcedureCallStatement extends RapidStatement {
      *
      * @return the expression referencing the procedure.
      */
+    @Override
     @NotNull RapidExpression getReferenceExpression();
 
     /**
@@ -28,6 +29,7 @@ public interface RapidProcedureCallStatement extends RapidStatement {
      *
      * @return the argument list of this procedure call.
      */
+    @Override
     @NotNull RapidArgumentList getArgumentList();
 
 }

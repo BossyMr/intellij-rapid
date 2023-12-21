@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.Objects;
 
 /**
  * A {@code VirtualPointer} attempts to restore a {@link VirtualSymbol} on the connected robot.
@@ -48,5 +49,26 @@ public class VirtualPointer<T extends VirtualSymbol> implements RapidPointer<T> 
         } catch (InterruptedException e) {
             throw new ProcessCanceledException();
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        VirtualPointer<?> that = (VirtualPointer<?>) o;
+        return Objects.equals(name, that.name) && Objects.equals(type, that.type);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, type);
+    }
+
+    @Override
+    public String toString() {
+        return "VirtualPointer{" +
+                "name='" + name + '\'' +
+                ", type=" + type +
+                '}';
     }
 }

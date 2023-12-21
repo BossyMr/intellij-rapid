@@ -15,18 +15,47 @@ import com.bossymr.rapid.language.psi.RapidReferenceExpression;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInspection.LocalInspectionTool;
+import com.intellij.codeInspection.LocalInspectionToolSession;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Z3Exception;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class ConstantValueInspection extends LocalInspectionTool {
+
+    @Override
+    public void inspectionStarted(@NotNull LocalInspectionToolSession session, boolean isOnTheFly) {
+        DataFlow dataFlow = ControlFlowService.getInstance().getDataFlow(session.getFile().getProject());
+        Context context = new Context();
+        for (DataFlowBlock block : dataFlow.getBlocks()) {
+            block.setContext(context);
+        }
+        super.inspectionStarted(session, isOnTheFly);
+    }
+
+    @Override
+    public void inspectionFinished(@NotNull LocalInspectionToolSession session, @NotNull ProblemsHolder problemsHolder) {
+        DataFlow dataFlow = ControlFlowService.getInstance().getDataFlow(session.getFile().getProject());
+        Set<Context> contexts = new HashSet<>();
+        for (DataFlowBlock block : dataFlow.getBlocks()) {
+            Context context = block.getContext();
+            if (context != null) {
+                contexts.add(context);
+            }
+            block.setContext(null);
+        }
+        for (Context context : contexts) {
+            try {
+                context.close();
+            } catch (Z3Exception ignored) {}
+        }
+        super.inspectionFinished(session, problemsHolder);
+    }
 
     @Override
     public @NotNull PsiElementVisitor buildVisitor(@NotNull ProblemsHolder holder, boolean isOnTheFly) {

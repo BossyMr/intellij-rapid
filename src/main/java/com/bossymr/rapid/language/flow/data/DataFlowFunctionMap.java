@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
+import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
@@ -8,8 +9,10 @@ import com.bossymr.rapid.language.flow.debug.DataFlowUsage;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
+import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -106,6 +109,9 @@ public class DataFlowFunctionMap {
 
     private void registerUsage(@NotNull DataFlowState callerState, @NotNull DataFlowFunction.Result result) {
         DataFlowState resultState = exitPoints.get(result);
+        if (resultState == null) {
+            throw new IllegalStateException();
+        }
         softReferences.remove(callerState);
         if (hardReferences.containsKey(resultState)) {
             DataFlowUsage usage = hardReferences.get(resultState);
@@ -159,6 +165,13 @@ public class DataFlowFunctionMap {
     }
 
     public void unregisterState(@NotNull DataFlowState state) {
+        BlockDescriptor blockDescriptor = BlockDescriptor.getBlockKey(state.getFunctionBlock());
+        if (functionMap.get(blockDescriptor) instanceof PhysicalDataFlowFunction function) {
+            Map<DataFlowState, DataFlowFunction.Result> reference = function.getReference();
+            if (reference != null) {
+                reference.remove(state);
+            }
+        }
         if (hardReferences.containsKey(state)) {
             // This state is a return state
             exitPoints.entrySet().removeIf(value -> value.equals(state));
@@ -201,6 +214,10 @@ public class DataFlowFunctionMap {
             this.functionBlock = functionBlock;
         }
 
+        private @Nullable Map<DataFlowState, Result> getReference() {
+            return result.get();
+        }
+
         public void setResult(@NotNull Map<DataFlowState, Result> result) {
             this.result.set(result);
         }
@@ -223,10 +240,28 @@ public class DataFlowFunctionMap {
         }
 
         @Override
-        protected @NotNull Set<Result> getResults() {
+        protected @NotNull Set<Result> getResults(@NotNull DataFlowState state, @NotNull CallInstruction instruction) {
             Map<DataFlowState, Result> value = result.get();
             if (value != null) {
-                return new HashSet<>(value.values());
+                Set<Result> results = new HashSet<>();
+                for (Result result : value.values()) {
+                    if (!(result instanceof Result.Success)) {
+                        results.add(result);
+                    }
+                    Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
+                    RapidType returnType = functionBlock.getReturnType();
+                    if (returnType == null) {
+                        if (arguments.keySet().stream().allMatch(argument -> argument.getParameterType() == ParameterType.INPUT)) {
+                            DataFlowState resultState = result.state();
+                            Result.Success shortCircuit = new Result.Success(new DataFlowState(resultState.getBlock(), resultState.getFunctionBlock(), null), null);
+                            resultState.getBlock().getStates().remove(shortCircuit.state());
+                            exitPoints.put(shortCircuit, exitPoints.get(result));
+                            return Set.of(shortCircuit);
+                        }
+                    }
+                    results.add(result);
+                }
+                return results;
             }
             return Set.of();
         }
@@ -237,7 +272,12 @@ public class DataFlowFunctionMap {
             BlockDescriptor blockDescriptor = BlockDescriptor.getBlockKey(functionBlock);
             if (value != null) {
                 Set<DataFlowFunction.Result> results = new HashSet<>();
-                for (Result result : getResults()) {
+                for (Result result : getResults(state, instruction)) {
+                    // TODO: Create the same new snapshots for each result. This way, duplicate results will be discarded
+                    //  if they have the same expressions and structure. Right now, new snapshots are created and so each
+                    //  result differs in the hashCode of the snapshot.
+                    //  This could either be done here, or when processing results in DataFlowAnalyzerVisitor#visitCallInstruction
+                    //  when collecting successors.
                     Result output = getOutput(result, state, instruction);
                     if (output != null) {
                         registerUsage(state, result);
@@ -248,6 +288,14 @@ public class DataFlowFunctionMap {
             }
             RapidType returnType = functionBlock.getReturnType();
             DataFlowState successorState = DataFlowState.createSuccessorState(state.getBlock(), state);
+            if (returnType == null) {
+                Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
+                if (arguments.keySet().stream().allMatch(argument -> argument.getParameterType() == ParameterType.INPUT)) {
+                    return Set.of(new Result.Success(successorState, null));
+                }
+            }
+            // TODO: Get all arguments which are passed to this function call, if all of the arguments are of type INPUT
+            //  and the return type is null, return an empty instruction.
             Snapshot returnValue = returnType != null ? Snapshot.createSnapshot(returnType) : null;
             for (ReferenceExpression variable : instruction.getArguments().values()) {
                 successorState.createSnapshot(variable);

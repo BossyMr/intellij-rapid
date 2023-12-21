@@ -1,11 +1,10 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
-import com.bossymr.rapid.language.flow.BlockDescriptor;
-import com.bossymr.rapid.language.flow.BooleanValue;
-import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.PhysicalElement;
@@ -59,25 +58,31 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     @Override
     public @NotNull List<DataFlowState> visitConditionalBranchingInstruction(@NotNull ConditionalBranchingInstruction instruction) {
         Expression value = instruction.getCondition();
-        BooleanValue constraint = state.getConstraint(value);
         List<DataFlowState> states = new ArrayList<>(2);
-        if (constraint == BooleanValue.ANY_VALUE || constraint == BooleanValue.ALWAYS_TRUE) {
-            states.add(visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(true))));
-        }
-        if (constraint == BooleanValue.ANY_VALUE || constraint == BooleanValue.ALWAYS_FALSE) {
-            states.add(visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(false))));
+        if (instruction.getTrue() != null && instruction.getTrue().equals(instruction.getFalse())) {
+            states.add(visitBranch(instruction.getTrue(), null));
+        } else {
+            BooleanValue constraint = state.getConstraint(value);
+            if (constraint == BooleanValue.ANY_VALUE || constraint == BooleanValue.ALWAYS_TRUE) {
+                states.add(visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(true))));
+            }
+            if (constraint == BooleanValue.ANY_VALUE || constraint == BooleanValue.ALWAYS_FALSE) {
+                states.add(visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(false))));
+            }
         }
         states.removeIf(Objects::isNull);
         return states;
     }
 
-    private @Nullable DataFlowState visitBranch(@Nullable Instruction successor, @NotNull Expression condition) {
+    private @Nullable DataFlowState visitBranch(@Nullable Instruction successor, @Nullable Expression condition) {
         if (successor == null) {
             return null;
         }
         DataFlowBlock successorBlock = blocks.get(successor);
         DataFlowState successorState = DataFlowState.createSuccessorState(successorBlock, state);
-        successorState.add(condition);
+        if (condition != null) {
+            successorState.add(condition);
+        }
         return successorState;
     }
 
@@ -95,23 +100,38 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     public @NotNull List<DataFlowState> visitReturnInstruction(@NotNull ReturnInstruction instruction) {
         Expression returnValue = instruction.getReturnValue();
         SnapshotExpression snapshot = getReferenceExpression(returnValue);
-        DataFlowState compactState = state.createCompactState();
+        DataFlowState compactState = state.createCompactState(getTargets(snapshot));
         functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Success(compactState, snapshot != null ? snapshot.getSnapshot() : null));
         return List.of();
     }
 
     @Override
     public @NotNull List<DataFlowState> visitExitInstruction(@NotNull ExitInstruction instruction) {
-        DataFlowState successor = state.createCompactState();
+        DataFlowState successor = state.createCompactState(getTargets(null));
         functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Exit(successor));
         return List.of();
+    }
+
+    private @NotNull Set<Snapshot> getTargets(@Nullable SnapshotExpression variable) {
+        Set<Snapshot> snapshots = new HashSet<>();
+        if (variable != null) {
+            snapshots.add(variable.getSnapshot());
+        }
+        Block block = state.getBlock().getInstruction().getBlock();
+        for (ArgumentGroup argumentGroup : block.getArgumentGroups()) {
+            for (Argument argument : argumentGroup.arguments()) {
+                SnapshotExpression snapshot = state.getSnapshot(new VariableExpression(argument));
+                snapshots.add(snapshot.getSnapshot());
+            }
+        }
+        return snapshots;
     }
 
     @Override
     public @NotNull List<DataFlowState> visitThrowInstruction(@NotNull ThrowInstruction instruction) {
         Expression exceptionValue = instruction.getExceptionValue();
         SnapshotExpression snapshot = getReferenceExpression(exceptionValue);
-        DataFlowState compactState = state.createCompactState();
+        DataFlowState compactState = state.createCompactState(getTargets(snapshot));
         functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, new DataFlowFunction.Result.Error(compactState, snapshot != null ? snapshot.getSnapshot() : null));
         return List.of();
     }
@@ -120,7 +140,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
         if (value == null) {
             return null;
         }
-        if(value instanceof ReferenceExpression reference) {
+        if (value instanceof ReferenceExpression reference) {
             return state.getSnapshot(reference);
         }
         SnapshotExpression snapshot = state.createSnapshot(value);
@@ -180,10 +200,11 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
                 functionMap.set(BlockDescriptor.getBlockKey(analyzer.getFunctionBlock()), state, result);
                 continue;
             }
-            DataFlowState successorState = DataFlowState.createSuccessorState(blocks.get(instruction.getSuccessor()), result.state());
-            successors.add(successorState);
+            successors.add(result.state());
         }
-        return successors;
+        return successors.stream()
+                         .map(state -> DataFlowState.createSuccessorState(blocks.get(instruction.getSuccessor()), state))
+                         .toList();
     }
 
     private @Nullable RapidRoutine getRoutine(@NotNull CallInstruction instruction, @NotNull BlockDescriptor blockDescriptor) {

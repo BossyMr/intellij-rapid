@@ -6,6 +6,8 @@ import com.intellij.psi.SmartPsiElementPointer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 /**
  * A {@code PhysicalPointer} attempts to restore a {@link PhysicalSymbol}.
  *
@@ -23,5 +25,25 @@ public class PhysicalPointer<T extends PhysicalSymbol> implements RapidPointer<T
     @Override
     public @Nullable T dereference() {
         return pointer.dereference();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PhysicalPointer<?> that = (PhysicalPointer<?>) o;
+        return Objects.equals(pointer, that.pointer);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(pointer);
+    }
+
+    @Override
+    public String toString() {
+        return "PhysicalPointer{" +
+                "pointer=" + pointer +
+                '}';
     }
 }

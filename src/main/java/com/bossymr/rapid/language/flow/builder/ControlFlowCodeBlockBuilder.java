@@ -1038,7 +1038,9 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         Expression expression = null;
         if (statement.getReferenceExpression() instanceof RapidReferenceExpression referenceExpression) {
             RapidSymbol symbol = referenceExpression.getSymbol();
-            if (symbol instanceof RapidRoutine routine) {
+            if (symbol == null) {
+                expression = literal(":" + referenceExpression.getCanonicalText());
+            } else if (symbol instanceof RapidRoutine routine) {
                 String name = routine.getName();
                 String moduleName = "";
                 if (routine instanceof PhysicalRoutine physicalRoutine) {

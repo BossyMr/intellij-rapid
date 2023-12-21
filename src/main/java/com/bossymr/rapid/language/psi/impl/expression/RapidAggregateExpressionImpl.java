@@ -1,10 +1,10 @@
 package com.bossymr.rapid.language.psi.impl.expression;
 
-import com.bossymr.rapid.language.psi.RapidAggregateExpression;
-import com.bossymr.rapid.language.psi.RapidAssignmentStatement;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
+import com.bossymr.rapid.language.symbol.RapidComponent;
+import com.bossymr.rapid.language.symbol.RapidParameter;
+import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.RapidVariable;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTNode;
@@ -39,19 +39,33 @@ public class RapidAggregateExpressionImpl extends RapidExpressionImpl implements
     public @Nullable RapidType getType() {
         if (getParent() instanceof RapidVariable) {
             return ((RapidVariable) getParent()).getType();
-        } else if (getParent() instanceof RapidAggregateExpression) {
-            RapidType parentType = ((RapidAggregateExpression) getParent()).getType();
+        } else if (getParent() instanceof RapidAggregateExpression parent) {
+            RapidType parentType = parent.getType();
             if (parentType == null) {
                 return null;
             }
             int dimensions = parentType.getDimensions();
-            if (dimensions < 1) {
+            if (dimensions > 0) {
+                return parentType.createArrayType(dimensions - 1);
+            }
+            if (!(parentType.getRootStructure() instanceof RapidRecord record)) {
                 return null;
             }
-            return parentType.createArrayType(dimensions - 1);
+            int index = parent.getExpressions().indexOf(this);
+            List<RapidComponent> components = record.getComponents();
+            if (index >= components.size()) {
+                return null;
+            }
+            RapidComponent component = components.get(index);
+            return component.getType();
         } else if (getParent() instanceof RapidAssignmentStatement) {
             RapidExpression left = ((RapidAssignmentStatement) getParent()).getLeft();
             return left != null ? left.getType() : null;
+        } else if (getParent() instanceof RapidArgument argument) {
+            RapidParameter symbol = argument.getSymbol();
+            if (symbol != null) {
+                return symbol.getType();
+            }
         }
         return null;
     }

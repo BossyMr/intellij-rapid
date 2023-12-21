@@ -669,7 +669,9 @@ public class RapidValidator {
                 if (group.isOptional()) continue;
                 List<? extends RapidParameter> parameters = group.getParameters();
                 if (parameters.isEmpty()) continue;
-                if (previous.contains(parameters.get(0))) continue;
+                if (parameters.stream().anyMatch(previous::contains)) {
+                    continue;
+                }
                 return parameters.get(0);
             }
             long size = groups.stream().filter(group -> !(group.isOptional())).count();

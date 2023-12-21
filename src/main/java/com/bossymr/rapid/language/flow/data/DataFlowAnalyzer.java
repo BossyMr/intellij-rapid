@@ -8,6 +8,7 @@ import com.bossymr.rapid.language.flow.instruction.ConditionalBranchingInstructi
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.Expression;
 import com.intellij.openapi.progress.ProgressManager;
+import com.microsoft.z3.Context;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,6 +16,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
@@ -39,9 +41,9 @@ public class DataFlowAnalyzer {
         this.consumer = consumer;
     }
 
-    public static @NotNull Map<Instruction, DataFlowBlock> analyze(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowState> consumer) {
+    public static @NotNull Map<Instruction, DataFlowBlock> analyze(@NotNull AtomicReference<Context> context, @NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowState> consumer) {
         List<Instruction> instructions = functionBlock.getInstructions();
-        Map<Instruction, DataFlowBlock> blocks = instructions.stream().collect(Collectors.toMap(block -> block, DataFlowBlock::new));
+        Map<Instruction, DataFlowBlock> blocks = instructions.stream().collect(Collectors.toMap(block -> block, instruction -> new DataFlowBlock(context, instruction)));
         Deque<DataFlowState> workList = new ArrayDeque<>(instructions.size());
         for (EntryInstruction entryInstruction : functionBlock.getEntryInstructions()) {
             Instruction instruction = entryInstruction.getInstruction();
@@ -134,8 +136,8 @@ public class DataFlowAnalyzer {
         while (!(queue.isEmpty())) {
             DataFlowState successor = queue.removeLast();
             functionMap.getWorkList().removeIf(state -> state.equals(successor));
-            successor.close();
             functionMap.unregisterState(successor);
+            successor.close();
             queue.addAll(successor.getSuccessors());
         }
     }

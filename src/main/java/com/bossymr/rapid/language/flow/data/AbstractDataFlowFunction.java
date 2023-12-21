@@ -8,6 +8,7 @@ import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
+import com.bossymr.rapid.language.symbol.ParameterType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,12 +16,12 @@ import java.util.*;
 
 public abstract class AbstractDataFlowFunction implements DataFlowFunction {
 
-    protected abstract @NotNull Set<DataFlowFunction.Result> getResults();
+    protected abstract @NotNull Set<DataFlowFunction.Result> getResults(@NotNull DataFlowState state, @NotNull CallInstruction instruction);
 
     @Override
     public @NotNull Set<Result> getOutput(@NotNull DataFlowState state, @NotNull CallInstruction instruction) {
         Set<DataFlowFunction.Result> results = new HashSet<>();
-        for (Result result : getResults()) {
+        for (Result result : getResults(state, instruction)) {
             Result output = getOutput(result, state, instruction);
             if (output != null) {
                 results.add(output);
@@ -67,6 +68,16 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
             successorState.assign(callerVariable, new SnapshotExpression(calleeSnapshot));
         }
 
+        for (Argument argument : arguments.keySet()) {
+            if (argument.getParameterType() == ParameterType.INPUT) {
+                continue;
+            }
+            Snapshot latestSnapshot = result.state().getSnapshots().get(argument);
+            Snapshot snapshot = modifications.get(latestSnapshot);
+            ReferenceExpression expression = arguments.get(argument);
+            successorState.assign(expression, new SnapshotExpression(snapshot));
+        }
+
         // Check if the result is satisfiable.
         // If it is not satisfiable, this function will not be called.
         if (!(successorState.isSatisfiable(targets))) {
@@ -85,7 +96,7 @@ public abstract class AbstractDataFlowFunction implements DataFlowFunction {
         return null;
     }
 
-    private <T> @NotNull Map<Argument, T> getArguments(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<ArgumentDescriptor, T> values) {
+    protected <T> @NotNull Map<Argument, T> getArguments(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<ArgumentDescriptor, T> values) {
         List<Argument> arguments = functionBlock.getArgumentGroups().stream()
                 .flatMap(argumentGroup -> argumentGroup.arguments().stream())
                 .toList();

@@ -96,13 +96,15 @@ public class DataFlowGraphService extends AnAction {
         }
         Map<DataFlowState, DataFlowUsage> usages = dataFlow.getUsages();
         for (DataFlowState calleeState : usages.keySet()) {
+            writeState(stringBuilder, blocks, states, calleeState);
             DataFlowUsage usage = usages.get(calleeState);
             for (DataFlowState callerState : usage.usages()) {
+                writeState(stringBuilder, blocks, states, calleeState);
                 stringBuilder.append(getDataFlowStateName(states, calleeState))
-                        .append(" -> ")
-                        .append(getDataFlowStateName(states, callerState))
-                        .append("[name=").append(usage.usageType().toString().toLowerCase())
-                        .append("];\n");
+                             .append(" -> ")
+                             .append(getDataFlowStateName(states, callerState))
+                             .append("[name=").append(usage.usageType().toString().toLowerCase())
+                             .append("];\n");
             }
         }
         stringBuilder.append("}");
@@ -201,9 +203,9 @@ public class DataFlowGraphService extends AnAction {
         if (state.getPredecessor() != null) {
             writeState(stringBuilder, blocks, states, state.getPredecessor());
             stringBuilder.append(getDataFlowStateName(states, state.getPredecessor()))
-                    .append(" -> ")
-                    .append(getDataFlowStateName(states, state))
-                    .append(";\n");
+                         .append(" -> ")
+                         .append(getDataFlowStateName(states, state))
+                         .append(";\n");
         }
         writeBlock(stringBuilder, blocks, states, block);
     }
@@ -230,17 +232,6 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");
         if (snapshot instanceof RecordSnapshot recordSnapshot) {
-            for (Map.Entry<String, Snapshot> component : recordSnapshot.getSnapshots().entrySet()) {
-                stringBuilder.append("<tr>");
-                stringBuilder.append("<td></td>");
-                stringBuilder.append("<td>");
-                stringBuilder.append(component.getKey());
-                stringBuilder.append("</td>");
-                stringBuilder.append("<td align=\"left\">");
-                stringBuilder.append(component.getValue());
-                stringBuilder.append("</td>");
-                stringBuilder.append("</tr>\n");
-            }
             for (Map.Entry<String, Snapshot> entry : recordSnapshot.getSnapshots().entrySet()) {
                 writeSnapshot(stringBuilder, state, new ComponentExpression(entry.getValue().getType(), variable, entry.getKey()), entry.getValue(), snapshots);
             }
@@ -314,14 +305,14 @@ public class DataFlowGraphService extends AnAction {
                     try {
                         convert(wrapper.getFile(), dataFlow);
                         NotificationGroupManager.getInstance()
-                                .getNotificationGroup("Data flow diagrams")
-                                .createNotification(RapidBundle.message("notification.group.data.flow.export.success"), wrapper.getFile().getAbsolutePath(), NotificationType.INFORMATION)
-                                .notify(project);
+                                                .getNotificationGroup("Data flow diagrams")
+                                                .createNotification(RapidBundle.message("notification.group.data.flow.export.success"), wrapper.getFile().getAbsolutePath(), NotificationType.INFORMATION)
+                                                .notify(project);
                     } catch (ExecutionException e) {
                         NotificationGroupManager.getInstance()
-                                .getNotificationGroup("Data flow diagrams")
-                                .createNotification(RapidBundle.message("notification.group.data.flow.export.error"), NotificationType.ERROR)
-                                .notify(project);
+                                                .getNotificationGroup("Data flow diagrams")
+                                                .createNotification(RapidBundle.message("notification.group.data.flow.export.error"), NotificationType.ERROR)
+                                                .notify(project);
                     } catch (IOException e) {
                         throw new UncheckedIOException(e);
                     }

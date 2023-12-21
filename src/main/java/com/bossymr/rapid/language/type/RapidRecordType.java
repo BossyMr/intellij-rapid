@@ -1,35 +1,37 @@
 package com.bossymr.rapid.language.type;
 
-import com.bossymr.rapid.language.symbol.RapidComponent;
-import com.bossymr.rapid.language.symbol.RapidRecord;
-import com.bossymr.rapid.language.symbol.RapidSymbol;
-import com.bossymr.rapid.language.symbol.ValueType;
+import com.bossymr.rapid.language.symbol.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
 public class RapidRecordType implements RapidType {
 
-    private final @NotNull RapidRecord record;
+    private final @NotNull RapidPointer<? extends RapidRecord> record;
 
     public RapidRecordType(@NotNull RapidRecord record) {
-        this.record = record;
+        this.record = record.createPointer();
     }
 
     @Override
-    public @NotNull RapidRecord getStructure() {
-        return record;
+    public @Nullable RapidRecord getStructure() {
+        return record.dereference();
     }
 
     @Override
-    public @NotNull RapidRecord getRootStructure() {
-        return record;
+    public @Nullable RapidRecord getRootStructure() {
+        return record.dereference();
     }
 
     @Override
     public @NotNull ValueType getValueType() {
         ValueType valueType = ValueType.VALUE_TYPE;
-        for (RapidComponent component : getStructure().getComponents()) {
+        RapidRecord structure = getStructure();
+        if (structure == null) {
+            return ValueType.UNKNOWN;
+        }
+        for (RapidComponent component : structure.getComponents()) {
             RapidType componentType = component.getType();
             if (componentType == null) {
                 return ValueType.UNKNOWN;
@@ -50,7 +52,15 @@ public class RapidRecordType implements RapidType {
 
     @Override
     public @NotNull String getText() {
-        return Objects.requireNonNullElse(record.getName(), RapidSymbol.getDefaultText());
+        RapidRecord dereference = record.dereference();
+        if (dereference == null) {
+            return RapidSymbol.getDefaultText();
+        }
+        String name = dereference.getName();
+        if (name == null) {
+            return RapidSymbol.getDefaultText();
+        }
+        return name;
     }
 
     @Override
@@ -58,12 +68,12 @@ public class RapidRecordType implements RapidType {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RapidRecordType that = (RapidRecordType) o;
-        return Objects.equals(record.getName(), that.record.getName());
+        return Objects.equals(record, that.record);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(record.getName());
+        return Objects.hash(record);
     }
 
     @Override
