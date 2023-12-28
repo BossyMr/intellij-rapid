@@ -15,11 +15,6 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
         myFixture.enableInspections(List.of(ConstantValueInspection.class));
     }
 
-    @Override
-    protected String getTestDataPath() {
-        return "src/test/testData";
-    }
-
     private void doTest(@NotNull String text) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
         myFixture.checkHighlighting(true, true, true, true);

@@ -1,71 +1,35 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.EntryInstruction;
+import com.bossymr.rapid.language.flow.ControlFlowBlock;
+import com.bossymr.rapid.language.flow.ControlFlowListener;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.ConditionalBranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.intellij.openapi.progress.ProgressManager;
-import com.microsoft.z3.Context;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiPredicate;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 /**
  * A {@code DataFlowAnalyzer} is an analyzer which analyzes a block.
  */
 public class DataFlowAnalyzer {
 
-    private final @NotNull Block.FunctionBlock functionBlock;
-
-    private final @NotNull Map<Instruction, DataFlowBlock> blocks;
-    private final @NotNull DataFlowFunctionMap functionMap;
+    private final @NotNull ControlFlowBlock block;
     private final @NotNull Deque<DataFlowState> workList;
+    private final @NotNull Set<RapidRoutine> stack;
 
-    private final @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowState> consumer;
-
-    public DataFlowAnalyzer(@NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull Deque<DataFlowState> workList, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowState> consumer) {
-        this.functionBlock = functionBlock;
-        this.functionMap = functionMap;
+    public DataFlowAnalyzer(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block, @NotNull Deque<DataFlowState> workList) {
+        this.block = block;
         this.workList = workList;
-        this.blocks = blocks;
-        this.consumer = consumer;
-    }
-
-    public static @NotNull Map<Instruction, DataFlowBlock> analyze(@NotNull AtomicReference<Context> context, @NotNull Block.FunctionBlock functionBlock, @NotNull DataFlowFunctionMap functionMap, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowState> consumer) {
-        List<Instruction> instructions = functionBlock.getInstructions();
-        Map<Instruction, DataFlowBlock> blocks = instructions.stream().collect(Collectors.toMap(block -> block, instruction -> new DataFlowBlock(context, instruction)));
-        Deque<DataFlowState> workList = new ArrayDeque<>(instructions.size());
-        for (EntryInstruction entryInstruction : functionBlock.getEntryInstructions()) {
-            Instruction instruction = entryInstruction.getInstruction();
-            DataFlowBlock block = blocks.get(instruction);
-            DataFlowState state = DataFlowState.createState(block);
-            workList.add(state);
-        }
-        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(functionBlock, functionMap, blocks, workList, consumer);
-        analyzer.process();
-        return blocks;
-    }
-
-    public static void reanalyze(@NotNull DataFlowState state, @NotNull DataFlowFunctionMap functionMap, @NotNull Map<Instruction, DataFlowBlock> blocks, @NotNull BiPredicate<Map<Instruction, DataFlowBlock>, DataFlowState> consumer) {
-        Deque<DataFlowState> workList = new ArrayDeque<>();
-        workList.addLast(state);
-        Block.FunctionBlock functionBlock = (Block.FunctionBlock) state.getBlock().getInstruction().getBlock();
-        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(functionBlock, functionMap, blocks, workList, consumer);
-        analyzer.process();
-    }
-
-    public @NotNull Block.FunctionBlock getFunctionBlock() {
-        return functionBlock;
+        this.stack = stack;
     }
 
     public static @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {
@@ -92,16 +56,15 @@ public class DataFlowAnalyzer {
             ProgressManager.checkCanceled();
             DataFlowState state = workList.removeFirst();
             List<DataFlowState> successors = process(state);
-            if (consumer.test(blocks, state)) {
-                for (DataFlowState successor : successors) {
-                    if (getPreviousCycles(successor) >= 2) {
-                        continue;
-                    }
-                    if (workList.contains(successor)) {
-                        continue;
-                    }
-                    workList.add(successor);
+            ControlFlowListener.publish().onState(state);
+            for (DataFlowState successor : successors) {
+                if (getPreviousCycles(successor) >= 2) {
+                    continue;
                 }
+                if (workList.contains(successor)) {
+                    continue;
+                }
+                workList.add(successor);
             }
         }
     }
@@ -111,7 +74,7 @@ public class DataFlowAnalyzer {
         getVolatileExpression(state).clear();
         state.getSnapshots().clear();
         state.getSnapshots().putAll(state.getRoots());
-        DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(this, state, blocks, functionMap);
+        DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(stack, state, block);
         Instruction instruction = state.getBlock().getInstruction();
         return instruction.accept(visitor);
     }
@@ -135,8 +98,8 @@ public class DataFlowAnalyzer {
         Deque<DataFlowState> queue = new ArrayDeque<>(origin.getSuccessors());
         while (!(queue.isEmpty())) {
             DataFlowState successor = queue.removeLast();
-            functionMap.getWorkList().removeIf(state -> state.equals(successor));
-            functionMap.unregisterState(successor);
+            workList.removeIf(state -> state.equals(successor));
+            block.getFunction().unregisterOutput(successor);
             successor.close();
             queue.addAll(successor.getSuccessors());
         }

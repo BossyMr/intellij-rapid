@@ -5,11 +5,14 @@ import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 public class ControlFlowTest extends BasePlatformTestCase {
 
     private void check(@NotNull String text, @NotNull String expected) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
-        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(myFixture.getProject());
+        ControlFlowService service = ControlFlowService.getInstance();
+        Set<ControlFlowBlock> controlFlow = service.getControlFlowBlock(myFixture.getProject());
         assertTextEquals(expected.replaceAll(" {4}", "\t"), ControlFlowFormatVisitor.format(controlFlow).replaceAll(" {4}", "\t"));
     }
 

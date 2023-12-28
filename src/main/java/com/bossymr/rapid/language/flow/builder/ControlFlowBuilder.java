@@ -4,13 +4,13 @@ import com.bossymr.rapid.language.builder.RapidBuilder;
 import com.bossymr.rapid.language.builder.RapidModuleBuilder;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
-import com.bossymr.rapid.language.flow.ControlFlow;
-import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.symbol.RapidField;
+import com.bossymr.rapid.language.symbol.RapidModule;
+import com.bossymr.rapid.language.symbol.RapidRoutine;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class ControlFlowBuilder implements RapidBuilder {
@@ -41,7 +41,7 @@ public class ControlFlowBuilder implements RapidBuilder {
         return this;
     }
 
-    public @NotNull ControlFlow getControlFlow() {
-        return new ControlFlow(controlFlow);
+    public @NotNull Set<Block> getControlFlow() {
+        return new HashSet<>(controlFlow.values());
     }
 }

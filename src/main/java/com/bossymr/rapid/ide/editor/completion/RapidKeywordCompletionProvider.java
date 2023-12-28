@@ -1,6 +1,7 @@
 package com.bossymr.rapid.ide.editor.completion;
 
 import com.intellij.codeInsight.TailType;
+import com.intellij.codeInsight.TailTypes;
 import com.intellij.codeInsight.completion.CompletionParameters;
 import com.intellij.codeInsight.completion.CompletionProvider;
 import com.intellij.codeInsight.completion.CompletionResultSet;
@@ -19,7 +20,7 @@ public class RapidKeywordCompletionProvider extends CompletionProvider<Completio
     private final InsertHandler<LookupElement> insertHandler;
 
     public RapidKeywordCompletionProvider(@NotNull String... keywords) {
-        this(TailType.SPACE, keywords);
+        this(TailTypes.spaceType(), keywords);
     }
 
     public RapidKeywordCompletionProvider(@NotNull TailType tailType, @NotNull String... keywords) {

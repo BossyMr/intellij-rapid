@@ -460,7 +460,8 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         if (returnType == null) {
             return any();
         }
-        RapidSymbol symbol = expression.getReferenceExpression().getSymbol();
+        RapidReferenceExpression referenceExpression = expression.getReferenceExpression();
+        RapidSymbol symbol = referenceExpression.getSymbol();
         if (!(symbol instanceof RapidRoutine)) {
             return any(returnType);
         }
@@ -480,7 +481,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         getArgumentConsumer(expression.getArgumentList()).accept(argumentBuilder);
         Variable variable = createVariable(returnType);
         ReferenceExpression reference = getReference(variable);
-        call(expression, literal(moduleName + ":" + routineName), reference, result);
+        call(expression, new LiteralExpression(referenceExpression, moduleName + ":" + routineName), reference, result);
         return reference;
     }
 
@@ -1039,7 +1040,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         if (statement.getReferenceExpression() instanceof RapidReferenceExpression referenceExpression) {
             RapidSymbol symbol = referenceExpression.getSymbol();
             if (symbol == null) {
-                expression = literal(":" + referenceExpression.getCanonicalText());
+                expression = new LiteralExpression(referenceExpression, ":" + referenceExpression.getCanonicalText());
             } else if (symbol instanceof RapidRoutine routine) {
                 String name = routine.getName();
                 String moduleName = "";
@@ -1050,7 +1051,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                     }
                 }
                 if (moduleName != null && name != null) {
-                    expression = literal(moduleName + ":" + name);
+                    expression = new LiteralExpression(referenceExpression, moduleName + ":" + name);
                 }
             }
         }

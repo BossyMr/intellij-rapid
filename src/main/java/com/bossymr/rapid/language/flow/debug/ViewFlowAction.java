@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.flow.debug;
 
-import com.bossymr.rapid.language.flow.ControlFlow;
+import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -11,6 +11,8 @@ import com.intellij.openapi.project.Project;
 import com.intellij.testFramework.LightVirtualFile;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 public class ViewFlowAction extends AnAction {
 
     @Override
@@ -19,7 +21,7 @@ public class ViewFlowAction extends AnAction {
         if (project == null) {
             return;
         }
-        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow(project);
+        Set<ControlFlowBlock> controlFlow = ControlFlowService.getInstance().getControlFlowBlock(project);
         String text = ControlFlowFormatVisitor.format(controlFlow);
         LightVirtualFile virtualFile = new LightVirtualFile("ControlFlow.txt", text);
         FileEditorManager.getInstance(project).openTextEditor(new OpenFileDescriptor(project, virtualFile), true);

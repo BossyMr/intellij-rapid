@@ -4,7 +4,7 @@ import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.find.usages.api.SearchTarget;
 import com.intellij.find.usages.api.UsageHandler;
 import com.intellij.model.Pointer;
-import com.intellij.navigation.TargetPresentation;
+import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("UnstableApiUsage")

@@ -2,7 +2,6 @@ package com.bossymr.rapid.ide.editor.insight.inspection.flow;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.DataFlow;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
@@ -12,50 +11,18 @@ import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidIfStatement;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
-import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInspection.LocalInspectionTool;
-import com.intellij.codeInspection.LocalInspectionToolSession;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Z3Exception;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ConstantValueInspection extends LocalInspectionTool {
-
-    @Override
-    public void inspectionStarted(@NotNull LocalInspectionToolSession session, boolean isOnTheFly) {
-        DataFlow dataFlow = ControlFlowService.getInstance().getDataFlow(session.getFile().getProject());
-        Context context = new Context();
-        for (DataFlowBlock block : dataFlow.getBlocks()) {
-            block.setContext(context);
-        }
-        super.inspectionStarted(session, isOnTheFly);
-    }
-
-    @Override
-    public void inspectionFinished(@NotNull LocalInspectionToolSession session, @NotNull ProblemsHolder problemsHolder) {
-        DataFlow dataFlow = ControlFlowService.getInstance().getDataFlow(session.getFile().getProject());
-        Set<Context> contexts = new HashSet<>();
-        for (DataFlowBlock block : dataFlow.getBlocks()) {
-            Context context = block.getContext();
-            if (context != null) {
-                contexts.add(context);
-            }
-            block.setContext(null);
-        }
-        for (Context context : contexts) {
-            try {
-                context.close();
-            } catch (Z3Exception ignored) {}
-        }
-        super.inspectionFinished(session, problemsHolder);
-    }
 
     @Override
     public @NotNull PsiElementVisitor buildVisitor(@NotNull ProblemsHolder holder, boolean isOnTheFly) {
@@ -66,12 +33,8 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 if (routine == null) {
                     return;
                 }
-                DataFlow dataFlow = ControlFlowService.getInstance().getDataFlow(expression);
-                Block.FunctionBlock functionBlock = getBlock(routine, dataFlow.getControlFlow());
-                if (functionBlock == null) {
-                    return;
-                }
-                Map<DataFlowState, Snapshot> expressions = getExpressions(expression, functionBlock, dataFlow);
+                ControlFlowBlock block = ControlFlowService.getInstance().getControlFlowBlock(routine);
+                Map<DataFlowState, Snapshot> expressions = getExpressions(expression, block);
                 if (expressions.isEmpty()) {
                     return;
                 }
@@ -123,14 +86,12 @@ public class ConstantValueInspection extends LocalInspectionTool {
         }
     }
 
-    private @NotNull Map<DataFlowState, Snapshot> getExpressions(@NotNull RapidExpression expression, @NotNull Block functionBlock, @NotNull DataFlow dataFlow) {
+    private @NotNull Map<DataFlowState, Snapshot> getExpressions(@NotNull RapidExpression expression, @NotNull ControlFlowBlock block) {
         Map<DataFlowState, Snapshot> states = new HashMap<>();
+        Block functionBlock = block.getControlFlow();
         for (Instruction instruction : functionBlock.getInstructions()) {
-            DataFlowBlock block = dataFlow.getBlock(instruction);
-            if (block == null) {
-                continue;
-            }
-            for (DataFlowState state : block.getStates()) {
+            DataFlowBlock dataFlowBlock = block.getDataFlow(instruction);
+            for (DataFlowState state : dataFlowBlock.getStates()) {
                 Snapshot snapshot = state.getSnapshot(expression);
                 if (snapshot != null) {
                     states.put(state, snapshot);
@@ -140,16 +101,4 @@ public class ConstantValueInspection extends LocalInspectionTool {
         return states;
     }
 
-    private @Nullable Block.FunctionBlock getBlock(@NotNull PhysicalRoutine routine, @NotNull ControlFlow controlFlow) {
-        for (Block block : controlFlow.getBlocks()) {
-            if (!(block instanceof Block.FunctionBlock functionBlock)) {
-                continue;
-            }
-            RapidSymbol element = block.getElement();
-            if (Objects.equals(element.getCanonicalName(), routine.getCanonicalName())) {
-                return functionBlock;
-            }
-        }
-        return null;
-    }
 }

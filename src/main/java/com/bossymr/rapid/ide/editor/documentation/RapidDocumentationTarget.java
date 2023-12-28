@@ -10,12 +10,12 @@ import com.intellij.codeInsight.daemon.impl.HighlightInfoType;
 import com.intellij.codeInsight.documentation.DocumentationManagerUtil;
 import com.intellij.lang.documentation.DocumentationMarkup;
 import com.intellij.model.Pointer;
-import com.intellij.navigation.TargetPresentation;
 import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.editor.richcopy.HtmlSyntaxInfoUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.platform.backend.documentation.DocumentationResult;
 import com.intellij.platform.backend.documentation.DocumentationTarget;
+import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

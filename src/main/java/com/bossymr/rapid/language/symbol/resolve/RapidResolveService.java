@@ -2,8 +2,7 @@ package com.bossymr.rapid.language.symbol.resolve;
 
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.ControlFlow;
-import com.bossymr.rapid.language.flow.ControlFlowService;
+import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
@@ -143,8 +142,7 @@ public final class RapidResolveService {
     }
 
     public @Nullable RapidSymbol findCustomSymbol(@NotNull String @NotNull [] sections) {
-        ControlFlow controlFlow = ControlFlowService.getInstance().getControlFlow();
-        Block block = controlFlow.getBlock("", sections[1]);
+        Block block = getVirtualBlock(sections[1]);
         if (block != null) {
             RapidSymbol element = block.getElement();
             if (sections.length == 3) {
@@ -162,6 +160,15 @@ public final class RapidResolveService {
             case "pos" -> RapidPrimitiveType.POSITION.getStructure();
             default -> null;
         };
+    }
+
+    private @Nullable Block getVirtualBlock(@NotNull String routineName) {
+        for (HardcodedContract contract : HardcodedContract.values()) {
+            if (contract.getRoutine().getName().equalsIgnoreCase(routineName)) {
+                return contract.getBlock();
+            }
+        }
+        return null;
     }
 
     private @Nullable RapidModule findModule(@NotNull String moduleName) {

@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 
-public final class RapidRecordIndex extends StringStubIndexExtension<PhysicalRecord> {
+public final class RapidRecordIndex extends StringStubIndexExtension<PhysicalRecord> implements RapidIndex<PhysicalRecord> {
     public static final StubIndexKey<String, PhysicalRecord> KEY = StubIndexKey.createIndexKey("rapid.symbol.record");
 
     private static final RapidRecordIndex INSTANCE = new RapidRecordIndex();
@@ -25,7 +25,8 @@ public final class RapidRecordIndex extends StringStubIndexExtension<PhysicalRec
         return KEY;
     }
 
-    public Collection<PhysicalRecord> get(@NotNull String name, @NotNull Project project, @NotNull GlobalSearchScope scope) {
+    @Override
+    public @NotNull Collection<PhysicalRecord> getElements(@NotNull String name, @NotNull Project project, @NotNull GlobalSearchScope scope) {
         return StubIndex.getElements(getKey(), StringUtil.toLowerCase(name), project, scope, PhysicalRecord.class);
     }
 }

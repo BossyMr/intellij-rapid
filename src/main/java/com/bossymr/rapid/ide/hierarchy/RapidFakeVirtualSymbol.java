@@ -3,7 +3,7 @@ package com.bossymr.rapid.ide.hierarchy;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.intellij.model.Pointer;
-import com.intellij.navigation.TargetPresentation;
+import com.intellij.platform.backend.presentation.TargetPresentation;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.impl.FakePsiElement;

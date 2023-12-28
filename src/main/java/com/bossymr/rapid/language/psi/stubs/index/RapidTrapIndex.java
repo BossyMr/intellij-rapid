@@ -11,8 +11,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 
-public final class RapidTrapIndex extends StringStubIndexExtension<PhysicalRoutine> {
-    public static final StubIndexKey<String, PhysicalRoutine> KEY = StubIndexKey.createIndexKey("rapid.symbol.routine");
+public final class RapidTrapIndex extends StringStubIndexExtension<PhysicalRoutine> implements RapidIndex<PhysicalRoutine> {
+    public static final StubIndexKey<String, PhysicalRoutine> KEY = StubIndexKey.createIndexKey("rapid.symbol.trap");
 
     private static final RapidTrapIndex INSTANCE = new RapidTrapIndex();
 
@@ -25,7 +25,8 @@ public final class RapidTrapIndex extends StringStubIndexExtension<PhysicalRouti
         return KEY;
     }
 
-    public Collection<PhysicalRoutine> get(@NotNull String name, @NotNull Project project, @NotNull GlobalSearchScope scope) {
+    @Override
+    public @NotNull Collection<PhysicalRoutine> getElements(@NotNull String name, @NotNull Project project, @NotNull GlobalSearchScope scope) {
         return StubIndex.getElements(getKey(), StringUtil.toLowerCase(name), project, scope, PhysicalRoutine.class);
     }
 }

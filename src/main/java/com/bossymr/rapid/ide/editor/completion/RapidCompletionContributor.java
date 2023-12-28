@@ -6,7 +6,7 @@ import com.bossymr.rapid.language.psi.stubs.index.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
-import com.intellij.codeInsight.TailType;
+import com.intellij.codeInsight.TailTypes;
 import com.intellij.codeInsight.completion.CompletionContributor;
 import com.intellij.codeInsight.completion.CompletionParameters;
 import com.intellij.codeInsight.completion.CompletionResultSet;
@@ -14,11 +14,10 @@ import com.intellij.codeInsight.completion.util.ParenthesesInsertHandler;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.codeInsight.lookup.TailTypeDecorator;
-import com.intellij.navigation.TargetPresentation;
 import com.intellij.openapi.project.Project;
+import com.intellij.platform.backend.presentation.TargetPresentation;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.stubs.StringStubIndexExtension;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -52,9 +51,9 @@ public class RapidCompletionContributor extends CompletionContributor {
                 .filter(symbol -> filters.stream().anyMatch(filter -> filter.matches(symbol)))
                 .forEach(variants::add);
         for (SymbolFilter filter : filters) {
-            for (StringStubIndexExtension<? extends PhysicalSymbol> index : filter.getIndexes()) {
+            for (RapidIndex<? extends PhysicalSymbol> index : filter.getIndexes()) {
                 for (String key : index.getAllKeys(project)) {
-                    variants.addAll(index.get(key, project, GlobalSearchScope.projectScope(project)));
+                    variants.addAll(index.getElements(key, project, GlobalSearchScope.projectScope(project)));
                 }
             }
         }
@@ -80,12 +79,12 @@ public class RapidCompletionContributor extends CompletionContributor {
             String tailText = FormatUtil.format(routine, EnumSet.of(FormatUtil.Option.SHOW_PARAMETERS), EnumSet.of(FormatUtil.Option.SHOW_TYPE, FormatUtil.Option.SHOW_NAME));
             return switch (routine.getRoutineType()) {
                 case FUNCTION -> lookupElementBuilder
-                        .withInsertHandler(ParenthesesInsertHandler.getInstance(parameters != null && parameters.size() > 0))
+                        .withInsertHandler(ParenthesesInsertHandler.getInstance(parameters != null && !(parameters.isEmpty())))
                         .withTailText(tailText, true)
                         .withTypeText(routine.getType() != null ? routine.getType().getPresentableText() : "", true);
                 case PROCEDURE ->
-                        TailTypeDecorator.withTail(lookupElementBuilder.withTailText(tailText, true), TailType.SPACE);
-                case TRAP -> TailTypeDecorator.withTail(lookupElementBuilder, TailType.NONE);
+                        TailTypeDecorator.withTail(lookupElementBuilder.withTailText(tailText, true), TailTypes.spaceType());
+                case TRAP -> TailTypeDecorator.withTail(lookupElementBuilder, TailTypes.noneType());
             };
         }
         if (symbol instanceof RapidVariable variable) {
@@ -130,10 +129,10 @@ public class RapidCompletionContributor extends CompletionContributor {
 
 
         private final @NotNull Predicate<RapidSymbol> predicate;
-        private final @NotNull StringStubIndexExtension<? extends PhysicalSymbol>[] indexes;
+        private final @NotNull RapidIndex<? extends PhysicalSymbol>[] indexes;
 
         @SafeVarargs
-        SymbolFilter(@NotNull Predicate<RapidSymbol> predicate, @NotNull StringStubIndexExtension<? extends PhysicalSymbol>... indexes) {
+        SymbolFilter(@NotNull Predicate<RapidSymbol> predicate, @NotNull RapidIndex<? extends PhysicalSymbol>... indexes) {
             this.predicate = predicate;
             this.indexes = indexes;
         }
@@ -143,7 +142,7 @@ public class RapidCompletionContributor extends CompletionContributor {
         }
 
         @Contract(pure = true)
-        public @Unmodifiable List<StringStubIndexExtension<? extends PhysicalSymbol>> getIndexes() {
+        public @Unmodifiable List<RapidIndex<? extends PhysicalSymbol>> getIndexes() {
             return List.of(indexes);
         }
     }

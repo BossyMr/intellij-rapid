@@ -2,15 +2,17 @@ package com.bossymr.rapid.language.flow.data.hardcode;
 
 import com.bossymr.rapid.language.builder.RapidModuleBuilder;
 import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.ControlFlow;
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
 import com.bossymr.rapid.language.flow.value.UnaryOperator;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RoutineType;
+import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public enum HardcodedContract {
@@ -24,23 +26,25 @@ public enum HardcodedContract {
                         codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.PRESENT, codeBuilder.getReference(argument)));
                     })));
 
-    private final @NotNull Consumer<RapidModuleBuilder> consumer;
+    private final @NotNull VirtualRoutine routine;
+    private final @NotNull Block block;
 
     HardcodedContract(@NotNull Consumer<RapidModuleBuilder> consumer) {
-        this.consumer = consumer;
+        ControlFlowBuilder builder = new ControlFlowBuilder();
+        builder.withModule("", consumer);
+        Set<Block> controlFlow = builder.getControlFlow();
+        if (controlFlow.size() != 1) {
+            throw new IllegalArgumentException();
+        }
+        this.block = controlFlow.iterator().next();
+        this.routine = (VirtualRoutine) block.getElement();
     }
 
-    public static @NotNull ControlFlow getControlFlow() {
-        return new ControlFlowBuilder()
-                .withModule("", builder -> {
-                    for (HardcodedContract value : HardcodedContract.values()) {
-                        value.getConsumer().accept(builder);
-                    }
-                })
-                .getControlFlow();
+    public @NotNull VirtualRoutine getRoutine() {
+        return routine;
     }
 
-    public @NotNull Consumer<RapidModuleBuilder> getConsumer() {
-        return consumer;
+    public @NotNull Block getBlock() {
+        return block;
     }
 }

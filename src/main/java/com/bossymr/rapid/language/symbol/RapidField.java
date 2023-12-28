@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.psi.RapidExpression;
-import com.intellij.navigation.TargetPresentation;
+import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

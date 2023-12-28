@@ -3,8 +3,8 @@ package com.bossymr.rapid.robot.ui.node;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
-import com.intellij.navigation.TargetPresentation;
 import com.intellij.openapi.project.Project;
+import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;

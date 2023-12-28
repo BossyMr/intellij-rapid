@@ -2,8 +2,10 @@ package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.*;
+import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -11,21 +13,24 @@ import java.util.stream.Collectors;
 
 public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
 
-    public static @NotNull String format(@NotNull ControlFlow controlFlow) {
-        return controlFlow.accept(new ControlFlowFormatVisitor());
-    }
-
-    @Override
-    public @NotNull String visitControlFlow(@NotNull ControlFlow controlFlow) {
+    public static @NotNull String format(@NotNull Set<ControlFlowBlock> blocks) {
         StringBuilder stringBuilder = new StringBuilder();
-        List<Block> blocks = new ArrayList<>(controlFlow.getBlocks());
-        blocks.sort(Comparator.comparing(block -> block.getModuleName() + ":" + block.getName()));
-        for (int i = 0; i < blocks.size(); i++) {
+        List<Block> results = new ArrayList<>();
+        for (ControlFlowBlock block : blocks) {
+            RapidSymbol element = block.getControlFlow().getElement();
+            if (Arrays.stream(HardcodedContract.values()).anyMatch(contract -> contract.getRoutine().equals(element))) {
+                continue;
+            }
+            results.add(block.getControlFlow());
+        }
+        results.sort(Comparator.comparing(block -> block.getModuleName() + ":" + block.getName()));
+        ControlFlowFormatVisitor visitor = new ControlFlowFormatVisitor();
+        for (int i = 0; i < results.size(); i++) {
             if (i > 0) {
                 stringBuilder.append("\n");
             }
-            Block block = blocks.get(i);
-            stringBuilder.append(block.accept(this));
+            Block block = results.get(i);
+            stringBuilder.append(block.accept(visitor));
         }
         return stringBuilder.toString();
     }
@@ -92,8 +97,8 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
             stringBuilder.append("\t");
 
             Optional<EntryInstruction> optional = instruction.getBlock().getEntryInstructions().stream()
-                    .filter(entry -> entry.getInstruction().equals(instruction))
-                    .findFirst();
+                                                             .filter(entry -> entry.getInstruction().equals(instruction))
+                                                             .findFirst();
             if (optional.isPresent()) {
                 EntryInstruction entryInstruction = optional.orElseThrow();
                 stringBuilder.append(entryInstruction.getEntryType());
@@ -110,8 +115,8 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
                     stringBuilder.append(" ".repeat(String.valueOf(instruction.getIndex()).length() + 2));
                     stringBuilder.append("goto -> ");
                     stringBuilder.append(instruction.getSuccessors().stream()
-                            .map(successor -> String.valueOf(successor.getIndex()))
-                            .collect(Collectors.joining(", ", "[", "]")));
+                                                    .map(successor -> String.valueOf(successor.getIndex()))
+                                                    .collect(Collectors.joining(", ", "[", "]")));
                     stringBuilder.append(";");
                 }
                 stringBuilder.append("\n");

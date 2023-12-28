@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.flow.builder;
 import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.builder.RapidBuilder;
 import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.ControlFlow;
+import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
@@ -14,8 +14,11 @@ import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -24,7 +27,9 @@ class ControlFlowBuilderTest {
     private void check(@NotNull Consumer<RapidBuilder> consumer, @NotNull String expected) {
         ControlFlowBuilder builder = new ControlFlowBuilder();
         consumer.accept(builder);
-        ControlFlow controlFlow = builder.getControlFlow();
+        Set<ControlFlowBlock> controlFlow = builder.getControlFlow().stream()
+                                                   .map(block -> new ControlFlowBlock(block, Map.of()))
+                                                   .collect(Collectors.toSet());
         String actual = ControlFlowFormatVisitor.format(controlFlow);
         if (expected.isEmpty()) {
             System.out.println(actual);
@@ -215,6 +220,23 @@ class ControlFlowBuilderTest {
                                             });
                                     codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.NEGATE, x));
                                 }))), """
+                func num foo:bar() {
+                	num _0;
+                	num _1;
+                	bool _2;
+                                
+                	STATEMENT_LIST:
+                	0: _0 := 0;
+                	1: _1 := 5;
+                	2: _2 := _1 > 0;
+                	3: if(_2) -> [true: 4, false: 6]
+                                
+                	4: _0 := _0 + 1;
+                	5: _1 := _1 - 1;
+                	   goto -> [2];
+                                
+                	6: return -_0;
+                }
                 """);
     }
 

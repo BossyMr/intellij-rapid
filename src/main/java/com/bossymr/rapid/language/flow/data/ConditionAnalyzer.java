@@ -309,9 +309,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                 Expr<?> handle = optionality.computeIfAbsent(expression.getSnapshot(), unused -> context.mkBoolConst("~" + expression.hashCode() + "*"));
                 queue.add(context.mkEq(handle, context.mkFalse()));
             }
-            case NO_VALUE -> {
-                queue.add(context.mkFalse());
-            }
+            case NO_VALUE -> queue.add(context.mkFalse());
             case UNKNOWN -> {}
         }
         if (!(correctType.equals(expression.getType()))) {

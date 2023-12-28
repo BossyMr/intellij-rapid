@@ -1,8 +1,10 @@
 package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.RapidIcons;
-import com.bossymr.rapid.language.type.*;
-import com.intellij.navigation.TargetPresentation;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidRecordType;
+import com.bossymr.rapid.language.type.RapidType;
+import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;

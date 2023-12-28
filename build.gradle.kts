@@ -8,7 +8,7 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.8.0"
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.16.0"
+    id("org.jetbrains.intellij") version "1.16.1"
     // Gradle GrammarKit Plugin
     id("org.jetbrains.grammarkit") version "2022.3.1"
     // Gradle Sentry Plugin
@@ -76,7 +76,6 @@ tasks {
 
     test {
         useJUnitPlatform()
-        systemProperty("idea.log.debug.categories", "com.bossymr.rapid.language.flow.DataFlowState")
     }
 
     patchPluginXml {

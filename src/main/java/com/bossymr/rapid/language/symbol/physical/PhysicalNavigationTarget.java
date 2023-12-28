@@ -1,10 +1,9 @@
 package com.bossymr.rapid.language.symbol.physical;
 
 import com.intellij.model.Pointer;
-import com.intellij.navigation.NavigationRequest;
-import com.intellij.navigation.NavigationService;
-import com.intellij.navigation.NavigationTarget;
-import com.intellij.navigation.TargetPresentation;
+import com.intellij.platform.backend.navigation.NavigationRequest;
+import com.intellij.platform.backend.navigation.NavigationTarget;
+import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,12 +22,12 @@ public class PhysicalNavigationTarget implements NavigationTarget {
     }
 
     @Override
-    public @NotNull TargetPresentation presentation() {
+    public @NotNull TargetPresentation computePresentation() {
         return symbol.getTargetPresentation();
     }
 
     @Override
     public @Nullable NavigationRequest navigationRequest() {
-        return NavigationService.instance().rawNavigationRequest(symbol);
+        return NavigationRequest.sourceNavigationRequest(symbol.getContainingFile(), symbol.getTextRange());
     }
 }

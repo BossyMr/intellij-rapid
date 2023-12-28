@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.DataFlow;
+import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
@@ -45,7 +45,7 @@ import java.util.*;
 
 public class DataFlowGraphService extends AnAction {
 
-    public static void convert(@NotNull File outputFile, @NotNull DataFlow dataFlow) throws IOException, ExecutionException {
+    public static void convert(@NotNull File outputFile, @NotNull Set<ControlFlowBlock> blocks) throws IOException, ExecutionException {
         String processName = SystemInfo.isUnix ? "dot" : "dot.exe";
         File processPath = PathEnvironmentVariableUtil.findInPath(processName);
         if (processPath == null) {
@@ -54,7 +54,7 @@ public class DataFlowGraphService extends AnAction {
         if (outputFile.exists()) {
             FileUtil.delete(outputFile);
         }
-        String text = writeInstruction(dataFlow);
+        String text = writeInstruction(blocks);
         String extension = FileUtil.getExtension(outputFile.getName(), "svg").toString();
         if (extension.equals("txt")) {
             FileUtil.writeToFile(outputFile, text);
@@ -81,37 +81,54 @@ public class DataFlowGraphService extends AnAction {
         }
     }
 
-    private static @NotNull String writeInstruction(@NotNull DataFlow dataFlow) {
+    private static @NotNull String writeInstruction(@NotNull Set<ControlFlowBlock> blocks) {
         List<DataFlowState> states = new ArrayList<>();
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("digraph {").append("\n");
         stringBuilder.append("rankdir=LR;\n");
-        ControlFlow controlFlow = dataFlow.getControlFlow();
-        Set<DataFlowBlock> blocks = new HashSet<>();
-        for (Block block : controlFlow.getBlocks()) {
-            if (!(block instanceof Block.FunctionBlock functionBlock)) {
+        Set<DataFlowBlock> visited = new HashSet<>();
+        for (ControlFlowBlock block : blocks) {
+            Block controlFlow = block.getControlFlow();
+            if (!(controlFlow instanceof Block.FunctionBlock functionBlock)) {
                 continue;
             }
-            writeInstruction(stringBuilder, functionBlock, dataFlow, states, blocks);
+            writeInstruction(stringBuilder, functionBlock, block, states, visited);
         }
-        Map<DataFlowState, DataFlowUsage> usages = dataFlow.getUsages();
-        for (DataFlowState calleeState : usages.keySet()) {
-            writeState(stringBuilder, blocks, states, calleeState);
-            DataFlowUsage usage = usages.get(calleeState);
-            for (DataFlowState callerState : usage.usages()) {
-                writeState(stringBuilder, blocks, states, calleeState);
-                stringBuilder.append(getDataFlowStateName(states, calleeState))
-                             .append(" -> ")
-                             .append(getDataFlowStateName(states, callerState))
-                             .append("[name=").append(usage.usageType().toString().toLowerCase())
-                             .append("];\n");
+        for (ControlFlowBlock block : blocks) {
+            DataFlowFunction function = block.getFunction();
+            Map<DataFlowState, Set<DataFlowState>> usages = function.getUsages();
+            for (DataFlowState callerState : usages.keySet()) {
+                writeState(stringBuilder, visited, states, callerState);
+                for (DataFlowState calleeState : usages.get(callerState)) {
+                    writeState(stringBuilder, visited, states, calleeState);
+                    DataFlowFunction.Result result = function.getResults().get(calleeState);
+                    String resultType = getResultType(result);
+                    stringBuilder.append(getDataFlowStateName(states, calleeState))
+                                 .append(" -> ")
+                                 .append(getDataFlowStateName(states, callerState))
+                                 .append("[name=").append(resultType)
+                                 .append("];\n");
+                }
             }
         }
         stringBuilder.append("}");
         return stringBuilder.toString();
     }
 
-    private static void writeInstruction(@NotNull StringBuilder stringBuilder, @NotNull Block.FunctionBlock functionBlock, @NotNull DataFlow dataFlow, @NotNull List<DataFlowState> states, @NotNull Set<DataFlowBlock> blocks) {
+    @NotNull
+    private static String getResultType(DataFlowFunction.Result result) {
+        if (result instanceof DataFlowFunction.Result.Success) {
+            return "success";
+        } else if (result instanceof DataFlowFunction.Result.Error) {
+            return "error";
+        } else if (result instanceof DataFlowFunction.Result.Exit) {
+            return "exit";
+        } else {
+            throw new AssertionError();
+        }
+    }
+
+    private static void writeInstruction(@NotNull StringBuilder stringBuilder, @NotNull Block.FunctionBlock functionBlock, @NotNull ControlFlowBlock block, @NotNull List<DataFlowState> states, @NotNull Set<DataFlowBlock> blocks) {
         String blockName = functionBlock.getModuleName() + ":" + functionBlock.getName();
         stringBuilder.append("subgraph ").append(getBlockClusterName(functionBlock)).append(" {").append("\n");
         stringBuilder.append("style=dotted;\nlabel=\"").append(blockName).append("\";").append("\n");
@@ -121,13 +138,11 @@ public class DataFlowGraphService extends AnAction {
             if (entryInstruction == null) {
                 continue;
             }
-            DataFlowBlock block = dataFlow.getBlock(entryInstruction.getInstruction());
-            if (block != null) {
-                for (DataFlowState state : block.getStates()) {
-                    writeState(stringBuilder, blocks, states, state);
-                    if (state.getPredecessor() == null) {
-                        stringBuilder.append(getEntryBlockName(functionBlock)).append(" -> ").append(getDataFlowStateName(states, state)).append(";\n");
-                    }
+            DataFlowBlock dataFlowBlock = block.getDataFlow(entryInstruction.getInstruction());
+            for (DataFlowState state : dataFlowBlock.getStates()) {
+                writeState(stringBuilder, blocks, states, state);
+                if (state.getPredecessor() == null) {
+                    stringBuilder.append(getEntryBlockName(functionBlock)).append(" -> ").append(getDataFlowStateName(states, state)).append(";\n");
                 }
             }
         }
@@ -296,14 +311,9 @@ public class DataFlowGraphService extends AnAction {
                 @Override
                 public void run(@NotNull ProgressIndicator indicator) {
                     ControlFlowService service = ControlFlowService.getInstance();
-                    DataFlow dataFlow = ReadAction.compute(() -> service.getDataFlow(project, (result, block) -> {
-                        Instruction instruction = block.getBlock().getInstruction();
-                        Block functionBlock = instruction.getBlock();
-                        indicator.setText2("Processing: " + functionBlock.getModuleName() + ":" + functionBlock.getName() + " - Instruction #" + instruction.getIndex());
-                        return true;
-                    }));
+                    Set<ControlFlowBlock> blocks = ReadAction.compute(() -> service.getControlFlowBlock(project));
                     try {
-                        convert(wrapper.getFile(), dataFlow);
+                        convert(wrapper.getFile(), blocks);
                         NotificationGroupManager.getInstance()
                                                 .getNotificationGroup("Data flow diagrams")
                                                 .createNotification(RapidBundle.message("notification.group.data.flow.export.success"), wrapper.getFile().getAbsolutePath(), NotificationType.INFORMATION)

@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameter;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInsight.TailType;
+import com.intellij.codeInsight.TailTypes;
 import com.intellij.codeInsight.completion.*;
 import com.intellij.patterns.ElementPattern;
 import com.intellij.patterns.PsiElementPattern;
@@ -59,7 +60,7 @@ public class RapidKeywordCompletionContributor extends CompletionContributor {
 
         // TODO: 2023-05-01 Technically UNDO, ERROR, and BACKWARD should only be displayed if they don't already exist, and should be inserted in the correct order.
         extend(CompletionType.BASIC, STATEMENT, new RapidKeywordCompletionProvider("GOTO", "RAISE", "CONNECT", "IF", "FOR", "WHILE", "TEST", "VAR", "PERS", "CONST", "ERROR", "BACKWARD", "UNDO"));
-        extend(CompletionType.BASIC, STATEMENT, new RapidKeywordCompletionProvider(TailType.SEMICOLON, "EXIT"));
+        extend(CompletionType.BASIC, STATEMENT, new RapidKeywordCompletionProvider(TailTypes.semicolonType(), "EXIT"));
 
         // Use the correct tail type depending on if the routine has a return value.
         extend(CompletionType.BASIC, STATEMENT, new CompletionProvider<>() {
@@ -69,7 +70,7 @@ public class RapidKeywordCompletionContributor extends CompletionContributor {
                 if (routine == null) {
                     return;
                 }
-                TailType tailType = routine.getRoutineType() == RoutineType.FUNCTION ? TailType.SPACE : TailType.SEMICOLON;
+                TailType tailType = routine.getRoutineType() == RoutineType.FUNCTION ? TailTypes.spaceType() : TailTypes.semicolonType();
                 result.caseInsensitive().addElement(RapidKeywordCompletionProvider.getLookupElement(tailType, "RETURN", null));
             }
         });
@@ -83,8 +84,8 @@ public class RapidKeywordCompletionContributor extends CompletionContributor {
                     return;
                 }
                 if (statementList.getStatementListType() == BlockType.ERROR_CLAUSE) {
-                    result.caseInsensitive().addElement(RapidKeywordCompletionProvider.getLookupElement(TailType.SEMICOLON, "RETRY", null));
-                    result.caseInsensitive().addElement(RapidKeywordCompletionProvider.getLookupElement(TailType.SEMICOLON, "TRYNEXT", null));
+                    result.caseInsensitive().addElement(RapidKeywordCompletionProvider.getLookupElement(TailTypes.semicolonType(), "RETRY", null));
+                    result.caseInsensitive().addElement(RapidKeywordCompletionProvider.getLookupElement(TailTypes.semicolonType(), "TRYNEXT", null));
                 }
             }
         });
