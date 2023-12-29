@@ -2,6 +2,7 @@ package com.bossymr.rapid.ide.insight.flow;
 
 import com.bossymr.rapid.ide.editor.insight.inspection.flow.ConstantValueInspection;
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,6 +14,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
     protected void setUp() throws Exception {
         super.setUp();
         myFixture.enableInspections(List.of(ConstantValueInspection.class));
+        ControlFlowService.getInstance().reload();
     }
 
     private void doTest(@NotNull String text) {

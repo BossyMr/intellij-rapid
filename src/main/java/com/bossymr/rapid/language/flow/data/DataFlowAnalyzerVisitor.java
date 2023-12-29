@@ -70,12 +70,15 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
         if (successor == null) {
             return null;
         }
-        DataFlowBlock successorBlock = block.getDataFlow(successor);
-        DataFlowState successorState = DataFlowState.createSuccessorState(successorBlock, state);
         if (condition != null) {
+            DataFlowState successorState = DataFlowState.createSuccessorState(state.getBlock(), state);
             successorState.add(condition);
+            DataFlowBlock successorBlock = block.getDataFlow(successor);
+            return DataFlowState.createSuccessorState(successorBlock, successorState);
+        } else {
+            DataFlowBlock successorBlock = block.getDataFlow(successor);
+            return DataFlowState.createSuccessorState(successorBlock, state);
         }
-        return successorState;
     }
 
     private @NotNull List<DataFlowState> getSuccessors(@NotNull Instruction instruction) {

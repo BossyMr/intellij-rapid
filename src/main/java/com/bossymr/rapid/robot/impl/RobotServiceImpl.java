@@ -2,11 +2,12 @@ package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.network.NetworkManager;
 import com.bossymr.network.client.security.Credentials;
-import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotEventListener;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.components.State;
@@ -18,17 +19,13 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
-import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiManager;
-import com.intellij.psi.search.FileTypeIndex;
-import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.Objects;
 
 @State(name = "robot",
@@ -108,13 +105,15 @@ public class RobotServiceImpl implements RobotService {
     }
 
     private void reload() {
-        ApplicationManager.getApplication().invokeLater(() -> {
-            Project[] projects = ProjectManager.getInstance().getOpenProjects();
-            for (Project project : projects) {
-                Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(project));
-                WriteAction.run(() -> PsiDocumentManager.getInstance(project).reparseFiles(virtualFiles, true));
-            }
-        });
+        Project[] projects = ProjectManager.getInstance().getOpenProjects();
+        for (Project project : projects) {
+            ApplicationManager.getApplication().invokeLater(() -> {
+                if (!(project.isDisposed())) {
+                    PsiManager.getInstance(project).dropPsiCaches();
+                }
+            }, ModalityState.nonModal());
+        }
+        ControlFlowService.getInstance().reload();
     }
 
     @Override

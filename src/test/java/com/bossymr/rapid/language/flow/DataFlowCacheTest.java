@@ -29,7 +29,7 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
             Objects.requireNonNull(element);
             PhysicalRoutine routine = PhysicalRoutine.getRoutine(element);
             Objects.requireNonNull(routine);
-            service.getControlFlowBlock(routine);
+            service.getDataFlow(routine);
         });
         assertEquals(processed, result);
     }
@@ -73,7 +73,71 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
                     PROC baz2()
                     ENDPROC
                 ENDMODULE
-                """, Set.of("foo:bar", "foo:bar2", "foo:bar3", "foo:bar4"));
+                """, Set.of("foo:bar"));
+    }
+
+    public void testChainWithReturnValue() {
+        checkByText("""
+                MODULE foo
+                    PROC bar()
+                        <caret>
+                        VAR value := bar2();
+                    ENDPROC
+                    
+                    FUNC num bar2()
+                        RETURN -1;
+                    ENDFUNC
+                ENDMODULE
+                """, Set.of("foo:bar", "foo:bar2"));
+    }
+
+    public void testChainWithUnusedReturnValue() {
+        checkByText("""
+                MODULE foo
+                    PROC bar()
+                        <caret>
+                        bar2();
+                    ENDPROC
+                    
+                    FUNC num bar2()
+                        RETURN -1;
+                    ENDFUNC
+                ENDMODULE
+                """, Set.of("foo:bar"));
+    }
+
+    public void testChainWithError() {
+        checkByText("""
+                MODULE foo
+                    PROC bar()
+                        <caret>
+                        bar2();
+                    ENDPROC
+                    
+                    FUNC num bar2()
+                        RAISE 1;
+                    ENDFUNC
+                ENDMODULE
+                """, Set.of("foo:bar", "foo:bar2"));
+    }
+
+    public void testDeepChainWithReturnValue() {
+        checkByText("""
+                MODULE foo
+                    PROC bar()
+                        <caret>
+                        VAR value := bar2();
+                    ENDPROC
+                    
+                    FUNC num bar2()
+                        RETURN bar3();
+                    ENDFUNC
+                    
+                    FUNC num bar3()
+                        RETURN -1;
+                    ENDFUNC
+                ENDMODULE
+                """, Set.of("foo:bar", "foo:bar2", "foo:bar3"));
     }
 
 }

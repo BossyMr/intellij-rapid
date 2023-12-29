@@ -311,7 +311,7 @@ public class DataFlowGraphService extends AnAction {
                 @Override
                 public void run(@NotNull ProgressIndicator indicator) {
                     ControlFlowService service = ControlFlowService.getInstance();
-                    Set<ControlFlowBlock> blocks = ReadAction.compute(() -> service.getControlFlowBlock(project));
+                    Set<ControlFlowBlock> blocks = ReadAction.compute(() -> service.getDataFlow(project));
                     try {
                         convert(wrapper.getFile(), blocks);
                         NotificationGroupManager.getInstance()

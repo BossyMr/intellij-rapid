@@ -12,7 +12,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
     private void check(@NotNull String text, @NotNull String expected) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
         ControlFlowService service = ControlFlowService.getInstance();
-        Set<ControlFlowBlock> controlFlow = service.getControlFlowBlock(myFixture.getProject());
+        Set<ControlFlowBlock> controlFlow = service.getDataFlow(myFixture.getProject());
         assertTextEquals(expected.replaceAll(" {4}", "\t"), ControlFlowFormatVisitor.format(controlFlow).replaceAll(" {4}", "\t"));
     }
 

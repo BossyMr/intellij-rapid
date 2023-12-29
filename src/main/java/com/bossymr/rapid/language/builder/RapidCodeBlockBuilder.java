@@ -54,7 +54,7 @@ public interface RapidCodeBlockBuilder {
      * @param name the name of the argument.
      * @return the argument with the specified name, or {@code null} if no argument with the specified was found.
      */
-    @Nullable Argument getArgument(@NotNull String name);
+    Argument getArgument(@NotNull String name);
 
     /**
      * Returns a reference to the specified field.

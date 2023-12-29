@@ -69,7 +69,7 @@ public class RobotToolWindow implements Disposable {
 
         EditSourceOnDoubleClickHandler.install(tree);
         EditSourceOnEnterKeyHandler.install(tree);
-        new TreeSpeedSearch(tree);
+        TreeSpeedSearch.installOn(tree);
 
         AnAction action = ActionManager.getInstance().getAction("com.bossymr.rapid.robot.actions.ConnectAction");
 

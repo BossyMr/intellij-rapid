@@ -4,9 +4,7 @@ import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.ControlFlowListener;
 import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
-import com.bossymr.rapid.language.flow.instruction.ConditionalBranchingInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.intellij.openapi.progress.ProgressManager;
 import org.jetbrains.annotations.NotNull;
@@ -71,27 +69,12 @@ public class DataFlowAnalyzer {
 
     private @NotNull List<DataFlowState> process(@NotNull DataFlowState state) {
         cutBranch(state);
-        getVolatileExpression(state).clear();
+        state.getExpressions().clear();
         state.getSnapshots().clear();
         state.getSnapshots().putAll(state.getRoots());
         DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(stack, state, block);
         Instruction instruction = state.getBlock().getInstruction();
         return instruction.accept(visitor);
-    }
-
-    private @NotNull List<Expression> getVolatileExpression(@NotNull DataFlowState state) {
-        DataFlowState predecessor = state.getPredecessor();
-        List<Expression> expressions = state.getExpressions();
-        if (predecessor != null) {
-            DataFlowBlock predecessorBlock = predecessor.getBlock();
-            Instruction instruction = predecessorBlock.getInstruction();
-            if (instruction instanceof ConditionalBranchingInstruction) {
-                if (!(expressions.isEmpty())) {
-                    return expressions.subList(1, expressions.size());
-                }
-            }
-        }
-        return expressions;
     }
 
     private void cutBranch(@NotNull DataFlowState origin) {

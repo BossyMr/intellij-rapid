@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidStatement;
 import com.bossymr.rapid.language.type.RapidType;
+import com.intellij.model.Pointer;
 import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,6 +63,9 @@ public interface RapidRoutine extends RapidVisibleSymbol {
     @Nullable List<RapidStatement> getStatements(@NotNull BlockType blockType);
 
     @Nullable List<RapidExpression> getErrorClause();
+
+    @Override
+    @NotNull Pointer<? extends RapidRoutine> createPointer();
 
     @Override
     default @NotNull TargetPresentation getTargetPresentation() {

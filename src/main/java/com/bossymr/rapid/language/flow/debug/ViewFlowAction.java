@@ -21,7 +21,7 @@ public class ViewFlowAction extends AnAction {
         if (project == null) {
             return;
         }
-        Set<ControlFlowBlock> controlFlow = ControlFlowService.getInstance().getControlFlowBlock(project);
+        Set<ControlFlowBlock> controlFlow = ControlFlowService.getInstance().getDataFlow(project);
         String text = ControlFlowFormatVisitor.format(controlFlow);
         LightVirtualFile virtualFile = new LightVirtualFile("ControlFlow.txt", text);
         FileEditorManager.getInstance(project).openTextEditor(new OpenFileDescriptor(project, virtualFile), true);

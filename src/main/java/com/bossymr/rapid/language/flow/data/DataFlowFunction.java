@@ -11,7 +11,6 @@ import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
-import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,7 +54,7 @@ public class DataFlowFunction {
         return new Result.Success(successorState, snapshot);
     }
 
-    private static <T> @NotNull Map<Argument, T> getArguments(@NotNull Block.FunctionBlock functionBlock, @NotNull Map<ArgumentDescriptor, T> values) {
+    public static <T> @NotNull Map<Argument, T> getArguments(@NotNull Block functionBlock, @NotNull Map<ArgumentDescriptor, T> values) {
         List<Argument> arguments = new ArrayList<>();
         for (ArgumentGroup argumentGroup : functionBlock.getArgumentGroups()) {
             arguments.addAll(argumentGroup.arguments());
@@ -102,7 +101,7 @@ public class DataFlowFunction {
 
     public @NotNull Set<Result> getOutput(@NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
         Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
-        RapidType returnType = getBlock().getReturnType();
+        ReferenceExpression returnValue = instruction.getReturnValue();
         Set<Result> output = new HashSet<>();
         for (DataFlowState calleeState : results.keySet()) {
             Result result = results.get(calleeState);
@@ -113,13 +112,19 @@ public class DataFlowFunction {
                 usages.get(callerState).add(calleeState);
             }
         }
-        if (returnType == null) {
+        if (returnValue == null) {
             if (arguments.keySet().stream().allMatch(argument -> argument.getParameterType() == ParameterType.INPUT)) {
                 /*
                  * This function call will not have any side effects on the caller. As a result, only at most a single
                  * empty success state needs to be returned.
                  */
-                output.removeIf(result -> result instanceof Result.Success);
+                output.removeIf(result -> {
+                    if (result instanceof Result.Success) {
+                        result.state().close();
+                        return true;
+                    }
+                    return false;
+                });
                 DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getBlock(), callerState);
                 output.add(new Result.Success(successorState, null));
             }

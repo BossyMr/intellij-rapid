@@ -14,7 +14,6 @@ import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -28,7 +27,7 @@ class ControlFlowBuilderTest {
         ControlFlowBuilder builder = new ControlFlowBuilder();
         consumer.accept(builder);
         Set<ControlFlowBlock> controlFlow = builder.getControlFlow().stream()
-                                                   .map(block -> new ControlFlowBlock(block, Map.of()))
+                                                   .map(ControlFlowBlock::new)
                                                    .collect(Collectors.toSet());
         String actual = ControlFlowFormatVisitor.format(controlFlow);
         if (expected.isEmpty()) {

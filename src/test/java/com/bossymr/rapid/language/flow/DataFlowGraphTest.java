@@ -17,6 +17,12 @@ import java.util.function.Supplier;
 public class DataFlowGraphTest extends BasePlatformTestCase {
 
     @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+        ControlFlowService.getInstance().reload();
+    }
+
+    @Override
     protected String getTestDataPath() {
         return "src/test/resources/com/bossymr/rapid/ide/insight/flow/";
     }
@@ -25,7 +31,7 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
         check(() -> {
             myFixture.configureByText(RapidFileType.getInstance(), text);
             ControlFlowService service = ControlFlowService.getInstance();
-            return service.getControlFlowBlock(myFixture.getProject());
+            return service.getDataFlow(myFixture.getProject());
         });
     }
 
@@ -33,7 +39,7 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
         check(() -> {
             myFixture.configureByFile(fileName);
             ControlFlowService service = ControlFlowService.getInstance();
-            return service.getControlFlowBlock(myFixture.getProject());
+            return service.getDataFlow(myFixture.getProject());
         });
     }
 

@@ -5,7 +5,7 @@ import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -15,9 +15,9 @@ public class ControlFlowBlock {
     private final @NotNull Map<Instruction, DataFlowBlock> dataFlow;
     private final @NotNull DataFlowFunction function;
 
-    public ControlFlowBlock(@NotNull Block controlFlow, @NotNull Map<Instruction, DataFlowBlock> dataFlow) {
+    public ControlFlowBlock(@NotNull Block controlFlow) {
         this.controlFlow = controlFlow;
-        this.dataFlow = dataFlow;
+        this.dataFlow = new HashMap<>();
         this.function = new DataFlowFunction(this);
     }
 
@@ -32,8 +32,8 @@ public class ControlFlowBlock {
         return dataFlow.get(instruction);
     }
 
-    public @NotNull Collection<DataFlowBlock> getDataFlow() {
-        return dataFlow.values();
+    public @NotNull Map<Instruction, DataFlowBlock> getDataFlow() {
+        return dataFlow;
     }
 
     public @NotNull DataFlowFunction getFunction() {
