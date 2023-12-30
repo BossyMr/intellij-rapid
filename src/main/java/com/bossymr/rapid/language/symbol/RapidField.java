@@ -6,6 +6,8 @@ import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 /**
  * A {@code RapidField} represents a field.
  */
@@ -45,7 +47,7 @@ public interface RapidField extends RapidVariable, RapidVisibleSymbol {
 
     @Override
     default @NotNull TargetPresentation getTargetPresentation() {
-        return TargetPresentation.builder(this.getName())
+        return TargetPresentation.builder(Objects.requireNonNullElseGet(this.getName(), RapidSymbol::getDefaultText))
                 .icon(switch (getFieldType()) {
                     case VARIABLE -> RapidIcons.VARIABLE;
                     case CONSTANT -> RapidIcons.CONSTANT;

@@ -733,11 +733,15 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull RapidCodeBlockBuilder ifThenElse(@NotNull Expression condition, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer, @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer) {
+        return ifThenElse(null, condition, thenConsumer, elseConsumer);
+    }
+
+    public @NotNull RapidCodeBlockBuilder ifThenElse(@Nullable RapidStatement statement, @NotNull Expression condition, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer, @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer) {
         if (!(condition.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             condition = any(RapidPrimitiveType.BOOLEAN);
         }
         condition = getAsVariable(condition);
-        ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, null, condition);
+        ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, statement, condition);
         builder.continueScope(instruction);
         ControlFlowBlockBuilder.Scope scope = builder.exitScope();
         if (scope == null) {
@@ -780,6 +784,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         if (thenScope != null) builder.enterScope(thenScope);
         if (elseScope != null) builder.enterScope(elseScope);
         return this;
+
     }
 
     private @NotNull Consumer<RapidCodeBlockBuilder> getBlockConsumer(@Nullable RapidStatementList statementList) {
@@ -796,7 +801,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     @Override
     public @NotNull RapidCodeBlockBuilder ifThenElse(@NotNull RapidIfStatement statement) {
         Expression expression = expressionOrError(statement.getCondition(), RapidPrimitiveType.BOOLEAN);
-        return ifThenElse(expression, getBlockConsumer(statement.getThenBranch()), getBlockConsumer(statement.getElseBranch()));
+        return ifThenElse(statement, expression, getBlockConsumer(statement.getThenBranch()), getBlockConsumer(statement.getElseBranch()));
     }
 
     @Override
@@ -813,7 +818,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     public @NotNull RapidCodeBlockBuilder whileLoop(@NotNull RapidWhileStatement statement) {
         Label label = createLabel();
         Expression expression = expressionOrError(statement.getCondition(), RapidPrimitiveType.BOOLEAN);
-        return ifThen(expression, thenBuilder -> {
+        return ifThenElse(statement, expression, thenBuilder -> {
             RapidStatementList statementList = statement.getStatementList();
             if (statementList != null) {
                 for (RapidStatement instruction : statementList.getStatements()) {
@@ -821,34 +826,38 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                 }
             }
             thenBuilder.goTo(label);
-        });
+        }, elseBuilder -> {});
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder forLoop(@NotNull Expression fromExpression, @NotNull Expression toExpression, @Nullable Expression stepExpression, @NotNull BiConsumer<Variable, RapidCodeBlockBuilder> consumer) {
+        return forLoop(null, fromExpression, toExpression, stepExpression, consumer);
+    }
+
+    public @NotNull RapidCodeBlockBuilder forLoop(@Nullable RapidForStatement statement, @NotNull Expression fromExpression, @NotNull Expression toExpression, @Nullable Expression stepExpression, @NotNull BiConsumer<Variable, RapidCodeBlockBuilder> consumer) {
         Variable indexVariable = createVariable(RapidPrimitiveType.NUMBER);
         ReferenceExpression indexExpression = getReference(indexVariable);
         assign(indexExpression, fromExpression);
         if (stepExpression == null) {
             Variable stepVariable = createVariable(RapidPrimitiveType.NUMBER);
             stepExpression = getReference(stepVariable);
-            ifThenElse(binary(BinaryOperator.LESS_THAN, indexExpression, toExpression),
+            ifThenElse(statement, binary(BinaryOperator.LESS_THAN, indexExpression, toExpression),
                     thenBuilder -> thenBuilder.assign(getReference(stepVariable), thenBuilder.literal(1)),
                     elseBuilder -> elseBuilder.assign(getReference(stepVariable), elseBuilder.literal(-1)));
         }
         Label label = createLabel();
         Variable breakVariable = createVariable(RapidPrimitiveType.BOOLEAN);
         ReferenceExpression breakExpression = getReference(breakVariable);
-        ifThenElse(binary(BinaryOperator.LESS_THAN, stepExpression, literal(0)),
+        ifThenElse(statement, binary(BinaryOperator.LESS_THAN, stepExpression, literal(0)),
                 thenBuilder -> thenBuilder.assign(breakExpression, thenBuilder.binary(BinaryOperator.GREATER_THAN, indexExpression, toExpression)),
                 elseBuilder -> elseBuilder.assign(breakExpression, elseBuilder.binary(BinaryOperator.LESS_THAN, indexExpression, toExpression)));
         Expression stepVariable = stepExpression;
-        return ifThen(breakExpression,
+        return ifThenElse(statement, breakExpression,
                 thenBuilder -> {
                     consumer.accept(indexVariable, thenBuilder);
                     thenBuilder.assign(indexExpression, binary(BinaryOperator.ADD, indexExpression, stepVariable));
                     thenBuilder.goTo(label);
-                });
+                }, elseBuilder -> {});
     }
 
     @Override
@@ -857,7 +866,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         Expression toExpression = expressionOrError(statement.getToExpression(), RapidPrimitiveType.NUMBER);
         Expression stepExpression = statement.getStepExpression() != null ? expressionOrError(statement.getStepExpression(), RapidPrimitiveType.NUMBER) : null;
         String name = statement.getVariable() != null ? statement.getVariable().getName() : null;
-        return forLoop(fromExpression, toExpression, stepExpression, (variable, builder) -> {
+        return forLoop(statement, fromExpression, toExpression, stepExpression, (variable, builder) -> {
             variable.setName(name);
             RapidStatementList statementList = statement.getStatementList();
             if (statementList != null) {
@@ -871,7 +880,11 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull RapidCodeBlockBuilder test(@NotNull Expression condition, @NotNull Consumer<RapidTestBlockBuilder> consumer) {
-        ControlFlowTestBlockBuilder testBlockBuilder = new ControlFlowTestBlockBuilder(this, condition);
+        return test(null, condition, consumer);
+    }
+
+    public @NotNull RapidCodeBlockBuilder test(@Nullable RapidTestStatement statement, @NotNull Expression condition, @NotNull Consumer<RapidTestBlockBuilder> consumer) {
+        ControlFlowTestBlockBuilder testBlockBuilder = new ControlFlowTestBlockBuilder(statement, this, condition);
         consumer.accept(testBlockBuilder);
         return this;
     }
@@ -879,7 +892,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     @Override
     public @NotNull RapidCodeBlockBuilder test(@NotNull RapidTestStatement statement) {
         Expression expression = expressionOrError(statement.getExpression(), RapidPrimitiveType.ANYTYPE);
-        return test(expression, builder -> {
+        return test(statement, expression, builder -> {
             for (RapidTestCaseStatement caseStatement : statement.getTestCaseStatements()) {
                 if (caseStatement.isDefault()) {
                     builder.withDefaultCase(codeBuilder -> {
@@ -1058,7 +1071,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         if (expression == null) {
             expression = expressionOrError(statement.getReferenceExpression(), RapidPrimitiveType.STRING);
         }
-        call(null, expression, null, result);
+        call(statement, expression, null, result);
         return this;
     }
 

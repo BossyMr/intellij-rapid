@@ -4,6 +4,7 @@ import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
 import com.bossymr.rapid.language.builder.RapidTestBlockBuilder;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.psi.RapidTestStatement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,10 +13,12 @@ import java.util.function.Consumer;
 
 public class ControlFlowTestBlockBuilder implements RapidTestBlockBuilder {
 
+    private final @Nullable RapidTestStatement statement;
     private final @NotNull Expression condition;
-    private @Nullable RapidCodeBlockBuilder builder;
+    private @Nullable ControlFlowCodeBlockBuilder builder;
 
-    public ControlFlowTestBlockBuilder(@NotNull ControlFlowCodeBlockBuilder builder, @NotNull Expression condition) {
+    public ControlFlowTestBlockBuilder(@Nullable RapidTestStatement statement, @NotNull ControlFlowCodeBlockBuilder builder, @NotNull Expression condition) {
+        this.statement = statement;
         this.builder = builder;
         this.condition = condition;
     }
@@ -30,7 +33,7 @@ public class ControlFlowTestBlockBuilder implements RapidTestBlockBuilder {
         for (int i = 1; i < equality.size(); i++) {
             expression = builder.binary(BinaryOperator.OR, expression, equality.get(i));
         }
-        builder.ifThenElse(expression, consumer, elseBuilder -> builder = elseBuilder);
+        builder.ifThenElse(statement, expression, consumer, elseBuilder -> builder = (ControlFlowCodeBlockBuilder) elseBuilder);
         return this;
     }
 

@@ -2,7 +2,6 @@ package com.bossymr.rapid.ide.editor.insight.inspection.flow;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
@@ -90,8 +89,7 @@ public class ConstantValueInspection extends LocalInspectionTool {
         Map<DataFlowState, Snapshot> states = new HashMap<>();
         Block functionBlock = block.getControlFlow();
         for (Instruction instruction : functionBlock.getInstructions()) {
-            DataFlowBlock dataFlowBlock = block.getDataFlow(instruction);
-            for (DataFlowState state : dataFlowBlock.getStates()) {
+            for (DataFlowState state : block.getDataFlow(instruction)) {
                 Snapshot snapshot = state.getSnapshot(expression);
                 if (snapshot != null) {
                     states.put(state, snapshot);

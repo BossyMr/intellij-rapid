@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.flow.debug;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
-import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
@@ -86,21 +85,20 @@ public class DataFlowGraphService extends AnAction {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("digraph {").append("\n");
         stringBuilder.append("rankdir=LR;\n");
-        Set<DataFlowBlock> visited = new HashSet<>();
         for (ControlFlowBlock block : blocks) {
             Block controlFlow = block.getControlFlow();
             if (!(controlFlow instanceof Block.FunctionBlock functionBlock)) {
                 continue;
             }
-            writeInstruction(stringBuilder, functionBlock, block, states, visited);
+            writeInstruction(stringBuilder, functionBlock, block, states);
         }
         for (ControlFlowBlock block : blocks) {
             DataFlowFunction function = block.getFunction();
             Map<DataFlowState, Set<DataFlowState>> usages = function.getUsages();
             for (DataFlowState callerState : usages.keySet()) {
-                writeState(stringBuilder, visited, states, callerState);
+                writeState(stringBuilder, states, callerState);
                 for (DataFlowState calleeState : usages.get(callerState)) {
-                    writeState(stringBuilder, visited, states, calleeState);
+                    writeState(stringBuilder, states, calleeState);
                     DataFlowFunction.Result result = function.getResults().get(calleeState);
                     String resultType = getResultType(result);
                     stringBuilder.append(getDataFlowStateName(states, calleeState))
@@ -128,7 +126,7 @@ public class DataFlowGraphService extends AnAction {
         }
     }
 
-    private static void writeInstruction(@NotNull StringBuilder stringBuilder, @NotNull Block.FunctionBlock functionBlock, @NotNull ControlFlowBlock block, @NotNull List<DataFlowState> states, @NotNull Set<DataFlowBlock> blocks) {
+    private static void writeInstruction(@NotNull StringBuilder stringBuilder, @NotNull Block.FunctionBlock functionBlock, @NotNull ControlFlowBlock block, @NotNull List<DataFlowState> states) {
         String blockName = functionBlock.getModuleName() + ":" + functionBlock.getName();
         stringBuilder.append("subgraph ").append(getBlockClusterName(functionBlock)).append(" {").append("\n");
         stringBuilder.append("style=dotted;\nlabel=\"").append(blockName).append("\";").append("\n");
@@ -138,9 +136,8 @@ public class DataFlowGraphService extends AnAction {
             if (entryInstruction == null) {
                 continue;
             }
-            DataFlowBlock dataFlowBlock = block.getDataFlow(entryInstruction.getInstruction());
-            for (DataFlowState state : dataFlowBlock.getStates()) {
-                writeState(stringBuilder, blocks, states, state);
+            for (DataFlowState state : block.getDataFlow(entryInstruction.getInstruction())) {
+                writeState(stringBuilder, states, state);
                 if (state.getPredecessor() == null) {
                     stringBuilder.append(getEntryBlockName(functionBlock)).append(" -> ").append(getDataFlowStateName(states, state)).append(";\n");
                 }
@@ -168,34 +165,18 @@ public class DataFlowGraphService extends AnAction {
         if (index < 0) {
             throw new IllegalArgumentException("Could not calculate name for state: " + state);
         }
-        Block block = state.getBlock().getInstruction().getBlock();
+        Block block = state.getFunctionBlock();
         return getDataFlowStateName(block, index);
     }
 
-    private static void writeBlock(@NotNull StringBuilder stringBuilder, @NotNull Set<DataFlowBlock> blocks, @NotNull List<DataFlowState> states, @NotNull DataFlowBlock block) {
-        if (!(blocks.add(block))) {
-            return;
-        }
-        for (DataFlowState state : block.getStates()) {
-            writeState(stringBuilder, blocks, states, state);
-        }
-    }
-
-    private static void writeState(@NotNull StringBuilder stringBuilder, @NotNull Set<DataFlowBlock> blocks, @NotNull List<DataFlowState> states, @NotNull DataFlowState state) {
+    private static void writeState(@NotNull StringBuilder stringBuilder, @NotNull List<DataFlowState> states, @NotNull DataFlowState state) {
         if (states.contains(state)) {
             return;
         }
         states.add(state);
-        DataFlowBlock block = state.getBlock();
-        if (state.getBlock().getInstruction().getIndex() == 1 && state.getBlock().getInstruction().getBlock().getName().equals("Abs") && !(block.getStates().contains(state))) {
-            System.out.println("Writing block");
-        }
         stringBuilder.append(getDataFlowStateName(states, state));
         stringBuilder.append("[shape=plain,label=<").append("<table BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">");
-        Instruction instruction = block.getInstruction();
-        if (!(block.getStates().contains(state))) {
-            stringBuilder.append("<tr><td COLSPAN=\"2\">").append("[detached]").append("</td></tr>\n");
-        }
+        Instruction instruction = state.getInstruction();
         stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Instruction #").append(instruction.getIndex()).append("</td></tr>\n");
         writeInstruction(stringBuilder, instruction);
         stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Snapshots").append("</td></tr>\n");
@@ -213,16 +194,15 @@ public class DataFlowGraphService extends AnAction {
         }
         stringBuilder.append("</table>>];\n");
         for (DataFlowState successor : state.getSuccessors()) {
-            writeState(stringBuilder, blocks, states, successor);
+            writeState(stringBuilder, states, successor);
         }
         if (state.getPredecessor() != null) {
-            writeState(stringBuilder, blocks, states, state.getPredecessor());
+            writeState(stringBuilder, states, state.getPredecessor());
             stringBuilder.append(getDataFlowStateName(states, state.getPredecessor()))
                          .append(" -> ")
                          .append(getDataFlowStateName(states, state))
                          .append(";\n");
         }
-        writeBlock(stringBuilder, blocks, states, block);
     }
 
     private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceExpression variable, @NotNull Snapshot snapshot, @NotNull Set<Snapshot> snapshots) {

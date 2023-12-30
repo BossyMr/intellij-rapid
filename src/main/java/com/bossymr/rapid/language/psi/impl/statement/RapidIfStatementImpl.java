@@ -33,6 +33,16 @@ public class RapidIfStatementImpl extends PhysicalElement implements RapidIfStat
     }
 
     @Override
+    public boolean isCompact() {
+        RapidStatementList thenBranch = getThenBranch();
+        if (thenBranch != null && thenBranch.getStatements().size() > 1) {
+            return false;
+        }
+        PsiElement element = findChildByType(RapidTokenTypes.THEN_KEYWORD);
+        return element == null;
+    }
+
+    @Override
     public @Nullable RapidExpression getCondition() {
         return findChildByType(RapidElementTypes.EXPRESSIONS);
     }

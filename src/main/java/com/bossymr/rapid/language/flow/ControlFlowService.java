@@ -4,7 +4,6 @@ import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
 import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
-import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
@@ -120,16 +119,12 @@ public final class ControlFlowService implements Disposable {
 
     private void computeDataFlow(@NotNull ControlFlowBlock block, @NotNull Set<RapidRoutine> stack) {
         long startTime = System.currentTimeMillis();
-        Map<Instruction, DataFlowBlock> dataFlow = block.getDataFlow();
         Block controlFlow = block.getControlFlow();
-        for (Instruction instruction : controlFlow.getInstructions()) {
-            dataFlow.put(instruction, new DataFlowBlock(context.get(), instruction));
-        }
-        Deque<DataFlowState> workList = new ArrayDeque<>(dataFlow.size());
+        Deque<DataFlowState> workList = new ArrayDeque<>(controlFlow.getInstructions().size());
         for (EntryInstruction instruction : controlFlow.getEntryInstructions()) {
-            DataFlowBlock dataFlowBlock = block.getDataFlow(instruction.getInstruction());
-            DataFlowState dataFlowState = DataFlowState.createState(dataFlowBlock);
-            workList.add(dataFlowState);
+            DataFlowState state = DataFlowState.createState(instruction.getInstruction());
+            block.getDataFlow().put(instruction.getEntryType(), state);
+            workList.add(state);
         }
         DataFlowAnalyzer analyzer = new DataFlowAnalyzer(stack, block, workList);
         analyzer.process();
@@ -152,11 +147,8 @@ public final class ControlFlowService implements Disposable {
         return block;
     }
 
-    private long getBlockSize(@NotNull ControlFlowBlock block) {
-        return block.getDataFlow().values().stream()
-                    .map(DataFlowBlock::getStates)
-                    .mapToLong(List::size)
-                    .sum();
+    private int getBlockSize(@NotNull ControlFlowBlock block) {
+        return block.getEntireDataFlow().size();
     }
 
     private @NotNull Block computePhysicalControlFlow(@NotNull RapidRoutine routine) {
@@ -215,7 +207,7 @@ public final class ControlFlowService implements Disposable {
             return function.getOutput(callerState, instruction);
         }
         if (isPureMethod(stack, block, instruction)) {
-            DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getBlock(), callerState);
+            DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getInstruction(), callerState);
             return Set.of(new DataFlowFunction.Result.Success(successorState, null));
         }
         computeDataFlow(block, stack);

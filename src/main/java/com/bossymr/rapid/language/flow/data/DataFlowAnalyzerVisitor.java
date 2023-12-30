@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.*;
@@ -71,21 +70,18 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
             return null;
         }
         if (condition != null) {
-            DataFlowState successorState = DataFlowState.createSuccessorState(state.getBlock(), state);
+            DataFlowState successorState = DataFlowState.createSuccessorState(state.getInstruction(), state);
             successorState.add(condition);
-            DataFlowBlock successorBlock = block.getDataFlow(successor);
-            return DataFlowState.createSuccessorState(successorBlock, successorState);
+            return DataFlowState.createSuccessorState(successor, successorState);
         } else {
-            DataFlowBlock successorBlock = block.getDataFlow(successor);
-            return DataFlowState.createSuccessorState(successorBlock, state);
+            return DataFlowState.createSuccessorState(successor, state);
         }
     }
 
     private @NotNull List<DataFlowState> getSuccessors(@NotNull Instruction instruction) {
         List<DataFlowState> successors = new ArrayList<>();
         for (Instruction successor : instruction.getSuccessors()) {
-            DataFlowBlock successorBlock = block.getDataFlow(successor);
-            DataFlowState successorState = DataFlowState.createSuccessorState(successorBlock, state);
+            DataFlowState successorState = DataFlowState.createSuccessorState(successor, state);
             successors.add(successorState);
         }
         return successors;
@@ -113,7 +109,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
         if (variable != null) {
             snapshots.add(variable.getSnapshot());
         }
-        Block block = state.getBlock().getInstruction().getBlock();
+        Block block = state.getFunctionBlock();
         for (ArgumentGroup argumentGroup : block.getArgumentGroups()) {
             for (Argument argument : argumentGroup.arguments()) {
                 SnapshotExpression snapshot = state.getSnapshot(new VariableExpression(argument));
@@ -145,8 +141,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     }
 
     private @NotNull List<DataFlowState> createSuccessorState(@NotNull Instruction successor) {
-        DataFlowBlock successorBlock = block.getDataFlow(successor);
-        DataFlowState successorState = DataFlowState.createSuccessorState(successorBlock, state);
+        DataFlowState successorState = DataFlowState.createSuccessorState(successor, state);
         return List.of(successorState);
     }
 
@@ -175,7 +170,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
             }
             successors.add(result.state());
         }
-        DataFlowBlock successorBlock = block.getDataFlow(instruction.getSuccessor());
-        return successors.stream().map(state -> DataFlowState.createSuccessorState(successorBlock, state)).toList();
+        Instruction successor = instruction.getSuccessor();
+        return successors.stream().map(state -> DataFlowState.createSuccessorState(successor, state)).toList();
     }
 }

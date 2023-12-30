@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.ControlFlowListener;
-import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
@@ -31,10 +30,10 @@ public class DataFlowAnalyzer {
     }
 
     public static @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {
-        DataFlowBlock dataFlowBlock = state.getBlock();
+        Instruction instruction = state.getInstruction();
         DataFlowState predecessor = state;
         while ((predecessor = predecessor.getPredecessor()) != null) {
-            if (predecessor.getBlock().getInstruction().equals(dataFlowBlock.getInstruction())) {
+            if (predecessor.getInstruction().equals(instruction)) {
                 return predecessor;
             }
         }
@@ -73,7 +72,7 @@ public class DataFlowAnalyzer {
         state.getSnapshots().clear();
         state.getSnapshots().putAll(state.getRoots());
         DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(stack, state, block);
-        Instruction instruction = state.getBlock().getInstruction();
+        Instruction instruction = state.getInstruction();
         return instruction.accept(visitor);
     }
 

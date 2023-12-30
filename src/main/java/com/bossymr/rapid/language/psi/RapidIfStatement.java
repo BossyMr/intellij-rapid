@@ -7,6 +7,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface RapidIfStatement extends RapidStatement {
 
+    boolean isCompact();
+
     /**
      * Returns the expression which is evaluated by this statement.
      *

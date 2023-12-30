@@ -31,7 +31,7 @@ public class DataFlowFunction {
 
     public static @NotNull Result getDefaultOutput(@Nullable Block.FunctionBlock functionBlock, @NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
         ReferenceExpression returnValue = instruction.getReturnValue();
-        DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getBlock(), callerState);
+        DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getInstruction(), callerState);
         if (functionBlock != null && returnValue == null) {
             Set<Argument> arguments = getArguments(functionBlock, instruction.getArguments()).keySet();
             if (arguments.stream().allMatch(argument -> argument.getParameterType() == ParameterType.INPUT)) {
@@ -125,7 +125,7 @@ public class DataFlowFunction {
                     }
                     return false;
                 });
-                DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getBlock(), callerState);
+                DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getInstruction(), callerState);
                 output.add(new Result.Success(successorState, null));
             }
         }

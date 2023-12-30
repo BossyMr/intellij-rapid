@@ -4,6 +4,7 @@ import com.bossymr.network.MultiMap;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.ConditionAnalyzer;
 import com.bossymr.rapid.language.flow.data.snapshots.*;
+import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
@@ -47,7 +48,10 @@ import java.util.*;
 public class DataFlowState {
 
     private final @NotNull List<DataFlowState> successors = new ArrayList<>();
+    private final @NotNull Instruction instruction;
+
     private final @NotNull Block functionBlock;
+    private @Nullable DataFlowState predecessor;
 
     /**
      * The conditions for all variables.
@@ -64,28 +68,24 @@ public class DataFlowState {
      */
     private final @NotNull Map<Field, Snapshot> roots;
 
-    private final @NotNull DataFlowBlock block;
-    private @Nullable DataFlowState predecessor;
-
-    public DataFlowState(@NotNull DataFlowBlock block, @NotNull Block functionBlock, @Nullable DataFlowState predecessor) {
+    public DataFlowState(@NotNull Instruction instruction, @Nullable DataFlowState predecessor) {
         this.predecessor = predecessor;
-        this.block = block;
-        this.functionBlock = functionBlock;
+        this.functionBlock = instruction.getBlock();
+        this.instruction = instruction;
         this.roots = predecessor == null ? new HashMap<>() : Map.of();
-        block.getStates().add(this);
         if (predecessor != null) {
             predecessor.getSuccessors().add(this);
         }
     }
 
-    public static @NotNull DataFlowState createState(@NotNull DataFlowBlock block) {
-        DataFlowState state = new DataFlowState(block, block.getInstruction().getBlock(), null);
+    public static @NotNull DataFlowState createState(@NotNull Instruction instruction) {
+        DataFlowState state = new DataFlowState(instruction, null);
         state.initializeDefault();
         return state;
     }
 
-    public static @NotNull DataFlowState createSuccessorState(@NotNull DataFlowBlock block, @NotNull DataFlowState predecessor) {
-        return new DataFlowState(block, block.getInstruction().getBlock(), predecessor);
+    public static @NotNull DataFlowState createSuccessorState(@NotNull Instruction instruction, @NotNull DataFlowState predecessor) {
+        return new DataFlowState(instruction, predecessor);
     }
 
     public static @NotNull Snapshot createDefaultSnapshot(@NotNull DataFlowState state, @NotNull RapidType type) {
@@ -117,7 +117,7 @@ public class DataFlowState {
 
     public @NotNull DataFlowState createCompactState(@NotNull Set<Snapshot> targets) {
         Set<Snapshot> snapshots = new HashSet<>(targets);
-        DataFlowState successor = new DataFlowState(block, functionBlock, null) {
+        DataFlowState successor = new DataFlowState(instruction, null) {
             @Override
             public boolean equals(Object o) {
                 if (this == o) return true;
@@ -131,7 +131,6 @@ public class DataFlowState {
                 return Objects.hash(getFunctionBlock(), getExpressions(), getSnapshots(), getRoots());
             }
         };
-        block.getStates().remove(successor);
         MultiMap<DataFlowState, Expression> expressions = new MultiMap<>(HashSet::new);
         List<DataFlowState> states = new ArrayList<>();
         for (DataFlowState predecessor = this; predecessor != null; predecessor = predecessor.getPredecessor()) {
@@ -197,7 +196,6 @@ public class DataFlowState {
         if (predecessor != null) {
             predecessor.getSuccessors().remove(this);
         }
-        block.getStates().remove(this);
         predecessor = null;
     }
 
@@ -207,6 +205,10 @@ public class DataFlowState {
 
     public @NotNull List<DataFlowState> getSuccessors() {
         return successors;
+    }
+
+    public @NotNull Instruction getInstruction() {
+        return instruction;
     }
 
     public @Nullable DataFlowState getFirstPredecessor() {
@@ -248,12 +250,8 @@ public class DataFlowState {
         }
     }
 
-    public @NotNull DataFlowBlock getBlock() {
-        return block;
-    }
-
     public @NotNull DataFlowState merge(@NotNull DataFlowState state, @NotNull Map<Snapshot, Snapshot> modifications) {
-        DataFlowState successorState = DataFlowState.createSuccessorState(getBlock(), this);
+        DataFlowState successorState = DataFlowState.createSuccessorState(instruction, this);
         for (Expression expression : state.getExpressions()) {
             successorState.add(expression.replace(component -> {
                 if (!(component instanceof SnapshotExpression snapshot)) {
@@ -424,7 +422,7 @@ public class DataFlowState {
             }
         }
         if (predecessor != null) {
-            if (predecessor.getBlock().equals(getBlock())) {
+            if (predecessor.getInstruction().equals(getInstruction())) {
                 return predecessor.getSnapshot(expression);
             }
         }

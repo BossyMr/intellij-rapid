@@ -167,6 +167,11 @@
                          bundle="messages.RapidBundle" key="inspection.name.constant.expression"
                          shortName="RapidConstantValue"
                          implementationClass="com.bossymr.rapid.ide.editor.insight.inspection.flow.ConstantValueInspection"/>
+        <localInspection language="RAPID" enabledByDefault="true" level="WARNING"
+                         groupPath="Rapid" groupKey="inspection.name.probable.bugs"
+                         bundle="messages.RapidBundle" key="inspection.name.unreachable.statement"
+                         shortName="RapidUnreachableCode"
+                         implementationClass="com.bossymr.rapid.ide.editor.insight.inspection.flow.UnreachableStatementInspection"/>
     </extensions>
 
     <actions>

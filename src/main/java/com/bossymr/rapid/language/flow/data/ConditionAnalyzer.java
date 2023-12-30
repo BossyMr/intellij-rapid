@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.block.DataFlowBlock;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.value.*;
@@ -11,7 +10,6 @@ import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,9 +34,9 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         if (targets.isEmpty()) {
             return true;
         }
-        try (LazyContext lazyContext = new LazyContext(state.getBlock().getContext())) {
-            Solver solver = lazyContext.getContext().mkSolver();
-            getSolver(lazyContext.getContext(), state, solver, targets);
+        try (Context context = new Context()) {
+            Solver solver = context.mkSolver();
+            getSolver(context, state, solver, targets);
             return switch (solver.check()) {
                 case UNSATISFIABLE -> false;
                 case UNKNOWN, SATISFIABLE -> true;
@@ -47,7 +45,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     }
 
     public static @NotNull BooleanValue getBooleanValue(@NotNull DataFlowState state, @NotNull Expression expression) {
-        try (LazyContext lazyContext = new LazyContext(state.getBlock().getContext())) {
+        try (Context context = new Context()) {
             Set<Snapshot> targets = new HashSet<>();
             expression.iterate(expr -> {
                 if (expr instanceof SnapshotExpression target) {
@@ -55,8 +53,8 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                 }
                 return false;
             });
-            Solver solver = lazyContext.getContext().mkSolver();
-            ConditionAnalyzer conditionAnalyzer = getSolver(lazyContext.getContext(), state, solver, targets);
+            Solver solver = context.mkSolver();
+            ConditionAnalyzer conditionAnalyzer = getSolver(context, state, solver, targets);
             boolean isTrue = solver.check(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(true)).accept(conditionAnalyzer))) != Status.UNSATISFIABLE;
             boolean isFalse = solver.check(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(false)).accept(conditionAnalyzer))) != Status.UNSATISFIABLE;
             if (isTrue && isFalse) {
@@ -85,8 +83,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     private static @NotNull ConditionAnalyzer getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull Solver solver, @NotNull Set<Snapshot> targets) {
         List<BoolExpr> queue = new ArrayList<>();
         ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context, queue);
-        DataFlowBlock block = state.getBlock();
-        Block functionBlock = block.getInstruction().getBlock();
+        Block functionBlock = state.getInstruction().getBlock();
         List<ArgumentGroup> argumentGroups = functionBlock.getArgumentGroups();
         DataFlowState firstPredecessor = Objects.requireNonNullElse(state.getFirstPredecessor(), state);
         for (ArgumentGroup argumentGroup : argumentGroups) {
@@ -300,13 +297,14 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             expr = context.mkConst(name, context.mkRealSort());
         }
         symbols.put(expression, expr);
+        String result = name;
         switch (expression.getSnapshot().getOptionality()) {
             case PRESENT -> {
-                Expr<?> handle = optionality.computeIfAbsent(expression.getSnapshot(), unused -> context.mkBoolConst("~" + expression.hashCode() + "*"));
+                Expr<?> handle = optionality.computeIfAbsent(expression.getSnapshot(), unused -> context.mkBoolConst(result + "*"));
                 queue.add(context.mkEq(handle, context.mkTrue()));
             }
             case MISSING -> {
-                Expr<?> handle = optionality.computeIfAbsent(expression.getSnapshot(), unused -> context.mkBoolConst("~" + expression.hashCode() + "*"));
+                Expr<?> handle = optionality.computeIfAbsent(expression.getSnapshot(), unused -> context.mkBoolConst(result + "*"));
                 queue.add(context.mkEq(handle, context.mkFalse()));
             }
             case NO_VALUE -> queue.add(context.mkFalse());
@@ -343,27 +341,5 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     @Override
     public Expr<?> visitExpression(@NotNull Expression expression) {
         throw new IllegalArgumentException("Cannot create expression for: " + expression);
-    }
-
-    private static class LazyContext implements AutoCloseable {
-
-        private final boolean doClose;
-        private final @NotNull Context context;
-
-        public LazyContext(@Nullable Context context) {
-            this.context = context != null ? context : new Context();
-            doClose = context == null;
-        }
-
-        public @NotNull Context getContext() {
-            return context;
-        }
-
-        @Override
-        public void close() {
-            if (doClose) {
-                context.close();
-            }
-        }
     }
 }
