@@ -1,14 +1,16 @@
 package com.bossymr.rapid.language.type;
 
 import com.bossymr.rapid.language.symbol.*;
+import com.intellij.model.Pointer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
+@SuppressWarnings("UnstableApiUsage")
 public class RapidRecordType implements RapidType {
 
-    private final @NotNull RapidPointer<? extends RapidRecord> record;
+    private final @NotNull Pointer<? extends RapidRecord> record;
 
     public RapidRecordType(@NotNull RapidRecord record) {
         this.record = record.createPointer();

@@ -4,46 +4,50 @@ import com.bossymr.rapid.language.symbol.RapidAlias;
 import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.ValueType;
+import com.intellij.model.Pointer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
+@SuppressWarnings("UnstableApiUsage")
 public class RapidAliasType implements RapidType {
 
-    private final @NotNull RapidAlias alias;
+    private final @NotNull Pointer<? extends RapidAlias> alias;
 
     public RapidAliasType(@NotNull RapidAlias alias) {
-        this.alias = alias;
+        this.alias = alias.createPointer();
     }
 
     public @Nullable RapidType getUnderlyingType() {
-        return alias.getType();
+        RapidAlias structure = getStructure();
+        if (structure == null) {
+            return null;
+        }
+        return structure.getType();
     }
 
     @Override
-    public @NotNull RapidAlias getStructure() {
-        return alias;
+    public @Nullable RapidAlias getStructure() {
+        return alias.dereference();
     }
 
     @Override
     public @Nullable RapidStructure getRootStructure() {
         RapidType underlyingType = getUnderlyingType();
-        if (underlyingType != null) {
-            return underlyingType.getRootStructure();
-        } else {
+        if (underlyingType == null) {
             return getStructure();
         }
+        return underlyingType.getRootStructure();
     }
 
     @Override
     public @NotNull ValueType getValueType() {
         RapidType underlyingType = getUnderlyingType();
-        if (underlyingType != null) {
-            return underlyingType.getValueType();
-        } else {
+        if (underlyingType == null) {
             return ValueType.UNKNOWN;
         }
+        return underlyingType.getValueType();
     }
 
     @Override
@@ -70,12 +74,12 @@ public class RapidAliasType implements RapidType {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RapidAliasType that = (RapidAliasType) o;
-        return Objects.equals(alias.getName(), that.alias.getName());
+        return Objects.equals(alias, that.alias);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(alias.getName());
+        return Objects.hash(alias);
     }
 
     @Override

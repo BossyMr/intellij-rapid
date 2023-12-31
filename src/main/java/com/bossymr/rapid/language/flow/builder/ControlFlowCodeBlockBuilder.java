@@ -11,6 +11,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
+import com.bossymr.rapid.language.type.RapidArrayType;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.tree.IElementType;
@@ -37,23 +38,35 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull Variable createVariable(@NotNull RapidType type) {
-        return block.createVariable(null, null, type);
+        return block.createVariable(null, null, type, null, getArraySize(type));
     }
 
     @Override
     public @NotNull Variable createVariable(@NotNull String name, @NotNull RapidType type) {
-        return block.createVariable(name, FieldType.VARIABLE, type);
+        return block.createVariable(name, FieldType.VARIABLE, type, null, getArraySize(type));
     }
 
     @Override
     public @NotNull Variable createVariable(@NotNull RapidField field) {
         RapidType type = Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE);
-        return block.createVariable(field.getName(), field.getFieldType(), type);
+        return block.createVariable(field.getName(), field.getFieldType(), type, field, getArraySize(type));
     }
 
     @Override
     public @Nullable Argument getArgument(@NotNull String name) {
         return block.findArgument(name);
+    }
+
+    private @Nullable List<Expression> getArraySize(@NotNull RapidType type) {
+        if(!(type instanceof RapidArrayType)) {
+            return null;
+        }
+        List<Expression> expressions = new ArrayList<>();
+        while(type instanceof RapidArrayType arrayType) {
+            expressions.add(expressionOrError(arrayType.getLength(), RapidPrimitiveType.NUMBER));
+            type = arrayType.getUnderlyingType();
+        }
+        return expressions;
     }
 
     @Override

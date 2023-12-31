@@ -1,10 +1,13 @@
 package com.bossymr.rapid.language.type;
 
+import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.ValueType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 /**
  * A {@code RapidType} represents the type of value a variable or expression can represent.
@@ -44,15 +47,19 @@ public interface RapidType {
      * @throws IllegalArgumentException if the specified degree is negative.
      */
     default @NotNull RapidType createArrayType(int dimensions) {
+        return createArrayType(dimensions, null);
+    }
+
+    default @NotNull RapidType createArrayType(int dimensions, @Nullable List<RapidExpression> length) {
         if(dimensions == 0) {
             return this;
         }
         if(dimensions < 0) {
             throw new IllegalArgumentException("Cannot create array type with degree: " + dimensions);
         }
-        RapidType type = new RapidArrayType(this);
+        RapidType type = new RapidArrayType(this, length);
         for (int i = 1; i < dimensions; i++) {
-            type = new RapidArrayType(type);
+            type = new RapidArrayType(type, length);
         }
         return type;
     }

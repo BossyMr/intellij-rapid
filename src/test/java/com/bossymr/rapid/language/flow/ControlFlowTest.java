@@ -119,9 +119,11 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	var num{*,*} _0 [value];
                                 
                 	STATEMENT_LIST:
-                	0: _0 := [[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
-                	1: _0[2.0][3.0] := 6.0;
-                	2: return _0[0.0][2.0];
+                	0: ~1742252546 := 3.0;
+                	1: _0 := [[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
+                	2: ~1243326674 := 2.0;
+                	3: _0[2.0][3.0] := 6.0;
+                	4: return _0[0.0][2.0];
                 }
                 """);
     }
@@ -336,7 +338,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _1;
                                 
                 	STATEMENT_LIST:
-                	0: _1 := IsPresent _0;
+                	0: _1 := PRESENT _0;
                 	1: if(_1) -> [true: 2, false: 3]
                                 
                 	2: foo:conditional(_a := _0);
@@ -369,10 +371,10 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _4;
                                 
                 	STATEMENT_LIST:
-                	0: _2 := IsPresent _0;
+                	0: _2 := PRESENT _0;
                 	1: if(_2) -> [true: 2, false: 6]
                                 
-                	2: _3 := IsPresent _1;
+                	2: _3 := PRESENT _1;
                 	3: if(_3) -> [true: 4, false: 5]
                                 
                 	4: foo:conditional(_a := _0, _b := _1);
@@ -381,7 +383,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	5: foo:conditional(_a := _0);
                 	   goto -> [10];
                                 
-                	6: _4 := IsPresent _1;
+                	6: _4 := PRESENT _1;
                 	7: if(_4) -> [true: 8, false: 9]
                                 
                 	8: foo:conditional(_b := _1);

@@ -359,7 +359,8 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
         return switch (expression.getOperator()) {
             case NOT -> "NOT ";
             case NEGATE -> "-";
-            case PRESENT -> "IsPresent ";
+            case PRESENT -> "PRESENT ";
+            case DIMENSION -> "DIM ";
         } + visitExpression(expression, expression.getExpression());
     }
 }

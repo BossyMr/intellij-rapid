@@ -216,6 +216,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                 }
                 yield context.mkTrue();
             }
+            case DIMENSION -> throw new IllegalArgumentException();
         };
     }
 
@@ -230,7 +231,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         if (expression instanceof UnaryExpression unaryExpression) {
             return switch (unaryExpression.getOperator()) {
                 case NOT, PRESENT -> RapidPrimitiveType.BOOLEAN;
-                case NEGATE -> RapidPrimitiveType.NUMBER;
+                case NEGATE, DIMENSION -> RapidPrimitiveType.NUMBER;
             };
         }
         if (expression instanceof BinaryExpression binaryExpression) {

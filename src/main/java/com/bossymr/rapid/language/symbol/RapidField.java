@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.language.psi.RapidExpression;
+import com.intellij.model.Pointer;
 import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -44,6 +45,9 @@ public interface RapidField extends RapidVariable, RapidVisibleSymbol {
      * @return if this field has an initializer.
      */
     boolean hasInitializer();
+
+    @Override
+    @NotNull Pointer<? extends RapidField> createPointer();
 
     @Override
     default @NotNull TargetPresentation getTargetPresentation() {

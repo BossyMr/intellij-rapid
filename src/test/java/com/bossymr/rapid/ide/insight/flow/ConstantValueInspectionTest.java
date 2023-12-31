@@ -125,6 +125,37 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
+    public void testArrayVariableHistory() {
+        doTest("""
+                MODULE foo
+                    PROC bar(num x)
+                        VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];
+                        IF <warning descr="Value of expression is always true">(variable{1, 3} * variable{2, 2}) = 8</warning> THEN
+                        ENDIF
+                        variable{1,3} := -1;
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
+    public void testRecordVariableHistory() {
+        doTest("""
+                MODULE foo
+                    RECORD baz
+                        num baz1;
+                        num baz2;
+                    ENDRECORD
+                
+                    PROC bar(num x)
+                        VAR baz variable := [1, 2];
+                        IF <warning descr="Value of expression is always true">variable.baz2 = 2</warning> THEN
+                        ENDIF
+                        variable.baz2 := 3;
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
     public void testMissingVariable() {
         doTest("""
                 MODULE foo

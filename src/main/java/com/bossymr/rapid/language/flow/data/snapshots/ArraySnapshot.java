@@ -1,11 +1,13 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
+import com.bossymr.rapid.ide.editor.completion.RapidAttributeListCompletionProvider;
 import com.bossymr.rapid.language.flow.BooleanValue;
 import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.value.BinaryExpression;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
@@ -36,12 +38,18 @@ public class ArraySnapshot implements Snapshot {
     private final @NotNull Optionality optionality;
     private final @NotNull Function<DataFlowState, Snapshot> defaultValue;
     private final @NotNull List<ArrayEntry.Assignment> assignments;
+    private final @NotNull Snapshot length;
 
     public ArraySnapshot(@NotNull RapidType type, @NotNull Optionality optionality, @NotNull Function<DataFlowState, Snapshot> defaultValue) {
         this.type = type;
         this.optionality = optionality;
         this.defaultValue = defaultValue;
         this.assignments = new ArrayList<>();
+        this.length = Snapshot.createSnapshot(RapidPrimitiveType.NUMBER);
+    }
+
+    public @NotNull Snapshot getLength() {
+        return length;
     }
 
     @Override
@@ -53,16 +61,23 @@ public class ArraySnapshot implements Snapshot {
         return assignments;
     }
 
-    public void assign(@NotNull Expression index, @NotNull Snapshot snapshot) {
-        assignments.add(new ArrayEntry.Assignment(index, snapshot));
+    public void assign(@NotNull DataFlowState state, @NotNull Expression index, @NotNull Snapshot snapshot) {
+        assignments.add(new ArrayEntry.Assignment(state, index, snapshot));
     }
 
     public @NotNull List<ArrayEntry> getAllAssignments(@NotNull DataFlowState state) {
         List<ArrayEntry> values = new ArrayList<>();
+        boolean canContinue = false;
         for (ListIterator<ArrayEntry.Assignment> iterator = assignments.listIterator(assignments.size()); iterator.hasPrevious(); ) {
             ArrayEntry.Assignment assignment = iterator.previous();
+            if (!(canContinue)) {
+                if (!(canUseAssignment(assignment, state))) {
+                    continue;
+                }
+                canContinue = true;
+            }
             if (isDuplicate(values, assignment, state)) {
-                // A value with the same index was assigned after this index.
+                // A snapshot with the same index was assigned after this index.
                 continue;
             }
             values.add(assignment);
@@ -75,6 +90,15 @@ public class ArraySnapshot implements Snapshot {
             values.add(new ArrayEntry.DefaultValue(defaultValue.apply(state)));
         }
         return values;
+    }
+
+    private boolean canUseAssignment(@NotNull ArrayEntry.Assignment assignment, @NotNull DataFlowState state) {
+        for (DataFlowState predecessor = state; predecessor != null; predecessor = predecessor.getPredecessor()) {
+            if(predecessor.equals(assignment.state())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public @NotNull List<ArrayEntry> getAssignments(@NotNull DataFlowState state, @NotNull Expression index) {

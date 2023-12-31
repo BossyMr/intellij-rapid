@@ -7,14 +7,9 @@ import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
-import com.bossymr.rapid.language.flow.instruction.ExitInstruction;
-import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.instruction.ThrowInstruction;
 import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
-import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
@@ -51,14 +46,14 @@ public final class ControlFlowService implements Disposable {
     @Topic.AppLevel
     public static Topic<ControlFlowListener> TOPIC = Topic.create("Control Flow", ControlFlowListener.class);
     /**
-     * The context used to create queries for the z3 SMT-solver. Creating the context for
-     * each individual query resulted in it becoming the bottleneck.
+     * The context used to create queries for the z3 SMT-solver. Creating the context for each individual query resulted
+     * in it becoming the bottleneck.
      */
     private final @NotNull LazyInitializer.LazyValue<AtomicReference<Context>> context = LazyInitializer.create(() -> new AtomicReference<>(new Context()));
 
     /**
-     * A store containing the control flow information for hardcoded methods. This store is built lazily, that is,
-     * the control flow graph for a method is not built until it is called.
+     * A store containing the control flow information for hardcoded methods. This store is built lazily, that is, the
+     * control flow graph for a method is not built until it is called.
      */
     private final @NotNull Map<VirtualRoutine, ControlFlowBlock> hardcoded = new HashMap<>();
 
@@ -67,8 +62,8 @@ public final class ControlFlowService implements Disposable {
     }
 
     /**
-     * Computes the control flow and data flow for the specified routine. Control flow and data flow graphs are
-     * computed lazily, and will only compute the specified routine and any subsequent routines called in that routine.
+     * Computes the control flow and data flow for the specified routine. Control flow and data flow graphs are computed
+     * lazily, and will only compute the specified routine and any subsequent routines called in that routine.
      *
      * @param routine the element.
      * @return the control flow and data flow graphs for the routine.
@@ -99,11 +94,17 @@ public final class ControlFlowService implements Disposable {
 
     private @NotNull ControlFlowBlock getDataFlow(@NotNull Set<RapidRoutine> stack, @NotNull RapidRoutine routine) {
         if (routine instanceof PhysicalRoutine physicalRoutine) {
-            ControlFlowBlock block = CachedValuesManager.getProjectPsiDependentCache(physicalRoutine, (symbol) -> new ControlFlowBlock(computeControlFlow(symbol)));
-            if (block.getDataFlow().isEmpty()) {
-                computeDataFlow(block, stack);
-            }
-            return block;
+            Set<RapidRoutine> weakStack = new HashSet<>(stack) {
+                @Override
+                public boolean equals(Object o) {
+                    return o instanceof HashSet<?>;
+                }
+            };
+            return CachedValuesManager.getProjectPsiDependentCache(physicalRoutine, (symbol) -> {
+                ControlFlowBlock block = new ControlFlowBlock(computeControlFlow(symbol));
+                computeDataFlow(block, weakStack);
+                return block;
+            });
         }
         if (routine instanceof VirtualRoutine virtualRoutine) {
             if (hardcoded.containsKey(virtualRoutine)) {
@@ -193,69 +194,9 @@ public final class ControlFlowService implements Disposable {
     }
 
     private @NotNull Set<DataFlowFunction.Result> getDataFlow(@NotNull Set<RapidRoutine> stack, @NotNull RapidRoutine routine, @NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
-        if (routine instanceof VirtualRoutine) {
-            ControlFlowBlock block = getDataFlow(stack, routine);
-            DataFlowFunction function = block.getFunction();
-            return function.getOutput(callerState, instruction);
-        }
-        if (!(routine instanceof PhysicalRoutine physicalRoutine)) {
-            throw new IllegalArgumentException();
-        }
-        ControlFlowBlock block = CachedValuesManager.getProjectPsiDependentCache(physicalRoutine, (symbol) -> new ControlFlowBlock(computeControlFlow(symbol)));
-        if (!(block.getDataFlow().isEmpty())) {
-            DataFlowFunction function = block.getFunction();
-            return function.getOutput(callerState, instruction);
-        }
-        if (isPureMethod(stack, block, instruction)) {
-            DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getInstruction(), callerState);
-            return Set.of(new DataFlowFunction.Result.Success(successorState, null));
-        }
-        computeDataFlow(block, stack);
+        ControlFlowBlock block = getDataFlow(stack, routine);
         DataFlowFunction function = block.getFunction();
         return function.getOutput(callerState, instruction);
-    }
-
-    private boolean isPureMethod(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block, @NotNull CallInstruction instruction) {
-        Block controlFlow = block.getControlFlow();
-        Map<Argument, ReferenceExpression> arguments = DataFlowFunction.getArguments(controlFlow, instruction.getArguments());
-        ReferenceExpression returnValue = instruction.getReturnValue();
-        if (returnValue != null) {
-            return false;
-        }
-        if (arguments.keySet().stream().anyMatch(argument -> argument.getParameterType() != ParameterType.INPUT)) {
-            return false;
-        }
-        if (controlFlow.getInstructions().stream().anyMatch(statement -> statement instanceof ThrowInstruction || statement instanceof ExitInstruction)) {
-            return false;
-        }
-        if (!(block.getDataFlow().isEmpty())) {
-            Map<DataFlowState, DataFlowFunction.Result> results = block.getFunction().getResults();
-            return results.values().stream().allMatch(result -> result instanceof DataFlowFunction.Result.Success);
-        }
-        for (Instruction statement : controlFlow.getInstructions()) {
-            if (!(statement instanceof CallInstruction callInstruction)) {
-                continue;
-            }
-            RapidRoutine routine = getRoutine(stack, callInstruction);
-            if (routine == null) {
-                continue;
-            }
-            Set<RapidRoutine> copy = new HashSet<>(stack);
-            copy.add(routine);
-            if (routine instanceof VirtualRoutine virtualRoutine) {
-                ControlFlowBlock dependency = getDataFlow(virtualRoutine);
-                if (!(isPureMethod(copy, dependency, callInstruction))) {
-                    return false;
-                }
-            }
-            if (routine instanceof PhysicalRoutine physicalRoutine) {
-                ControlFlowBlock dependency = CachedValuesManager.getProjectPsiDependentCache(physicalRoutine, (symbol) -> new ControlFlowBlock(computeControlFlow(symbol)));
-                if (!(isPureMethod(copy, dependency, callInstruction))) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     private @NotNull String getModuleName(@NotNull RapidRoutine routine) {

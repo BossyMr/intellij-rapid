@@ -8,9 +8,7 @@ import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.BiFunction;
 
 /**
@@ -22,8 +20,7 @@ public class RecordSnapshot implements Snapshot {
     private final @NotNull Optionality optionality;
     private final @NotNull Map<String, RapidType> components;
     private final @NotNull BiFunction<DataFlowState, RapidType, Snapshot> defaultValue;
-    private final @NotNull Map<String, Snapshot> snapshots;
-    private final @NotNull Map<String, Snapshot> roots;
+    private final @NotNull Map<String, List<Entry>> snapshots;
 
     public RecordSnapshot(@NotNull RapidType type, @NotNull Optionality optionality, @NotNull BiFunction<DataFlowState, RapidType, Snapshot> defaultValue) {
         this.type = type;
@@ -42,7 +39,6 @@ public class RecordSnapshot implements Snapshot {
             components.put(componentName, Objects.requireNonNullElse(componentType, RapidPrimitiveType.ANYTYPE));
         }
         this.snapshots = new HashMap<>();
-        this.roots = new HashMap<>();
     }
 
     @Override
@@ -50,15 +46,13 @@ public class RecordSnapshot implements Snapshot {
         return optionality;
     }
 
-    public @NotNull Map<String, Snapshot> getSnapshots() {
+    public @NotNull Map<String, List<Entry>> getSnapshots() {
         return snapshots;
     }
 
-    public void assign(@NotNull String name, @NotNull Snapshot snapshot) {
-        snapshots.put(name, snapshot);
-        if (!(roots.containsKey(name))) {
-            roots.put(name, snapshot);
-        }
+    public void assign(@NotNull DataFlowState state, @NotNull String name, @NotNull Snapshot snapshot) {
+        snapshots.computeIfAbsent(name, unused -> new ArrayList<>());
+        snapshots.get(name).add(new Entry(state, snapshot));
     }
 
     public @NotNull Snapshot getSnapshot(@NotNull DataFlowState state, @NotNull String name) {
@@ -66,11 +60,27 @@ public class RecordSnapshot implements Snapshot {
             if (!(components.containsKey(name))) {
                 throw new IllegalArgumentException("Cannot create snapshot for component: " + name + " for record of type: " + type);
             }
-            Snapshot snapshot = defaultValue.apply(state, components.get(name));
-            snapshots.put(name, snapshot);
-            return snapshot;
+        } else {
+            List<Entry> entries = snapshots.get(name);
+            for (ListIterator<Entry> iterator = entries.listIterator(entries.size()); iterator.hasPrevious();) {
+                Entry entry = iterator.previous();
+                if(canUseAssignment(entry, state)) {
+                    return entry.snapshot();
+                }
+            }
         }
-        return snapshots.get(name);
+        Snapshot snapshot = defaultValue.apply(state, components.get(name));
+        assign(state, name, snapshot);
+        return snapshot;
+    }
+
+    private boolean canUseAssignment(@NotNull Entry assignment, @NotNull DataFlowState state) {
+        for (DataFlowState predecessor = state; predecessor != null; predecessor = predecessor.getPredecessor()) {
+            if(predecessor.equals(assignment.state())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -97,4 +107,6 @@ public class RecordSnapshot implements Snapshot {
             case NO_VALUE -> "";
         } + "]";
     }
+
+    public record Entry(@NotNull DataFlowState state, @NotNull Snapshot snapshot) {}
 }

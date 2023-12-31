@@ -59,7 +59,7 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
     @Override
     public @Nullable RapidType getType() {
         int dimensions = findChildrenByType(RapidTokenTypes.ASTERISK).size();
-        return SymbolUtil.getType(this, dimensions);
+        return SymbolUtil.getType(this, dimensions, null);
     }
 
     @Override

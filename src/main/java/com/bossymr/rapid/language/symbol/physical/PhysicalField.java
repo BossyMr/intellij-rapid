@@ -106,7 +106,7 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     public @Nullable RapidType getType() {
         RapidArray array = getArray();
         int dimensions = array != null ? array.getDimensions().size() : 0;
-        return SymbolUtil.getType(this, dimensions);
+        return SymbolUtil.getType(this, dimensions, dimensions > 0 ? getArray() : null);
     }
 
     public @Nullable RapidArray getArray() {

@@ -25,7 +25,7 @@ public class ControlFlowParameterGroupBuilder implements RapidParameterGroupBuil
     @Override
     public @NotNull RapidParameterGroupBuilder withParameter(@NotNull String name, @NotNull ParameterType parameterType, @NotNull RapidType valueType) {
         VirtualParameter parameter = new VirtualParameter(parameterGroup, parameterType, name, valueType);
-        Argument argument = block.createArgument(name, valueType, parameterType);
+        Argument argument = block.createArgument(name, valueType, parameterType, null, null);
         argumentGroup.arguments().add(argument);
         parameterGroup.getParameters().add(parameter);
         return this;

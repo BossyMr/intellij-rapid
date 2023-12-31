@@ -47,6 +47,15 @@ public class UnaryExpression implements Expression {
                 yield null;
             }
             case PRESENT -> RapidPrimitiveType.BOOLEAN;
+            case DIMENSION -> {
+                if(!(expression instanceof ReferenceExpression)) {
+                    yield null;
+                }
+                if (expression.getType().getDimensions() <= 0) {
+                    yield null;
+                }
+                yield RapidPrimitiveType.NUMBER;
+            }
         };
     }
 

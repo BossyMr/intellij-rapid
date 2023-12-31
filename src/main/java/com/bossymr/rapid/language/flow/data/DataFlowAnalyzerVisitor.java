@@ -72,6 +72,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
         if (condition != null) {
             DataFlowState successorState = DataFlowState.createSuccessorState(state.getInstruction(), state);
             successorState.add(condition);
+            successorState.setInitialized();
             return DataFlowState.createSuccessorState(successor, successorState);
         } else {
             return DataFlowState.createSuccessorState(successor, state);

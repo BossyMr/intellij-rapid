@@ -58,6 +58,8 @@ public class DataFlowState {
      */
     private final @NotNull List<Expression> conditions = new ArrayList<>();
 
+    private int volatileCondition = 0;
+
     /**
      * The latest snapshot of each variable. The latest snapshot for a given variable also represents the variable.
      */
@@ -81,6 +83,7 @@ public class DataFlowState {
     public static @NotNull DataFlowState createState(@NotNull Instruction instruction) {
         DataFlowState state = new DataFlowState(instruction, null);
         state.initializeDefault();
+        state.setInitialized();
         return state;
     }
 
@@ -88,13 +91,21 @@ public class DataFlowState {
         return new DataFlowState(instruction, predecessor);
     }
 
-    public static @NotNull Snapshot createDefaultSnapshot(@NotNull DataFlowState state, @NotNull RapidType type) {
+    public void setInitialized() {
+        volatileCondition = conditions.size();
+    }
+
+    public static @NotNull Snapshot createDefaultSnapshot(@NotNull DataFlowState state, @NotNull RapidType type, int index, @Nullable List<Expression> arraySize) {
         if (type.getDimensions() > 0) {
             RapidType arrayType = type.createArrayType(type.getDimensions() - 1);
-            return new ArraySnapshot(type, Optionality.PRESENT, nextState -> createDefaultSnapshot(nextState, arrayType));
+            ArraySnapshot snapshot = new ArraySnapshot(type, Optionality.PRESENT, nextState -> createDefaultSnapshot(nextState, arrayType, index + 1, arraySize));
+            if ((arraySize != null && index >= 0 && index < arraySize.size())) {
+                state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot.getLength()), arraySize.get(index)));
+            }
+            return snapshot;
         }
         if (type.getRootStructure() instanceof RapidRecord) {
-            return new RecordSnapshot(type, Optionality.PRESENT, DataFlowState::createDefaultSnapshot);
+            return new RecordSnapshot(type, Optionality.PRESENT, (nextState, componentType) -> createDefaultSnapshot(nextState, componentType, -1, null));
         }
         VariableSnapshot snapshot = new VariableSnapshot(type, Optionality.PRESENT);
         Object object = getDefaultValue(type);
@@ -199,6 +210,12 @@ public class DataFlowState {
         predecessor = null;
     }
 
+    public void clear() {
+        conditions.subList(volatileCondition, conditions.size()).clear();
+        snapshots.clear();
+        getSnapshots().putAll(getRoots());
+    }
+
     public @Nullable DataFlowState getPredecessor() {
         return predecessor;
     }
@@ -226,7 +243,7 @@ public class DataFlowState {
 
     private void initializeDefault() {
         for (Variable variable : functionBlock.getVariables()) {
-            snapshots.put(variable, createDefaultSnapshot(this, variable.getType()));
+            snapshots.put(variable, createDefaultSnapshot(this, variable.getType(), 0, variable.getArraySize()));
         }
         initializeArguments();
         for (Field field : snapshots.keySet()) {
@@ -385,7 +402,7 @@ public class DataFlowState {
             }
             Expression indexSnapshot = getSnapshot(indexExpression.getIndex());
             Snapshot snapshot = Snapshot.createSnapshot(indexExpression.getType());
-            arraySnapshot.assign(indexSnapshot, snapshot);
+            arraySnapshot.assign(this, indexSnapshot, snapshot);
             return new SnapshotExpression(snapshot, indexExpression);
         }
         if (variable instanceof ComponentExpression componentExpression) {
@@ -394,7 +411,7 @@ public class DataFlowState {
                 throw new IllegalArgumentException();
             }
             Snapshot snapshot = Snapshot.createSnapshot(componentExpression.getType());
-            recordSnapshot.assign(componentExpression.getComponent(), snapshot);
+            recordSnapshot.assign(this, componentExpression.getComponent(), snapshot);
             return new SnapshotExpression(snapshot, componentExpression);
         }
         Snapshot snapshot = Snapshot.createSnapshot(variable.getType(), optionality);
@@ -430,6 +447,11 @@ public class DataFlowState {
     }
 
     private @NotNull Expression getSnapshot(@NotNull Expression value) {
+        if(value instanceof UnaryExpression expression && expression.getOperator() == UnaryOperator.DIMENSION) {
+            SnapshotExpression snapshot = getSnapshot((ReferenceExpression) expression.getExpression());
+            ArraySnapshot arraySnapshot = (ArraySnapshot) snapshot.getSnapshot();
+            return new SnapshotExpression(arraySnapshot.getLength(), value);
+        }
         if (value instanceof ReferenceExpression referenceValue) {
             return getSnapshot(referenceValue);
         }

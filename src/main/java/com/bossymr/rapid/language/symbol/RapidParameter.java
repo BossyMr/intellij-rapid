@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.symbol;
 
 import com.bossymr.rapid.RapidIcons;
+import com.intellij.model.Pointer;
 import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,6 +26,9 @@ public interface RapidParameter extends RapidVariable {
      * @return the parameter group which contains this parameter.
      */
     @NotNull RapidParameterGroup getParameterGroup();
+
+    @Override
+    @NotNull Pointer<? extends RapidParameter> createPointer();
 
     @Override
     default @NotNull String getCanonicalName() {

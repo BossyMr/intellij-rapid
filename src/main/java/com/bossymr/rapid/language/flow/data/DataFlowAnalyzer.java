@@ -68,9 +68,7 @@ public class DataFlowAnalyzer {
 
     private @NotNull List<DataFlowState> process(@NotNull DataFlowState state) {
         cutBranch(state);
-        state.getExpressions().clear();
-        state.getSnapshots().clear();
-        state.getSnapshots().putAll(state.getRoots());
+        state.clear();
         DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(stack, state, block);
         Instruction instruction = state.getInstruction();
         return instruction.accept(visitor);

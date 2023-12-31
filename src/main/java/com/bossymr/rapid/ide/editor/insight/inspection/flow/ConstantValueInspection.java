@@ -1,17 +1,17 @@
 package com.bossymr.rapid.ide.editor.insight.inspection.flow;
 
+import ai.grazie.utils.attributes.Attributes;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.value.SnapshotExpression;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.RapidIfStatement;
-import com.bossymr.rapid.language.psi.RapidReferenceExpression;
+import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInspection.LocalInspectionTool;
+import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
@@ -27,26 +27,30 @@ public class ConstantValueInspection extends LocalInspectionTool {
     public @NotNull PsiElementVisitor buildVisitor(@NotNull ProblemsHolder holder, boolean isOnTheFly) {
         return new RapidElementVisitor() {
             @Override
-            public void visitExpression(@NotNull RapidExpression expression) {
-                PhysicalRoutine routine = PhysicalRoutine.getRoutine(expression);
-                if (routine == null) {
+            public void visitIfStatement(@NotNull RapidIfStatement statement) {
+                RapidExpression condition = statement.getCondition();
+                if (condition == null) {
                     return;
                 }
-                ControlFlowBlock block = ControlFlowService.getInstance().getDataFlow(routine);
-                Map<DataFlowState, Snapshot> expressions = getExpressions(expression, block);
-                if (expressions.isEmpty()) {
-                    return;
-                }
+                Map<DataFlowState, Snapshot> expressions = getExpressions(condition);
+                registerValue(condition, expressions, holder);
+            }
+
+            @Override
+            public void visitReferenceExpression(@NotNull RapidReferenceExpression expression) {
+                Map<DataFlowState, Snapshot> expressions = getExpressions(expression);
                 registerOptionality(expression, expressions, holder);
-                registerValue(expression, expressions, holder);
+            }
+
+            @Override
+            public void visitIndexExpression(@NotNull RapidIndexExpression expression) {
+                Map<DataFlowState, Snapshot> expressions = getExpressions(expression);
+                registerIndex(expression, expressions, holder);
             }
         };
     }
 
-    private void registerOptionality(@NotNull RapidExpression element, @NotNull Map<DataFlowState, Snapshot> expressions, @NotNull ProblemsHolder holder) {
-        if (!(element instanceof RapidReferenceExpression)) {
-            return;
-        }
+    private void registerOptionality(@NotNull RapidReferenceExpression element, @NotNull Map<DataFlowState, Snapshot> expressions, @NotNull ProblemsHolder holder) {
         Optionality optionality = Optionality.NO_VALUE;
         for (DataFlowState state : expressions.keySet()) {
             SnapshotExpression snapshot = new SnapshotExpression(expressions.get(state));
@@ -61,10 +65,6 @@ public class ConstantValueInspection extends LocalInspectionTool {
     }
 
     private void registerValue(@NotNull RapidExpression element, @NotNull Map<DataFlowState, Snapshot> expressions, @NotNull ProblemsHolder holder) {
-        PsiElement parent = element.getParent();
-        if (!(parent instanceof RapidIfStatement)) {
-            return;
-        }
         BooleanValue value = BooleanValue.NO_VALUE;
         for (DataFlowState state : expressions.keySet()) {
             List<DataFlowState> successors = state.getSuccessors();
@@ -83,6 +83,41 @@ public class ConstantValueInspection extends LocalInspectionTool {
         if (value == BooleanValue.ALWAYS_FALSE) {
             holder.registerProblem(element, RapidBundle.message("inspection.message.constant.expression", "false"));
         }
+    }
+
+    private void registerIndex(@NotNull RapidIndexExpression element, @NotNull Map<DataFlowState, Snapshot> expressions, @NotNull ProblemsHolder holder) {
+        for (DataFlowState state : expressions.keySet()) {
+            Snapshot snapshot = state.getSnapshot(element.getExpression());
+            if(snapshot == null) {
+                continue;
+            }
+            for (RapidExpression dimension : element.getArray().getDimensions()) {
+                Snapshot index = state.getSnapshot(element.getExpression());
+                if(index == null) {
+                    continue;
+                }
+                BinaryExpression lowerBound = new BinaryExpression(BinaryOperator.GREATER_THAN_OR_EQUAL, new SnapshotExpression(index), new LiteralExpression(1));
+                BinaryExpression upperBound = new BinaryExpression(BinaryOperator.LESS_THAN_OR_EQUAL, new SnapshotExpression(index), new UnaryExpression(UnaryOperator.DIMENSION, new SnapshotExpression(snapshot)));
+                BooleanValue constraint = state.getConstraint(new BinaryExpression(BinaryOperator.AND, lowerBound, upperBound));
+                if(constraint == BooleanValue.ALWAYS_FALSE) {
+                    if(dimension instanceof RapidLiteralExpression) {
+                        holder.registerProblem(dimension, RapidBundle.message("inspection.message.out.of.bounds"), ProblemHighlightType.ERROR);
+                    } else {
+                        holder.registerProblem(dimension, RapidBundle.message("inspection.message.out.of.bounds"));
+                    }
+                }
+            }
+        }
+    }
+
+
+    private @NotNull Map<DataFlowState, Snapshot> getExpressions(@NotNull RapidExpression expression) {
+        PhysicalRoutine routine = PhysicalRoutine.getRoutine(expression);
+        if (routine == null) {
+            return Map.of();
+        }
+        ControlFlowBlock block = ControlFlowService.getInstance().getDataFlow(routine);
+        return getExpressions(expression, block);
     }
 
     private @NotNull Map<DataFlowState, Snapshot> getExpressions(@NotNull RapidExpression expression, @NotNull ControlFlowBlock block) {

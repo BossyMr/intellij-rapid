@@ -105,14 +105,14 @@ public sealed abstract class Block {
         entryPoints.put(BlockType.ERROR_CLAUSE, new EntryInstruction.ErrorEntryInstruction(instruction, exceptions));
     }
 
-    public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
-        Variable variable = new Variable(getNextVariableIndex(), fieldType, type, name);
+    public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type, @Nullable RapidField field, @Nullable List<Expression> arraySize) {
+        Variable variable = new Variable(getNextVariableIndex(), fieldType, type, name, field, arraySize);
         variables.add(variable);
         return variable;
     }
 
-    public @NotNull Argument createArgument(@NotNull String name, @NotNull RapidType type, @NotNull ParameterType parameterType) {
-        return new Argument(getNextVariableIndex(), parameterType, type, name);
+    public @NotNull Argument createArgument(@NotNull String name, @NotNull RapidType type, @NotNull ParameterType parameterType, @Nullable RapidParameter parameter, @Nullable List<Expression> arraySize) {
+        return new Argument(getNextVariableIndex(), parameterType, type, name, parameter, arraySize);
     }
 
     protected int getNextVariableIndex() {

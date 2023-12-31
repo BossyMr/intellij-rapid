@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
 import com.bossymr.rapid.language.flow.Optionality;
+import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;

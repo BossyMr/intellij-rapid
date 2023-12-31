@@ -227,10 +227,20 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");
         if (snapshot instanceof RecordSnapshot recordSnapshot) {
-            for (Map.Entry<String, Snapshot> entry : recordSnapshot.getSnapshots().entrySet()) {
-                writeSnapshot(stringBuilder, state, new ComponentExpression(entry.getValue().getType(), variable, entry.getKey()), entry.getValue(), snapshots);
+            for (Map.Entry<String, List<RecordSnapshot.Entry>> entry : recordSnapshot.getSnapshots().entrySet()) {
+                for (RecordSnapshot.Entry assignment : entry.getValue()) {
+                    writeSnapshot(stringBuilder, state, new ComponentExpression(assignment.snapshot().getType(), variable, entry.getKey()), assignment.snapshot(), snapshots);
+                }
             }
         } else if (snapshot instanceof ArraySnapshot arraySnapshot) {
+            stringBuilder.append("<tr>");
+            stringBuilder.append("<td>");
+            stringBuilder.append("length");
+            stringBuilder.append("</td>");
+            stringBuilder.append("<td align=\"left\">");
+            stringBuilder.append(arraySnapshot.getLength());
+            stringBuilder.append("</td>");
+            stringBuilder.append("</tr>\n");
             for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments()) {
                 if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
                     stringBuilder.append("<tr>");
