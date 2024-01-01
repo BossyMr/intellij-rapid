@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.LiteralExpression;
 import com.bossymr.rapid.language.symbol.FieldType;
 import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.type.RapidType;
@@ -19,9 +19,9 @@ public class Variable implements Field {
     private final @NotNull RapidType type;
     private @Nullable String name;
     private final @Nullable Pointer<? extends RapidField> field;
-    private final @Nullable List<Expression> arraySize;
+    private final @Nullable List<LiteralExpression> arraySize;
 
-    public Variable(int index, @Nullable FieldType fieldType, @NotNull RapidType type, @Nullable String name, @Nullable RapidField field, @Nullable List<Expression> arraySize) {
+    public Variable(int index, @Nullable FieldType fieldType, @NotNull RapidType type, @Nullable String name, @Nullable RapidField field, @Nullable List<LiteralExpression> arraySize) {
         this.index = index;
         this.fieldType = fieldType;
         this.type = type;
@@ -56,7 +56,7 @@ public class Variable implements Field {
     }
 
     @Override
-    public @Nullable List<Expression> getArraySize() {
+    public @Nullable List<LiteralExpression> getArraySize() {
         return arraySize;
     }
 

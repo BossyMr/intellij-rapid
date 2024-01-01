@@ -7,22 +7,24 @@ import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiFunction;
 
 /**
  * A snapshot based on a record, which itself has snapshots for each component of the record.
  */
 public class RecordSnapshot implements Snapshot {
 
+    private final @Nullable Snapshot parent;
     private final @NotNull RapidType type;
     private final @NotNull Optionality optionality;
     private final @NotNull Map<String, RapidType> components;
-    private final @NotNull BiFunction<DataFlowState, RapidType, Snapshot> defaultValue;
+    private final @NotNull DefaultValueProvider defaultValue;
     private final @NotNull Map<String, List<Entry>> snapshots;
 
-    public RecordSnapshot(@NotNull RapidType type, @NotNull Optionality optionality, @NotNull BiFunction<DataFlowState, RapidType, Snapshot> defaultValue) {
+    public RecordSnapshot(@Nullable Snapshot parent, @NotNull RapidType type, @NotNull Optionality optionality, @NotNull DefaultValueProvider defaultValue) {
+        this.parent = parent;
         this.type = type;
         this.optionality = optionality;
         this.defaultValue = defaultValue;
@@ -39,6 +41,11 @@ public class RecordSnapshot implements Snapshot {
             components.put(componentName, Objects.requireNonNullElse(componentType, RapidPrimitiveType.ANYTYPE));
         }
         this.snapshots = new HashMap<>();
+    }
+
+    @Override
+    public @Nullable Snapshot getParent() {
+        return parent;
     }
 
     @Override
@@ -69,7 +76,7 @@ public class RecordSnapshot implements Snapshot {
                 }
             }
         }
-        Snapshot snapshot = defaultValue.apply(state, components.get(name));
+        Snapshot snapshot = defaultValue.getDefaultValue(this, state, components.get(name));
         assign(state, name, snapshot);
         return snapshot;
     }
@@ -109,4 +116,10 @@ public class RecordSnapshot implements Snapshot {
     }
 
     public record Entry(@NotNull DataFlowState state, @NotNull Snapshot snapshot) {}
+
+    @FunctionalInterface
+    public interface DefaultValueProvider {
+        @NotNull Snapshot getDefaultValue(@NotNull RecordSnapshot snapshot, @NotNull DataFlowState state, @NotNull RapidType componentType);
+    }
+
 }

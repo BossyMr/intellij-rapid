@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.LiteralExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidParameter;
 import com.bossymr.rapid.language.type.RapidType;
@@ -19,9 +19,9 @@ public class Argument implements Field {
     private final @NotNull RapidType type;
     private final @NotNull String name;
     private final @Nullable Pointer<? extends RapidParameter> parameter;
-    private final @Nullable List<Expression> arraySize;
+    private final @Nullable List<LiteralExpression> arraySize;
 
-    public Argument(int index, @NotNull ParameterType parameterType, @NotNull RapidType type, @NotNull String name, @Nullable RapidParameter parameter, @Nullable List<Expression> arraySize) {
+    public Argument(int index, @NotNull ParameterType parameterType, @NotNull RapidType type, @NotNull String name, @Nullable RapidParameter parameter, @Nullable List<LiteralExpression> arraySize) {
         this.index = index;
         this.parameterType = parameterType;
         this.type = type;
@@ -50,7 +50,7 @@ public class Argument implements Field {
     }
 
     @Override
-    public @Nullable List<Expression> getArraySize() {
+    public @Nullable List<LiteralExpression> getArraySize() {
         return arraySize;
     }
 

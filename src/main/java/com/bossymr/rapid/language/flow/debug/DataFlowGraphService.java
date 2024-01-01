@@ -4,7 +4,6 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
-import com.bossymr.rapid.language.flow.data.snapshots.ArrayEntry;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
@@ -241,32 +240,18 @@ public class DataFlowGraphService extends AnAction {
             stringBuilder.append(arraySnapshot.getLength());
             stringBuilder.append("</td>");
             stringBuilder.append("</tr>\n");
-            for (ArrayEntry assignmentEntry : arraySnapshot.getAssignments()) {
-                if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
-                    stringBuilder.append("<tr>");
-                    stringBuilder.append("<td>");
-                    stringBuilder.append(assignment.index().accept(visitor));
-                    stringBuilder.append("</td>");
-                    stringBuilder.append("<td align=\"left\">");
-                    stringBuilder.append(assignment.snapshot());
-                    stringBuilder.append("</td>");
-                    stringBuilder.append("</tr>\n");
-                } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
-                    stringBuilder.append("<tr>");
-                    stringBuilder.append("[default]");
-                    stringBuilder.append("</td>");
-                    stringBuilder.append("<td align=\"left\">");
-                    stringBuilder.append(defaultValue.snapshot());
-                    stringBuilder.append("</td>");
-                    stringBuilder.append("</tr>\n");
-                }
+            for (ArraySnapshot.Entry assignment : arraySnapshot.getAssignments()) {
+                stringBuilder.append("<tr>");
+                stringBuilder.append("<td>");
+                stringBuilder.append(assignment.index().accept(visitor));
+                stringBuilder.append("</td>");
+                stringBuilder.append("<td align=\"left\">");
+                stringBuilder.append(assignment.snapshot());
+                stringBuilder.append("</td>");
+                stringBuilder.append("</tr>\n");
             }
-            for (ArrayEntry assignmentEntry : arraySnapshot.getAllAssignments(state)) {
-                if (assignmentEntry instanceof ArrayEntry.Assignment assignment) {
-                    writeSnapshot(stringBuilder, state, new IndexExpression(variable, assignment.index()), assignment.snapshot(), snapshots);
-                } else if (assignmentEntry instanceof ArrayEntry.DefaultValue defaultValue) {
-                    writeSnapshot(stringBuilder, state, new IndexExpression(variable, new LiteralExpression(-1)), defaultValue.snapshot(), snapshots);
-                }
+            for (ArraySnapshot.Entry assignment : arraySnapshot.getAssignments(state)) {
+                writeSnapshot(stringBuilder, state, new IndexExpression(variable, assignment.index()), assignment.snapshot(), snapshots);
             }
         }
     }

@@ -57,13 +57,23 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         return block.findArgument(name);
     }
 
-    private @Nullable List<Expression> getArraySize(@NotNull RapidType type) {
+    private @Nullable List<LiteralExpression> getArraySize(@NotNull RapidType type) {
         if(!(type instanceof RapidArrayType)) {
             return null;
         }
-        List<Expression> expressions = new ArrayList<>();
+        List<LiteralExpression> expressions = new ArrayList<>();
         while(type instanceof RapidArrayType arrayType) {
-            expressions.add(expressionOrError(arrayType.getLength(), RapidPrimitiveType.NUMBER));
+            RapidExpression length = arrayType.getLength();
+            if (length == null) {
+                expressions.add(null);
+                continue;
+            }
+            Expression expression = expression(length);
+            if (!(expression instanceof LiteralExpression literalExpression)) {
+                expressions.add(null);
+                continue;
+            }
+            expressions.add(literalExpression);
             type = arrayType.getUnderlyingType();
         }
         return expressions;

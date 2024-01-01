@@ -6,13 +6,13 @@ import com.bossymr.rapid.language.builder.RapidRoutineBuilder;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.Variable;
-import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.LiteralExpression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
-import com.bossymr.rapid.language.flow.value.SnapshotExpression;
 import com.bossymr.rapid.language.flow.value.VariableExpression;
 import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.RapidLiteralExpression;
 import com.bossymr.rapid.language.psi.RapidStatement;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.VirtualField;
@@ -118,7 +118,7 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
         Block.FunctionBlock block = new Block.FunctionBlock(routine, moduleName);
         Map<RapidExpression, ReferenceExpression> variables = new HashMap<>();
         for (RapidField field : routine.getFields()) {
-            Variable variable = block.createVariable(field.getName(), field.getFieldType(), Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE), field, getArraySize(variables, field.getType()));
+            Variable variable = block.createVariable(field.getName(), field.getFieldType(), Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE), field, getArraySize(field.getType()));
             RapidExpression initializer = field.getInitializer();
             if (initializer != null) {
                 variables.put(initializer, new VariableExpression(variable));
@@ -148,18 +148,23 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
         return this;
     }
 
-    private @Nullable List<Expression> getArraySize(@NotNull Map<RapidExpression, ReferenceExpression> lengths, @NotNull RapidType type) {
+    private @Nullable List<LiteralExpression> getArraySize(@NotNull RapidType type) {
         if (!(type instanceof RapidArrayType)) {
             return null;
         }
-        List<Expression> expressions = new ArrayList<>();
+        List<LiteralExpression> expressions = new ArrayList<>();
         while (type instanceof RapidArrayType arrayType) {
             RapidExpression length = arrayType.getLength();
-            Snapshot variable = Snapshot.createSnapshot(RapidPrimitiveType.NUMBER);
-            if(length != null) {
-                lengths.put(length, new SnapshotExpression(variable));
+            if (!(length instanceof RapidLiteralExpression literalExpression)) {
+                expressions.add(null);
+                type = arrayType.getUnderlyingType();
+                continue;
             }
-            expressions.add(new SnapshotExpression(variable));
+            Object value = literalExpression.getValue();
+            if (value == null) {
+                return null;
+            }
+            expressions.add(new LiteralExpression(value));
             type = arrayType.getUnderlyingType();
         }
         return expressions;

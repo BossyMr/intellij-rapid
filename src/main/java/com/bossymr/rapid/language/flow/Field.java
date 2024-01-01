@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.LiteralExpression;
 import com.bossymr.rapid.language.symbol.RapidVariable;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -18,6 +18,6 @@ public interface Field {
 
     @Nullable RapidVariable getVariable();
 
-    @Nullable List<Expression> getArraySize();
+    @Nullable List<LiteralExpression> getArraySize();
 
 }

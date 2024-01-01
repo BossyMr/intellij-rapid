@@ -1,19 +1,17 @@
 package com.bossymr.rapid.ide.editor.insight.inspection.flow;
 
-import ai.grazie.utils.attributes.Attributes;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
-import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInspection.LocalInspectionTool;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
-import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import org.jetbrains.annotations.NotNull;
 
@@ -87,20 +85,25 @@ public class ConstantValueInspection extends LocalInspectionTool {
 
     private void registerIndex(@NotNull RapidIndexExpression element, @NotNull Map<DataFlowState, Snapshot> expressions, @NotNull ProblemsHolder holder) {
         for (DataFlowState state : expressions.keySet()) {
-            Snapshot snapshot = state.getSnapshot(element.getExpression());
-            if(snapshot == null) {
-                continue;
-            }
-            for (RapidExpression dimension : element.getArray().getDimensions()) {
-                Snapshot index = state.getSnapshot(element.getExpression());
-                if(index == null) {
+            Snapshot snapshot = expressions.get(state);
+            List<RapidExpression> dimensions = element.getArray().getDimensions();
+            for (int i = dimensions.size() - 1; i >= 0; i--) {
+                RapidExpression dimension = dimensions.get(i);
+                if (!(snapshot.getParent() instanceof ArraySnapshot arraySnapshot)) {
+                    break;
+                }
+                ArraySnapshot.Entry assignment = arraySnapshot.getAssignment(snapshot);
+                snapshot = arraySnapshot;
+                if (assignment == null) {
                     continue;
                 }
-                BinaryExpression lowerBound = new BinaryExpression(BinaryOperator.GREATER_THAN_OR_EQUAL, new SnapshotExpression(index), new LiteralExpression(1));
-                BinaryExpression upperBound = new BinaryExpression(BinaryOperator.LESS_THAN_OR_EQUAL, new SnapshotExpression(index), new UnaryExpression(UnaryOperator.DIMENSION, new SnapshotExpression(snapshot)));
-                BooleanValue constraint = state.getConstraint(new BinaryExpression(BinaryOperator.AND, lowerBound, upperBound));
-                if(constraint == BooleanValue.ALWAYS_FALSE) {
-                    if(dimension instanceof RapidLiteralExpression) {
+                Expression index = assignment.index();
+                BinaryExpression lowerBound = new BinaryExpression(BinaryOperator.GREATER_THAN_OR_EQUAL, index, new LiteralExpression(1));
+                BinaryExpression upperBound = new BinaryExpression(BinaryOperator.LESS_THAN_OR_EQUAL, index, new UnaryExpression(UnaryOperator.DIMENSION, new SnapshotExpression(snapshot)));
+                BinaryExpression integerType = new BinaryExpression(BinaryOperator.EQUAL_TO, new BinaryExpression(BinaryOperator.INTEGER_DIVIDE, index, new LiteralExpression(1)), index);
+                BooleanValue constraint = state.getConstraint(new BinaryExpression(BinaryOperator.AND, integerType, new BinaryExpression(BinaryOperator.AND, lowerBound, upperBound)));
+                if (constraint == BooleanValue.ALWAYS_FALSE) {
+                    if (dimension instanceof RapidLiteralExpression) {
                         holder.registerProblem(dimension, RapidBundle.message("inspection.message.out.of.bounds"), ProblemHighlightType.ERROR);
                     } else {
                         holder.registerProblem(dimension, RapidBundle.message("inspection.message.out.of.bounds"));

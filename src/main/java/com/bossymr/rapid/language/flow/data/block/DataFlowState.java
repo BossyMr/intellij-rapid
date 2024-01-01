@@ -3,7 +3,10 @@ package com.bossymr.rapid.language.flow.data.block;
 import com.bossymr.network.MultiMap;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.ConditionAnalyzer;
-import com.bossymr.rapid.language.flow.data.snapshots.*;
+import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
+import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.RapidExpression;
@@ -51,24 +54,20 @@ public class DataFlowState {
     private final @NotNull Instruction instruction;
 
     private final @NotNull Block functionBlock;
-    private @Nullable DataFlowState predecessor;
-
     /**
      * The conditions for all variables.
      */
     private final @NotNull List<Expression> conditions = new ArrayList<>();
-
-    private int volatileCondition = 0;
-
     /**
      * The latest snapshot of each variable. The latest snapshot for a given variable also represents the variable.
      */
     private final @NotNull Map<Field, Snapshot> snapshots = new HashMap<>();
-
     /**
      * The first snapshot of each variable.
      */
     private final @NotNull Map<Field, Snapshot> roots;
+    private @Nullable DataFlowState predecessor;
+    private int volatileCondition = 0;
 
     public DataFlowState(@NotNull Instruction instruction, @Nullable DataFlowState predecessor) {
         this.predecessor = predecessor;
@@ -91,23 +90,19 @@ public class DataFlowState {
         return new DataFlowState(instruction, predecessor);
     }
 
-    public void setInitialized() {
-        volatileCondition = conditions.size();
-    }
-
-    public static @NotNull Snapshot createDefaultSnapshot(@NotNull DataFlowState state, @NotNull RapidType type, int index, @Nullable List<Expression> arraySize) {
+    public static @NotNull Snapshot createDefaultSnapshot(@Nullable Snapshot parent, @NotNull DataFlowState state, @NotNull RapidType type, int index, @Nullable List<LiteralExpression> arraySize) {
         if (type.getDimensions() > 0) {
             RapidType arrayType = type.createArrayType(type.getDimensions() - 1);
-            ArraySnapshot snapshot = new ArraySnapshot(type, Optionality.PRESENT, nextState -> createDefaultSnapshot(nextState, arrayType, index + 1, arraySize));
-            if ((arraySize != null && index >= 0 && index < arraySize.size())) {
+            ArraySnapshot snapshot = new ArraySnapshot(parent, type, Optionality.PRESENT, (current, nextState) -> createDefaultSnapshot(current, nextState, arrayType, index + 1, arraySize));
+            if (arraySize != null && index >= 0 && index < arraySize.size() && arraySize.get(index) != null) {
                 state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot.getLength()), arraySize.get(index)));
             }
             return snapshot;
         }
         if (type.getRootStructure() instanceof RapidRecord) {
-            return new RecordSnapshot(type, Optionality.PRESENT, (nextState, componentType) -> createDefaultSnapshot(nextState, componentType, -1, null));
+            return new RecordSnapshot(parent, type, Optionality.PRESENT, (current, nextState, componentType) -> createDefaultSnapshot(current, nextState, componentType, -1, null));
         }
-        VariableSnapshot snapshot = new VariableSnapshot(type, Optionality.PRESENT);
+        VariableSnapshot snapshot = new VariableSnapshot(parent, type, Optionality.PRESENT);
         Object object = getDefaultValue(type);
         if (object != null) {
             state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), new LiteralExpression(object)));
@@ -124,6 +119,10 @@ public class DataFlowState {
             return 0;
         }
         return null;
+    }
+
+    public void setInitialized() {
+        volatileCondition = conditions.size();
     }
 
     public @NotNull DataFlowState createCompactState(@NotNull Set<Snapshot> targets) {
@@ -243,7 +242,7 @@ public class DataFlowState {
 
     private void initializeDefault() {
         for (Variable variable : functionBlock.getVariables()) {
-            snapshots.put(variable, createDefaultSnapshot(this, variable.getType(), 0, variable.getArraySize()));
+            snapshots.put(variable, createDefaultSnapshot(null, this, variable.getType(), 0, variable.getArraySize()));
         }
         initializeArguments();
         for (Field field : snapshots.keySet()) {
@@ -287,6 +286,7 @@ public class DataFlowState {
         }
         expression = expression.replace(this::getSnapshot);
         Optionality optionality = getQuickOptionality(expression);
+        // FIXME: Not creating new assignment for top-level, at 0-index...
         SnapshotExpression snapshot = createSnapshot(variable, optionality);
         insert(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, expression));
         if (optionality == Optionality.UNKNOWN) {
@@ -322,6 +322,7 @@ public class DataFlowState {
                     AggregateExpression aggregateExpression = (AggregateExpression) binaryExpression.getRight();
                     List<? extends Expression> components = aggregateExpression.getExpressions();
                     if (referenceExpression.getType().getDimensions() > 0) {
+                        add(new BinaryExpression(BinaryOperator.EQUAL_TO, new UnaryExpression(UnaryOperator.DIMENSION, referenceExpression), new LiteralExpression(components.size())));
                         for (int i = 0; i < components.size(); i++) {
                             Expression component = components.get(i);
                             IndexExpression indexExpression = new IndexExpression(referenceExpression, new LiteralExpression(i + 1));
@@ -401,7 +402,7 @@ public class DataFlowState {
                 throw new IllegalArgumentException();
             }
             Expression indexSnapshot = getSnapshot(indexExpression.getIndex());
-            Snapshot snapshot = Snapshot.createSnapshot(indexExpression.getType());
+            Snapshot snapshot = Snapshot.createSnapshot(arraySnapshot, indexExpression.getType(), Optionality.PRESENT);
             arraySnapshot.assign(this, indexSnapshot, snapshot);
             return new SnapshotExpression(snapshot, indexExpression);
         }
@@ -410,7 +411,7 @@ public class DataFlowState {
             if (!(variableSnapshot.getSnapshot() instanceof RecordSnapshot recordSnapshot)) {
                 throw new IllegalArgumentException();
             }
-            Snapshot snapshot = Snapshot.createSnapshot(componentExpression.getType());
+            Snapshot snapshot = Snapshot.createSnapshot(recordSnapshot, componentExpression.getType(), Optionality.PRESENT);
             recordSnapshot.assign(this, componentExpression.getComponent(), snapshot);
             return new SnapshotExpression(snapshot, componentExpression);
         }
@@ -447,7 +448,7 @@ public class DataFlowState {
     }
 
     private @NotNull Expression getSnapshot(@NotNull Expression value) {
-        if(value instanceof UnaryExpression expression && expression.getOperator() == UnaryOperator.DIMENSION) {
+        if (value instanceof UnaryExpression expression && expression.getOperator() == UnaryOperator.DIMENSION) {
             SnapshotExpression snapshot = getSnapshot((ReferenceExpression) expression.getExpression());
             ArraySnapshot arraySnapshot = (ArraySnapshot) snapshot.getSnapshot();
             return new SnapshotExpression(arraySnapshot.getLength(), value);
@@ -505,34 +506,24 @@ public class DataFlowState {
                     throw new IllegalArgumentException("Unexpected snapshot: " + snapshot + " for variable of type: " + variable.getType());
                 }
                 Expression index = getSnapshot(expression.getIndex());
-                List<ArrayEntry> assignments = arraySnapshot.getAssignments(DataFlowState.this, index);
+                List<ArraySnapshot.Entry> assignments = arraySnapshot.getAssignments(DataFlowState.this, index);
                 if (assignments.isEmpty()) {
                     throw new IllegalArgumentException();
                 }
                 if (assignments.size() == 1) {
-                    ArrayEntry entry = assignments.get(0);
-                    if (entry instanceof ArrayEntry.DefaultValue defaultAssignment) {
-                        Snapshot value = defaultAssignment.snapshot();
-                        return new SnapshotExpression(value, expression);
-                    }
-                    if (entry instanceof ArrayEntry.Assignment assignment) {
-                        Snapshot value = assignment.snapshot();
-                        return new SnapshotExpression(value, expression);
-                    }
+                    ArraySnapshot.Entry entry = assignments.get(0);
+                    Snapshot value = entry.snapshot();
+                    return new SnapshotExpression(value, expression);
                 }
                 SnapshotExpression result = new SnapshotExpression(Snapshot.createSnapshot(expression.getType()), expression);
                 List<Expression> expressions = new ArrayList<>();
                 for (int i = 0; i < assignments.size(); i++) {
-                    ArrayEntry entry = assignments.get(i);
+                    ArraySnapshot.Entry entry = assignments.get(i);
                     Snapshot value = entry.snapshot();
                     Expression expr = new BinaryExpression(BinaryOperator.EQUAL_TO, result, new SnapshotExpression(value));
-                    if (entry instanceof ArrayEntry.Assignment assignment) {
-                        expr = new BinaryExpression(BinaryOperator.AND, expr, new BinaryExpression(BinaryOperator.EQUAL_TO, index, getSnapshot(assignment.index())));
-                    }
+                    expr = new BinaryExpression(BinaryOperator.AND, expr, new BinaryExpression(BinaryOperator.EQUAL_TO, index, getSnapshot(entry.index())));
                     for (int j = 0; j < i; j++) {
-                        if (entry instanceof ArrayEntry.Assignment assignment) {
-                            expr = new BinaryExpression(BinaryOperator.AND, expr, new BinaryExpression(BinaryOperator.NOT_EQUAL_TO, index, getSnapshot(assignment.index())));
-                        }
+                        expr = new BinaryExpression(BinaryOperator.AND, expr, new BinaryExpression(BinaryOperator.NOT_EQUAL_TO, index, getSnapshot(assignments.get(j).index())));
                     }
                     expressions.add(expr);
                 }

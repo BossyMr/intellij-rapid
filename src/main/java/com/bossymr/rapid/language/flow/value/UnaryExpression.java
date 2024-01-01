@@ -24,7 +24,7 @@ public class UnaryExpression implements Expression {
 
     public UnaryExpression(@Nullable RapidExpression expression, @NotNull UnaryOperator operator, @NotNull Expression component) {
         this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
-        this.type = Objects.requireNonNull(getType(operator, component));
+        this.type = Objects.requireNonNull(getType(operator, component), "Could not create unary expression for: " + operator + " " + component + " [" + component.getType() + "]");
         this.operator = operator;
         this.component = component;
     }

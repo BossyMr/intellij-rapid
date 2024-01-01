@@ -4,6 +4,7 @@ import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A {@code VariableSnapshot} represents the previous state of a variable. The below example shows how snapshots can be
@@ -19,10 +20,12 @@ import org.jetbrains.annotations.NotNull;
  */
 public class VariableSnapshot implements Snapshot {
 
+    private final @Nullable Snapshot snapshot;
     private final @NotNull RapidType type;
     private final @NotNull Optionality optionality;
 
-    public VariableSnapshot(@NotNull RapidType type, @NotNull Optionality optionality) {
+    public VariableSnapshot(@Nullable Snapshot snapshot, @NotNull RapidType type, @NotNull Optionality optionality) {
+        this.snapshot = snapshot;
         if (type.getDimensions() > 0) {
             throw new IllegalArgumentException("Cannot create VariableSnapshot for variable of type: " + type);
         }
@@ -31,6 +34,11 @@ public class VariableSnapshot implements Snapshot {
         }
         this.type = type;
         this.optionality = optionality;
+    }
+
+    @Override
+    public @Nullable Snapshot getParent() {
+        return snapshot;
     }
 
     @Override

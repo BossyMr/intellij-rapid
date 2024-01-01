@@ -64,6 +64,22 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
         checkByFile("File.mod");
     }
 
+    public void testLargeArraySize() throws IOException, ExecutionException {
+        checkByText("""
+                MODULE foo
+                    PROC bar()
+                        VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];
+                        variable{1, 1} := 0;
+                        variable{0, 2} := 0;
+                        variable{3, 2} := 0;
+                        variable{2, 0} := 0;
+                        variable{2, 4} := 0;
+                        variable{3, 4} := 0;
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
     public void testArraySize() throws IOException, ExecutionException {
         checkByText("""
                 MODULE foo

@@ -22,24 +22,6 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
         myFixture.checkHighlighting(true, true, true, true);
     }
 
-    public void disableTestLoop() {
-        doTest("""
-                MODULE foo
-                    PROC bar(num x)
-                        VAR num y := 0;
-                        WHILE x > 0 THEN
-                            y := y + 1;
-                            x := x - 1;
-                        ENDWHILE
-                        IF <warning descr="Value of expression is always false">x > 0</warning> THEN
-                        ENDIF
-                        IF <warning descr="Value of expression is always false">y < 0</warning> THEN
-                        ENDIF
-                    ENDPROC
-                ENDMODULE
-                """);
-    }
-
     public void testEquality() {
         doTest("""
                 MODULE foo
@@ -116,10 +98,31 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
     public void testArrayVariable() {
         doTest("""
                 MODULE foo
-                    PROC bar(num x)
+                    PROC bar()
                         VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];
                         IF <warning descr="Value of expression is always true">(variable{1, 3} * variable{2, 2}) = 8</warning> THEN
                         ENDIF
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
+    public void testArrayVariableLength() {
+        doTest("""
+                MODULE foo
+                    PROC bar()
+                        VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];
+                        VAR num variable2{2 + 3};
+                        VAR num index := 3;
+                        variable{1, 1} := 0;
+                        variable{<error descr="Array index is out of bounds">0</error>, 2} := 0;
+                        variable{<error descr="Array index is out of bounds">3</error>, 2} := 0;
+                        variable{2, <error descr="Array index is out of bounds">0</error>} := 0;
+                        variable{2, <error descr="Array index is out of bounds">4</error>} := 0;
+                        variable2{<error descr="Array index is out of bounds">1.5</error>} := 2;
+                        ! The array with initialized with an aggregate expression, which means the third index was not 
+                        ! initialied, as such its length is unkown. 
+                        variable{<warning descr="Array index is out of bounds">index</warning>, 4} := 0;
                     ENDPROC
                 ENDMODULE
                 """);
