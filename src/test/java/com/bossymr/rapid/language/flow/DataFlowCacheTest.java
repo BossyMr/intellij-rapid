@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.openapi.application.ReadAction;
+import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
@@ -32,6 +33,54 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
             service.getDataFlow(routine);
         });
         assertEquals(processed, result);
+    }
+
+    private void checkByTextAfterModification(@NotNull String text, @NotNull Set<String> processed) {
+        myFixture.configureByText(RapidFileType.getInstance(), text);
+        Set<String> result = new HashSet<>();
+        ControlFlowListener.connect(new ControlFlowListener() {
+            @Override
+            public void onBlock(@NotNull ControlFlowBlock block) {
+                Block controlFlow = block.getControlFlow();
+                result.add(controlFlow.getModuleName() + ":" + controlFlow.getName());
+            }
+        });
+        ControlFlowService service = ControlFlowService.getInstance();
+        service.getDataFlow(myFixture.getProject());
+        result.clear();
+        myFixture.type(' ');
+        PsiDocumentManager.getInstance(myFixture.getProject()).commitAllDocuments();
+        ReadAction.run(() -> service.getDataFlow(myFixture.getProject()));
+        assertEquals(processed, result);
+    }
+
+    public void testModificationCache() {
+        checkByTextAfterModification("""
+                MODULE foo
+                    PROC bar()
+                        <caret>
+                    ENDPROC
+                    
+                    PROC baz()
+                    ENDPROC
+                ENDMODULE
+                """, Set.of("foo:bar"));
+    }
+
+    public void testModificationCacheWithDependency() {
+        checkByTextAfterModification("""
+                MODULE foo
+                    FUNC num bar()
+                        <caret>
+                        RETURN 0;
+                    ENDPROC
+                    
+                    PROC baz()
+                        VAR value := 0;
+                        value := bar();
+                    ENDPROC
+                ENDMODULE
+                """, Set.of("foo:baz", "foo:bar"));
     }
 
     public void testUnusedRoutine() {

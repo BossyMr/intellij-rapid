@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.extapi.psi.StubBasedPsiElementBase;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.Language;
+import com.intellij.openapi.util.SimpleModificationTracker;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.StubBasedPsiElement;
@@ -15,12 +16,24 @@ import org.jetbrains.annotations.NotNull;
 
 public abstract class RapidStubElement<T extends StubElement<?>> extends StubBasedPsiElementBase<T> implements StubBasedPsiElement<T> {
 
+    private final @NotNull SimpleModificationTracker tracker = new SimpleModificationTracker();
+
     protected RapidStubElement(@NotNull T stub, @NotNull IStubElementType<?, ?> nodeType) {
         super(stub, nodeType);
     }
 
     protected RapidStubElement(@NotNull ASTNode node) {
         super(node);
+    }
+
+    public long getModificationCount() {
+        return tracker.getModificationCount();
+    }
+
+    @Override
+    public void subtreeChanged() {
+        tracker.incModificationCount();
+        super.subtreeChanged();
     }
 
     @Override

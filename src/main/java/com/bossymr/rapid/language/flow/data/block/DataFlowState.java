@@ -286,7 +286,6 @@ public class DataFlowState {
         }
         expression = expression.replace(this::getSnapshot);
         Optionality optionality = getQuickOptionality(expression);
-        // FIXME: Not creating new assignment for top-level, at 0-index...
         SnapshotExpression snapshot = createSnapshot(variable, optionality);
         insert(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, expression));
         if (optionality == Optionality.UNKNOWN) {
@@ -330,7 +329,7 @@ public class DataFlowState {
                         }
                         return;
                     } else if (referenceExpression.getType().getRootStructure() instanceof RapidRecord record) {
-                        List<RapidComponent> fields = record.getComponents();
+                        List<? extends RapidComponent> fields = record.getComponents();
                         if (fields.size() != components.size()) {
                             throw new IllegalArgumentException("Cannot add expression: " + expression);
                         }

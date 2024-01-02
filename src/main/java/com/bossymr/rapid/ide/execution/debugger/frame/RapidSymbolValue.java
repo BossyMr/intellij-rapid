@@ -81,7 +81,7 @@ public class RapidSymbolValue extends XNamedValue {
         try {
             String value = getValue();
             RapidType dataType = symbol.getType();
-            boolean hasChildren = dataType != null && dataType.getRootStructure() instanceof RapidRecord record && record.getComponents().size() > 0;
+            boolean hasChildren = dataType != null && dataType.getRootStructure() instanceof RapidRecord record && !(record.getComponents().isEmpty());
             node.setPresentation(symbol.getTargetPresentation().getIcon(), new RapidValuePresentation(dataType, value), hasChildren);
         } catch (IOException e) {
             node.setPresentation(null, new XErrorValuePresentation(e.getLocalizedMessage()), false);
@@ -136,7 +136,7 @@ public class RapidSymbolValue extends XNamedValue {
     public void computeChildren(@NotNull XCompositeNode node) {
         if (symbol.getType() != null && symbol.getType().getRootStructure() instanceof RapidRecord record) {
             XValueChildrenList childrenList = new XValueChildrenList();
-            List<RapidComponent> components = record.getComponents();
+            List<? extends RapidComponent> components = record.getComponents();
             for (int i = 0; i < components.size(); i++) {
                 childrenList.add(new RapidComponentValue(manager, components.get(i), i));
             }
@@ -161,11 +161,11 @@ public class RapidSymbolValue extends XNamedValue {
                 switch (character) {
                     case '[' -> stack.add(0);
                     case ']' -> {
-                        assert stack.size() > 0;
+                        assert !(stack.isEmpty());
                         stack.remove(stack.size() - 1);
                     }
                     case ',' -> {
-                        assert stack.size() > 0;
+                        assert !(stack.isEmpty());
                         stack.set(stack.size() - 1, stack.get(stack.size() - 1) + 1);
                     }
                     default -> {}
@@ -196,7 +196,7 @@ public class RapidSymbolValue extends XNamedValue {
 
         @Contract(pure = true)
         private static boolean isAtIndex(@NotNull List<Integer> stack, int index) {
-            if (stack.size() == 0) {
+            if (stack.isEmpty()) {
                 return false;
             }
             return stack.get(0) == index;

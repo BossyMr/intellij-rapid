@@ -25,6 +25,10 @@ public class ControlFlowBlock {
         return controlFlow;
     }
 
+    public boolean hasDataFlowGraph() {
+        return !(dataFlow.isEmpty()) || controlFlow.getEntryInstructions().isEmpty();
+    }
+
     public @NotNull Set<DataFlowState> getDataFlow(@NotNull Instruction instruction) {
         if (!(instruction.getBlock().equals(controlFlow))) {
             throw new IllegalArgumentException("Could not find instruction: " + instruction + " in block: " + controlFlow);
@@ -43,15 +47,15 @@ public class ControlFlowBlock {
         return result;
     }
 
-    public @NotNull Set<DataFlowState> getEntireDataFlow() {
-        Set<DataFlowState> result = new HashSet<>();
+    public int getSize() {
+        int size = 0;
         Deque<DataFlowState> queue = new ArrayDeque<>(dataFlow.values());
         while (!(queue.isEmpty())) {
             DataFlowState state = queue.removeLast();
-            result.add(state);
+            size += 1;
             queue.addAll(state.getSuccessors());
         }
-        return result;
+        return size;
     }
 
     private @NotNull BlockType getBlockType(@NotNull Instruction instruction) {

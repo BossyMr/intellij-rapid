@@ -143,7 +143,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull ReferenceExpression index(@NotNull ReferenceExpression variable, @NotNull Expression index) {
-        if (variable.getType().getDimensions() <= 0) {
+        if (variable.getType().getDimensions() <= 0 && !(variable.equals(RapidPrimitiveType.ANYTYPE))) {
             throw new IllegalArgumentException("Cannot create index expression for variable of type: " + variable.getType());
         }
         if (!(index.getType().isAssignable(RapidPrimitiveType.NUMBER))) {
@@ -238,7 +238,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                 }
             }
         } else if (type.getRootStructure() instanceof RapidRecord record) {
-            List<RapidComponent> components = record.getComponents();
+            List<? extends RapidComponent> components = record.getComponents();
             for (int i = 0; i < components.size(); i++) {
                 RapidType componentType = components.get(i).getType();
                 if (i >= expressions.size()) {

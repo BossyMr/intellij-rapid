@@ -257,7 +257,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             }
             if (type.getRootStructure() instanceof RapidRecord record) {
                 int index = aggregateExpression.getExpressions().indexOf(current);
-                List<RapidComponent> components = record.getComponents();
+                List<? extends RapidComponent> components = record.getComponents();
                 if (index < 0 || index >= components.size()) {
                     return RapidPrimitiveType.BOOLEAN;
                 }

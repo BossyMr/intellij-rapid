@@ -20,7 +20,7 @@ public interface RapidRecord extends RapidStructure {
      *
      * @return the components.
      */
-    @NotNull List<RapidComponent> getComponents();
+    @NotNull List<? extends RapidComponent> getComponents();
 
     @Override
     default @NotNull RapidType createType() {

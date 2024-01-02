@@ -32,6 +32,10 @@ import java.util.Objects;
 @SuppressWarnings("UnstableApiUsage")
 public interface PhysicalSymbol extends RapidElement, RapidSymbol, PsiNameIdentifierOwner, RenameableSymbol, PsiSymbolDeclaration, NavigatablePsiElement {
 
+    default long getModificationCount() {
+        throw new UnsupportedOperationException();
+    }
+
     @Override
     default @Nullable String getCanonicalName() {
         return getName();

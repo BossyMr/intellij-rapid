@@ -52,7 +52,7 @@ public class RapidAggregateExpressionImpl extends RapidExpressionImpl implements
                 return null;
             }
             int index = parent.getExpressions().indexOf(this);
-            List<RapidComponent> components = record.getComponents();
+            List<? extends RapidComponent> components = record.getComponents();
             if (index >= components.size()) {
                 return null;
             }

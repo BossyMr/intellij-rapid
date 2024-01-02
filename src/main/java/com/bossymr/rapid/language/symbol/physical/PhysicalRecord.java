@@ -6,7 +6,6 @@ import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidRecordStub;
-import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.bossymr.rapid.language.symbol.Visibility;
@@ -46,7 +45,7 @@ public class PhysicalRecord extends RapidStubElement<RapidRecordStub> implements
     }
 
     @Override
-    public @NotNull List<RapidComponent> getComponents() {
+    public @NotNull List<PhysicalComponent> getComponents() {
         return List.of(getStubOrPsiChildren(RapidStubElementTypes.COMPONENT, new PhysicalComponent[0]));
     }
 

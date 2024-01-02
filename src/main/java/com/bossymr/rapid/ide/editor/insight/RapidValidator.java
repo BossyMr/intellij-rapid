@@ -242,7 +242,7 @@ public class RapidValidator {
             }
         } else if (structure instanceof RapidRecord record) {
             List<RapidExpression> expressions = aggregate.getExpressions();
-            List<RapidComponent> components = record.getComponents();
+            List<? extends RapidComponent> components = record.getComponents();
             if (expressions.size() != components.size()) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.aggregate.number.of.components", record.getName(), components.size()))
                         .range(aggregate)

@@ -1,15 +1,17 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.RapidFileType;
-import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
-import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
-import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
+import com.bossymr.rapid.language.flow.instruction.ExitInstruction;
+import com.bossymr.rapid.language.flow.instruction.Instruction;
+import com.bossymr.rapid.language.flow.instruction.ThrowInstruction;
 import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
+import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
@@ -18,14 +20,12 @@ import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.util.LazyInitializer;
 import com.intellij.util.messages.Topic;
 import com.microsoft.z3.Context;
@@ -33,7 +33,10 @@ import com.microsoft.z3.Z3Exception;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -42,20 +45,12 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service(Service.Level.APP)
 public final class ControlFlowService implements Disposable {
 
-    private static final Logger logger = Logger.getInstance(ControlFlowService.class);
     @Topic.AppLevel
     public static Topic<ControlFlowListener> TOPIC = Topic.create("Control Flow", ControlFlowListener.class);
-    /**
-     * The context used to create queries for the z3 SMT-solver. Creating the context for each individual query resulted
-     * in it becoming the bottleneck.
-     */
+
     private final @NotNull LazyInitializer.LazyValue<AtomicReference<Context>> context = LazyInitializer.create(() -> new AtomicReference<>(new Context()));
 
-    /**
-     * A store containing the control flow information for hardcoded methods. This store is built lazily, that is, the
-     * control flow graph for a method is not built until it is called.
-     */
-    private final @NotNull Map<VirtualRoutine, ControlFlowBlock> hardcoded = new HashMap<>();
+    private final @NotNull ControlFlowCache cache = new ControlFlowCache();
 
     public static @NotNull ControlFlowService getInstance() {
         return ApplicationManager.getApplication().getService(ControlFlowService.class);
@@ -69,11 +64,15 @@ public final class ControlFlowService implements Disposable {
      * @return the control flow and data flow graphs for the routine.
      */
     public @NotNull ControlFlowBlock getDataFlow(@NotNull RapidRoutine routine) {
-        Set<RapidRoutine> stack = new HashSet<>();
-        stack.add(routine);
-        return getDataFlow(stack, routine);
+        return cache.getDataFlow(Set.of(routine), routine);
     }
 
+    /**
+     * Computes the control flow and data flow for every routine in the specified project.
+     *
+     * @param project the project.
+     * @return the control flow and data flow graphs for every routine in the specified project.
+     */
     public @NotNull Set<ControlFlowBlock> getDataFlow(@NotNull Project project) {
         Set<ControlFlowBlock> routines = new HashSet<>();
         PsiManager manager = PsiManager.getInstance(project);
@@ -88,84 +87,8 @@ public final class ControlFlowService implements Disposable {
                 }
             }
         }
-        routines.addAll(hardcoded.values());
+        routines.addAll(cache.getDataFlow());
         return routines;
-    }
-
-    private @NotNull ControlFlowBlock getDataFlow(@NotNull Set<RapidRoutine> stack, @NotNull RapidRoutine routine) {
-        if (routine instanceof PhysicalRoutine physicalRoutine) {
-            Set<RapidRoutine> weakStack = new HashSet<>(stack) {
-                @Override
-                public boolean equals(Object o) {
-                    return o instanceof HashSet<?>;
-                }
-            };
-            return CachedValuesManager.getProjectPsiDependentCache(physicalRoutine, (symbol) -> {
-                ControlFlowBlock block = new ControlFlowBlock(computeControlFlow(symbol));
-                computeDataFlow(block, weakStack);
-                return block;
-            });
-        }
-        if (routine instanceof VirtualRoutine virtualRoutine) {
-            if (hardcoded.containsKey(virtualRoutine)) {
-                return hardcoded.get(virtualRoutine);
-            }
-            ControlFlowBlock block = new ControlFlowBlock(computeControlFlow(virtualRoutine));
-            computeDataFlow(block, stack);
-            hardcoded.put(virtualRoutine, block);
-            return block;
-        }
-        throw new AssertionError();
-    }
-
-    private void computeDataFlow(@NotNull ControlFlowBlock block, @NotNull Set<RapidRoutine> stack) {
-        long startTime = System.currentTimeMillis();
-        Block controlFlow = block.getControlFlow();
-        Deque<DataFlowState> workList = new ArrayDeque<>(controlFlow.getInstructions().size());
-        for (EntryInstruction instruction : controlFlow.getEntryInstructions()) {
-            DataFlowState state = DataFlowState.createState(instruction.getInstruction());
-            block.getDataFlow().put(instruction.getEntryType(), state);
-            workList.add(state);
-        }
-        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(stack, block, workList);
-        analyzer.process();
-        long totalTime = System.currentTimeMillis() - startTime;
-        String routineName = controlFlow.getModuleName() + ":" + controlFlow.getName();
-        String states = logger.isDebugEnabled() ? " (" + getBlockSize(block) + " states)" : "";
-        logger.debug("Computed data flow for block: " + routineName + states + " in: " + totalTime + " ms");
-        ControlFlowListener.publish().onBlock(block);
-    }
-
-    private @NotNull Block computeControlFlow(@NotNull RapidRoutine routine) {
-        Block block;
-        if (routine instanceof PhysicalRoutine physicalRoutine) {
-            block = computePhysicalControlFlow(physicalRoutine);
-        } else if (routine instanceof VirtualRoutine virtualRoutine) {
-            block = computeVirtualControlFlow(virtualRoutine);
-        } else {
-            throw new AssertionError();
-        }
-        return block;
-    }
-
-    private int getBlockSize(@NotNull ControlFlowBlock block) {
-        return block.getEntireDataFlow().size();
-    }
-
-    private @NotNull Block computePhysicalControlFlow(@NotNull RapidRoutine routine) {
-        Set<Block> blocks = new ControlFlowBuilder()
-                .withModule(getModuleName(routine), moduleBuilder -> moduleBuilder.withRoutine(routine))
-                .getControlFlow();
-        return blocks.iterator().next();
-    }
-
-    private @NotNull Block computeVirtualControlFlow(@NotNull RapidRoutine routine) {
-        for (HardcodedContract contract : HardcodedContract.values()) {
-            if (contract.getRoutine().equals(routine)) {
-                return contract.getBlock();
-            }
-        }
-        return computePhysicalControlFlow(routine);
     }
 
     public @NotNull Set<DataFlowFunction.Result> getDataFlowFunction(@NotNull Set<RapidRoutine> stack, @NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
@@ -194,24 +117,70 @@ public final class ControlFlowService implements Disposable {
     }
 
     private @NotNull Set<DataFlowFunction.Result> getDataFlow(@NotNull Set<RapidRoutine> stack, @NotNull RapidRoutine routine, @NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
-        ControlFlowBlock block = getDataFlow(stack, routine);
+        if (routine instanceof VirtualRoutine) {
+            ControlFlowBlock block = cache.getDataFlow(stack, routine);
+            DataFlowFunction function = block.getFunction();
+            return function.getOutput(callerState, instruction);
+        }
+        ControlFlowBlock block = cache.getControlFlow(routine);
+        if (block.hasDataFlowGraph()) {
+            DataFlowFunction function = block.getFunction();
+            return function.getOutput(callerState, instruction);
+        }
+        if (!(hasSideEffect(stack, block, instruction))) {
+            DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getInstruction(), callerState);
+            return Set.of(new DataFlowFunction.Result.Success(successorState, null));
+        }
+        block = cache.getDataFlow(stack, routine);
         DataFlowFunction function = block.getFunction();
         return function.getOutput(callerState, instruction);
     }
 
-    private @NotNull String getModuleName(@NotNull RapidRoutine routine) {
-        if (routine instanceof PhysicalRoutine physicalRoutine) {
-            PhysicalModule module = PhysicalModule.getModule(physicalRoutine);
-            if (module != null) {
-                return Objects.requireNonNullElseGet(module.getName(), RapidSymbol::getDefaultText);
-            }
-            return RapidSymbol.getDefaultText();
+    private boolean hasSideEffect(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block, @NotNull CallInstruction instruction) {
+        Block controlFlow = block.getControlFlow();
+        Map<Argument, ReferenceExpression> arguments = DataFlowFunction.getArguments(controlFlow, instruction.getArguments());
+        ReferenceExpression returnValue = instruction.getReturnValue();
+        if (returnValue != null) {
+            return true;
         }
-        return "";
+        if (arguments.keySet().stream().anyMatch(argument -> argument.getParameterType() != ParameterType.INPUT)) {
+            return true;
+        }
+        if (controlFlow.getInstructions().stream().anyMatch(statement -> statement instanceof ThrowInstruction || statement instanceof ExitInstruction)) {
+            return true;
+        }
+        if (block.hasDataFlowGraph()) {
+            Map<DataFlowState, DataFlowFunction.Result> results = block.getFunction().getResults();
+            return !(results.values().stream().allMatch(result -> result instanceof DataFlowFunction.Result.Success));
+        }
+        for (Instruction statement : controlFlow.getInstructions()) {
+            if (!(statement instanceof CallInstruction callInstruction)) {
+                continue;
+            }
+            RapidRoutine routine = getRoutine(stack, callInstruction);
+            if (routine == null) {
+                continue;
+            }
+            Set<RapidRoutine> copy = new HashSet<>(stack);
+            copy.add(routine);
+            if (routine instanceof VirtualRoutine virtualRoutine) {
+                ControlFlowBlock dependency = cache.getDataFlow(Set.of(virtualRoutine), virtualRoutine);
+                if (hasSideEffect(copy, dependency, callInstruction)) {
+                    return true;
+                }
+            }
+            if (routine instanceof PhysicalRoutine) {
+                ControlFlowBlock dependency = cache.getControlFlow(routine);
+                if (hasSideEffect(copy, dependency, callInstruction)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void reload() {
-        hardcoded.clear();
+        cache.clear();
     }
 
     @Override

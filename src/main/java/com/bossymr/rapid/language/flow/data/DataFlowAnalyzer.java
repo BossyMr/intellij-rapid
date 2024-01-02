@@ -1,7 +1,9 @@
 package com.bossymr.rapid.language.flow.data;
 
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.ControlFlowListener;
+import com.bossymr.rapid.language.flow.EntryInstruction;
 import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
@@ -23,10 +25,22 @@ public class DataFlowAnalyzer {
     private final @NotNull Deque<DataFlowState> workList;
     private final @NotNull Set<RapidRoutine> stack;
 
-    public DataFlowAnalyzer(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block, @NotNull Deque<DataFlowState> workList) {
+    private DataFlowAnalyzer(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block, @NotNull Deque<DataFlowState> workList) {
         this.block = block;
         this.workList = workList;
         this.stack = stack;
+    }
+
+    public static void computeDataFlow(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block) {
+        Block controlFlow = block.getControlFlow();
+        Deque<DataFlowState> workList = new ArrayDeque<>(controlFlow.getInstructions().size());
+        for (EntryInstruction instruction : controlFlow.getEntryInstructions()) {
+            DataFlowState state = DataFlowState.createState(instruction.getInstruction());
+            block.getDataFlow().put(instruction.getEntryType(), state);
+            workList.add(state);
+        }
+        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(stack, block, workList);
+        analyzer.process();
     }
 
     public static @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {

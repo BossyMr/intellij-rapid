@@ -59,7 +59,7 @@ public class FormatUtil {
         }
         if (options.contains(Option.SHOW_COMPONENTS)) {
             buffer.append('(');
-            List<RapidComponent> groups = record.getComponents();
+            List<? extends RapidComponent> groups = record.getComponents();
             for (int i = 0; i < groups.size(); i++) {
                 if (i > 0) {
                     buffer.append(", ");
@@ -447,7 +447,7 @@ public class FormatUtil {
 
         @Override
         public void visitArgumentList(@NotNull RapidArgumentList o) {
-            buffer.append(o.getArguments().size() > 0 ? "(...)" : "()");
+            buffer.append(o.getArguments().isEmpty() ? "()" : "(...)");
         }
 
         @Override

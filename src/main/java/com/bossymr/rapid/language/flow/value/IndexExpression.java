@@ -24,7 +24,7 @@ public class IndexExpression implements ReferenceExpression {
     }
 
     public IndexExpression(@Nullable RapidIndexExpression expression, @NotNull ReferenceExpression variable, @NotNull Expression index) {
-        if (variable.getType().getDimensions() < 1) {
+        if (variable.getType().getDimensions() < 1 && !(variable.getType().equals(RapidPrimitiveType.ANYTYPE))) {
             throw new IllegalArgumentException("Cannot create index expression for variable: " + variable + " of type: " + variable.getType());
         }
         if(!(RapidPrimitiveType.NUMBER.isAssignable(index.getType()))) {

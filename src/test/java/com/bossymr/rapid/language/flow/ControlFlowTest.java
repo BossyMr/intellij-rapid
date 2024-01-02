@@ -9,6 +9,12 @@ import java.util.Set;
 
 public class ControlFlowTest extends BasePlatformTestCase {
 
+    @Override
+    protected void setUp() throws Exception {
+        ControlFlowService.getInstance().reload();
+        super.setUp();
+    }
+
     private void check(@NotNull String text, @NotNull String expected) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
         ControlFlowService service = ControlFlowService.getInstance();

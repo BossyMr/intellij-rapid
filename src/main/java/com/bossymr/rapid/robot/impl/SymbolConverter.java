@@ -98,7 +98,7 @@ public final class SymbolConverter {
     private @NotNull RapidRecord getRecord(@NotNull RecordModel symbol) {
         Map<String, SymbolModel> map = this.states.get(symbol.getTitle());
         Collection<SymbolModel> states = map.values();
-        List<RapidComponent> components = new ArrayList<>();
+        List<VirtualComponent> components = new ArrayList<>();
         assert states.size() == symbol.getComponentCount();
         for (int i = 0; i < symbol.getComponentCount(); i++) {
             components.add(null);
@@ -119,7 +119,7 @@ public final class SymbolConverter {
         return getSymbol(new VirtualAlias(getName(state), structure.createType()));
     }
 
-    private @NotNull RapidComponent getComponent(@NotNull VirtualRecord record, @NotNull ComponentModel state) {
+    private @NotNull VirtualComponent getComponent(@NotNull VirtualRecord record, @NotNull ComponentModel state) {
         String name = Objects.requireNonNull(state.getDataType());
         RapidStructure structure = Objects.requireNonNull(getStructure(name));
         return new VirtualComponent(record, getName(state), structure.createType());
