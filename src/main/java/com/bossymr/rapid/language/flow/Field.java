@@ -1,12 +1,8 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.value.LiteralExpression;
-import com.bossymr.rapid.language.symbol.RapidVariable;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
 
 public interface Field {
 
@@ -15,9 +11,5 @@ public interface Field {
     @NotNull RapidType getType();
 
     @Nullable String getName();
-
-    @Nullable RapidVariable getVariable();
-
-    @Nullable List<LiteralExpression> getArraySize();
 
 }

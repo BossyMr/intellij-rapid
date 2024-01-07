@@ -11,7 +11,6 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
-import com.bossymr.rapid.language.type.RapidArrayType;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.psi.tree.IElementType;
@@ -38,45 +37,23 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull Variable createVariable(@NotNull RapidType type) {
-        return block.createVariable(null, null, type, null, getArraySize(type));
+        return block.createVariable(null, null, type);
     }
 
     @Override
     public @NotNull Variable createVariable(@NotNull String name, @NotNull RapidType type) {
-        return block.createVariable(name, FieldType.VARIABLE, type, null, getArraySize(type));
+        return block.createVariable(name, FieldType.VARIABLE, type);
     }
 
     @Override
     public @NotNull Variable createVariable(@NotNull RapidField field) {
         RapidType type = Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE);
-        return block.createVariable(field.getName(), field.getFieldType(), type, field, getArraySize(type));
+        return block.createVariable(field.getName(), field.getFieldType(), type);
     }
 
     @Override
     public @Nullable Argument getArgument(@NotNull String name) {
         return block.findArgument(name);
-    }
-
-    private @Nullable List<LiteralExpression> getArraySize(@NotNull RapidType type) {
-        if(!(type instanceof RapidArrayType)) {
-            return null;
-        }
-        List<LiteralExpression> expressions = new ArrayList<>();
-        while(type instanceof RapidArrayType arrayType) {
-            RapidExpression length = arrayType.getLength();
-            if (length == null) {
-                expressions.add(null);
-                continue;
-            }
-            Expression expression = expression(length);
-            if (!(expression instanceof LiteralExpression literalExpression)) {
-                expressions.add(null);
-                continue;
-            }
-            expressions.add(literalExpression);
-            type = arrayType.getUnderlyingType();
-        }
-        return expressions;
     }
 
     @Override
@@ -143,7 +120,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull ReferenceExpression index(@NotNull ReferenceExpression variable, @NotNull Expression index) {
-        if (variable.getType().getDimensions() <= 0 && !(variable.equals(RapidPrimitiveType.ANYTYPE))) {
+        if (variable.getType().getDimensions() <= 0 && !(variable.getType().equals(RapidPrimitiveType.ANYTYPE))) {
             throw new IllegalArgumentException("Cannot create index expression for variable of type: " + variable.getType());
         }
         if (!(index.getType().isAssignable(RapidPrimitiveType.NUMBER))) {

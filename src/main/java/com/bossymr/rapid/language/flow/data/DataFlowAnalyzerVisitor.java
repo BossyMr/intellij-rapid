@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
@@ -70,10 +69,10 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
             return null;
         }
         if (condition != null) {
-            DataFlowState successorState = DataFlowState.createSuccessorState(state.getInstruction(), state);
+            DataFlowState successorState = DataFlowState.createSuccessorState(successor, state);
             successorState.add(condition);
-            successorState.setInitialized();
-            return DataFlowState.createSuccessorState(successor, successorState);
+            successorState.persist();
+            return successorState;
         } else {
             return DataFlowState.createSuccessorState(successor, state);
         }

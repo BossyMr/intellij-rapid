@@ -1,7 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidComponent;
@@ -103,7 +102,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             solver.add(context.mkAtMost(array, 1));
         }
         DataFlowState compactState = state.createCompactState(targets);
-        for (Expression expression : compactState.getExpressions()) {
+        for (Expression expression : compactState.getConditions()) {
             Expr<?> expr = expression.accept(conditionAnalyzer);
             if (expr.getSort().equals(context.getBoolSort())) {
                 queue.add(conditionAnalyzer.getAsBoolean(expr));

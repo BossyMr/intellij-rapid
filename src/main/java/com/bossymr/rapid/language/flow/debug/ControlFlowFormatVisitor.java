@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.flow.debug;
 
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
+import com.bossymr.rapid.language.flow.data.HardcodedContract;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidSymbol;

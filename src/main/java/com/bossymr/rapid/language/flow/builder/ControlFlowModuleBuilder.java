@@ -7,18 +7,15 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.flow.Variable;
 import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.LiteralExpression;
 import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.flow.value.VariableExpression;
 import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.RapidLiteralExpression;
 import com.bossymr.rapid.language.psi.RapidStatement;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.VirtualField;
 import com.bossymr.rapid.language.symbol.virtual.VirtualParameterGroup;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
-import com.bossymr.rapid.language.type.RapidArrayType;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -118,7 +115,7 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
         Block.FunctionBlock block = new Block.FunctionBlock(routine, moduleName);
         Map<RapidExpression, ReferenceExpression> variables = new HashMap<>();
         for (RapidField field : routine.getFields()) {
-            Variable variable = block.createVariable(field.getName(), field.getFieldType(), Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE), field, getArraySize(field.getType()));
+            Variable variable = block.createVariable(field.getName(), field.getFieldType(), Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE));
             RapidExpression initializer = field.getInitializer();
             if (initializer != null) {
                 variables.put(initializer, new VariableExpression(variable));
@@ -146,28 +143,6 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
         }
         controlFlow.put(blockDescriptor, block);
         return this;
-    }
-
-    private @Nullable List<LiteralExpression> getArraySize(@NotNull RapidType type) {
-        if (!(type instanceof RapidArrayType)) {
-            return null;
-        }
-        List<LiteralExpression> expressions = new ArrayList<>();
-        while (type instanceof RapidArrayType arrayType) {
-            RapidExpression length = arrayType.getLength();
-            if (!(length instanceof RapidLiteralExpression literalExpression)) {
-                expressions.add(null);
-                type = arrayType.getUnderlyingType();
-                continue;
-            }
-            Object value = literalExpression.getValue();
-            if (value == null) {
-                return null;
-            }
-            expressions.add(new LiteralExpression(value));
-            type = arrayType.getUnderlyingType();
-        }
-        return expressions;
     }
 
     private @NotNull Consumer<RapidCodeBlockBuilder> getConsumer(@NotNull Map<RapidExpression, ReferenceExpression> variables, @NotNull RapidRoutine routine, @NotNull List<RapidStatement> statements) {

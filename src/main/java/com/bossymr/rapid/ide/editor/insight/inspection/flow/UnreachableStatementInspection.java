@@ -4,7 +4,7 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.editor.insight.quickfix.SubstituteRangeFix;
 import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.ControlFlowService;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;

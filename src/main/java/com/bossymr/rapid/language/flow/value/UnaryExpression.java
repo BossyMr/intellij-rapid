@@ -51,7 +51,7 @@ public class UnaryExpression implements Expression {
                 if(!(expression instanceof ReferenceExpression)) {
                     yield null;
                 }
-                if (expression.getType().getDimensions() <= 0) {
+                if (!(expression.getType().equals(RapidPrimitiveType.ANYTYPE)) && expression.getType().getDimensions() <= 0) {
                     yield null;
                 }
                 yield RapidPrimitiveType.NUMBER;

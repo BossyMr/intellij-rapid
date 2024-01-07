@@ -1,10 +1,8 @@
 package com.bossymr.rapid.language.symbol.resolve;
 
-import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.data.hardcode.HardcodedContract;
+import com.bossymr.rapid.language.flow.data.HardcodedContract;
 import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
@@ -15,17 +13,12 @@ import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiManager;
-import com.intellij.psi.search.FileTypeIndex;
-import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -123,24 +116,6 @@ public final class RapidResolveService {
         return processor.getSymbols();
     }
 
-    public @NotNull List<RapidSymbol> findSymbols(@NotNull PsiElement context, @Nullable String moduleName, @NotNull String name) {
-        if (moduleName == null) {
-            return findSymbols(context, name);
-        }
-        if (moduleName.isBlank()) {
-            RapidSymbol symbol = findSymbol("RAPID/" + name);
-            return symbol != null ? List.of(symbol) : List.of();
-        }
-        RapidModule module = findModule(moduleName);
-        if (module == null) {
-            return List.of();
-        }
-        return module.getSymbols().stream()
-                .filter(symbol -> name.equalsIgnoreCase(symbol.getName()))
-                .map(symbol -> (RapidSymbol) symbol)
-                .toList();
-    }
-
     public @Nullable RapidSymbol findCustomSymbol(@NotNull String @NotNull [] sections) {
         Block block = getVirtualBlock(sections[1]);
         if (block != null) {
@@ -169,18 +144,6 @@ public final class RapidResolveService {
             }
         }
         return null;
-    }
-
-    private @Nullable RapidModule findModule(@NotNull String moduleName) {
-        Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.allScope(project));
-        PsiManager manager = PsiManager.getInstance(project);
-        return virtualFiles.stream()
-                .map(manager::findFile)
-                .filter(file -> file instanceof RapidFile)
-                .map(file -> (RapidFile) file)
-                .flatMap(file -> file.getModules().stream())
-                .filter(module -> moduleName.equalsIgnoreCase(module.getName()))
-                .findFirst().orElse(null);
     }
 
     /**

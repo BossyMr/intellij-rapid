@@ -1,15 +1,10 @@
 package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.builder.ArgumentDescriptor;
-import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.ArgumentGroup;
-import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.ControlFlowBlock;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
-import com.bossymr.rapid.language.flow.value.ReferenceExpression;
-import com.bossymr.rapid.language.flow.value.SnapshotExpression;
+import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,6 +16,9 @@ public class DataFlowFunction {
     private final @NotNull ControlFlowBlock block;
     private final @NotNull Map<DataFlowState, Set<DataFlowState>> usages = new WeakHashMap<>();
     private final @NotNull Map<DataFlowState, Result> results = new HashMap<>();
+
+    private final @NotNull Map<Field, Snapshot> snapshots = new HashMap<>();
+    private @Nullable Snapshot returnVariable;
 
     public DataFlowFunction(@NotNull ControlFlowBlock block) {
         if (!(block.getControlFlow() instanceof Block.FunctionBlock)) {
@@ -91,7 +89,67 @@ public class DataFlowFunction {
     }
 
     public void registerOutput(@NotNull DataFlowState returnState, @NotNull Result result) {
-        results.put(returnState, result);
+        Result normalized = normalizeResult(result);
+        if(results.containsValue(normalized)) {
+            return;
+        }
+        results.put(returnState, normalized);
+    }
+
+    private @NotNull Result normalizeResult(@NotNull Result result) {
+        if (!(result instanceof Result.Success)) {
+            return result;
+        }
+        DataFlowState state = new DataFlowState(result.state().getBlock(), result.state().getInstruction(), null);
+        for (Expression expression : result.state().getConditions()) {
+            state.getConditions().add(expression.replace(component -> {
+                if (!(component instanceof SnapshotExpression snapshot)) {
+                    return component;
+                }
+                return new SnapshotExpression(normalizeSnapshot(result, snapshot.getSnapshot(), state));
+            }));
+        }
+        Map<Field, Snapshot> snapshots = result.state().getSnapshots();
+        for (Field field : snapshots.keySet()) {
+            state.getSnapshots().put(field, normalizeSnapshot(result, snapshots.get(field), state));
+        }
+        Map<Field, Snapshot> roots = result.state().getRoots();
+        for (Field field : roots.keySet()) {
+            state.getRoots().put(field, normalizeSnapshot(result, roots.get(field), state));
+        }
+        return new Result.Success(state, result.variable() != null ? returnVariable : null);
+    }
+
+    private @NotNull Snapshot normalizeSnapshot(@NotNull Result result, @NotNull Snapshot snapshot, @NotNull DataFlowState state) {
+        Field field = getField(result.state(), snapshot);
+        if(Objects.equals(snapshot, result.variable())) {
+            if (returnVariable == null) {
+                returnVariable = Snapshot.createSnapshot(snapshot.getType(), snapshot.getOptionality());
+            }
+        }
+        if(field != null) {
+            Snapshot normalized = snapshots.computeIfAbsent(field, key -> Snapshot.createSnapshot(snapshot.getType(), snapshot.getOptionality()));
+            if(Objects.equals(snapshot, result.variable())) {
+                Objects.requireNonNull(returnVariable);
+                state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(normalized), new SnapshotExpression(returnVariable)));
+            }
+            return normalized;
+        }
+        if(Objects.equals(snapshot, result.variable())) {
+            Objects.requireNonNull(returnVariable);
+            return returnVariable;
+        }
+        return snapshot;
+    }
+
+    private @Nullable Field getField(@NotNull DataFlowState state, @NotNull Snapshot snapshot) {
+        for (Field field : state.getSnapshots().keySet()) {
+            Snapshot normalized = state.getSnapshots().get(field);
+            if (normalized.equals(snapshot)) {
+                return field;
+            }
+        }
+        return null;
     }
 
     public void unregisterOutput(@NotNull DataFlowState returnState) {
@@ -103,13 +161,15 @@ public class DataFlowFunction {
         Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
         ReferenceExpression returnValue = instruction.getReturnValue();
         Set<Result> output = new HashSet<>();
-        for (DataFlowState calleeState : results.keySet()) {
-            Result result = results.get(calleeState);
+        Map<Result, DataFlowState> mappings = new HashMap<>();
+        for (Map.Entry<DataFlowState, Result> entry : results.entrySet()) {
+            Result result = entry.getValue();
             Result actual = getOutput(result, callerState, instruction);
             if (actual != null) {
                 output.add(actual);
+                mappings.put(actual, entry.getKey());
                 usages.computeIfAbsent(callerState, key -> new HashSet<>());
-                usages.get(callerState).add(calleeState);
+                usages.get(callerState).add(entry.getKey());
             }
         }
         if (returnValue == null) {
@@ -120,7 +180,12 @@ public class DataFlowFunction {
                  */
                 output.removeIf(result -> {
                     if (result instanceof Result.Success) {
-                        result.state().close();
+                        Set<DataFlowState> states = usages.get(callerState);
+                        states.remove(mappings.get(result));
+                        if (states.isEmpty()) {
+                            usages.remove(callerState);
+                        }
+                        result.state().prune();
                         return true;
                     }
                     return false;
@@ -183,7 +248,7 @@ public class DataFlowFunction {
         // Check if the result is satisfiable.
         // If it is not satisfiable, this function will not be called.
         if (!(successorState.isSatisfiable(targets))) {
-            successorState.close();
+            successorState.prune();
             return null;
         }
         if (result instanceof Result.Exit) {

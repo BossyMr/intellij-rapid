@@ -16,6 +16,16 @@ public class RapidUnknownType implements RapidType {
     }
 
     @Override
+    public boolean isRecord() {
+        return false;
+    }
+
+    @Override
+    public boolean isArray() {
+        return false;
+    }
+
+    @Override
     public @Nullable RapidStructure getStructure() {
         return null;
     }

@@ -17,6 +17,16 @@ public class RapidRecordType implements RapidType {
     }
 
     @Override
+    public boolean isRecord() {
+        return true;
+    }
+
+    @Override
+    public boolean isArray() {
+        return false;
+    }
+
+    @Override
     public @Nullable RapidRecord getStructure() {
         return record.dereference();
     }

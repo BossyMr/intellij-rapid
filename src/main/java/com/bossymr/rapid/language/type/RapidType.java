@@ -15,6 +15,20 @@ import java.util.List;
 public interface RapidType {
 
     /**
+     * Checks whether this type is a record.
+     *
+     * @return whether this type is a record.
+     */
+    boolean isRecord();
+
+    /**
+     * Checks whether this type is an array.
+     *
+     * @return whether this type is an array.
+     */
+    boolean isArray();
+
+    /**
      * Checks whether a value of the specified type can be assigned to a variable or expression of this type.
      *
      * @param type the type.
@@ -22,18 +36,18 @@ public interface RapidType {
      */
     @Contract(pure = true)
     default boolean isAssignable(@NotNull RapidType type) {
-        if(type.equals(this)) {
+        if (type.equals(this)) {
             return true;
         }
         if (type.equals(RapidPrimitiveType.ANYTYPE)) {
             return true;
         }
-        if(getDimensions() != type.getDimensions()) {
+        if (getDimensions() != type.getDimensions()) {
             return false;
         }
         RapidStructure thisStructure = getRootStructure();
         RapidStructure otherStructure = type.getRootStructure();
-        if(thisStructure == null || otherStructure == null) {
+        if (thisStructure == null || otherStructure == null) {
             return getText().equals(type.getText());
         }
         return thisStructure.equals(otherStructure);
@@ -51,10 +65,10 @@ public interface RapidType {
     }
 
     default @NotNull RapidType createArrayType(int dimensions, @Nullable List<RapidExpression> length) {
-        if(dimensions == 0) {
+        if (dimensions == 0) {
             return this;
         }
-        if(dimensions < 0) {
+        if (dimensions < 0) {
             throw new IllegalArgumentException("Cannot create array type with degree: " + dimensions);
         }
         RapidType type = new RapidArrayType(this, length);
@@ -121,5 +135,6 @@ public interface RapidType {
             }
             stringBuilder.append("}");
         }
-        return stringBuilder.toString();    }
+        return stringBuilder.toString();
+    }
 }

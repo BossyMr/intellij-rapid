@@ -24,6 +24,16 @@ public class RapidAtomicType implements RapidType {
     }
 
     @Override
+    public boolean isRecord() {
+        return false;
+    }
+
+    @Override
+    public boolean isArray() {
+        return false;
+    }
+
+    @Override
     public @NotNull RapidAtomic getStructure() {
         return atomic;
     }

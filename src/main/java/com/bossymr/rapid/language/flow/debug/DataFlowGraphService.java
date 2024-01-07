@@ -3,7 +3,7 @@ package com.bossymr.rapid.language.flow.debug;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
@@ -58,7 +58,7 @@ public class DataFlowGraphService extends AnAction {
             FileUtil.writeToFile(outputFile, text);
             return;
         }
-        File instructionFile = FileUtil.createTempFile("data-flow", ".dot", true);
+        File instructionFile = FileUtil.createTempFile("dataFlow", ".dot", true);
         try {
             if (outputFile.getParentFile() != null && !(outputFile.getParentFile().exists())) {
                 if (!(outputFile.getParentFile().mkdirs())) {
@@ -184,7 +184,7 @@ public class DataFlowGraphService extends AnAction {
             writeSnapshot(stringBuilder, state, new VariableExpression(entry.getKey()), entry.getValue(), snapshots);
         }
         stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Expressions").append("</td></tr>\n");
-        for (Expression condition : state.getExpressions()) {
+        for (Expression condition : state.getConditions()) {
             stringBuilder.append("<tr>");
             stringBuilder.append("<td COLSPAN=\"2\" CELLPADDING=\"4\" align=\"left\">");
             stringBuilder.append(HtmlChunk.text(condition.accept(new ControlFlowFormatVisitor())));

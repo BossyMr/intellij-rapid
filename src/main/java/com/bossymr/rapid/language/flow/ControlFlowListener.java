@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.intellij.openapi.application.ApplicationManager;
 import org.jetbrains.annotations.NotNull;
 

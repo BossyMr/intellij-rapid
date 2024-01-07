@@ -2,7 +2,6 @@ package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.LiteralExpression;
 import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.type.RapidType;
@@ -106,14 +105,14 @@ public sealed abstract class Block {
         entryPoints.put(BlockType.ERROR_CLAUSE, new EntryInstruction.ErrorEntryInstruction(instruction, exceptions));
     }
 
-    public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type, @Nullable RapidField field, @Nullable List<LiteralExpression> arraySize) {
-        Variable variable = new Variable(getNextVariableIndex(), fieldType, type, name, field, arraySize);
+    public @NotNull Variable createVariable(@Nullable String name, @Nullable FieldType fieldType, @NotNull RapidType type) {
+        Variable variable = new Variable(getNextVariableIndex(), fieldType, type, name);
         variables.add(variable);
         return variable;
     }
 
-    public @NotNull Argument createArgument(@NotNull String name, @NotNull RapidType type, @NotNull ParameterType parameterType, @Nullable RapidParameter parameter, @Nullable List<LiteralExpression> arraySize) {
-        return new Argument(getNextVariableIndex(), parameterType, type, name, parameter, arraySize);
+    public @NotNull Argument createArgument(@NotNull String name, @NotNull RapidType type, @NotNull ParameterType parameterType) {
+        return new Argument(getNextVariableIndex(), parameterType, type, name);
     }
 
     protected int getNextVariableIndex() {

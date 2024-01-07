@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.flow.data.snapshots;
 
 import com.bossymr.rapid.language.flow.BooleanValue;
 import com.bossymr.rapid.language.flow.Optionality;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.value.BinaryExpression;
 import com.bossymr.rapid.language.flow.value.BinaryOperator;
 import com.bossymr.rapid.language.flow.value.Expression;
@@ -16,42 +16,30 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
- * A snapshot based on an array. The index to assign a value does not need to be concrete; as a result, every
- * assignment is stored separately. This also leads to uncertainty as to which assignment actually modified a specific
- * index, as a result, the state needs to be split for each retrieval.
- * <pre>{@code
- * num a{*};    // a -> a1 {x -> 0}
- *              // x -> any
- * a{2} := 2;   // a1 {2 -> 2}
- * y -> [0, 10]
- * a{y} -> 5;   // a1 {y1 -> 5}                     // State #1     // State #2
- * z = a{2};    // a1 {x -> 0, 2 -> 2, y1 -> 5}     // z = 5        // z = 2
- *              // y1 might match 2                 // y1 = 2       // y1 != 2
- *              // 2 always matches 2
- *              // z = 5 or 2
- * }</pre>
+ * A snapshot which represents an array assignment.
  */
 public class ArraySnapshot implements Snapshot {
 
-    private final @Nullable Snapshot snapshot;
+    private final @Nullable Snapshot parent;
     private final @NotNull RapidType type;
     private final @NotNull Optionality optionality;
     private final @NotNull DefaultValueProvider defaultValue;
-    private final @NotNull List<Entry> assignments;
-    private final @NotNull Snapshot length;
+    private final @NotNull List<Entry> assignments = new ArrayList<>();
+    private final @NotNull Snapshot length = Snapshot.createSnapshot(RapidPrimitiveType.NUMBER);
 
-    public ArraySnapshot(@Nullable Snapshot snapshot, @NotNull RapidType type, @NotNull Optionality optionality, @NotNull DefaultValueProvider defaultValue) {
-        this.snapshot = snapshot;
+    public ArraySnapshot(@Nullable Snapshot parent, @NotNull RapidType type, @NotNull Optionality optionality, @NotNull DefaultValueProvider defaultValue) {
+        if (!(type.isArray())) {
+            throw new IllegalArgumentException("Cannot create array snapshot for variable of type: " + type);
+        }
+        this.parent = parent;
         this.type = type;
         this.optionality = optionality;
         this.defaultValue = defaultValue;
-        this.assignments = new ArrayList<>();
-        this.length = Snapshot.createSnapshot(RapidPrimitiveType.NUMBER);
     }
 
     @Override
     public @Nullable Snapshot getParent() {
-        return snapshot;
+        return parent;
     }
 
     public @NotNull Snapshot getLength() {
@@ -67,8 +55,11 @@ public class ArraySnapshot implements Snapshot {
         return assignments;
     }
 
-    public void assign(@NotNull DataFlowState state, @NotNull Expression index, @NotNull Snapshot snapshot) {
+    public @NotNull Snapshot assign(@NotNull DataFlowState state, @NotNull Expression index) {
+        RapidType arrayType = type.createArrayType(type.getDimensions() - 1);
+        Snapshot snapshot = Snapshot.createSnapshot(arrayType, this);
         assignments.add(new Entry(state, index, snapshot));
+        return snapshot;
     }
 
     public @Nullable ArraySnapshot.Entry getAssignment(@NotNull Snapshot snapshot) {
@@ -82,16 +73,9 @@ public class ArraySnapshot implements Snapshot {
 
     public @NotNull List<Entry> getAssignments(@NotNull DataFlowState state) {
         List<Entry> values = new ArrayList<>();
-        boolean canContinue = false;
-        for (ListIterator<Entry> iterator = assignments.listIterator(assignments.size()); iterator.hasPrevious(); ) {
+        for (ListIterator<Entry> iterator = assignments.listIterator(getValidAssignment(state) + 1); iterator.hasPrevious(); ) {
             Entry assignment = iterator.previous();
-            if (!(canContinue)) {
-                if (!(canUseAssignment(assignment, state))) {
-                    continue;
-                }
-                canContinue = true;
-            }
-            if (isDuplicate(values, assignment, state)) {
+            if (contains(values, assignment, state)) {
                 // A snapshot with the same index was assigned after this index.
                 continue;
             }
@@ -100,13 +84,14 @@ public class ArraySnapshot implements Snapshot {
         return values;
     }
 
-    private boolean canUseAssignment(@NotNull ArraySnapshot.Entry assignment, @NotNull DataFlowState state) {
-        for (DataFlowState predecessor = state; predecessor != null; predecessor = predecessor.getPredecessor()) {
-            if (predecessor.equals(assignment.state())) {
-                return true;
+    private int getValidAssignment(@NotNull DataFlowState state) {
+        for (int i = assignments.size() - 1; i >= 0; i--) {
+            Entry assignment = assignments.get(i);
+            if (state.isAncestor(assignment.state())) {
+                return i;
             }
         }
-        return false;
+        return -1;
     }
 
     public @NotNull List<Entry> getAssignments(@NotNull DataFlowState state, @NotNull Expression index) {
@@ -115,17 +100,16 @@ public class ArraySnapshot implements Snapshot {
             Entry assignment = iterator.previous();
             BooleanValue constraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignment.index(), index));
             if (constraint == BooleanValue.ALWAYS_FALSE || constraint == BooleanValue.NO_VALUE) {
-                // The specified index cannot be equal to the current assignment, as such, this assignment should not be considered.
                 continue;
             }
-            if (isDuplicate(values, assignment, state)) {
+            if (constraint == BooleanValue.ALWAYS_TRUE) {
+                values.add(assignment);
+                break;
+            }
+            if (contains(values, assignment, state)) {
                 continue;
             }
             values.add(assignment);
-            if (constraint == BooleanValue.ALWAYS_TRUE) {
-                // The specified index is always equal to the current assignment, as such, this assignment must be returned; while older assignments would be overwritten.
-                break;
-            }
             if (!(iterator.hasPrevious())) {
                 Entry entry = new Entry(state, index, defaultValue.getDefaultValue(this, state));
                 assignments.add(entry);
@@ -140,11 +124,12 @@ public class ArraySnapshot implements Snapshot {
         return values;
     }
 
-    private boolean isDuplicate(@NotNull List<Entry> entries, @NotNull ArraySnapshot.Entry entry, @NotNull DataFlowState state) {
-        for (Entry previousEntry : entries) {
-            BooleanValue comparisonConstraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, previousEntry.index(), entry.index()));
+    private boolean contains(@NotNull List<Entry> assignments, @NotNull ArraySnapshot.Entry nextAssignment, @NotNull DataFlowState state) {
+        for (Entry assignment : assignments) {
+            BooleanValue comparisonConstraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignment.index(), nextAssignment.index()));
             if (comparisonConstraint == BooleanValue.ALWAYS_TRUE) {
-                // The index of the current assignment is always equal to the index of an assignment already considered, as a result, that entry would always replace this entry.
+                // The index of this assignment, which was made after nextAssignment, is always equal to the index of nextAssignment.
+                // As a result, it is no longer possible for the value of nextAssignment to be returned by this index expression.
                 return true;
             }
         }
@@ -154,6 +139,10 @@ public class ArraySnapshot implements Snapshot {
     @Override
     public @NotNull RapidType getType() {
         return type;
+    }
+
+    public @NotNull RapidType getArrayType() {
+        return type.createArrayType(type.getDimensions() - 1);
     }
 
     @Override
@@ -176,9 +165,29 @@ public class ArraySnapshot implements Snapshot {
         } + "]";
     }
 
+    /**
+     * A provider responsible for creating snapshots equal to the default value of this array.
+     */
     @FunctionalInterface
     public interface DefaultValueProvider {
-        @NotNull Snapshot getDefaultValue(@NotNull ArraySnapshot snapshot, @NotNull DataFlowState state);
+
+        /**
+         * Creates a new snapshot equal to the default value of this array.
+         *
+         * @param snapshot the current array.
+         * @param state the current state.
+         * @return a new snapshot.
+         * @implSpec the created snapshot must be assignable to the array type of the specified array.
+         */
+        @NotNull Snapshot computeDefaultValue(@NotNull ArraySnapshot snapshot, @NotNull DataFlowState state);
+
+        private @NotNull Snapshot getDefaultValue(@NotNull ArraySnapshot snapshot, @NotNull DataFlowState state) {
+            Snapshot defaultValue = computeDefaultValue(snapshot, state);
+            if (!(defaultValue.getType().isAssignable(snapshot.getArrayType()))) {
+                throw new IllegalStateException("The default value computed for the array: " + snapshot + " is of type: " + defaultValue.getType() + " which is not assignable to its array type: " + snapshot.getArrayType());
+            }
+            return defaultValue;
+        }
     }
 
     public record Entry(@NotNull DataFlowState state, @NotNull Expression index, @NotNull Snapshot snapshot) {}

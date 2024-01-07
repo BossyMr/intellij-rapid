@@ -61,6 +61,18 @@ public class RapidAliasType implements RapidType {
     }
 
     @Override
+    public boolean isRecord() {
+        RapidType underlyingType = getUnderlyingType();
+        return underlyingType != null && underlyingType.isRecord();
+    }
+
+    @Override
+    public boolean isArray() {
+        RapidType underlyingType = getUnderlyingType();
+        return underlyingType != null && underlyingType.isArray();
+    }
+
+    @Override
     public @NotNull RapidType createArrayType(int dimensions) {
         RapidType underlyingType = getUnderlyingType();
         if (underlyingType != null) {

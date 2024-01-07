@@ -32,6 +32,16 @@ public class RapidArrayType implements RapidType {
     }
 
     @Override
+    public boolean isRecord() {
+        return false;
+    }
+
+    @Override
+    public boolean isArray() {
+        return true;
+    }
+
+    @Override
     public @NotNull RapidType createArrayType(int dimensions) {
         List<RapidExpression> expressions = length == null ? null : length.stream()
                 .map(SmartPsiElementPointer::dereference)

@@ -33,6 +33,8 @@ public class ControlFlowTestBlockBuilder implements RapidTestBlockBuilder {
         for (int i = 1; i < equality.size(); i++) {
             expression = builder.binary(BinaryOperator.OR, expression, equality.get(i));
         }
+        // TODO: This doesn't really work, since the else branch isn't built inside the consumer. Instead, all consumers
+        //  should be stored until the test block is complete, then everything is built at once.
         builder.ifThenElse(statement, expression, consumer, elseBuilder -> builder = (ControlFlowCodeBlockBuilder) elseBuilder);
         return this;
     }

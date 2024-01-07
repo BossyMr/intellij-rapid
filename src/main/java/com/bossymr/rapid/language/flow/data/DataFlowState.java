@@ -1,8 +1,7 @@
-package com.bossymr.rapid.language.flow.data.block;
+package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.network.MultiMap;
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.ConditionAnalyzer;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
@@ -10,15 +9,18 @@ import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.RapidExpression;
+import com.bossymr.rapid.language.psi.RapidLiteralExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
+import com.bossymr.rapid.language.type.RapidArrayType;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * A {@code DataFlowState} represents the state of the program at a specific point.
@@ -52,25 +54,26 @@ public class DataFlowState {
 
     private final @NotNull List<DataFlowState> successors = new ArrayList<>();
     private final @NotNull Instruction instruction;
-
     private final @NotNull Block functionBlock;
-    /**
-     * The conditions for all variables.
-     */
-    private final @NotNull List<Expression> conditions = new ArrayList<>();
+    private final @NotNull ControlFlowBlock block;
+
+    private final @NotNull Set<Expression> conditions = new HashSet<>();
+    private final @NotNull Set<Expression> stored = new HashSet<>();
+
     /**
      * The latest snapshot of each variable. The latest snapshot for a given variable also represents the variable.
      */
     private final @NotNull Map<Field, Snapshot> snapshots = new HashMap<>();
+
     /**
      * The first snapshot of each variable.
      */
     private final @NotNull Map<Field, Snapshot> roots;
     private @Nullable DataFlowState predecessor;
-    private int volatileCondition = 0;
 
-    public DataFlowState(@NotNull Instruction instruction, @Nullable DataFlowState predecessor) {
+    public DataFlowState(@NotNull ControlFlowBlock block, @NotNull Instruction instruction, @Nullable DataFlowState predecessor) {
         this.predecessor = predecessor;
+        this.block = block;
         this.functionBlock = instruction.getBlock();
         this.instruction = instruction;
         this.roots = predecessor == null ? new HashMap<>() : Map.of();
@@ -79,38 +82,42 @@ public class DataFlowState {
         }
     }
 
-    public static @NotNull DataFlowState createState(@NotNull Instruction instruction) {
-        DataFlowState state = new DataFlowState(instruction, null);
+    public static @NotNull DataFlowState createState(@NotNull ControlFlowBlock block, @NotNull Instruction instruction) {
+        DataFlowState state = new DataFlowState(block, instruction, null);
         state.initializeDefault();
-        state.setInitialized();
+        state.persist();
         return state;
     }
 
     public static @NotNull DataFlowState createSuccessorState(@NotNull Instruction instruction, @NotNull DataFlowState predecessor) {
-        return new DataFlowState(instruction, predecessor);
+        return new DataFlowState(predecessor.getBlock(), instruction, predecessor);
     }
 
-    public static @NotNull Snapshot createDefaultSnapshot(@Nullable Snapshot parent, @NotNull DataFlowState state, @NotNull RapidType type, int index, @Nullable List<LiteralExpression> arraySize) {
-        if (type.getDimensions() > 0) {
-            RapidType arrayType = type.createArrayType(type.getDimensions() - 1);
-            ArraySnapshot snapshot = new ArraySnapshot(parent, type, Optionality.PRESENT, (current, nextState) -> createDefaultSnapshot(current, nextState, arrayType, index + 1, arraySize));
-            if (arraySize != null && index >= 0 && index < arraySize.size() && arraySize.get(index) != null) {
-                state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot.getLength()), arraySize.get(index)));
+    public @NotNull ControlFlowBlock getBlock() {
+        return block;
+    }
+
+    private @NotNull Snapshot createDefaultSnapshot(@NotNull RapidType type, @Nullable Snapshot parent) {
+        if (type.isArray()) {
+            ArraySnapshot snapshot = new ArraySnapshot(parent, type, Optionality.PRESENT, (current, state) -> state.createDefaultSnapshot(current.getArrayType(), current));
+            Expression length = getLength(type);
+            if (length != null) {
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot.getLength()), length));
             }
             return snapshot;
         }
-        if (type.getRootStructure() instanceof RapidRecord) {
-            return new RecordSnapshot(parent, type, Optionality.PRESENT, (current, nextState, componentType) -> createDefaultSnapshot(current, nextState, componentType, -1, null));
+        if (type.isRecord()) {
+            return new RecordSnapshot(parent, type, Optionality.PRESENT, (current, state, componentType) -> state.createDefaultSnapshot(componentType, parent));
         }
         VariableSnapshot snapshot = new VariableSnapshot(parent, type, Optionality.PRESENT);
-        Object object = getDefaultValue(type);
-        if (object != null) {
-            state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), new LiteralExpression(object)));
+        Object defaultValue = getDefaultValue(type);
+        if (defaultValue != null) {
+            add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), new LiteralExpression(defaultValue)));
         }
         return snapshot;
     }
 
-    private static @Nullable Object getDefaultValue(@NotNull RapidType type) {
+    private @Nullable Object getDefaultValue(@NotNull RapidType type) {
         if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
             return false;
         } else if (type.isAssignable(RapidPrimitiveType.STRING)) {
@@ -121,98 +128,89 @@ public class DataFlowState {
         return null;
     }
 
-    public void setInitialized() {
-        volatileCondition = conditions.size();
+    private @Nullable Expression getLength(@NotNull RapidType type) {
+        if (!(type instanceof RapidArrayType arrayType)) {
+            return null;
+        }
+        if (!(arrayType.getLength() instanceof RapidLiteralExpression expression)) {
+            return null;
+        }
+        if (!(expression.getValue() instanceof Number value)) {
+            return null;
+        }
+        return new LiteralExpression(value);
     }
 
-    public @NotNull DataFlowState createCompactState(@NotNull Set<Snapshot> targets) {
-        Set<Snapshot> snapshots = new HashSet<>(targets);
-        DataFlowState successor = new DataFlowState(instruction, null) {
-            @Override
-            public boolean equals(Object o) {
-                if (this == o) return true;
-                if (o == null || getClass() != o.getClass()) return false;
-                DataFlowState flowState = (DataFlowState) o;
-                return Objects.equals(getFunctionBlock(), flowState.getFunctionBlock()) && Objects.equals(getExpressions(), flowState.getExpressions()) && Objects.equals(getSnapshots(), flowState.getSnapshots()) && Objects.equals(getRoots(), flowState.getRoots());
-            }
-
-            @Override
-            public int hashCode() {
-                return Objects.hash(getFunctionBlock(), getExpressions(), getSnapshots(), getRoots());
-            }
-        };
-        MultiMap<DataFlowState, Expression> expressions = new MultiMap<>(HashSet::new);
-        List<DataFlowState> states = new ArrayList<>();
-        for (DataFlowState predecessor = this; predecessor != null; predecessor = predecessor.getPredecessor()) {
-            states.add(predecessor);
-            List<Expression> result = getAllExpressions(predecessor, snapshots);
-            expressions.putAll(predecessor, result);
-            successor.getExpressions().addAll(result);
-            DataFlowState state = predecessor;
-            if (snapshots.stream().allMatch(snapshot -> state.getSnapshots().containsValue(snapshot))) {
-                break;
+    /**
+     * Creates a new {@code DataFlowState} which contains all conditions dependent one of the specified targets, which
+     * are registered in either this state or in one of its predecessors. All snapshots and roots to variables dependent
+     * on one the specified targets are also added to the state.
+     * <p>
+     * If a condition dependent on one of the specified targets is found, all other variables which the condition
+     * depends on are added to the set of targets.
+     *
+     * @param snapshots the targets.
+     * @return a new state, with no predecessors or successors.
+     */
+    public @NotNull DataFlowState createCompactState(@NotNull Set<Snapshot> snapshots) {
+        DataFlowState compactState = new DataFlowState(getBlock(), getInstruction(), null);
+        Map<DataFlowState, MultiMap<Expression, Snapshot>> dependencies = new HashMap<>();
+        Map<DataFlowState, MultiMap<Snapshot, Expression>> dependents = new HashMap<>();
+        List<DataFlowState> chain = getPredecessorChain();
+        for (DataFlowState state : chain) {
+            getTargets(state, snapshots, dependencies.computeIfAbsent(state, key -> new MultiMap<>(HashSet::new)), dependents.computeIfAbsent(state, key -> new MultiMap<>(HashSet::new)));
+        }
+        for (int i = chain.size() - 1; i >= 0; i--) {
+            DataFlowState state = chain.get(i);
+            getTargets(state, snapshots, dependencies.get(state), dependents.get(state));
+            state.getSnapshots().forEach((field, snapshot) -> {
+                if (snapshots.contains(snapshot)) {
+                    compactState.snapshots.put(field, snapshot);
+                    if (!(compactState.roots.containsKey(field))) {
+                        compactState.roots.put(field, snapshot);
+                    }
+                }
+            });
+            for (Snapshot snapshot : snapshots) {
+                compactState.conditions.addAll(dependents.get(state).getAll(snapshot));
             }
         }
-        for (int i = states.size() - 1; i >= 0; i--) {
-            DataFlowState predecessor = states.get(i);
-            successor.getSnapshots().putAll(predecessor.getSnapshots());
-            List<Expression> result = getAllExpressions(predecessor, snapshots);
-            result.removeAll(expressions.getAll(predecessor));
-            successor.getExpressions().addAll(result);
-        }
-        successor.getSnapshots().values().removeIf(snapshot -> !(snapshots.contains(snapshot)));
-        successor.getRoots().putAll(states.get(states.size() - 1).getRoots());
-        return successor;
+        return compactState;
     }
 
-    public @NotNull Block getFunctionBlock() {
-        return functionBlock;
-    }
-
-    private @NotNull List<Expression> getAllExpressions(@NotNull DataFlowState state, @NotNull Set<Snapshot> variables) {
-        MultiMap<Snapshot, Expression> result = new MultiMap<>(HashSet::new);
-        MultiMap<Expression, Snapshot> dependency = new MultiMap<>(HashSet::new);
-        for (Expression expression : state.getExpressions()) {
-            expression.iterate(expr -> {
-                if (expr instanceof SnapshotExpression variable) {
-                    result.put(variable.getSnapshot(), expression);
-                    dependency.put(expression, variable.getSnapshot());
+    private void getTargets(@NotNull DataFlowState state, @NotNull Set<Snapshot> snapshots, @NotNull MultiMap<Expression, Snapshot> dependencies, @NotNull MultiMap<Snapshot, Expression> dependents) {
+        for (Expression expression : state.getConditions()) {
+            expression.iterate(component -> {
+                if (component instanceof SnapshotExpression snapshot) {
+                    dependencies.put(expression, snapshot.getSnapshot());
+                    dependents.put(snapshot.getSnapshot(), expression);
                 }
                 return false;
             });
         }
-        List<Expression> expressions = new ArrayList<>();
-        Deque<Snapshot> workList = new ArrayDeque<>(variables);
+        Deque<Snapshot> workList = new ArrayDeque<>(snapshots);
         while (!(workList.isEmpty())) {
-            Snapshot key = workList.removeLast();
-            Collection<Expression> collection = result.getAll(key);
-            for (Expression expression : collection) {
-                for (Snapshot dependent : dependency.getAll(expression)) {
-                    if (variables.add(dependent)) {
-                        workList.add(dependent);
+            Snapshot snapshot = workList.removeLast();
+            for (Expression expression : dependents.getAll(snapshot)) {
+                for (Snapshot dependency : dependencies.getAll(expression)) {
+                    if (snapshots.add(dependency)) {
+                        workList.add(dependency);
                     }
                 }
             }
-            for (Expression expression : collection) {
-                if (!(expressions.contains(expression))) {
-                    expressions.add(expression);
-                }
-            }
         }
-        return expressions;
     }
 
-    public void close() {
-        if (predecessor != null) {
-            predecessor.getSuccessors().remove(this);
+    public @NotNull List<DataFlowState> getPredecessorChain() {
+        List<DataFlowState> states = new ArrayList<>();
+        for (DataFlowState predecessor = this; predecessor != null; predecessor = predecessor.getPredecessor()) {
+            states.add(predecessor);
         }
-        predecessor = null;
+        return states;
     }
 
-    public void clear() {
-        conditions.subList(volatileCondition, conditions.size()).clear();
-        snapshots.clear();
-        getSnapshots().putAll(getRoots());
+    public @NotNull Block getFunctionBlock() {
+        return functionBlock;
     }
 
     public @Nullable DataFlowState getPredecessor() {
@@ -221,6 +219,22 @@ public class DataFlowState {
 
     public @NotNull List<DataFlowState> getSuccessors() {
         return successors;
+    }
+
+    /**
+     * Checks if the specified state is an ancestor to this state. That is, if the specified state is a predecessor to
+     * this state. If the specified state is equal to this state, this method will return {@code true}.
+     *
+     * @param state the state.
+     * @return whether the specified state is an ancestor to this state.
+     */
+    public boolean isAncestor(@NotNull DataFlowState state) {
+        for (DataFlowState predecessor = this; predecessor != null; predecessor = predecessor.getPredecessor()) {
+            if (predecessor.equals(state)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public @NotNull Instruction getInstruction() {
@@ -242,7 +256,7 @@ public class DataFlowState {
 
     private void initializeDefault() {
         for (Variable variable : functionBlock.getVariables()) {
-            snapshots.put(variable, createDefaultSnapshot(null, this, variable.getType(), 0, variable.getArraySize()));
+            snapshots.put(variable, createDefaultSnapshot(variable.getType(), null));
         }
         initializeArguments();
         for (Field field : snapshots.keySet()) {
@@ -255,12 +269,10 @@ public class DataFlowState {
             for (Argument argument : argumentGroup.arguments()) {
                 if (argumentGroup.isOptional()) {
                     snapshots.put(argument, Snapshot.createSnapshot(argument.getType(), Optionality.UNKNOWN));
+                } else if (argument.getParameterType() == ParameterType.REFERENCE && argument.getType().equals(RapidPrimitiveType.ANYTYPE)) {
+                    snapshots.put(argument, Snapshot.createSnapshot(argument.getType(), Optionality.UNKNOWN));
                 } else {
-                    if (argument.getParameterType() == ParameterType.REFERENCE) {
-                        snapshots.put(argument, Snapshot.createSnapshot(argument.getType(), Optionality.UNKNOWN));
-                    } else {
-                        snapshots.put(argument, Snapshot.createSnapshot(argument.getType()));
-                    }
+                    snapshots.put(argument, Snapshot.createSnapshot(argument.getType()));
                 }
             }
         }
@@ -268,7 +280,7 @@ public class DataFlowState {
 
     public @NotNull DataFlowState merge(@NotNull DataFlowState state, @NotNull Map<Snapshot, Snapshot> modifications) {
         DataFlowState successorState = DataFlowState.createSuccessorState(instruction, this);
-        for (Expression expression : state.getExpressions()) {
+        for (Expression expression : state.getConditions()) {
             successorState.add(expression.replace(component -> {
                 if (!(component instanceof SnapshotExpression snapshot)) {
                     return component;
@@ -351,10 +363,13 @@ public class DataFlowState {
         if (expression.getComponents().stream().anyMatch(expr -> expr instanceof IndexExpression || expr instanceof ComponentExpression)) {
             throw new IllegalArgumentException("Cannot add expression: " + expression);
         }
+        if (conditions.contains(expression)) {
+            return;
+        }
         conditions.add(expression);
     }
 
-    public @NotNull List<Expression> getExpressions() {
+    public @NotNull Set<Expression> getConditions() {
         return conditions;
     }
 
@@ -391,34 +406,35 @@ public class DataFlowState {
         return createSnapshot(expression, Optionality.PRESENT);
     }
 
-    public @NotNull SnapshotExpression createSnapshot(@NotNull Expression variable, @NotNull Optionality optionality) {
-        if (variable instanceof SnapshotExpression expression) {
-            return new SnapshotExpression(expression.getSnapshot());
+    public @NotNull SnapshotExpression createSnapshot(@NotNull Expression expression, @NotNull Optionality optionality) {
+        if (expression instanceof SnapshotExpression reference) {
+            return reference;
         }
-        if (variable instanceof IndexExpression indexExpression) {
-            SnapshotExpression variableSnapshot = getSnapshot(indexExpression.getVariable());
-            if (!(variableSnapshot.getSnapshot() instanceof ArraySnapshot arraySnapshot)) {
-                throw new IllegalArgumentException();
+        if (expression instanceof IndexExpression indexExpression) {
+            SnapshotExpression snapshot = getSnapshot(indexExpression.getVariable());
+            if (!(snapshot.getSnapshot() instanceof ArraySnapshot array)) {
+                throw new IllegalArgumentException("Could not find array snapshot for expression: " + indexExpression + ", found: " + snapshot + " of type: " + snapshot.getType());
             }
-            Expression indexSnapshot = getSnapshot(indexExpression.getIndex());
-            Snapshot snapshot = Snapshot.createSnapshot(arraySnapshot, indexExpression.getType(), Optionality.PRESENT);
-            arraySnapshot.assign(this, indexSnapshot, snapshot);
-            return new SnapshotExpression(snapshot, indexExpression);
+            Expression index = getSnapshot(indexExpression.getIndex());
+            return new SnapshotExpression(array.assign(this, index), indexExpression);
         }
-        if (variable instanceof ComponentExpression componentExpression) {
-            SnapshotExpression variableSnapshot = getSnapshot(componentExpression.getVariable());
-            if (!(variableSnapshot.getSnapshot() instanceof RecordSnapshot recordSnapshot)) {
-                throw new IllegalArgumentException();
+        if (expression instanceof ComponentExpression componentExpression) {
+            SnapshotExpression snapshot = getSnapshot(componentExpression.getVariable());
+            if (!(snapshot.getSnapshot() instanceof RecordSnapshot record)) {
+                throw new IllegalArgumentException("Could not find record snapshot for expression: " + componentExpression + ", found: " + snapshot + " of type: " + snapshot.getType());
             }
-            Snapshot snapshot = Snapshot.createSnapshot(recordSnapshot, componentExpression.getType(), Optionality.PRESENT);
-            recordSnapshot.assign(this, componentExpression.getComponent(), snapshot);
-            return new SnapshotExpression(snapshot, componentExpression);
+            Snapshot component = record.assign(this, componentExpression.getComponent());
+            return new SnapshotExpression(component, componentExpression);
         }
-        Snapshot snapshot = Snapshot.createSnapshot(variable.getType(), optionality);
-        if (variable instanceof VariableExpression variableExpression) {
-            snapshots.put(variableExpression.getField(), snapshot);
+        Snapshot snapshot = Snapshot.createSnapshot(expression.getType(), optionality);
+        if (expression instanceof VariableExpression variable) {
+            snapshots.put(variable.getField(), snapshot);
         }
-        return new SnapshotExpression(snapshot, variable);
+        SnapshotExpression reference = new SnapshotExpression(snapshot, expression);
+        if (!(expression instanceof ReferenceExpression)) {
+            add(new BinaryExpression(BinaryOperator.EQUAL_TO, reference, expression));
+        }
+        return reference;
     }
 
     public @Nullable Snapshot getSnapshot(@NotNull RapidExpression expression) {
@@ -460,11 +476,10 @@ public class DataFlowState {
 
     /**
      * Attempts to retrieve the latest snapshot for the specified variable. If this state does not modify the variable,
-     * the predecessors of this state are recursively queried until the latest snapshot is found. If this state or its
-     * predecessors has no reference to this variable, or if the variable is a field, an empty optional is returned.
+     * the predecessors of this state are recursively queried until a snapshot is found.
      *
      * @param expression the variable.
-     * @return the latest snapshot for the variable, or an empty optional if no reference to this variable was found.
+     * @return the latest snapshot for the variable.
      */
     public @NotNull SnapshotExpression getSnapshot(@NotNull ReferenceExpression expression) {
         return expression.accept(new ControlFlowVisitor<>() {
@@ -544,10 +559,52 @@ public class DataFlowState {
         });
     }
 
+    public void persist() {
+        stored.addAll(conditions);
+    }
+
+    public void prune() {
+        prune(state -> {});
+    }
+
+    public void prune(@NotNull Consumer<DataFlowState> consumer) {
+        consumer.accept(this);
+        block.getFunction().unregisterOutput(this);
+        if (predecessor != null) {
+            predecessor.getSuccessors().remove(this);
+        }
+        predecessor = null;
+        for (DataFlowState successor : successors) {
+            successor.prune(consumer);
+        }
+    }
+
+    public void clear() {
+        conditions.clear();
+        conditions.addAll(stored);
+        snapshots.clear();
+        getSnapshots().putAll(getRoots());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DataFlowState that = (DataFlowState) o;
+        return Objects.equals(instruction, that.instruction) && Objects.equals(functionBlock, that.functionBlock) && Objects.equals(conditions, that.conditions) && Objects.equals(snapshots, that.snapshots) && Objects.equals(roots, that.roots) && Objects.equals(predecessor, that.predecessor);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(instruction, functionBlock, conditions, snapshots, roots, predecessor);
+    }
+
     @Override
     public String toString() {
         return "DataFlowState{" +
                 "name=" + functionBlock.getModuleName() + ":" + functionBlock.getName() +
+                ", index=" + instruction.getIndex() +
+                ", instruction=" + instruction +
                 ", conditions=" + conditions.size() +
                 '}';
     }

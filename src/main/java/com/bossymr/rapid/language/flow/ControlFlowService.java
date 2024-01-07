@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.instruction.ExitInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;

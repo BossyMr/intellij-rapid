@@ -2,7 +2,7 @@ package com.bossymr.rapid.ide.editor.insight.inspection.flow;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.instruction.Instruction;

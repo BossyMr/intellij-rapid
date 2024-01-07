@@ -1,4 +1,4 @@
-package com.bossymr.rapid.language.flow.data.hardcode;
+package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.builder.RapidModuleBuilder;
 import com.bossymr.rapid.language.flow.Argument;

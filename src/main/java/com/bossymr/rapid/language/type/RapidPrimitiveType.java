@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.type;
 
+import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.ValueType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualAtomic;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRecord;
@@ -59,6 +60,16 @@ public enum RapidPrimitiveType implements RapidType {
 
     RapidPrimitiveType(@NotNull VirtualStructure symbol) {
         this.symbol = symbol;
+    }
+
+    @Override
+    public boolean isRecord() {
+        return symbol instanceof RapidRecord;
+    }
+
+    @Override
+    public boolean isArray() {
+        return false;
     }
 
     @Override

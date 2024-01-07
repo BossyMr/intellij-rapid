@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.flow;
 
 import com.bossymr.network.MultiMap;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.psi.BlockType;
 import org.jetbrains.annotations.NotNull;

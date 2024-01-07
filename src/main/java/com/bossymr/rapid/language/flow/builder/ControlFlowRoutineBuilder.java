@@ -63,7 +63,7 @@ public class ControlFlowRoutineBuilder implements RapidRoutineBuilder {
                 continue;
             }
             RapidType type = Objects.requireNonNullElse(parameter.getType(), RapidPrimitiveType.ANYTYPE);
-            Argument argument = block.createArgument(name, type, parameter.getParameterType(), parameter, null);
+            Argument argument = block.createArgument(name, type, parameter.getParameterType());
             argumentGroup.arguments().add(argument);
         }
         argumentGroups.add(argumentGroup);

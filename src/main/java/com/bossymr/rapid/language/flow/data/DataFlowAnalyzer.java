@@ -4,7 +4,6 @@ import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.ControlFlowListener;
 import com.bossymr.rapid.language.flow.EntryInstruction;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.intellij.openapi.progress.ProgressManager;
@@ -35,7 +34,7 @@ public class DataFlowAnalyzer {
         Block controlFlow = block.getControlFlow();
         Deque<DataFlowState> workList = new ArrayDeque<>(controlFlow.getInstructions().size());
         for (EntryInstruction instruction : controlFlow.getEntryInstructions()) {
-            DataFlowState state = DataFlowState.createState(instruction.getInstruction());
+            DataFlowState state = DataFlowState.createState(block, instruction.getInstruction());
             block.getDataFlow().put(instruction.getEntryType(), state);
             workList.add(state);
         }
@@ -45,10 +44,11 @@ public class DataFlowAnalyzer {
 
     public static @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {
         Instruction instruction = state.getInstruction();
-        DataFlowState predecessor = state;
-        while ((predecessor = predecessor.getPredecessor()) != null) {
-            if (predecessor.getInstruction().equals(instruction)) {
-                return predecessor;
+        List<DataFlowState> chain = state.getPredecessorChain();
+        for (int i = 1; i < chain.size(); i++) {
+            DataFlowState currentState = chain.get(i);
+            if(currentState.getInstruction().equals(instruction)) {
+                return currentState;
             }
         }
         return null;
@@ -81,21 +81,17 @@ public class DataFlowAnalyzer {
     }
 
     private @NotNull List<DataFlowState> process(@NotNull DataFlowState state) {
-        cutBranch(state);
+        List<DataFlowState> chain = state.getPredecessorChain();
+        DataFlowState origin = chain.get(chain.size() - 1);
+        if(!(block.getDataFlow().containsValue(origin))) {
+            return List.of();
+        }
+        for (DataFlowState successor : state.getSuccessors()) {
+            successor.prune(workList::remove);
+        }
         state.clear();
         DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(stack, state, block);
         Instruction instruction = state.getInstruction();
         return instruction.accept(visitor);
-    }
-
-    private void cutBranch(@NotNull DataFlowState origin) {
-        Deque<DataFlowState> queue = new ArrayDeque<>(origin.getSuccessors());
-        while (!(queue.isEmpty())) {
-            DataFlowState successor = queue.removeLast();
-            workList.removeIf(state -> state.equals(successor));
-            block.getFunction().unregisterOutput(successor);
-            successor.close();
-            queue.addAll(successor.getSuccessors());
-        }
     }
 }

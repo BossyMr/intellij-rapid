@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
 import com.bossymr.rapid.language.flow.Optionality;
-import com.bossymr.rapid.language.flow.data.block.DataFlowState;
+import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
@@ -57,37 +57,42 @@ public class RecordSnapshot implements Snapshot {
         return snapshots;
     }
 
-    public void assign(@NotNull DataFlowState state, @NotNull String name, @NotNull Snapshot snapshot) {
-        snapshots.computeIfAbsent(name, unused -> new ArrayList<>());
-        snapshots.get(name).add(new Entry(state, snapshot));
-    }
-
-    public @NotNull Snapshot getSnapshot(@NotNull DataFlowState state, @NotNull String name) {
-        if (!(snapshots.containsKey(name))) {
-            if (!(components.containsKey(name))) {
-                throw new IllegalArgumentException("Cannot create snapshot for component: " + name + " for record of type: " + type);
-            }
-        } else {
-            List<Entry> entries = snapshots.get(name);
-            for (ListIterator<Entry> iterator = entries.listIterator(entries.size()); iterator.hasPrevious();) {
-                Entry entry = iterator.previous();
-                if(canUseAssignment(entry, state)) {
-                    return entry.snapshot();
-                }
-            }
+    public @NotNull Snapshot assign(@NotNull DataFlowState state, @NotNull String name) {
+        if (!(components.containsKey(name))) {
+            throw new IllegalArgumentException("Cannot assign value to component: " + name + " in snapshot of type: " + type + "; the specified component was not found");
         }
-        Snapshot snapshot = defaultValue.getDefaultValue(this, state, components.get(name));
-        assign(state, name, snapshot);
+        RapidType componentType = components.get(name);
+        Snapshot snapshot = Snapshot.createSnapshot(componentType);
+        snapshots.computeIfAbsent(name, key -> new ArrayList<>());
+        snapshots.get(name).add(new Entry(state, snapshot));
         return snapshot;
     }
 
-    private boolean canUseAssignment(@NotNull Entry assignment, @NotNull DataFlowState state) {
-        for (DataFlowState predecessor = state; predecessor != null; predecessor = predecessor.getPredecessor()) {
-            if(predecessor.equals(assignment.state())) {
-                return true;
+    public @NotNull Snapshot getSnapshot(@NotNull DataFlowState state, @NotNull String name) {
+        if (!(components.containsKey(name))) {
+            throw new IllegalArgumentException("Cannot find snapshot for component: " + name + " in snapshot of type: " + type + "; the specified component was not found");
+        }
+        if(snapshots.containsKey(name)) {
+            List<Entry> assignments = snapshots.get(name);
+            int index = getValidAssignment(state, assignments);
+            if(index >= 0) {
+                return assignments.get(index).snapshot();
             }
         }
-        return false;
+        Snapshot snapshot = defaultValue.getDefaultValue(this, state, components.get(name));
+        snapshots.computeIfAbsent(name, key -> new ArrayList<>());
+        snapshots.get(name).add(new Entry(state, snapshot));
+        return snapshot;
+    }
+
+    private int getValidAssignment(@NotNull DataFlowState state, @NotNull List<Entry> assignments) {
+        for (int i = assignments.size() - 1; i >= 0; i--) {
+            Entry assignment = assignments.get(i);
+            if (state.isAncestor(assignment.state())) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Override
