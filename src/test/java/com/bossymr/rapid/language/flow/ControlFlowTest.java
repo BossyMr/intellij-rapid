@@ -11,8 +11,8 @@ public class ControlFlowTest extends BasePlatformTestCase {
 
     @Override
     protected void setUp() throws Exception {
-        ControlFlowService.getInstance().reload();
         super.setUp();
+        ControlFlowService.getInstance().reload();
     }
 
     private void check(@NotNull String text, @NotNull String expected) {

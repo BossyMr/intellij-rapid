@@ -1,7 +1,7 @@
 package com.bossymr.rapid.ide.editor.insight.inspection.flow;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.ide.editor.insight.quickfix.SubstituteRangeFix;
+import com.bossymr.rapid.ide.editor.insight.fix.SubstituteRangeFix;
 import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.language.flow.data.DataFlowState;

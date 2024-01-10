@@ -1,14 +1,10 @@
 package com.bossymr.rapid.language.flow;
 
+import com.bossymr.rapid.language.flow.expression.*;
 import com.bossymr.rapid.language.flow.instruction.*;
-import com.bossymr.rapid.language.flow.value.*;
 import org.jetbrains.annotations.NotNull;
 
 public class ControlFlowVisitor<R> {
-
-    public R visitControlFlow(@NotNull ControlFlow controlFlow) {
-        return null;
-    }
 
     public R visitFunctionBlock(@NotNull Block.FunctionBlock functionBlock) {
         return visitBlock(functionBlock);

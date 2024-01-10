@@ -1,7 +1,7 @@
 package com.bossymr.rapid.ide.editor.insight.inspection;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.ide.editor.insight.quickfix.SafeDeleteFix;
+import com.bossymr.rapid.ide.editor.insight.fix.SafeDeleteFix;
 import com.bossymr.rapid.ide.search.RapidSymbolUsageSearcher;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.symbol.RoutineType;

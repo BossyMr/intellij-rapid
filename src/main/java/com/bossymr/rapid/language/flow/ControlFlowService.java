@@ -3,12 +3,12 @@ package com.bossymr.rapid.language.flow;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
+import com.bossymr.rapid.language.flow.expression.Expression;
+import com.bossymr.rapid.language.flow.expression.ReferenceExpression;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.flow.instruction.ExitInstruction;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.flow.instruction.ThrowInstruction;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 /**
  * A service used to retrieve the control flow graph for a program.
@@ -64,7 +65,7 @@ public final class ControlFlowService implements Disposable {
      * @return the control flow and data flow graphs for the routine.
      */
     public @NotNull ControlFlowBlock getDataFlow(@NotNull RapidRoutine routine) {
-        return cache.getDataFlow(Set.of(routine), routine);
+        return cache.getDataFlow(routine);
     }
 
     /**
@@ -74,6 +75,14 @@ public final class ControlFlowService implements Disposable {
      * @return the control flow and data flow graphs for every routine in the specified project.
      */
     public @NotNull Set<ControlFlowBlock> getDataFlow(@NotNull Project project) {
+        return getDataFlow(project, cache::getDataFlow);
+    }
+
+    public @NotNull Set<ControlFlowBlock> getControlFlow(@NotNull Project project) {
+        return getDataFlow(project, cache::getControlFlow);
+    }
+
+    private @NotNull Set<ControlFlowBlock> getDataFlow(@NotNull Project project, @NotNull Function<PhysicalRoutine, ControlFlowBlock> consumer) {
         Set<ControlFlowBlock> routines = new HashSet<>();
         PsiManager manager = PsiManager.getInstance(project);
         Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(project));
@@ -82,7 +91,7 @@ public final class ControlFlowService implements Disposable {
             if (psiFile instanceof RapidFile file) {
                 for (PhysicalModule module : file.getModules()) {
                     for (PhysicalRoutine routine : module.getRoutines()) {
-                        routines.add(getDataFlow(routine));
+                        routines.add(consumer.apply(routine));
                     }
                 }
             }

@@ -1,4 +1,4 @@
-package com.bossymr.rapid.ide.editor.insight.quickfix;
+package com.bossymr.rapid.ide.editor.insight.fix;
 
 import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.LocalQuickFixAndIntentionActionOnPsiElement;
@@ -10,5 +10,4 @@ public abstract class RapidQuickFix extends LocalQuickFixAndIntentionActionOnPsi
     protected RapidQuickFix(@Nullable PsiElement element) {
         super(element);
     }
-
 }

@@ -2,47 +2,39 @@ package com.bossymr.rapid.language.flow.builder;
 
 import com.bossymr.rapid.language.builder.RapidCodeBlockBuilder;
 import com.bossymr.rapid.language.builder.RapidTestBlockBuilder;
-import com.bossymr.rapid.language.flow.value.BinaryOperator;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.psi.RapidTestStatement;
+import com.bossymr.rapid.language.flow.expression.Expression;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class ControlFlowTestBlockBuilder implements RapidTestBlockBuilder {
 
-    private final @Nullable RapidTestStatement statement;
     private final @NotNull Expression condition;
-    private @Nullable ControlFlowCodeBlockBuilder builder;
+    private final @NotNull List<Map.Entry<List<Expression>, Consumer<RapidCodeBlockBuilder>>> cases;
 
-    public ControlFlowTestBlockBuilder(@Nullable RapidTestStatement statement, @NotNull ControlFlowCodeBlockBuilder builder, @NotNull Expression condition) {
-        this.statement = statement;
-        this.builder = builder;
+    public ControlFlowTestBlockBuilder(@NotNull Expression condition, @NotNull List<Map.Entry<List<Expression>, Consumer<RapidCodeBlockBuilder>>> cases) {
         this.condition = condition;
+        this.cases = cases;
     }
 
     @Override
     public @NotNull RapidTestBlockBuilder withCase(@NotNull List<Expression> conditions, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
-        if (conditions.isEmpty() || builder == null) {
+        if (conditions.isEmpty()) {
             return this;
         }
-        List<Expression> equality = conditions.stream().map(expr -> builder.binary(BinaryOperator.EQUAL_TO, condition, expr)).toList();
-        Expression expression = equality.get(0);
-        for (int i = 1; i < equality.size(); i++) {
-            expression = builder.binary(BinaryOperator.OR, expression, equality.get(i));
+        if (conditions.stream().anyMatch(expression -> !(condition.getType().isAssignable(expression.getType())))) {
+            return this;
         }
-        // TODO: This doesn't really work, since the else branch isn't built inside the consumer. Instead, all consumers
-        //  should be stored until the test block is complete, then everything is built at once.
-        builder.ifThenElse(statement, expression, consumer, elseBuilder -> builder = (ControlFlowCodeBlockBuilder) elseBuilder);
+        cases.add(new AbstractMap.SimpleImmutableEntry<>(conditions, consumer));
         return this;
     }
 
     @Override
     public @NotNull RapidTestBlockBuilder withDefaultCase(@NotNull Consumer<RapidCodeBlockBuilder> consumer) {
-        consumer.accept(builder);
-        builder = null;
+        cases.add(new AbstractMap.SimpleImmutableEntry<>(null, consumer));
         return this;
     }
 }

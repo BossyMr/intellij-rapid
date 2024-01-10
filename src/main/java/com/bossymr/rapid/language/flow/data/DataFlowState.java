@@ -6,8 +6,8 @@ import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.VariableSnapshot;
+import com.bossymr.rapid.language.flow.expression.*;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidLiteralExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
@@ -23,32 +23,8 @@ import java.util.*;
 import java.util.function.Consumer;
 
 /**
- * A {@code DataFlowState} represents the state of the program at a specific point.
- * <pre>{@code
- * Block 0:
- * 0: if(value) -> (true: 1, false: 2)
- *
- * Block 1:         // State:
- * 0: x = [0, 1];   // x[0]1 = 0;
- * 1: z = 0;        // x[1]1 = 1
- * 2: goto 3;       // z1 = 0;
- *
- * Block 2:         // State:
- * 0: x = [1, 0];   // x[0]1 = 1;
- * 1: z = 1;        // x[1]1 = 0;
- * 2: goto 3;       // z1 = 1;
- *
- * Block 3:                             // State 1:             State 2:
- * 0: y = (x[0] == 0);                  // y1 = (x[0]1 == 0);   y1 = (x[0]1 == 0);
- * 1: if(y) -> (true: 4, false: 5)      // x[0]1 = 0;           x[0]1 = 1;
- *                                      // x[1]1 = 1;           z[1]1 = 0;
- *                                      // z1 = 0;              z1 = 1;
- *
- * Block 4:     // State:
- *              // y1 = (x1 == 0);
- *              // x1 = 0;
- *              // z1 = 0;
- * }</pre>
+ * A {@code DataFlowState} represents the state of the program at a specific point. Together, states form the data flow
+ * graph of a method.
  */
 public class DataFlowState {
 
@@ -58,7 +34,6 @@ public class DataFlowState {
     private final @NotNull ControlFlowBlock block;
 
     private final @NotNull Set<Expression> conditions = new HashSet<>();
-    private final @NotNull Set<Expression> stored = new HashSet<>();
 
     /**
      * The latest snapshot of each variable. The latest snapshot for a given variable also represents the variable.
@@ -85,7 +60,6 @@ public class DataFlowState {
     public static @NotNull DataFlowState createState(@NotNull ControlFlowBlock block, @NotNull Instruction instruction) {
         DataFlowState state = new DataFlowState(block, instruction, null);
         state.initializeDefault();
-        state.persist();
         return state;
     }
 
@@ -381,7 +355,7 @@ public class DataFlowState {
         return roots;
     }
 
-    public @NotNull BooleanValue getConstraint(@NotNull Expression expression) {
+    public @NotNull Constraint getConstraint(@NotNull Expression expression) {
         if (!(expression.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             throw new IllegalArgumentException("Cannot calculate constraint for expression: " + expression);
         }
@@ -559,10 +533,6 @@ public class DataFlowState {
         });
     }
 
-    public void persist() {
-        stored.addAll(conditions);
-    }
-
     public void prune() {
         prune(state -> {});
     }
@@ -581,7 +551,6 @@ public class DataFlowState {
 
     public void clear() {
         conditions.clear();
-        conditions.addAll(stored);
         snapshots.clear();
         getSnapshots().putAll(getRoots());
     }

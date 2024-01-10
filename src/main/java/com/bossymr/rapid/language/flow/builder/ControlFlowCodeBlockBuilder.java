@@ -3,8 +3,8 @@ package com.bossymr.rapid.language.flow.builder;
 import com.bossymr.rapid.language.builder.*;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
+import com.bossymr.rapid.language.flow.expression.*;
 import com.bossymr.rapid.language.flow.instruction.*;
-import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
@@ -144,7 +144,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
             return getAsVariable(any());
         }
         List<Expression> expressions = dimensions.stream()
-                                                 .map(expr -> expressionOrError(expr, RapidPrimitiveType.NUMBER))
+                                                 .map(expr -> expression(expr, RapidPrimitiveType.NUMBER))
                                                  .toList();
         if (expressions.contains(null)) {
             return getAsVariable(any());
@@ -202,7 +202,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         }
         RapidType defaultType = type.getDimensions() > 0 ? type.createArrayType(type.getDimensions() - 1) : null;
         List<Expression> expressions = expression.getExpressions().stream()
-                                                 .map(expr -> expressionOrError(expr, defaultType))
+                                                 .map(expr -> expression(expr, defaultType))
                                                  .collect(Collectors.toList());
         if (type.getDimensions() > 0) {
             // Replace any expressions which are of an invalid type, with an error expression.
@@ -266,8 +266,8 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         if (binaryOperator == null) {
             return any(type);
         }
-        Expression left = expressionOrError(expression.getLeft());
-        Expression right = expression.getRight() != null ? expressionOrError(expression.getRight()) : any();
+        Expression left = expression(expression.getLeft());
+        Expression right = expression(expression.getRight(), RapidPrimitiveType.ANYTYPE);
         if (EnumSet.of(BinaryOperator.ADD, BinaryOperator.SUBTRACT, BinaryOperator.MULTIPLY, BinaryOperator.DIVIDE, BinaryOperator.INTEGER_DIVIDE, BinaryOperator.MODULO, BinaryOperator.LESS_THAN, BinaryOperator.LESS_THAN_OR_EQUAL, BinaryOperator.GREATER_THAN, BinaryOperator.GREATER_THAN_OR_EQUAL).contains(binaryOperator)) {
             if (left.getType().isAssignable(RapidPrimitiveType.NUMBER) && right.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
                 return new BinaryExpression(expression, binaryOperator, left, right);
@@ -416,7 +416,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         if (unaryOperator == null) {
             return any(type);
         }
-        Expression component = expression.getExpression() != null ? expressionOrError(expression.getExpression()) : any();
+        Expression component = expression(expression.getExpression(), RapidPrimitiveType.ANYTYPE);
         if (unaryOperator == UnaryOperator.NEGATE) {
             if (component.getType().isAssignable(RapidPrimitiveType.NUMBER)) {
                 return new UnaryExpression(expression, unaryOperator, component);
@@ -450,7 +450,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         arguments.accept(argumentBuilder);
         Variable variable = createVariable(returnType);
         ReferenceExpression reference = getReference(variable);
-        call(null, expressionOfType(routine, RapidPrimitiveType.STRING), reference, result);
+        call(null, expression(routine, RapidPrimitiveType.STRING), reference, result);
         return reference;
     }
 
@@ -491,7 +491,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
             for (RapidArgument argument : arguments) {
                 if (argument instanceof RapidRequiredArgument requiredArgument) {
                     RapidExpression value = requiredArgument.getArgument();
-                    builder.withRequiredArgument(expressionOrError(value));
+                    builder.withRequiredArgument(expression(value));
                 } else if (argument instanceof RapidConditionalArgument conditionalArgument) {
                     RapidSymbol parameter = conditionalArgument.getParameter().getSymbol();
                     if (!(parameter instanceof RapidParameter parameterSymbol)) {
@@ -524,7 +524,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                     if (name == null) {
                         continue;
                     }
-                    builder.withOptionalArgument(name, expressionOrError(value));
+                    builder.withOptionalArgument(name, expression(value));
                 }
             }
         };
@@ -641,22 +641,22 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         return any(expression);
     }
 
-    public @NotNull Expression expressionOfType(@NotNull Expression expression, @NotNull RapidType type) {
+    public @NotNull Expression expression(@Nullable RapidExpression expression, @Nullable RapidType type) {
+        if (expression == null) {
+            return any(null, type);
+        }
+        Expression result = expression(expression);
+        if (type != null && !(result.getType().isAssignable(type))) {
+            return any(expression, type);
+        }
+        return result;
+    }
+
+    public @NotNull Expression expression(@NotNull Expression expression, @NotNull RapidType type) {
         if (expression.getType().isAssignable(type)) {
             return expression;
         }
         return any(expression.getElement(), type);
-    }
-
-    private @NotNull Expression expressionOrError(@NotNull RapidExpression expression) {
-        return expression(expression);
-    }
-
-    private @NotNull Expression expressionOrError(@Nullable RapidExpression expression, @Nullable RapidType type) {
-        if (expression == null) {
-            return any(null, type);
-        }
-        return expression(expression);
     }
 
     @Override
@@ -683,7 +683,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
             builder.continueScope(new ReturnInstruction(block, statement, null));
             builder.exitScope();
         } else {
-            Expression expression = returnValue != null ? expressionOrError(returnValue, returnType) : any(returnType);
+            Expression expression = expression(returnValue, returnType);
             builder.continueScope(new ReturnInstruction(block, statement, expression));
             builder.exitScope();
         }
@@ -737,11 +737,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     }
 
     public @NotNull RapidCodeBlockBuilder ifThenElse(@Nullable RapidStatement statement, @NotNull Expression condition, @NotNull Consumer<RapidCodeBlockBuilder> thenConsumer, @NotNull Consumer<RapidCodeBlockBuilder> elseConsumer) {
-        if (!(condition.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
-            condition = any(RapidPrimitiveType.BOOLEAN);
-        }
-        condition = getAsVariable(condition);
-        ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, statement, condition);
+        ConditionalBranchingInstruction instruction = new ConditionalBranchingInstruction(block, statement, getAsVariable(expression(condition, RapidPrimitiveType.BOOLEAN)));
         builder.continueScope(instruction);
         ControlFlowBlockBuilder.Scope scope = builder.exitScope();
         if (scope == null) {
@@ -800,7 +796,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull RapidCodeBlockBuilder ifThenElse(@NotNull RapidIfStatement statement) {
-        Expression expression = expressionOrError(statement.getCondition(), RapidPrimitiveType.BOOLEAN);
+        Expression expression = expression(statement.getCondition(), RapidPrimitiveType.BOOLEAN);
         return ifThenElse(statement, expression, getBlockConsumer(statement.getThenBranch()), getBlockConsumer(statement.getElseBranch()));
     }
 
@@ -817,7 +813,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     @Override
     public @NotNull RapidCodeBlockBuilder whileLoop(@NotNull RapidWhileStatement statement) {
         Label label = createLabel();
-        Expression expression = expressionOrError(statement.getCondition(), RapidPrimitiveType.BOOLEAN);
+        Expression expression = expression(statement.getCondition(), RapidPrimitiveType.BOOLEAN);
         return ifThenElse(statement, expression, thenBuilder -> {
             RapidStatementList statementList = statement.getStatementList();
             if (statementList != null) {
@@ -862,9 +858,9 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull RapidCodeBlockBuilder forLoop(@NotNull RapidForStatement statement) {
-        Expression fromExpression = expressionOrError(statement.getFromExpression(), RapidPrimitiveType.NUMBER);
-        Expression toExpression = expressionOrError(statement.getToExpression(), RapidPrimitiveType.NUMBER);
-        Expression stepExpression = statement.getStepExpression() != null ? expressionOrError(statement.getStepExpression(), RapidPrimitiveType.NUMBER) : null;
+        Expression fromExpression = expression(statement.getFromExpression(), RapidPrimitiveType.NUMBER);
+        Expression toExpression = expression(statement.getToExpression(), RapidPrimitiveType.NUMBER);
+        Expression stepExpression = statement.getStepExpression() != null ? expression(statement.getStepExpression(), RapidPrimitiveType.NUMBER) : null;
         String name = statement.getVariable() != null ? statement.getVariable().getName() : null;
         return forLoop(statement, fromExpression, toExpression, stepExpression, (variable, builder) -> {
             variable.setName(name);
@@ -884,14 +880,37 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     }
 
     public @NotNull RapidCodeBlockBuilder test(@Nullable RapidTestStatement statement, @NotNull Expression condition, @NotNull Consumer<RapidTestBlockBuilder> consumer) {
-        ControlFlowTestBlockBuilder testBlockBuilder = new ControlFlowTestBlockBuilder(statement, this, condition);
+        List<Map.Entry<List<Expression>, Consumer<RapidCodeBlockBuilder>>> cases = new ArrayList<>();
+        ControlFlowTestBlockBuilder testBlockBuilder = new ControlFlowTestBlockBuilder(condition, cases);
         consumer.accept(testBlockBuilder);
+        if (!(cases.isEmpty())) {
+            testCase(statement, condition, cases.iterator());
+        }
         return this;
+    }
+
+    private void testCase(@Nullable RapidTestStatement statement, @NotNull Expression condition, @NotNull Iterator<Map.Entry<List<Expression>, Consumer<RapidCodeBlockBuilder>>> iterator) {
+        Map.Entry<List<Expression>, Consumer<RapidCodeBlockBuilder>> entry = iterator.next();
+        if (entry.getKey() == null) {
+            entry.getValue().accept(this);
+            return;
+        }
+        List<Expression> equality = entry.getKey().stream().map(expr -> binary(BinaryOperator.EQUAL_TO, condition, expr)).toList();
+        Expression expression = equality.get(0);
+        for (int i = 1; i < equality.size(); i++) {
+            expression = binary(BinaryOperator.OR, expression, equality.get(i));
+        }
+        ifThenElse(statement, expression,
+                thenConsumer -> entry.getValue().accept(thenConsumer), elseConsumer -> {
+                    if (iterator.hasNext()) {
+                        testCase(statement, condition, iterator);
+                    }
+                });
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder test(@NotNull RapidTestStatement statement) {
-        Expression expression = expressionOrError(statement.getExpression(), RapidPrimitiveType.ANYTYPE);
+        Expression expression = expression(statement.getExpression(), RapidPrimitiveType.ANYTYPE);
         return test(statement, expression, builder -> {
             for (RapidTestCaseStatement caseStatement : statement.getTestCaseStatements()) {
                 if (caseStatement.isDefault()) {
@@ -906,7 +925,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                     if (conditions == null) {
                         expressions = List.of(any(expression.getType()));
                     } else {
-                        expressions = conditions.stream().map(expr -> expressionOrError(expr, expression.getType())).toList();
+                        expressions = conditions.stream().map(expr -> expression(expr, expression.getType())).toList();
                     }
                     builder.withCase(expressions, codeBuilder -> {
                         for (RapidStatement instruction : caseStatement.getStatements().getStatements()) {
@@ -951,7 +970,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     @Override
     public void raise(@Nullable Expression expression) {
         if (expression != null) {
-            expression = expressionOfType(expression, RapidPrimitiveType.NUMBER);
+            expression = expression(expression, RapidPrimitiveType.NUMBER);
         }
         builder.continueScope(new ThrowInstruction(block, null, expression));
         builder.exitScope();
@@ -960,7 +979,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     @Override
     public void raise(@NotNull RapidRaiseStatement statement) {
         RapidExpression component = statement.getExpression();
-        Expression expression = component != null ? expressionOfType(expressionOrError(component), RapidPrimitiveType.NUMBER) : null;
+        Expression expression = expression(component, RapidPrimitiveType.NUMBER);
         builder.continueScope(new ThrowInstruction(block, statement, expression));
         builder.exitScope();
     }
@@ -1003,7 +1022,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
 
     @Override
     public @NotNull RapidCodeBlockBuilder assign(@NotNull ReferenceExpression variable, @NotNull Expression expression) {
-        expression = expressionOfType(expression, variable.getType());
+        expression = expression(expression, variable.getType());
         builder.continueScope(new AssignmentInstruction(block, null, variable, expression));
         return this;
     }
@@ -1011,25 +1030,25 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     @Override
     public @NotNull RapidCodeBlockBuilder assign(@NotNull RapidAssignmentStatement statement) {
         RapidExpression left = statement.getLeft();
-        ReferenceExpression variable = left != null ? getAsVariable(expressionOrError(left)) : getAsVariable(any(RapidPrimitiveType.ANYTYPE));
+        ReferenceExpression variable = getAsVariable(expression(left, RapidPrimitiveType.ANYTYPE));
         RapidExpression right = statement.getRight();
-        Expression expression = right != null ? expressionOrError(right) : any(variable.getType());
-        expression = expressionOfType(expression, variable.getType());
+        Expression expression = right != null ? expression(right) : any(variable.getType());
+        expression = expression(expression, variable.getType());
         builder.continueScope(new AssignmentInstruction(block, statement, variable, expression));
         return this;
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder connect(@NotNull ReferenceExpression variable, @NotNull String routine) {
-        variable = getAsVariable(expressionOfType(variable, RapidPrimitiveType.NUMBER));
+        variable = getAsVariable(expression(variable, RapidPrimitiveType.NUMBER));
         builder.continueScope(new ConnectInstruction(block, null, variable, new LiteralExpression(routine)));
         return this;
     }
 
     @Override
     public @NotNull RapidCodeBlockBuilder connect(@NotNull RapidConnectStatement statement) {
-        ReferenceExpression variable = getAsVariable(expressionOrError(statement.getLeft(), RapidPrimitiveType.NUMBER));
-        Expression expression = expressionOrError(statement.getRight(), RapidPrimitiveType.STRING);
+        ReferenceExpression variable = getAsVariable(expression(statement.getLeft(), RapidPrimitiveType.NUMBER));
+        Expression expression = expression(statement.getRight(), RapidPrimitiveType.STRING);
         builder.continueScope(new ConnectInstruction(block, statement, variable, expression));
         return this;
     }
@@ -1039,7 +1058,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         Map<ArgumentDescriptor, Expression> result = new HashMap<>();
         ControlFlowArgumentBuilder argumentBuilder = new ControlFlowArgumentBuilder(result, this);
         arguments.accept(argumentBuilder);
-        routine = expressionOfType(routine, RapidPrimitiveType.STRING);
+        routine = expression(routine, RapidPrimitiveType.STRING);
         call(null, routine, null, result);
         return this;
     }
@@ -1069,7 +1088,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
             }
         }
         if (expression == null) {
-            expression = expressionOrError(statement.getReferenceExpression(), RapidPrimitiveType.STRING);
+            expression = expression(statement.getReferenceExpression(), RapidPrimitiveType.STRING);
         }
         call(statement, expression, null, result);
         return this;

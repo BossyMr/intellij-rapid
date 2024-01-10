@@ -3,11 +3,11 @@ package com.bossymr.rapid.language.psi.impl.expression;
 import com.bossymr.rapid.language.psi.RapidBinaryExpression;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
-import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.bossymr.rapid.language.psi.RapidTokenSets;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
+import com.bossymr.rapid.language.symbol.ValueType;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
-import com.bossymr.rapid.language.symbol.ValueType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
@@ -37,7 +37,7 @@ public class RapidBinaryExpressionImpl extends RapidExpressionImpl implements Ra
 
     @Override
     public PsiElement getSign() {
-        return findChildByType(RapidTokenTypes.OPERATIONS);
+        return findChildByType(RapidTokenSets.OPERATIONS);
     }
 
     @Override

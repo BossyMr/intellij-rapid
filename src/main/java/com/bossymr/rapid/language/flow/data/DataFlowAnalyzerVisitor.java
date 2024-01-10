@@ -2,8 +2,8 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
+import com.bossymr.rapid.language.flow.expression.*;
 import com.bossymr.rapid.language.flow.instruction.*;
-import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -52,11 +52,11 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
         if (instruction.getTrue() != null && instruction.getTrue().equals(instruction.getFalse())) {
             states.add(visitBranch(instruction.getTrue(), null));
         } else {
-            BooleanValue constraint = state.getConstraint(value);
-            if (constraint == BooleanValue.ANY_VALUE || constraint == BooleanValue.ALWAYS_TRUE) {
+            Constraint constraint = state.getConstraint(value);
+            if (constraint == Constraint.ANY_VALUE || constraint == Constraint.ALWAYS_TRUE) {
                 states.add(visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(true))));
             }
-            if (constraint == BooleanValue.ANY_VALUE || constraint == BooleanValue.ALWAYS_FALSE) {
+            if (constraint == Constraint.ANY_VALUE || constraint == Constraint.ALWAYS_FALSE) {
                 states.add(visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(false))));
             }
         }
@@ -69,10 +69,9 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
             return null;
         }
         if (condition != null) {
-            DataFlowState successorState = DataFlowState.createSuccessorState(successor, state);
+            DataFlowState successorState = DataFlowState.createSuccessorState(state.getInstruction(), state);
             successorState.add(condition);
-            successorState.persist();
-            return successorState;
+            return DataFlowState.createSuccessorState(successor, successorState);
         } else {
             return DataFlowState.createSuccessorState(successor, state);
         }

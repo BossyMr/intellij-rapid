@@ -2,6 +2,7 @@ package com.bossymr.rapid.ide.editor.highlight;
 
 import com.bossymr.rapid.language.lexer.RapidLexer;
 import com.bossymr.rapid.language.lexer.RapidStringLexer;
+import com.bossymr.rapid.language.psi.RapidTokenSets;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.lexer.LayeredLexer;
 import com.intellij.lexer.Lexer;
@@ -20,8 +21,9 @@ public class RapidHighlighter extends SyntaxHighlighterBase {
     private static final Map<IElementType, RapidColor> HIGHLIGHTS = new HashMap<>();
 
     static {
-        fillMap(RapidTokenTypes.OPERATIONS, RapidColor.OPERATOR_SIGN);
-        fillMap(RapidTokenTypes.KEYWORDS, RapidColor.KEYWORD);
+        fillMap(RapidTokenSets.OPERATIONS, RapidColor.OPERATOR_SIGN);
+        fillMap(RapidTokenSets.KEYWORDS, RapidColor.KEYWORD);
+        fillMap(RapidTokenSets.PLACEHOLDERS, RapidColor.VALID_STRING_ESCAPE);
 
         HIGHLIGHTS.put(RapidTokenTypes.INTEGER_LITERAL, RapidColor.NUMBER);
         HIGHLIGHTS.put(RapidTokenTypes.STRING_LITERAL, RapidColor.STRING);

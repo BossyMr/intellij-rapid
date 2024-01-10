@@ -29,40 +29,12 @@ public enum Optionality {
      */
     NO_VALUE;
 
-    public @NotNull Optionality and(@NotNull Optionality optionality) {
-        if (this == NO_VALUE || optionality == NO_VALUE) {
-            return NO_VALUE;
-        }
-        if (this == UNKNOWN && optionality != UNKNOWN) {
-            return optionality;
-        }
-        if (this != UNKNOWN && optionality == UNKNOWN) {
+    public @NotNull Optionality or(@NotNull Optionality optionality) {
+        if (this == optionality || optionality == NO_VALUE) {
             return this;
         }
-        if (this == PRESENT) {
-            return optionality == PRESENT ? PRESENT : NO_VALUE;
-        }
-        if (this == MISSING) {
-            return optionality == MISSING ? MISSING : NO_VALUE;
-        }
-        return UNKNOWN;
-    }
-
-    public @NotNull Optionality or(@NotNull Optionality optionality) {
         if (this == NO_VALUE) {
             return optionality;
-        }
-        if (optionality == NO_VALUE) {
-            return this;
-        }
-        if (this == UNKNOWN || optionality == UNKNOWN) {
-            return UNKNOWN;
-        }
-        if (this == PRESENT) {
-            return optionality == PRESENT ? PRESENT : UNKNOWN;
-        }
-        if (this == MISSING) {
-            return optionality == MISSING ? MISSING : UNKNOWN;
         }
         return UNKNOWN;
     }

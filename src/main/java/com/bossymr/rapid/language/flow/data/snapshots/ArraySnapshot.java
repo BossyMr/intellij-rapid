@@ -1,11 +1,11 @@
 package com.bossymr.rapid.language.flow.data.snapshots;
 
-import com.bossymr.rapid.language.flow.BooleanValue;
+import com.bossymr.rapid.language.flow.Constraint;
 import com.bossymr.rapid.language.flow.Optionality;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
-import com.bossymr.rapid.language.flow.value.BinaryExpression;
-import com.bossymr.rapid.language.flow.value.BinaryOperator;
-import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.expression.BinaryExpression;
+import com.bossymr.rapid.language.flow.expression.BinaryOperator;
+import com.bossymr.rapid.language.flow.expression.Expression;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -98,11 +98,11 @@ public class ArraySnapshot implements Snapshot {
         List<Entry> values = new ArrayList<>();
         for (ListIterator<Entry> iterator = assignments.listIterator(assignments.size()); iterator.hasPrevious(); ) {
             Entry assignment = iterator.previous();
-            BooleanValue constraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignment.index(), index));
-            if (constraint == BooleanValue.ALWAYS_FALSE || constraint == BooleanValue.NO_VALUE) {
+            Constraint constraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignment.index(), index));
+            if (constraint == Constraint.ALWAYS_FALSE || constraint == Constraint.NO_VALUE) {
                 continue;
             }
-            if (constraint == BooleanValue.ALWAYS_TRUE) {
+            if (constraint == Constraint.ALWAYS_TRUE) {
                 values.add(assignment);
                 break;
             }
@@ -126,8 +126,8 @@ public class ArraySnapshot implements Snapshot {
 
     private boolean contains(@NotNull List<Entry> assignments, @NotNull ArraySnapshot.Entry nextAssignment, @NotNull DataFlowState state) {
         for (Entry assignment : assignments) {
-            BooleanValue comparisonConstraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignment.index(), nextAssignment.index()));
-            if (comparisonConstraint == BooleanValue.ALWAYS_TRUE) {
+            Constraint comparisonConstraint = state.getConstraint(new BinaryExpression(BinaryOperator.EQUAL_TO, assignment.index(), nextAssignment.index()));
+            if (comparisonConstraint == Constraint.ALWAYS_TRUE) {
                 // The index of this assignment, which was made after nextAssignment, is always equal to the index of nextAssignment.
                 // As a result, it is no longer possible for the value of nextAssignment to be returned by this index expression.
                 return true;

@@ -5,8 +5,8 @@ import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
+import com.bossymr.rapid.language.flow.expression.*;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.value.*;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInspection.LocalInspectionTool;
@@ -63,22 +63,22 @@ public class ConstantValueInspection extends LocalInspectionTool {
     }
 
     private void registerValue(@NotNull RapidExpression element, @NotNull Map<DataFlowState, Snapshot> expressions, @NotNull ProblemsHolder holder) {
-        BooleanValue value = BooleanValue.NO_VALUE;
+        Constraint value = Constraint.NO_VALUE;
         for (DataFlowState state : expressions.keySet()) {
             List<DataFlowState> successors = state.getSuccessors();
             if (successors.isEmpty()) {
-                value = value.or(BooleanValue.NO_VALUE);
+                value = value.or(Constraint.NO_VALUE);
             } else if (successors.size() == 1) {
                 SnapshotExpression expression = new SnapshotExpression(expressions.get(state));
                 value = value.or(state.getConstraint(expression));
             } else if (successors.size() == 2) {
-                value = value.or(BooleanValue.ANY_VALUE);
+                value = value.or(Constraint.ANY_VALUE);
             }
         }
-        if (value == BooleanValue.ALWAYS_TRUE) {
+        if (value == Constraint.ALWAYS_TRUE) {
             holder.registerProblem(element, RapidBundle.message("inspection.message.constant.expression", "true"));
         }
-        if (value == BooleanValue.ALWAYS_FALSE) {
+        if (value == Constraint.ALWAYS_FALSE) {
             holder.registerProblem(element, RapidBundle.message("inspection.message.constant.expression", "false"));
         }
     }
@@ -101,8 +101,8 @@ public class ConstantValueInspection extends LocalInspectionTool {
                 BinaryExpression lowerBound = new BinaryExpression(BinaryOperator.GREATER_THAN_OR_EQUAL, index, new LiteralExpression(1));
                 BinaryExpression upperBound = new BinaryExpression(BinaryOperator.LESS_THAN_OR_EQUAL, index, new UnaryExpression(UnaryOperator.DIMENSION, new SnapshotExpression(snapshot)));
                 BinaryExpression integerType = new BinaryExpression(BinaryOperator.EQUAL_TO, new BinaryExpression(BinaryOperator.INTEGER_DIVIDE, index, new LiteralExpression(1)), index);
-                BooleanValue constraint = state.getConstraint(new BinaryExpression(BinaryOperator.AND, integerType, new BinaryExpression(BinaryOperator.AND, lowerBound, upperBound)));
-                if (constraint == BooleanValue.ALWAYS_FALSE) {
+                Constraint constraint = state.getConstraint(new BinaryExpression(BinaryOperator.AND, integerType, new BinaryExpression(BinaryOperator.AND, lowerBound, upperBound)));
+                if (constraint == Constraint.ALWAYS_FALSE) {
                     if (dimension instanceof RapidLiteralExpression) {
                         holder.registerProblem(dimension, RapidBundle.message("inspection.message.out.of.bounds"), ProblemHighlightType.ERROR);
                     } else {

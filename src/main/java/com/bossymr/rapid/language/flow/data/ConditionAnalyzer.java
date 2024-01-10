@@ -2,7 +2,7 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
-import com.bossymr.rapid.language.flow.value.*;
+import com.bossymr.rapid.language.flow.expression.*;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
@@ -43,7 +43,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
     }
 
-    public static @NotNull BooleanValue getBooleanValue(@NotNull DataFlowState state, @NotNull Expression expression) {
+    public static @NotNull Constraint getBooleanValue(@NotNull DataFlowState state, @NotNull Expression expression) {
         try (Context context = new Context()) {
             Set<Snapshot> targets = new HashSet<>();
             expression.iterate(expr -> {
@@ -57,21 +57,21 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             boolean isTrue = solver.check(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(true)).accept(conditionAnalyzer))) != Status.UNSATISFIABLE;
             boolean isFalse = solver.check(conditionAnalyzer.getAsBoolean(new BinaryExpression(BinaryOperator.EQUAL_TO, expression, new LiteralExpression(false)).accept(conditionAnalyzer))) != Status.UNSATISFIABLE;
             if (isTrue && isFalse) {
-                return BooleanValue.ANY_VALUE;
+                return Constraint.ANY_VALUE;
             }
             if (isTrue) {
-                return BooleanValue.ALWAYS_TRUE;
+                return Constraint.ALWAYS_TRUE;
             }
             if (isFalse) {
-                return BooleanValue.ALWAYS_FALSE;
+                return Constraint.ALWAYS_FALSE;
             }
-            return BooleanValue.NO_VALUE;
+            return Constraint.NO_VALUE;
         }
     }
 
     public static @NotNull Optionality getOptionality(@NotNull DataFlowState state, @NotNull ReferenceExpression variable) {
-        BooleanValue booleanValue = getBooleanValue(state, new UnaryExpression(UnaryOperator.PRESENT, variable));
-        return switch (booleanValue) {
+        Constraint constraint = getBooleanValue(state, new UnaryExpression(UnaryOperator.PRESENT, variable));
+        return switch (constraint) {
             case ANY_VALUE -> Optionality.UNKNOWN;
             case ALWAYS_TRUE -> Optionality.PRESENT;
             case ALWAYS_FALSE -> Optionality.MISSING;
@@ -99,7 +99,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             }
             @SuppressWarnings("unchecked")
             Expr<BoolSort>[] array = isOptional.toArray(Expr[]::new);
-            solver.add(context.mkAtMost(array, 1));
+            queue.add(context.mkAtMost(array, 1));
         }
         DataFlowState compactState = state.createCompactState(targets);
         for (Expression expression : compactState.getConditions()) {
@@ -107,6 +107,13 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             if (expr.getSort().equals(context.getBoolSort())) {
                 queue.add(conditionAnalyzer.getAsBoolean(expr));
             }
+            if (expr.equals(context.mkFalse())) {
+                break;
+            }
+        }
+        if (queue.contains(context.mkFalse())) {
+            solver.add(context.mkFalse());
+            return conditionAnalyzer;
         }
         solver.add(queue.toArray(BoolExpr[]::new));
         return conditionAnalyzer;

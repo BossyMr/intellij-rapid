@@ -4,9 +4,9 @@ import com.bossymr.rapid.language.builder.ArgumentDescriptor;
 import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
 import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.HardcodedContract;
+import com.bossymr.rapid.language.flow.expression.Expression;
+import com.bossymr.rapid.language.flow.expression.ReferenceExpression;
 import com.bossymr.rapid.language.flow.instruction.*;
-import com.bossymr.rapid.language.flow.value.Expression;
-import com.bossymr.rapid.language.flow.value.ReferenceExpression;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidStructure;
@@ -28,6 +28,7 @@ public class ControlFlowCache {
 
     private final Map<RapidRoutine, Entry> cache = new WeakHashMap<>();
 
+    @RequiresReadLock
     public synchronized @NotNull Set<ControlFlowBlock> getDataFlow() {
         Set<ControlFlowBlock> blocks = new HashSet<>();
         for (Entry value : cache.values()) {
@@ -37,6 +38,11 @@ public class ControlFlowCache {
             }
         }
         return blocks;
+    }
+
+    @RequiresReadLock
+    public synchronized @NotNull ControlFlowBlock getDataFlow(@NotNull RapidRoutine routine) {
+        return getDataFlow(Set.of(routine), routine);
     }
 
     @RequiresReadLock

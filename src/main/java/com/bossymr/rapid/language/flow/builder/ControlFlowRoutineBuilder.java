@@ -6,7 +6,7 @@ import com.bossymr.rapid.language.builder.RapidRoutineBuilder;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.ArgumentGroup;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.expression.Expression;
 import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.symbol.RapidParameter;
 import com.bossymr.rapid.language.symbol.RapidParameterGroup;

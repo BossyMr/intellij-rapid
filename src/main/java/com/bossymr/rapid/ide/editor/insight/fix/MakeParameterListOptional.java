@@ -1,4 +1,4 @@
-package com.bossymr.rapid.ide.editor.insight.quickfix;
+package com.bossymr.rapid.ide.editor.insight.fix;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;

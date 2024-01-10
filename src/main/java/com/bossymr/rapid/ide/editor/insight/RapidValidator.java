@@ -1,7 +1,7 @@
 package com.bossymr.rapid.ide.editor.insight;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.ide.editor.insight.quickfix.*;
+import com.bossymr.rapid.ide.editor.insight.fix.*;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
@@ -68,7 +68,7 @@ public class RapidValidator {
             int startOffset = module.getNode().getStartOffset();
             int endOffset = nameIdentifier.getNode().getStartOffset() + nameIdentifier.getTextLength();
             TextRange textRange = new TextRange(startOffset, endOffset);
-            String message = RapidBundle.message("annotation.module.multiple", name);
+            String message = RapidBundle.message("annotation.module.name", name);
             AnnotationBuilder annotationBuilder = annotationHolder.newAnnotation(HighlightSeverity.ERROR, message)
                     .range(textRange);
             if (containingFile.getModules().size() > 1) {

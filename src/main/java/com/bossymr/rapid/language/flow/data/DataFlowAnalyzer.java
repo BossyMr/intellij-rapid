@@ -36,7 +36,7 @@ public class DataFlowAnalyzer {
         for (EntryInstruction instruction : controlFlow.getEntryInstructions()) {
             DataFlowState state = DataFlowState.createState(block, instruction.getInstruction());
             block.getDataFlow().put(instruction.getEntryType(), state);
-            workList.add(state);
+            workList.add(DataFlowState.createSuccessorState(instruction.getInstruction(), state));
         }
         DataFlowAnalyzer analyzer = new DataFlowAnalyzer(stack, block, workList);
         analyzer.process();
@@ -46,8 +46,14 @@ public class DataFlowAnalyzer {
         Instruction instruction = state.getInstruction();
         List<DataFlowState> chain = state.getPredecessorChain();
         for (int i = 1; i < chain.size(); i++) {
+            DataFlowState previousState = chain.get(i - 1);
             DataFlowState currentState = chain.get(i);
-            if(currentState.getInstruction().equals(instruction)) {
+            if (previousState.getInstruction().equals(currentState.getInstruction())) {
+                if (!(previousState.getInstruction().getPredecessors().contains(currentState.getInstruction()))) {
+                    continue;
+                }
+            }
+            if (currentState.getInstruction().equals(instruction)) {
                 return currentState;
             }
         }
@@ -83,7 +89,7 @@ public class DataFlowAnalyzer {
     private @NotNull List<DataFlowState> process(@NotNull DataFlowState state) {
         List<DataFlowState> chain = state.getPredecessorChain();
         DataFlowState origin = chain.get(chain.size() - 1);
-        if(!(block.getDataFlow().containsValue(origin))) {
+        if (!(block.getDataFlow().containsValue(origin))) {
             return List.of();
         }
         for (DataFlowState successor : state.getSuccessors()) {

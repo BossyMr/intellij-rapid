@@ -1,9 +1,6 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.bossymr.rapid.language.psi.RapidAttributeList;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidStubElementTypes;
-import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.stubs.RapidAttributeListStub;
 import com.bossymr.rapid.language.symbol.ModuleType;
 import com.intellij.lang.ASTNode;
@@ -80,8 +77,8 @@ public class RapidAttributeListImpl extends RapidStubElement<RapidAttributeListS
             }
         }
         ASTNode treeElement = super.addInternal(first, last, anchor, before);
-        if (first == last && RapidTokenTypes.ATTRIBUTES.contains(first.getElementType())) {
-            RapidElementUtil.addSeparatingComma(this, first, RapidTokenTypes.ATTRIBUTES);
+        if (first == last && RapidTokenSets.ATTRIBUTES.contains(first.getElementType())) {
+            RapidElementUtil.addSeparatingComma(this, first, RapidTokenSets.ATTRIBUTES);
         }
         return treeElement;
     }

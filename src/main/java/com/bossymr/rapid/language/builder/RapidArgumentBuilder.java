@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.builder;
 
 import com.bossymr.rapid.language.flow.Argument;
-import com.bossymr.rapid.language.flow.value.Expression;
+import com.bossymr.rapid.language.flow.expression.Expression;
 import org.jetbrains.annotations.NotNull;
 
 /**

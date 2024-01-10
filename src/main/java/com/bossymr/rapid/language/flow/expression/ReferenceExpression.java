@@ -1,3 +1,3 @@
-package com.bossymr.rapid.language.flow.value;
+package com.bossymr.rapid.language.flow.expression;
 
 public interface ReferenceExpression extends Expression {}

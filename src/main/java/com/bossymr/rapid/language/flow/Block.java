@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.flow;
 
+import com.bossymr.rapid.language.flow.expression.Expression;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.value.Expression;
 import com.bossymr.rapid.language.psi.BlockType;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.type.RapidType;
