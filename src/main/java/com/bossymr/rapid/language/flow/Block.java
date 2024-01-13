@@ -64,6 +64,12 @@ public sealed abstract class Block {
         return List.of();
     }
 
+    public @NotNull List<Argument> getArguments() {
+        return getArgumentGroups().stream()
+                                  .flatMap(argumentGroup -> argumentGroup.arguments().stream())
+                                  .toList();
+    }
+
     public @NotNull List<Variable> getVariables() {
         return variables;
     }

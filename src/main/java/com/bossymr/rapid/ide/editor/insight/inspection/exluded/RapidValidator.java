@@ -1,4 +1,4 @@
-package com.bossymr.rapid.ide.editor.insight;
+package com.bossymr.rapid.ide.editor.insight.inspection.exluded;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.editor.insight.fix.*;
@@ -6,7 +6,7 @@ import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.*;
-import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
+import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.codeInsight.intention.IntentionAction;
@@ -90,7 +90,7 @@ public class RapidValidator {
                  * would no longer match the name of the file, or multiple modules would exist with the same name.
                  */
                 annotationBuilder =
-                        annotationBuilder.withFix(new RenameFileFix(name + RapidFileType.DEFAULT_DOT_EXTENSION));
+                        annotationBuilder.withFix(new RenameElementFix(containingFile, name + RapidFileType.DEFAULT_DOT_EXTENSION));
                 annotationBuilder = annotationBuilder.withFix(new RenameElementFix(module, fileName));
             }
             annotationBuilder.create();
@@ -101,7 +101,7 @@ public class RapidValidator {
         String name = symbol.getName();
         PsiElement nameIdentifier = symbol.getNameIdentifier();
         if (name == null || nameIdentifier == null) return;
-        List<RapidSymbol> symbols = RapidResolveService.getInstance(symbol.getProject()).findSymbols(symbol, name);
+        List<RapidSymbol> symbols = ResolveService.getInstance(symbol.getProject()).findSymbols(symbol, name);
         if (symbols.size() > 1 && symbols.indexOf(symbol) != 0) {
             /*
              * Multiple symbols are declared with the same name as this symbol, in the same context.

@@ -34,6 +34,17 @@ public interface Expression {
         AtomicBoolean cancelled = new AtomicBoolean();
         accept(new ControlFlowVisitor<>() {
             @Override
+            public Object visitFunctionCallExpression(@NotNull FunctionCallExpression expression) {
+                for (FunctionCallExpression.Entry value : expression.getArguments()) {
+                    value.variable().accept(this);
+                    if (cancelled.get()) {
+                        return null;
+                    }
+                }
+                return null;
+            }
+
+            @Override
             public Void visitAggregateExpression(@NotNull AggregateExpression expression) {
                 for (Expression component : expression.getExpressions()) {
                     component.accept(this);

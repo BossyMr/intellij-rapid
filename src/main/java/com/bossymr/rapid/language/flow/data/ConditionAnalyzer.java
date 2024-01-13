@@ -3,25 +3,30 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.expression.*;
+import com.bossymr.rapid.language.flow.expression.FunctionCallExpression.Entry;
 import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.RapidRecord;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
+import com.bossymr.rapid.language.symbol.RapidVariable;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
 
+    private static final @NotNull Expression EMPTY_EXPRESSION = new SnapshotExpression(Snapshot.createSnapshot(RapidPrimitiveType.NUMBER));
     private final @NotNull Context context;
+
     private final @NotNull Map<ReferenceExpression, Expr<?>> symbols = new HashMap<>();
-    private final @NotNull Map<String, AtomicInteger> names = new HashMap<>();
-    private final @NotNull Map<Snapshot, Expr<?>> optionality = new HashMap<>();
+    private final @NotNull Map<Snapshot, Expr<?>> pointers = new HashMap<>();
+    private final @NotNull Map<Integer, AtomicInteger> suffixes = new HashMap<>();
 
     private final @NotNull Deque<Expression> stack = new ArrayDeque<>();
-
     private final @NotNull List<BoolExpr> queue;
 
     private ConditionAnalyzer(@NotNull Context context, @NotNull List<BoolExpr> queue) {
@@ -70,7 +75,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     }
 
     public static @NotNull Optionality getOptionality(@NotNull DataFlowState state, @NotNull ReferenceExpression variable) {
-        Constraint constraint = getBooleanValue(state, new UnaryExpression(UnaryOperator.PRESENT, variable));
+        Constraint constraint = getBooleanValue(state, FunctionCallExpression.present(variable));
         return switch (constraint) {
             case ANY_VALUE -> Optionality.UNKNOWN;
             case ALWAYS_TRUE -> Optionality.PRESENT;
@@ -82,48 +87,133 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     private static @NotNull ConditionAnalyzer getSolver(@NotNull Context context, @NotNull DataFlowState state, @NotNull Solver solver, @NotNull Set<Snapshot> targets) {
         List<BoolExpr> queue = new ArrayList<>();
         ConditionAnalyzer conditionAnalyzer = new ConditionAnalyzer(context, queue);
+        computeArgumentOptionality(state, conditionAnalyzer);
+        List<DataFlowState> predecessorChain = state.createCompactState(targets).getPredecessorChain();
+        for (int i = predecessorChain.size() - 1; i >= 0; i--) {
+            DataFlowState predecessor = predecessorChain.get(i);
+            for (Expression condition : predecessor.getConditions()) {
+                Expr<?> expression = condition.accept(conditionAnalyzer);
+                if (expression.getSort().equals(context.getBoolSort())) {
+                    queue.add(conditionAnalyzer.getAsBoolean(expression));
+                }
+                if (queue.contains(context.mkFalse())) {
+                    solver.add(context.mkFalse());
+                    return conditionAnalyzer;
+                }
+            }
+        }
+        solver.add(queue.toArray(BoolExpr[]::new));
+        System.out.println(solver);
+        return conditionAnalyzer;
+    }
+
+    private static void computeArgumentOptionality(@NotNull DataFlowState state, @NotNull ConditionAnalyzer conditionAnalyzer) {
         Block functionBlock = state.getInstruction().getBlock();
         List<ArgumentGroup> argumentGroups = functionBlock.getArgumentGroups();
-        DataFlowState firstPredecessor = Objects.requireNonNullElse(state.getFirstPredecessor(), state);
         for (ArgumentGroup argumentGroup : argumentGroups) {
             if (!(argumentGroup.isOptional()) || argumentGroup.arguments().size() <= 1) {
                 continue;
             }
             List<Expr<BoolSort>> isOptional = new ArrayList<>();
             for (Argument argument : argumentGroup.arguments()) {
-                SnapshotExpression snapshot = firstPredecessor.getSnapshot(new VariableExpression(argument));
+                SnapshotExpression snapshot = state.getSnapshot(new VariableExpression(argument));
                 Objects.requireNonNull(snapshot);
-                UnaryExpression present = new UnaryExpression(UnaryOperator.PRESENT, snapshot);
-                BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, present, new LiteralExpression(true));
+                BinaryExpression expression = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(snapshot), new LiteralExpression(true));
                 isOptional.add(conditionAnalyzer.getAsBoolean(expression.accept(conditionAnalyzer)));
             }
             @SuppressWarnings("unchecked")
             Expr<BoolSort>[] array = isOptional.toArray(Expr[]::new);
-            queue.add(context.mkAtMost(array, 1));
+            conditionAnalyzer.queue.add(conditionAnalyzer.context.mkAtMost(array, 1));
         }
-        DataFlowState compactState = state.createCompactState(targets);
-        for (Expression expression : compactState.getConditions()) {
-            Expr<?> expr = expression.accept(conditionAnalyzer);
-            if (expr.getSort().equals(context.getBoolSort())) {
-                queue.add(conditionAnalyzer.getAsBoolean(expr));
-            }
-            if (expr.equals(context.mkFalse())) {
-                break;
-            }
-        }
-        if (queue.contains(context.mkFalse())) {
-            solver.add(context.mkFalse());
-            return conditionAnalyzer;
-        }
-        solver.add(queue.toArray(BoolExpr[]::new));
-        return conditionAnalyzer;
     }
 
-    private @NotNull Expr<?> getExpression(@NotNull Expression expression, @NotNull Expression child) {
-        stack.add(expression);
+    private @NotNull Expr<?> getExpression(@Nullable Expression expression, @NotNull Expression child) {
+        stack.add(Objects.requireNonNullElse(expression, EMPTY_EXPRESSION));
         Expr<?> expr = child.accept(this);
         stack.removeLast();
         return expr;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    @Override
+    public Expr<?> visitFunctionCallExpression(@NotNull FunctionCallExpression expression) {
+        List<Entry> arguments = expression.getArguments();
+        return switch (expression.getName()) {
+            case ":ConstantA" -> {
+                Entry variable = arguments.get(0);
+                Entry value = arguments.get(1);
+                Sort arraySort = getSort(variable.variable().getType());
+                Objects.requireNonNull(arraySort);
+                yield context.mkConstArray(arraySort, getExpression(null, value.variable()));
+            }
+            case ":SelectA" -> {
+                Expr array = getExpression(null, arguments.get(0).variable());
+                Expr index = getExpression(null, arguments.get(1).variable());
+                yield context.mkSelect(array, index);
+            }
+            case ":StoreA" -> {
+                Expr array = getExpression(null, arguments.get(0).variable());
+                Expr index = getExpression(null, arguments.get(1).variable());
+                Expr value = getExpression(null, arguments.get(2).variable());
+                yield context.mkStore(array, index, value);
+            }
+            case ":SelectS" -> {
+                Expr<?> record = getExpression(null, arguments.get(0).variable());
+                FuncDecl<?> field = getField(arguments.get(0).variable(), arguments.get(1).variable());
+                yield context.mkApp(field, record);
+            }
+            case ":StoreS" -> {
+                Expr<?> record = getExpression(null, arguments.get(0).variable());
+                Expr<?> value = getExpression(null, arguments.get(2).variable());
+                FuncDecl field = getField(arguments.get(0).variable(), arguments.get(1).variable());
+                yield context.mkUpdateField(field, record, value);
+            }
+            default -> {
+                Sort sort = Objects.requireNonNullElseGet(getSort(expression.getType()), context::getRealSort);
+                Sort[] sorts = arguments.stream()
+                                        .map(argument -> Objects.requireNonNullElseGet(getSort(argument.type()), context::getRealSort))
+                                        .toList()
+                                        .toArray(new Sort[0]);
+                FuncDecl<?> funcDecl = context.mkFuncDecl(expression.getName(), sorts, sort);
+                yield funcDecl.apply(getArguments(expression));
+            }
+        };
+    }
+
+    @SuppressWarnings("rawtypes")
+    private @NotNull FuncDecl<?> getField(@NotNull Expression variable, @NotNull Expression componentName) {
+        Expr record = getExpression(null, variable);
+        DatatypeSort sort = (DatatypeSort) record.getSort();
+        FuncDecl.Parameter[] parameters = sort.getConstructors()[0].getParameters();
+        FuncDecl.Parameter parameter = parameters[getComponentIndex(variable, ((String) ((LiteralExpression) componentName).getValue()))];
+        return parameter.getFuncDecl();
+    }
+
+    private int getComponentIndex(@NotNull Expression variable, @NotNull String componentName) {
+        RapidRecord record = (RapidRecord) variable.getType().getRootStructure();
+        Objects.requireNonNull(record);
+        List<? extends RapidComponent> components = record.getComponents();
+        for (int i = 0; i < components.size(); i++) {
+            if (componentName.equalsIgnoreCase(components.get(i).getName())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private Expr<?> @NotNull [] getArguments(@NotNull FunctionCallExpression expression) {
+        List<Entry> arguments = expression.getArguments();
+        Expr<?>[] expressions = new Expr<?>[arguments.size()];
+        for (int i = 0; i < arguments.size(); i++) {
+            Entry entry = arguments.get(i);
+            Expression argument = entry.variable();
+            if (entry.type().equals(RapidPrimitiveType.ANYTYPE) && argument instanceof SnapshotExpression snapshot) {
+                expressions[i] = createPointer(snapshot);
+            } else {
+                expressions[i] = getExpression(null, argument);
+            }
+        }
+        return expressions;
     }
 
     @Override
@@ -215,14 +305,6 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         return switch (expression.getOperator()) {
             case NOT -> context.mkNot(getAsBoolean(expr));
             case NEGATE -> context.mkMul(getAsNumber(expr), context.mkReal(-1));
-            case PRESENT -> {
-                if (component instanceof SnapshotExpression variable) {
-                    Expr<?> handle = optionality.computeIfAbsent(variable.getSnapshot(), unused -> context.mkBoolConst("~" + variable.hashCode() + "*"));
-                    yield context.mkEq(handle, context.mkTrue());
-                }
-                yield context.mkTrue();
-            }
-            case DIMENSION -> throw new IllegalArgumentException();
         };
     }
 
@@ -231,13 +313,13 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             return current.getType();
         }
         Expression expression = stack.peekLast();
-        if (expression == null) {
-            return RapidPrimitiveType.BOOLEAN;
+        if (expression == null || expression.equals(EMPTY_EXPRESSION)) {
+            return RapidPrimitiveType.ANYTYPE;
         }
         if (expression instanceof UnaryExpression unaryExpression) {
             return switch (unaryExpression.getOperator()) {
-                case NOT, PRESENT -> RapidPrimitiveType.BOOLEAN;
-                case NEGATE, DIMENSION -> RapidPrimitiveType.NUMBER;
+                case NOT -> RapidPrimitiveType.BOOLEAN;
+                case NEGATE -> RapidPrimitiveType.NUMBER;
             };
         }
         if (expression instanceof BinaryExpression binaryExpression) {
@@ -280,7 +362,52 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                 return correctType.createArrayType(correctType.getDimensions() + 1);
             }
         }
-        return RapidPrimitiveType.BOOLEAN;
+        return RapidPrimitiveType.ANYTYPE;
+    }
+
+    @SuppressWarnings("unchecked")
+    private @Nullable Sort getSort(@NotNull RapidType type) {
+        if (type.equals(RapidPrimitiveType.ANYTYPE)) {
+            return null;
+        }
+        if (type.isAssignable(RapidPrimitiveType.STRING)) {
+            return context.mkStringSort();
+        }
+        if (type.isAssignable(RapidPrimitiveType.BOOLEAN)) {
+            return context.mkBoolSort();
+        }
+        if (type.isAssignable(RapidPrimitiveType.NUMBER)) {
+            return context.mkRealSort();
+        }
+        if (type.isArray()) {
+            Sort sort = getSort(type.createArrayType(type.getDimensions() - 1));
+            Objects.requireNonNull(sort);
+            return context.mkArraySort(new Sort[]{context.getIntSort()}, sort);
+        }
+        if (type.isRecord()) {
+            RapidRecord record = (RapidRecord) type.getRootStructure();
+            Objects.requireNonNull(record);
+            Sort[] sorts = record.getComponents().stream()
+                                 .map(RapidVariable::getType)
+                                 .filter(Objects::nonNull)
+                                 .map(this::getSort)
+                                 .peek(Objects::requireNonNull)
+                                 .toList()
+                                 .toArray(new Sort[0]);
+            String qualifiedName = record.getQualifiedName();
+            Objects.requireNonNull(qualifiedName);
+            String[] componentNames = record.getComponents().stream()
+                                            .map(RapidSymbol::getName)
+                                            .filter(Objects::nonNull)
+                                            .toList()
+                                            .toArray(new String[0]);
+            return context.mkDatatypeSort(qualifiedName, new Constructor[]{context.mkConstructor("create:" + qualifiedName, "is:" + qualifiedName, componentNames, sorts, null)});
+        }
+        return null;
+    }
+
+    private @NotNull Expr<?> createPointer(@NotNull SnapshotExpression expression) {
+        return pointers.computeIfAbsent(expression.getSnapshot(), snapshot -> context.mkRealConst(getName(snapshot) + "*"));
     }
 
     @Override
@@ -288,31 +415,19 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         if (symbols.containsKey(expression)) {
             return symbols.get(expression);
         }
+        String name = getName(expression.getSnapshot());
         RapidType correctType = getCorrectType(expression);
-        String name = "~" + expression.hashCode();
-        if (names.containsKey(name)) {
-            name += ":" + names.get(name).getAndIncrement();
-        } else {
-            names.put(name, new AtomicInteger());
+        Sort sort = getSort(correctType);
+        if (sort == null) {
+            return createPointer(expression);
         }
-        Expr<?> expr;
-        if (correctType.isAssignable(RapidPrimitiveType.STRING)) {
-            expr = context.mkConst(name, context.mkStringSort());
-        } else if (correctType.isAssignable(RapidPrimitiveType.BOOLEAN)) {
-            expr = context.mkConst(name, context.mkBoolSort());
-        } else {
-            expr = context.mkConst(name, context.mkRealSort());
-        }
+        Expr<?> expr = context.mkConst(name, sort);
         symbols.put(expression, expr);
-        String result = name;
         switch (expression.getSnapshot().getOptionality()) {
-            case PRESENT -> {
-                Expr<?> handle = optionality.computeIfAbsent(expression.getSnapshot(), unused -> context.mkBoolConst(result + "*"));
-                queue.add(context.mkEq(handle, context.mkTrue()));
-            }
+            case PRESENT -> queue.add(getAsBoolean(FunctionCallExpression.present(expression).accept(this)));
             case MISSING -> {
-                Expr<?> handle = optionality.computeIfAbsent(expression.getSnapshot(), unused -> context.mkBoolConst(result + "*"));
-                queue.add(context.mkEq(handle, context.mkFalse()));
+                UnaryExpression unaryExpression = new UnaryExpression(UnaryOperator.NOT, FunctionCallExpression.present(expression));
+                queue.add(getAsBoolean(unaryExpression.accept(this)));
             }
             case NO_VALUE -> queue.add(context.mkFalse());
             case UNKNOWN -> {}
@@ -321,6 +436,16 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             symbols.remove(expression);
         }
         return expr;
+    }
+
+    private @NotNull String getName(@NotNull Snapshot snapshot) {
+        int hashCode = snapshot.hashCode();
+        if (suffixes.containsKey(hashCode)) {
+            return hashCode + ":" + suffixes.get(hashCode).getAndIncrement();
+        } else {
+            suffixes.put(hashCode, new AtomicInteger());
+            return String.valueOf(hashCode);
+        }
     }
 
     @Override
@@ -336,7 +461,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             RapidType type = expression.getType();
             if (type.isAssignable(RapidPrimitiveType.NUMBER)) {
                 double v = value.doubleValue();
-                if ((v % 1) == 0) {
+                if ((long) v == v) {
                     return context.mkReal((long) v);
                 }
                 return context.mkFPToReal(context.mkFP(value.doubleValue(), context.mkFPSort(8, 24)));

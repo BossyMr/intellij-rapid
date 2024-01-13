@@ -3,14 +3,12 @@ package com.bossymr.rapid.ide.editor.insight.inspection.flow;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
-import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
-import com.bossymr.rapid.language.flow.expression.*;
+import com.bossymr.rapid.language.flow.expression.SnapshotExpression;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInspection.LocalInspectionTool;
-import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.PsiElementVisitor;
 import org.jetbrains.annotations.NotNull;
@@ -43,7 +41,6 @@ public class ConstantValueInspection extends LocalInspectionTool {
             @Override
             public void visitIndexExpression(@NotNull RapidIndexExpression expression) {
                 Map<DataFlowState, Snapshot> expressions = getExpressions(expression);
-                registerIndex(expression, expressions, holder);
             }
         };
     }
@@ -82,37 +79,6 @@ public class ConstantValueInspection extends LocalInspectionTool {
             holder.registerProblem(element, RapidBundle.message("inspection.message.constant.expression", "false"));
         }
     }
-
-    private void registerIndex(@NotNull RapidIndexExpression element, @NotNull Map<DataFlowState, Snapshot> expressions, @NotNull ProblemsHolder holder) {
-        for (DataFlowState state : expressions.keySet()) {
-            Snapshot snapshot = expressions.get(state);
-            List<RapidExpression> dimensions = element.getArray().getDimensions();
-            for (int i = dimensions.size() - 1; i >= 0; i--) {
-                RapidExpression dimension = dimensions.get(i);
-                if (!(snapshot.getParent() instanceof ArraySnapshot arraySnapshot)) {
-                    break;
-                }
-                ArraySnapshot.Entry assignment = arraySnapshot.getAssignment(snapshot);
-                snapshot = arraySnapshot;
-                if (assignment == null) {
-                    continue;
-                }
-                Expression index = assignment.index();
-                BinaryExpression lowerBound = new BinaryExpression(BinaryOperator.GREATER_THAN_OR_EQUAL, index, new LiteralExpression(1));
-                BinaryExpression upperBound = new BinaryExpression(BinaryOperator.LESS_THAN_OR_EQUAL, index, new UnaryExpression(UnaryOperator.DIMENSION, new SnapshotExpression(snapshot)));
-                BinaryExpression integerType = new BinaryExpression(BinaryOperator.EQUAL_TO, new BinaryExpression(BinaryOperator.INTEGER_DIVIDE, index, new LiteralExpression(1)), index);
-                Constraint constraint = state.getConstraint(new BinaryExpression(BinaryOperator.AND, integerType, new BinaryExpression(BinaryOperator.AND, lowerBound, upperBound)));
-                if (constraint == Constraint.ALWAYS_FALSE) {
-                    if (dimension instanceof RapidLiteralExpression) {
-                        holder.registerProblem(dimension, RapidBundle.message("inspection.message.out.of.bounds"), ProblemHighlightType.ERROR);
-                    } else {
-                        holder.registerProblem(dimension, RapidBundle.message("inspection.message.out.of.bounds"));
-                    }
-                }
-            }
-        }
-    }
-
 
     private @NotNull Map<DataFlowState, Snapshot> getExpressions(@NotNull RapidExpression expression) {
         PhysicalRoutine routine = PhysicalRoutine.getRoutine(expression);

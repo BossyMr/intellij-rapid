@@ -189,7 +189,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
 
     private void visitCustomVariable() {
         if (processor.getName() != null) {
-            RapidResolveService service = RapidResolveService.getInstance(previous.getProject());
+            ResolveService service = ResolveService.getInstance(previous.getProject());
             process(service.findCustomSymbol(new String[]{"RAPID", processor.getName()}));
         }
     }

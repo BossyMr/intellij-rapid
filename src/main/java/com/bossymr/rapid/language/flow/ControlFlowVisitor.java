@@ -113,4 +113,8 @@ public class ControlFlowVisitor<R> {
     public R visitReferenceExpression(@NotNull ReferenceExpression expression) {
         return visitExpression(expression);
     }
+
+    public R visitFunctionCallExpression(@NotNull FunctionCallExpression expression) {
+        return visitSnapshotExpression(expression);
+    }
 }

@@ -42,6 +42,20 @@ public interface PhysicalSymbol extends RapidElement, RapidSymbol, PsiNameIdenti
     }
 
     @Override
+    default @Nullable String getQualifiedName() {
+        PhysicalModule module = PhysicalModule.getModule(this);
+        if (module == null) {
+            return null;
+        }
+        String moduleName = module.getName();
+        String name = getName();
+        if (name == null) {
+            return null;
+        }
+        return moduleName + ":" + name;
+    }
+
+    @Override
     @NotNull
     default Collection<? extends @NotNull PsiSymbolDeclaration> getOwnDeclarations() {
         if (getNameIdentifier() != null) {

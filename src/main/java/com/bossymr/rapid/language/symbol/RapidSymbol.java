@@ -55,6 +55,8 @@ public interface RapidSymbol extends Symbol, NavigatableSymbol, SearchTargetSymb
      */
     @Nullable String getCanonicalName();
 
+    @Nullable String getQualifiedName();
+
     /**
      * Returns the name of this symbol.
      *

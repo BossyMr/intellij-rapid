@@ -275,12 +275,10 @@ class ControlFlowBuilderTest {
                                 
                 func num foo:bar() {
                 	num _0;
-                	num _1;
                                 
                 	STATEMENT_LIST:
-                	0: _1 := -1;
-                	1: _0 := foo:Abs(_0 := _1);
-                	2: return _0;
+                	0: _0 := foo:Abs(_0 := -1);
+                	1: return _0;
                 }
                 """);
     }

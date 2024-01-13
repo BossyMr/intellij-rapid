@@ -427,9 +427,6 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                 return new UnaryExpression(expression, unaryOperator, component);
             }
         }
-        if (unaryOperator == UnaryOperator.PRESENT) {
-            return new UnaryExpression(expression, unaryOperator, component);
-        }
         return any(type);
     }
 
@@ -534,7 +531,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         ArgumentDescriptor.Conditional conditional = getConditionalArgument(arguments);
         if (conditional == null) {
             // This function call does not reference any conditional arguments.
-            builder.continueScope(new CallInstruction(block, element, routine, returnVariable, getArgumentVariables(arguments)));
+            builder.continueScope(new CallInstruction(block, element, routine, returnVariable, arguments));
             return;
         }
         // The argument which the conditional argument is based on, i.e. the argument is present if this parameter is present.
@@ -545,7 +542,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
             condition = any(RapidPrimitiveType.BOOLEAN);
         } else {
             ReferenceExpression reference = getReference(argument);
-            condition = new UnaryExpression(UnaryOperator.PRESENT, reference);
+            condition = FunctionCallExpression.present(reference);
         }
         ifThenElse(condition,
                 builder -> {
@@ -561,26 +558,6 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                     copy.remove(conditional);
                     ((ControlFlowCodeBlockBuilder) builder).call(element, routine, returnVariable, copy);
                 });
-    }
-
-
-    private @NotNull Map<ArgumentDescriptor, ReferenceExpression> getArgumentVariables(@NotNull Map<ArgumentDescriptor, Expression> arguments) {
-        Map<ArgumentDescriptor, ReferenceExpression> variables = new HashMap<>();
-        arguments.forEach((descriptor, expression) -> {
-            if (expression instanceof ReferenceExpression referenceExpression) {
-                variables.put(descriptor, referenceExpression);
-            } else {
-                /*
-                 * It's a lot easier to handle call instructions if all of its arguments are variables, instead of
-                 * regular expressions.
-                 */
-                Variable variable = createVariable(expression.getType());
-                ReferenceExpression reference = getReference(variable);
-                assign(reference, expression);
-                variables.put(descriptor, reference);
-            }
-        });
-        return variables;
     }
 
     private @Nullable ArgumentDescriptor.Conditional getConditionalArgument(@NotNull Map<ArgumentDescriptor, ?> arguments) {

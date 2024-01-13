@@ -10,7 +10,7 @@ import com.bossymr.rapid.language.symbol.ModuleType;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
-import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
+import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.annotation.AnnotationBuilder;
 import com.intellij.lang.annotation.AnnotationHolder;
@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+@SuppressWarnings("UnstableApiUsage")
 public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     private AnnotationHolder annotationHolder;
@@ -66,7 +67,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
         if (identifier == null || name == null) {
             return;
         }
-        RapidResolveService service = RapidResolveService.getInstance(symbol.getProject());
+        ResolveService service = ResolveService.getInstance(symbol.getProject());
         List<RapidSymbol> symbols = service.findSymbols(symbol, name);
         if (symbols.isEmpty() || symbols.indexOf(symbol) == 0) {
             return;

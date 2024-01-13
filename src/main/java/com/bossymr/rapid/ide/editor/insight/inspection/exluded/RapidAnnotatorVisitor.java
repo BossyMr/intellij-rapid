@@ -1,4 +1,4 @@
-package com.bossymr.rapid.ide.editor.insight;
+package com.bossymr.rapid.ide.editor.insight.inspection.exluded;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.psi.*;

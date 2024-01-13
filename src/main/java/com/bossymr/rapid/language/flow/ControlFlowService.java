@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
+import com.bossymr.rapid.language.flow.data.HardcodedContract;
 import com.bossymr.rapid.language.flow.expression.Expression;
 import com.bossymr.rapid.language.flow.expression.ReferenceExpression;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
@@ -66,6 +67,16 @@ public final class ControlFlowService implements Disposable {
      */
     public @NotNull ControlFlowBlock getDataFlow(@NotNull RapidRoutine routine) {
         return cache.getDataFlow(routine);
+    }
+
+    public @Nullable ControlFlowBlock getDataFlow(@NotNull String name) {
+        for (HardcodedContract value : HardcodedContract.values()) {
+            VirtualRoutine routine = value.getRoutine();
+            if (routine.getName().equals(name)) {
+                return getDataFlow(routine);
+            }
+        }
+        return null;
     }
 
     /**
@@ -147,7 +158,7 @@ public final class ControlFlowService implements Disposable {
 
     private boolean hasSideEffect(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block, @NotNull CallInstruction instruction) {
         Block controlFlow = block.getControlFlow();
-        Map<Argument, ReferenceExpression> arguments = DataFlowFunction.getArguments(controlFlow, instruction.getArguments());
+        Map<Argument, Expression> arguments = DataFlowFunction.getArguments(controlFlow, instruction.getArguments());
         ReferenceExpression returnValue = instruction.getReturnValue();
         if (returnValue != null) {
             return true;

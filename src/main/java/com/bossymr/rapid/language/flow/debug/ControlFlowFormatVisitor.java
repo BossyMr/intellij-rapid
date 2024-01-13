@@ -243,13 +243,13 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
             stringBuilder.append(routine.accept(this));
         }
         stringBuilder.append("(");
-        List<Map.Entry<ArgumentDescriptor, ReferenceExpression>> arguments = new ArrayList<>(instruction.getArguments().entrySet());
+        List<Map.Entry<ArgumentDescriptor, Expression>> arguments = new ArrayList<>(instruction.getArguments().entrySet());
         arguments.sort(Comparator.comparing(entry -> getDescriptorName(entry.getKey())));
         for (int i = 0; i < arguments.size(); i++) {
             if (i > 0) {
                 stringBuilder.append(", ");
             }
-            Map.Entry<ArgumentDescriptor, ReferenceExpression> entry = arguments.get(i);
+            Map.Entry<ArgumentDescriptor, Expression> entry = arguments.get(i);
             String key = getDescriptorName(entry.getKey());
             stringBuilder.append("_").append(key);
             if (entry.getValue() != null) {
@@ -302,7 +302,7 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
 
     @Override
     public @NotNull String visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
-        return "~" + snapshot.hashCode();
+        return snapshot.toString();
     }
 
     @Override
@@ -359,8 +359,6 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
         return switch (expression.getOperator()) {
             case NOT -> "NOT ";
             case NEGATE -> "-";
-            case PRESENT -> "PRESENT ";
-            case DIMENSION -> "DIM ";
         } + visitExpression(expression, expression.getExpression());
     }
 }

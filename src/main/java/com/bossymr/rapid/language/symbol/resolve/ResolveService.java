@@ -23,16 +23,16 @@ import java.util.List;
 import java.util.Optional;
 
 @Service(Service.Level.PROJECT)
-public final class RapidResolveService {
+public final class ResolveService {
 
     private final @NotNull Project project;
 
-    public RapidResolveService(@NotNull Project project) {
+    public ResolveService(@NotNull Project project) {
         this.project = project;
     }
 
-    public static @NotNull RapidResolveService getInstance(@NotNull Project project) {
-        return project.getService(RapidResolveService.class);
+    public static @NotNull ResolveService getInstance(@NotNull Project project) {
+        return project.getService(ResolveService.class);
     }
 
     public static @Nullable RapidSymbol findChild(@NotNull RapidSymbol symbol, @NotNull String name) {
@@ -140,7 +140,7 @@ public final class RapidResolveService {
     private @Nullable Block getVirtualBlock(@NotNull String routineName) {
         for (HardcodedContract contract : HardcodedContract.values()) {
             if (contract.getRoutine().getName().equalsIgnoreCase(routineName)) {
-                return contract.getBlock();
+                return contract.getBlock().getControlFlow();
             }
         }
         return null;

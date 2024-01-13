@@ -18,9 +18,9 @@ public class CallInstruction extends Instruction {
 
     private final @NotNull Expression routineName;
     private final @Nullable ReferenceExpression returnValue;
-    private final @NotNull Map<ArgumentDescriptor, ReferenceExpression> arguments;
+    private final @NotNull Map<ArgumentDescriptor, Expression> arguments;
 
-    public CallInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull Expression routineName, @Nullable ReferenceExpression returnValue, @NotNull Map<ArgumentDescriptor, ReferenceExpression> arguments) {
+    public CallInstruction(@NotNull Block block, @Nullable PsiElement element, @NotNull Expression routineName, @Nullable ReferenceExpression returnValue, @NotNull Map<ArgumentDescriptor, Expression> arguments) {
         super(block, element);
         if (!(RapidPrimitiveType.STRING.isAssignable(routineName.getType()))) {
             throw new IllegalArgumentException("Invalid reference type: " + routineName.getType());
@@ -42,7 +42,7 @@ public class CallInstruction extends Instruction {
         return returnValue;
     }
 
-    public @NotNull Map<ArgumentDescriptor, ReferenceExpression> getArguments() {
+    public @NotNull Map<ArgumentDescriptor, Expression> getArguments() {
         return arguments;
     }
 

@@ -8,6 +8,7 @@ import com.bossymr.rapid.language.psi.BlockType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.function.Function;
 
 public class ControlFlowBlock {
 
@@ -16,9 +17,13 @@ public class ControlFlowBlock {
     private final @NotNull DataFlowFunction function;
 
     public ControlFlowBlock(@NotNull Block controlFlow) {
+        this(controlFlow, DataFlowFunction::new);
+    }
+
+    public ControlFlowBlock(@NotNull Block controlFlow, @NotNull Function<ControlFlowBlock, DataFlowFunction> function) {
         this.controlFlow = controlFlow;
         this.dataFlow = new MultiMap<>();
-        this.function = new DataFlowFunction(this);
+        this.function = function.apply(this);
     }
 
     public @NotNull Block getControlFlow() {

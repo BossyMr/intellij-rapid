@@ -120,8 +120,6 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                         variable{2, <error descr="Array index is out of bounds">0</error>} := 0;
                         variable{2, <error descr="Array index is out of bounds">4</error>} := 0;
                         variable2{<error descr="Array index is out of bounds">1.5</error>} := 2;
-                        ! The array with initialized with an aggregate expression, which means the third index was not 
-                        ! initialied, as such its length is unkown. 
                         variable{<warning descr="Array index is out of bounds">index</warning>, 4} := 0;
                     ENDPROC
                 ENDMODULE

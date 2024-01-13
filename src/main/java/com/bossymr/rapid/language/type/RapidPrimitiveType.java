@@ -1,11 +1,15 @@
 package com.bossymr.rapid.language.type;
 
+import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.ValueType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualAtomic;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRecord;
 import com.bossymr.rapid.language.symbol.virtual.VirtualStructure;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 public enum RapidPrimitiveType implements RapidType {
 
@@ -51,6 +55,16 @@ public enum RapidPrimitiveType implements RapidType {
             .build()),
 
     ANYTYPE(new VirtualAtomic("ANYTYPE#")) {
+        @Override
+        public @NotNull RapidType createArrayType(int dimensions) {
+            return ANYTYPE;
+        }
+
+        @Override
+        public @NotNull RapidType createArrayType(int dimensions, @Nullable List<RapidExpression> length) {
+            return ANYTYPE;
+        }
+
         @Override
         public boolean isAssignable(@NotNull RapidType type) {
             return true;

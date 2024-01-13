@@ -45,9 +45,11 @@ public class DataFlowFunction {
         if (returnValue != null) {
             successorState.assign(returnValue, new SnapshotExpression(snapshot));
         }
-        Map<ArgumentDescriptor, ReferenceExpression> arguments = instruction.getArguments();
-        for (ReferenceExpression argument : arguments.values()) {
-            successorState.assign(argument, null);
+        Map<ArgumentDescriptor, Expression> arguments = instruction.getArguments();
+        for (Expression argument : arguments.values()) {
+            if (argument instanceof ReferenceExpression variable) {
+                successorState.assign(variable, null);
+            }
         }
         return new Result.Success(successorState, snapshot);
     }
@@ -117,7 +119,7 @@ public class DataFlowFunction {
         for (Field field : roots.keySet()) {
             state.getRoots().put(field, normalizeSnapshot(result, roots.get(field), state));
         }
-        return new Result.Success(state, result.variable() != null ? returnVariable : null);
+        return new Result.Success(state, result.variable() != null ? normalizeSnapshot(result, result.variable(), state) : null);
     }
 
     private @NotNull Snapshot normalizeSnapshot(@NotNull Result result, @NotNull Snapshot snapshot, @NotNull DataFlowState state) {
@@ -154,17 +156,19 @@ public class DataFlowFunction {
 
     public void unregisterOutput(@NotNull DataFlowState returnState) {
         results.remove(returnState);
-        usages.values().removeIf(value -> value.contains(returnState));
+        usages.values().removeIf(value -> {
+            value.remove(returnState);
+            return value.isEmpty();
+        });
     }
 
     public @NotNull Set<Result> getOutput(@NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
-        Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
         ReferenceExpression returnValue = instruction.getReturnValue();
         Set<Result> output = new HashSet<>();
         Map<Result, DataFlowState> mappings = new HashMap<>();
         for (Map.Entry<DataFlowState, Result> entry : results.entrySet()) {
             Result result = entry.getValue();
-            Result actual = getOutput(result, callerState, instruction);
+            Result actual = getOutput(result, callerState.createSuccessorState(), instruction);
             if (actual != null) {
                 output.add(actual);
                 mappings.put(actual, entry.getKey());
@@ -173,6 +177,7 @@ public class DataFlowFunction {
             }
         }
         if (returnValue == null) {
+            Map<Argument, Expression> arguments = getArguments(getBlock(), instruction.getArguments());
             if (arguments.keySet().stream().allMatch(argument -> argument.getParameterType() == ParameterType.INPUT)) {
                 /*
                  * This function call will not have any side effects on the caller. As a result, only at most a single
@@ -185,7 +190,7 @@ public class DataFlowFunction {
                         if (states.isEmpty()) {
                             usages.remove(callerState);
                         }
-                        result.state().prune();
+                        Objects.requireNonNullElseGet(result.state().getPredecessor(), result::state).prune();
                         return true;
                     }
                     return false;
@@ -197,7 +202,7 @@ public class DataFlowFunction {
         return output;
     }
 
-    private @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull CallInstruction instruction) {
+    protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull CallInstruction instruction) {
         /*
          * Create an empty successor to the specified state.
          *
@@ -218,11 +223,18 @@ public class DataFlowFunction {
         Map<Snapshot, Snapshot> modifications = new HashMap<>();
         Set<Snapshot> targets = new HashSet<>();
 
-        Map<Argument, ReferenceExpression> arguments = getArguments(getBlock(), instruction.getArguments());
+        Map<Argument, Expression> arguments = getArguments(getBlock(), instruction.getArguments());
         for (Argument argument : arguments.keySet()) {
-            ReferenceExpression expression = arguments.get(argument);
+            ReferenceExpression variable;
+            Expression expression = arguments.get(argument);
+            if (expression instanceof ReferenceExpression referenceExpression) {
+                variable = referenceExpression;
+            } else {
+                variable = new SnapshotExpression(Snapshot.createSnapshot(expression.getType()), expression);
+                state.assign(variable, expression);
+            }
             Snapshot calleeSnapshot = result.state().getRoots().get(argument);
-            Snapshot callerSnapshot = state.getSnapshot(expression).getSnapshot();
+            Snapshot callerSnapshot = state.getSnapshot(variable).getSnapshot();
             modifications.put(calleeSnapshot, callerSnapshot);
             targets.add(callerSnapshot);
         }
@@ -241,14 +253,16 @@ public class DataFlowFunction {
             }
             Snapshot latestSnapshot = result.state().getSnapshots().get(argument);
             Snapshot snapshot = modifications.get(latestSnapshot);
-            ReferenceExpression expression = arguments.get(argument);
-            successorState.assign(expression, new SnapshotExpression(snapshot));
+            Expression expression = arguments.get(argument);
+            if (expression instanceof ReferenceExpression variable) {
+                successorState.assign(variable, new SnapshotExpression(snapshot));
+            }
         }
 
         // Check if the result is satisfiable.
         // If it is not satisfiable, this function will not be called.
         if (!(successorState.isSatisfiable(targets))) {
-            successorState.prune();
+            state.prune();
             return null;
         }
         if (result instanceof Result.Exit) {

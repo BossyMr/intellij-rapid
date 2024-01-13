@@ -5,7 +5,7 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.stubs.index.*;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
-import com.bossymr.rapid.language.symbol.resolve.RapidResolveService;
+import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.intellij.codeInsight.TailTypes;
 import com.intellij.codeInsight.completion.CompletionContributor;
 import com.intellij.codeInsight.completion.CompletionParameters;
@@ -37,7 +37,7 @@ public class RapidCompletionContributor extends CompletionContributor {
             return;
         }
         Project project = element.getProject();
-        RapidResolveService service = RapidResolveService.getInstance(project);
+        ResolveService service = ResolveService.getInstance(project);
         PsiElement parent = element.getParent();
         if (parent == null) {
             return;

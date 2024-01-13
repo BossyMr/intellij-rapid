@@ -54,6 +54,11 @@ public class RapidTask implements RapidSymbol {
         return getName();
     }
 
+    @Override
+    public @Nullable String getQualifiedName() {
+        return getName();
+    }
+
     public @NotNull String getName() {
         return name;
     }

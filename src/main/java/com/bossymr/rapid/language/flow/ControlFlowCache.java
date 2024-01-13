@@ -5,7 +5,6 @@ import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
 import com.bossymr.rapid.language.flow.data.DataFlowAnalyzer;
 import com.bossymr.rapid.language.flow.data.HardcodedContract;
 import com.bossymr.rapid.language.flow.expression.Expression;
-import com.bossymr.rapid.language.flow.expression.ReferenceExpression;
 import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
@@ -62,9 +61,8 @@ public class ControlFlowCache {
                 return block;
             }
         }
-        Block controlFlow = computeControlFlow(routine);
-        ControlFlowBlock block = new ControlFlowBlock(controlFlow);
-        Map<PhysicalSymbol, Long> dependencies = routine instanceof PhysicalRoutine physicalRoutine ? getDependencies(physicalRoutine, controlFlow) : new HashMap<>();
+        ControlFlowBlock block = computeControlFlow(routine);
+        Map<PhysicalSymbol, Long> dependencies = routine instanceof PhysicalRoutine physicalRoutine ? getDependencies(physicalRoutine, block.getControlFlow()) : new HashMap<>();
         cache.put(routine, new Entry(block, dependencies));
         return block;
     }
@@ -98,8 +96,8 @@ public class ControlFlowCache {
         } else if (instruction instanceof CallInstruction callInstruction) {
             getDependencies(symbols, callInstruction.getRoutineName());
             getDependencies(symbols, callInstruction.getReturnValue());
-            Map<ArgumentDescriptor, ReferenceExpression> arguments = callInstruction.getArguments();
-            for (ReferenceExpression expression : arguments.values()) {
+            Map<ArgumentDescriptor, Expression> arguments = callInstruction.getArguments();
+            for (Expression expression : arguments.values()) {
                 getDependencies(symbols, expression);
             }
             Expression routineName = callInstruction.getRoutineName();
@@ -147,7 +145,7 @@ public class ControlFlowCache {
         }
     }
 
-    private @NotNull Block computeControlFlow(@NotNull RapidRoutine routine) {
+    private @NotNull ControlFlowBlock computeControlFlow(@NotNull RapidRoutine routine) {
         if (routine instanceof VirtualRoutine) {
             for (HardcodedContract value : HardcodedContract.values()) {
                 if (value.getRoutine().equals(routine)) {
@@ -158,7 +156,7 @@ public class ControlFlowCache {
         Set<Block> controlFlow = new ControlFlowBuilder()
                 .withModule(getModuleName(routine), moduleBuilder -> moduleBuilder.withRoutine(routine))
                 .getControlFlow();
-        return controlFlow.iterator().next();
+        return new ControlFlowBlock(controlFlow.iterator().next());
     }
 
     private @NotNull String getModuleName(@NotNull RapidRoutine routine) {

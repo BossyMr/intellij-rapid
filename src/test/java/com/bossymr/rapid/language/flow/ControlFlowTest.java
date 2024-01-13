@@ -18,7 +18,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
     private void check(@NotNull String text, @NotNull String expected) {
         myFixture.configureByText(RapidFileType.getInstance(), text);
         ControlFlowService service = ControlFlowService.getInstance();
-        Set<ControlFlowBlock> controlFlow = service.getDataFlow(myFixture.getProject());
+        Set<ControlFlowBlock> controlFlow = service.getControlFlow(myFixture.getProject());
         assertTextEquals(expected.replaceAll(" {4}", "\t"), ControlFlowFormatVisitor.format(controlFlow).replaceAll(" {4}", "\t"));
     }
 
@@ -318,12 +318,10 @@ public class ControlFlowTest extends BasePlatformTestCase {
                                 
                 func num foo:bar() {
                 	num _0;
-                	num _1;
                                 
                 	STATEMENT_LIST:
-                	0: _1 := -1.0;
-                	1: _0 := foo:Abs(_0 := _1);
-                	2: return _0;
+                	0: _0 := foo:Abs(_0 := -1.0);
+                	1: return _0;
                 }
                 """);
     }
@@ -339,17 +337,14 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 proc foo:bar(\\input num _0 [a]) {
-                	bool _1;
-                                
                 	STATEMENT_LIST:
-                	0: _1 := PRESENT _0;
-                	1: if(_1) -> [true: 2, false: 3]
+                	0: if(:Present(REF _0)) -> [true: 1, false: 2]
                                 
-                	2: foo:conditional(_a := _0);
-                	   goto -> [4];
+                	1: foo:conditional(_a := _0);
+                	   goto -> [3];
                                 
-                	3: foo:conditional();
-                	4: return;
+                	2: foo:conditional();
+                	3: return;
                 }
                                 
                 proc foo:conditional(\\input num _0 [a]) {
@@ -370,31 +365,24 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 proc foo:bar(\\input num _0 [a], \\input num _1 [b]) {
-                	bool _2;
-                	bool _3;
-                	bool _4;
-                                
                 	STATEMENT_LIST:
-                	0: _2 := PRESENT _0;
-                	1: if(_2) -> [true: 2, false: 6]
+                	0: if(:Present(REF _0)) -> [true: 1, false: 4]
                                 
-                	2: _3 := PRESENT _1;
-                	3: if(_3) -> [true: 4, false: 5]
+                	1: if(:Present(REF _1)) -> [true: 2, false: 3]
                                 
-                	4: foo:conditional(_a := _0, _b := _1);
-                	   goto -> [10];
+                	2: foo:conditional(_a := _0, _b := _1);
+                	   goto -> [7];
                                 
-                	5: foo:conditional(_a := _0);
-                	   goto -> [10];
+                	3: foo:conditional(_a := _0);
+                	   goto -> [7];
                                 
-                	6: _4 := PRESENT _1;
-                	7: if(_4) -> [true: 8, false: 9]
+                	4: if(:Present(REF _1)) -> [true: 5, false: 6]
                                 
-                	8: foo:conditional(_b := _1);
-                	   goto -> [10];
+                	5: foo:conditional(_b := _1);
+                	   goto -> [7];
                                 
-                	9: foo:conditional();
-                	10: return;
+                	6: foo:conditional();
+                	7: return;
                 }
                                 
                 proc foo:conditional(\\input num _0 [a], \\input num _1 [b]) {

@@ -61,10 +61,10 @@ public interface Snapshot {
 
     private static @NotNull Snapshot createSnapshot(@NotNull RapidType type, @Nullable Snapshot parent, @NotNull Optionality optionality) {
         if (type.isArray()) {
-            return new ArraySnapshot(parent, type, optionality, (current, state) -> createSnapshot(current.getArrayType(), current, Optionality.PRESENT));
+            return new ArraySnapshot(parent, type, optionality);
         }
         if (type.isRecord()) {
-            return new RecordSnapshot(parent, type, optionality, (current, state, componentType) -> createSnapshot(componentType, current, Optionality.PRESENT));
+            return new RecordSnapshot(parent, type, optionality);
         }
         return new VariableSnapshot(parent, type, optionality);
     }

@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.platform.backend.documentation.DocumentationTarget;
 import com.intellij.platform.backend.navigation.NavigationTarget;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Set;
@@ -20,6 +21,11 @@ public interface VirtualSymbol extends RapidSymbol {
     @Override
     default @NotNull String getCanonicalName() {
         return getName();
+    }
+
+    @Override
+    default @Nullable String getQualifiedName() {
+        return ":" + getName();
     }
 
     @Override

@@ -85,7 +85,7 @@ public class RapidAttributeListImpl extends RapidStubElement<RapidAttributeListS
 
     @Override
     public void deleteChildInternal(@NotNull ASTNode child) {
-        if (RapidTokenTypes.ATTRIBUTES.contains(child.getElementType())) {
+        if (RapidTokenSets.ATTRIBUTES.contains(child.getElementType())) {
             RapidElementUtil.deleteSeparatingComma(this, child);
             RapidElementUtil.ensureSurroundingParenthesis(this);
         }

@@ -4,10 +4,10 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
-import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
-import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
-import com.bossymr.rapid.language.flow.expression.*;
+import com.bossymr.rapid.language.flow.expression.Expression;
+import com.bossymr.rapid.language.flow.expression.ReferenceExpression;
+import com.bossymr.rapid.language.flow.expression.VariableExpression;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.psi.BlockType;
 import com.intellij.execution.ExecutionException;
@@ -181,7 +181,7 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Snapshots").append("</td></tr>\n");
         Set<Snapshot> snapshots = new HashSet<>();
         for (Map.Entry<Field, Snapshot> entry : state.getSnapshots().entrySet()) {
-            writeSnapshot(stringBuilder, state, new VariableExpression(entry.getKey()), entry.getValue(), snapshots);
+            writeSnapshot(stringBuilder, new VariableExpression(entry.getKey()), entry.getValue(), snapshots);
         }
         stringBuilder.append("<tr><td COLSPAN=\"2\">").append("Expressions").append("</td></tr>\n");
         for (Expression condition : state.getConditions()) {
@@ -204,7 +204,7 @@ public class DataFlowGraphService extends AnAction {
         }
     }
 
-    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull DataFlowState state, @NotNull ReferenceExpression variable, @NotNull Snapshot snapshot, @NotNull Set<Snapshot> snapshots) {
+    private static void writeSnapshot(@NotNull StringBuilder stringBuilder, @NotNull ReferenceExpression variable, @NotNull Snapshot snapshot, @NotNull Set<Snapshot> snapshots) {
         if (!(snapshots.add(snapshot))) {
             return;
         }
@@ -225,35 +225,6 @@ public class DataFlowGraphService extends AnAction {
         stringBuilder.append(snapshot);
         stringBuilder.append("</td>");
         stringBuilder.append("</tr>\n");
-        if (snapshot instanceof RecordSnapshot recordSnapshot) {
-            for (Map.Entry<String, List<RecordSnapshot.Entry>> entry : recordSnapshot.getSnapshots().entrySet()) {
-                for (RecordSnapshot.Entry assignment : entry.getValue()) {
-                    writeSnapshot(stringBuilder, state, new ComponentExpression(assignment.snapshot().getType(), variable, entry.getKey()), assignment.snapshot(), snapshots);
-                }
-            }
-        } else if (snapshot instanceof ArraySnapshot arraySnapshot) {
-            stringBuilder.append("<tr>");
-            stringBuilder.append("<td>");
-            stringBuilder.append("length");
-            stringBuilder.append("</td>");
-            stringBuilder.append("<td align=\"left\">");
-            stringBuilder.append(arraySnapshot.getLength());
-            stringBuilder.append("</td>");
-            stringBuilder.append("</tr>\n");
-            for (ArraySnapshot.Entry assignment : arraySnapshot.getAssignments()) {
-                stringBuilder.append("<tr>");
-                stringBuilder.append("<td>");
-                stringBuilder.append(assignment.index().accept(visitor));
-                stringBuilder.append("</td>");
-                stringBuilder.append("<td align=\"left\">");
-                stringBuilder.append(assignment.snapshot());
-                stringBuilder.append("</td>");
-                stringBuilder.append("</tr>\n");
-            }
-            for (ArraySnapshot.Entry assignment : arraySnapshot.getAssignments(state)) {
-                writeSnapshot(stringBuilder, state, new IndexExpression(variable, assignment.index()), assignment.snapshot(), snapshots);
-            }
-        }
     }
 
     private static void writeInstruction(@NotNull StringBuilder stringBuilder, @NotNull Instruction instruction) {

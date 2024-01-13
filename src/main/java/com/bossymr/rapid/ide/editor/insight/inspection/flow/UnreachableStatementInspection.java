@@ -35,14 +35,8 @@ public class UnreachableStatementInspection extends LocalInspectionTool {
                 InspectionManager manager = InspectionManager.getInstance(routine.getProject());
                 PsiFile containingFile = routine.getContainingFile();
                 for (TextRange range : ranges) {
-                    SubstituteRangeFix quickFix;
                     TextRange rangeInElement = normalizeTextRange(range, routine);
-                    if (isChildOfCompactIfStatement(containingFile, rangeInElement)) {
-                        quickFix = SubstituteRangeFix.modify(RapidBundle.message("quick.fix.text.delete.unreachable.code"), routine.getContainingFile(), rangeInElement, "THEN ENDIF");
-                    } else {
-                        quickFix = SubstituteRangeFix.delete(RapidBundle.message("quick.fix.text.delete.unreachable.code"), routine.getContainingFile(), rangeInElement);
-                    }
-
+                    SubstituteRangeFix quickFix = createQuickFix(containingFile, rangeInElement);
                     ProblemDescriptor descriptor = manager.createProblemDescriptor(routine, rangeInElement.shiftLeft(routine.getTextRange().getStartOffset()), RapidBundle.message("inspection.message.unreachable.statement"), ProblemHighlightType.LIKE_UNUSED_SYMBOL, isOnTheFly, quickFix);
                     holder.registerProblem(descriptor);
                 }
@@ -50,7 +44,15 @@ public class UnreachableStatementInspection extends LocalInspectionTool {
         };
     }
 
-    private boolean isChildOfCompactIfStatement(@NotNull PsiFile file, @NotNull TextRange range) {
+    private @NotNull SubstituteRangeFix createQuickFix(@NotNull PsiFile file, @NotNull TextRange range) {
+        if (isParentCompactIfStatement(file, range)) {
+            return SubstituteRangeFix.modify(RapidBundle.message("quick.fix.text.delete.unreachable.code"), file, range, "THEN ENDIF");
+        } else {
+            return SubstituteRangeFix.delete(RapidBundle.message("quick.fix.text.delete.unreachable.code"), file, range);
+        }
+    }
+
+    private boolean isParentCompactIfStatement(@NotNull PsiFile file, @NotNull TextRange range) {
         RapidStatement statement = PsiTreeUtil.getParentOfType(file.findElementAt(range.getStartOffset()), RapidStatement.class);
         if (statement == null) {
             return false;

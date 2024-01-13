@@ -5,26 +5,18 @@ import com.bossymr.rapid.language.psi.RapidAttributeList;
 import com.bossymr.rapid.language.psi.RapidElementFactory;
 import com.bossymr.rapid.language.symbol.ModuleType;
 import com.intellij.codeInspection.util.IntentionFamilyName;
-import com.intellij.codeInspection.util.IntentionName;
-import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiFile;
+import com.intellij.modcommand.ActionContext;
+import com.intellij.modcommand.ModPsiUpdater;
+import com.intellij.modcommand.PsiUpdateModCommandAction;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class ReorderModuleAttributeFix extends RapidQuickFix {
-
+@SuppressWarnings("UnstableApiUsage")
+public class ReorderModuleAttributeFix extends PsiUpdateModCommandAction<RapidAttributeList> {
 
     public ReorderModuleAttributeFix(@NotNull RapidAttributeList attributeList) {
         super(attributeList);
-    }
-
-    @Override
-    public @IntentionName @NotNull String getText() {
-        return RapidBundle.message("quick.fix.text.reorder.module.attributes");
     }
 
     @Override
@@ -33,9 +25,9 @@ public class ReorderModuleAttributeFix extends RapidQuickFix {
     }
 
     @Override
-    public void invoke(@NotNull Project project, @NotNull PsiFile file, @Nullable Editor editor, @NotNull PsiElement startElement, @NotNull PsiElement endElement) {
-        List<ModuleType> attributes = ((RapidAttributeList) startElement).getAttributes();
-        RapidElementFactory factory = RapidElementFactory.getInstance(project);
-        startElement.replace(factory.createAttributeList(attributes));
+    protected void invoke(@NotNull ActionContext context, @NotNull RapidAttributeList element, @NotNull ModPsiUpdater updater) {
+        List<ModuleType> attributes = element.getAttributes();
+        RapidElementFactory factory = RapidElementFactory.getInstance(context.project());
+        element.replace(factory.createAttributeList(attributes));
     }
 }

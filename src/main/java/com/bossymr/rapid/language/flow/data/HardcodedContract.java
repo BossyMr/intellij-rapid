@@ -3,19 +3,21 @@ package com.bossymr.rapid.language.flow.data;
 import com.bossymr.rapid.language.builder.RapidModuleBuilder;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
+import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
-import com.bossymr.rapid.language.flow.expression.Expression;
-import com.bossymr.rapid.language.flow.expression.ReferenceExpression;
-import com.bossymr.rapid.language.flow.expression.UnaryOperator;
+import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
+import com.bossymr.rapid.language.flow.expression.*;
+import com.bossymr.rapid.language.flow.expression.FunctionCallExpression.Entry;
+import com.bossymr.rapid.language.flow.instruction.CallInstruction;
+import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 
 public enum HardcodedContract {
@@ -26,53 +28,89 @@ public enum HardcodedContract {
                             .withParameter("OptPar", ParameterType.REFERENCE, RapidPrimitiveType.ANYTYPE))
                     .withCode(codeBuilder -> {
                         Argument argument = Objects.requireNonNull(codeBuilder.getArgument("OptPar"));
-                        codeBuilder.returnValue(codeBuilder.unary(UnaryOperator.PRESENT, codeBuilder.getReference(argument)));
+                        codeBuilder.returnValue(FunctionCallExpression.present(codeBuilder.getReference(argument)));
                     }))),
     DIM(builder -> builder
             .withRoutine("Dim", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
                     .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
                             .withParameter("ArrPar", ParameterType.REFERENCE, RapidPrimitiveType.ANYTYPE)
-                            .withParameter("DimNo", ParameterType.INPUT, RapidPrimitiveType.NUMBER))
-                    .withCode(codeBuilder -> {
-                        ReferenceExpression ArrPar = codeBuilder.getReference(codeBuilder.getArgument("ArrPar"));
-                        ReferenceExpression DimNo = codeBuilder.getReference(codeBuilder.getArgument("DimNo"));
-                        codeBuilder.test(DimNo, testBuilder -> testBuilder
-                                .withCase(List.of(codeBuilder.literal(1)), caseBuilder -> {
-                                    Expression expression = caseBuilder.unary(UnaryOperator.DIMENSION, ArrPar);
-                                    caseBuilder.returnValue(expression);
-                                })
-                                .withCase(List.of(codeBuilder.literal(2)), caseBuilder -> {
-                                    ReferenceExpression index = caseBuilder.index(ArrPar, caseBuilder.literal(1));
-                                    Expression expression = caseBuilder.unary(UnaryOperator.DIMENSION, index);
-                                    caseBuilder.returnValue(expression);
-                                })
-                                .withCase(List.of(codeBuilder.literal(3)), caseBuilder -> {
-                                    ReferenceExpression index = caseBuilder.index(caseBuilder.index(ArrPar, caseBuilder.literal(1)), caseBuilder.literal(1));
-                                    Expression expression = caseBuilder.unary(UnaryOperator.DIMENSION, index);
-                                    caseBuilder.returnValue(expression);
-                                })
-                                .withDefaultCase(caseBuilder -> caseBuilder.raise(caseBuilder.literal(40241))));
-                    })));
+                            .withParameter("DimNo", ParameterType.INPUT, RapidPrimitiveType.NUMBER))),
+            (block, callerState, instruction, arguments) -> {
+                RapidType returnType = Objects.requireNonNull(block.getControlFlow().getReturnType());
+                Map<String, Expression> parameters = new HashMap<>();
+                arguments.forEach((argument, expression) -> parameters.put(argument.getName(), expression));
+                RapidExpression expression = instruction.getElement() instanceof RapidExpression element ? element : null;
+                Expression parameter = parameters.get("ArrPar");
+                if (!(parameter instanceof ReferenceExpression array) || !(array.getType().isArray())) {
+                    return Set.of(new DataFlowFunction.Result.Error(callerState.createSuccessorState(), Snapshot.createSnapshot(RapidPrimitiveType.NUMBER)));
+                }
+                Set<DataFlowFunction.Result> results = new HashSet<>();
+                Expression degree = parameters.get("DimNo");
+                ReferenceExpression returnValue = instruction.getReturnValue();
+                if (returnValue != null) {
+                    SnapshotExpression snapshot = callerState.createSnapshot(returnValue);
+                    Expression previousLength = null;
+                    ReferenceExpression variable = array;
+                    for (int i = 1; i <= 3; i++) {
+                        variable = new IndexExpression(variable, new LiteralExpression(0));
+                        DataFlowState successSuccessorState = callerState.createSuccessorState();
+                        if (previousLength != null) {
+                            successSuccessorState.add(new BinaryExpression(BinaryOperator.GREATER_THAN, previousLength, new LiteralExpression(0)));
+                            DataFlowState errorSuccessorState = callerState.createSuccessorState();
+                            errorSuccessorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, previousLength, new LiteralExpression(0)));
+                            errorSuccessorState.add(new BinaryExpression(BinaryOperator.GREATER_THAN_OR_EQUAL, degree, new LiteralExpression(i)));
+                            results.add(new DataFlowFunction.Result.Error(errorSuccessorState, Snapshot.createSnapshot(RapidPrimitiveType.NUMBER)));
+                        }
+                        successSuccessorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, degree, new LiteralExpression(i)));
+                        previousLength = new FunctionCallExpression(expression, returnType, ":Dim", List.of(Entry.pointerOf(array), Entry.valueOf(degree)));
+                        successSuccessorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, previousLength));
+                        results.add(new DataFlowFunction.Result.Success(successSuccessorState, snapshot.getSnapshot()));
+                    }
+                }
+                return results;
+            });
 
     private final @NotNull VirtualRoutine routine;
-    private final @NotNull Block block;
+    private final @NotNull ControlFlowBlock block;
 
     HardcodedContract(@NotNull Consumer<RapidModuleBuilder> consumer) {
+        this.block = new ControlFlowBlock(computeBlock(consumer));
+        this.routine = (VirtualRoutine) block.getControlFlow().getElement();
+    }
+
+    HardcodedContract(@NotNull Consumer<RapidModuleBuilder> consumer, @NotNull DataFlowProcessor processor) {
+        Block controlFlow = computeBlock(consumer);
+        this.block = new ControlFlowBlock(controlFlow, block -> new DataFlowFunction(block) {
+            @Override
+            public @NotNull Set<Result> getOutput(@NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
+                return processor.getOutput(block, callerState, instruction, getArguments(controlFlow, instruction.getArguments()));
+            }
+        });
+        this.routine = (VirtualRoutine) block.getControlFlow().getElement();
+    }
+
+    private static @NotNull Block computeBlock(@NotNull Consumer<RapidModuleBuilder> consumer) {
         ControlFlowBuilder builder = new ControlFlowBuilder();
         builder.withModule("", consumer);
         Set<Block> controlFlow = builder.getControlFlow();
         if (controlFlow.size() != 1) {
             throw new IllegalArgumentException();
         }
-        this.block = controlFlow.iterator().next();
-        this.routine = (VirtualRoutine) block.getElement();
+        return controlFlow.iterator().next();
     }
 
     public @NotNull VirtualRoutine getRoutine() {
         return routine;
     }
 
-    public @NotNull Block getBlock() {
+    public @NotNull ControlFlowBlock getBlock() {
         return block;
+    }
+
+    @FunctionalInterface
+    private interface DataFlowProcessor {
+
+        @NotNull Set<DataFlowFunction.Result> getOutput(@NotNull ControlFlowBlock block, @NotNull DataFlowState callerState, @NotNull CallInstruction instruction, @NotNull Map<Argument, Expression> arguments);
+
     }
 }
