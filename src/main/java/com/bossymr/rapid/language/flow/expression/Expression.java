@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow.expression;
 
 import com.bossymr.rapid.language.flow.ControlFlowVisitor;
+import com.bossymr.rapid.language.flow.expression.FunctionCallExpression.Entry;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
@@ -35,8 +36,13 @@ public interface Expression {
         accept(new ControlFlowVisitor<>() {
             @Override
             public Object visitFunctionCallExpression(@NotNull FunctionCallExpression expression) {
-                for (FunctionCallExpression.Entry value : expression.getArguments()) {
-                    value.variable().accept(this);
+                for (Entry value : expression.getArguments()) {
+                    if(value instanceof Entry.ValueEntry valueEntry) {
+                        valueEntry.expression().accept(this);
+                    }
+                    if(value instanceof Entry.ReferenceEntry referenceEntry) {
+                        new SnapshotExpression(referenceEntry.snapshot()).accept(this);
+                    }
                     if (cancelled.get()) {
                         return null;
                     }
@@ -102,6 +108,27 @@ public interface Expression {
 
     default @NotNull Expression replace(@NotNull Function<Expression, Expression> mapper) {
         return accept(new ControlFlowVisitor<>() {
+            @Override
+            public Expression visitFunctionCallExpression(@NotNull FunctionCallExpression expression) {
+                List<Entry> arguments = expression.getArguments().stream()
+                        .map(entry -> {
+                            if(entry instanceof Entry.ValueEntry valueEntry) {
+                                return new Entry.ValueEntry(valueEntry.expression().accept(this));
+                            }
+                            if(entry instanceof Entry.ReferenceEntry referenceEntry) {
+                                SnapshotExpression snapshot = new SnapshotExpression(referenceEntry.snapshot());
+                                Expression replaceValue = snapshot.accept(this);
+                                if(!(replaceValue instanceof SnapshotExpression replaceSnapshot)) {
+                                    throw new IllegalArgumentException("Could not replace snapshot: " + referenceEntry.snapshot() + " with: " + replaceValue);
+                                }
+                                return new Entry.ReferenceEntry(replaceSnapshot.getSnapshot());
+                            }
+                            return entry;
+                        })
+                        .toList();
+                return new FunctionCallExpression(expression.getElement(), expression.getType(), expression.getName(), arguments);
+            }
+
             @Override
             public Expression visitAggregateExpression(@NotNull AggregateExpression expression) {
                 List<Expression> expressions = expression.getExpressions().stream()

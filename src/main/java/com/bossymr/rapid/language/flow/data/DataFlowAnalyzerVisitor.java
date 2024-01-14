@@ -134,9 +134,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
         if (value instanceof ReferenceExpression reference) {
             return state.getSnapshot(reference);
         }
-        SnapshotExpression snapshot = state.createSnapshot(value);
-        state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, value));
-        return snapshot;
+        return state.createSnapshot(value);
     }
 
     private @NotNull List<DataFlowState> createSuccessorState(@NotNull Instruction successor) {

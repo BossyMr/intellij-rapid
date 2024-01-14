@@ -25,11 +25,25 @@ public enum HardcodedContract {
     PRESENT(builder -> builder
             .withRoutine("Present", RoutineType.FUNCTION, RapidPrimitiveType.BOOLEAN, routineBuilder -> routineBuilder
                     .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
-                            .withParameter("OptPar", ParameterType.REFERENCE, RapidPrimitiveType.ANYTYPE))
-                    .withCode(codeBuilder -> {
-                        Argument argument = Objects.requireNonNull(codeBuilder.getArgument("OptPar"));
-                        codeBuilder.returnValue(FunctionCallExpression.present(codeBuilder.getReference(argument)));
-                    }))),
+                            .withParameter("OptPar", ParameterType.REFERENCE, RapidPrimitiveType.ANYTYPE))),
+            (block, callerState, instruction, arguments) -> {
+                Map<String, Expression> parameters = new HashMap<>();
+                arguments.forEach((argument, expression) -> parameters.put(argument.getName(), expression));
+                Expression expression = parameters.get("OptPar");
+                if (!(expression instanceof ReferenceExpression)) {
+                    DataFlowState successorState = callerState.createSuccessorState();
+                    Snapshot snapshot = Snapshot.createSnapshot(RapidPrimitiveType.BOOLEAN);
+                    successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), new LiteralExpression(true)));
+                    return Set.of(new DataFlowFunction.Result.Success(successorState, snapshot));
+                }
+                if (!(expression instanceof SnapshotExpression snapshotExpression)) {
+                    throw new IllegalArgumentException();
+                }
+                DataFlowState successorState = callerState.createSuccessorState();
+                Snapshot snapshot = Snapshot.createSnapshot(RapidPrimitiveType.BOOLEAN);
+                successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), FunctionCallExpression.present(snapshotExpression.getSnapshot())));
+                return Set.of(new DataFlowFunction.Result.Success(successorState, snapshot));
+            }),
     DIM(builder -> builder
             .withRoutine("Dim", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
                     .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
@@ -41,7 +55,7 @@ public enum HardcodedContract {
                 arguments.forEach((argument, expression) -> parameters.put(argument.getName(), expression));
                 RapidExpression expression = instruction.getElement() instanceof RapidExpression element ? element : null;
                 Expression parameter = parameters.get("ArrPar");
-                if (!(parameter instanceof ReferenceExpression array) || !(array.getType().isArray())) {
+                if (!(parameter instanceof SnapshotExpression array) || !(array.getType().isArray())) {
                     return Set.of(new DataFlowFunction.Result.Error(callerState.createSuccessorState(), Snapshot.createSnapshot(RapidPrimitiveType.NUMBER)));
                 }
                 Set<DataFlowFunction.Result> results = new HashSet<>();
@@ -62,7 +76,7 @@ public enum HardcodedContract {
                             results.add(new DataFlowFunction.Result.Error(errorSuccessorState, Snapshot.createSnapshot(RapidPrimitiveType.NUMBER)));
                         }
                         successSuccessorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, degree, new LiteralExpression(i)));
-                        previousLength = new FunctionCallExpression(expression, returnType, ":Dim", List.of(Entry.pointerOf(array), Entry.valueOf(degree)));
+                        previousLength = new FunctionCallExpression(expression, returnType, ":Dim", List.of(Entry.pointerOf(array.getSnapshot()), Entry.valueOf(degree)));
                         successSuccessorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, previousLength));
                         results.add(new DataFlowFunction.Result.Success(successSuccessorState, snapshot.getSnapshot()));
                     }

@@ -337,14 +337,17 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 proc foo:bar(\\input num _0 [a]) {
+                	bool _1;
+                                
                 	STATEMENT_LIST:
-                	0: if(:Present(REF _0)) -> [true: 1, false: 2]
+                	0: _1 := :Present(REF _0);
+                	1: if(_1) -> [true: 2, false: 3]
                                 
-                	1: foo:conditional(_a := _0);
-                	   goto -> [3];
+                	2: foo:conditional(_a := _0);
+                	   goto -> [4];
                                 
-                	2: foo:conditional();
-                	3: return;
+                	3: foo:conditional();
+                	4: return;
                 }
                                 
                 proc foo:conditional(\\input num _0 [a]) {
@@ -365,24 +368,31 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 ENDMODULE
                 """, """
                 proc foo:bar(\\input num _0 [a], \\input num _1 [b]) {
+                	bool _2;
+                	bool _3;
+                	bool _4;
+                                
                 	STATEMENT_LIST:
-                	0: if(:Present(REF _0)) -> [true: 1, false: 4]
+                	0: _2 := :Present(REF _0);
+                	1: if(_2) -> [true: 2, false: 6]
                                 
-                	1: if(:Present(REF _1)) -> [true: 2, false: 3]
+                	2: _3 := :Present(REF _1);
+                	3: if(_3) -> [true: 4, false: 5]
                                 
-                	2: foo:conditional(_a := _0, _b := _1);
-                	   goto -> [7];
+                	4: foo:conditional(_a := _0, _b := _1);
+                	   goto -> [10];
                                 
-                	3: foo:conditional(_a := _0);
-                	   goto -> [7];
+                	5: foo:conditional(_a := _0);
+                	   goto -> [10];
                                 
-                	4: if(:Present(REF _1)) -> [true: 5, false: 6]
+                	6: _4 := :Present(REF _1);
+                	7: if(_4) -> [true: 8, false: 9]
                                 
-                	5: foo:conditional(_b := _1);
-                	   goto -> [7];
+                	8: foo:conditional(_b := _1);
+                	   goto -> [10];
                                 
-                	6: foo:conditional();
-                	7: return;
+                	9: foo:conditional();
+                	10: return;
                 }
                                 
                 proc foo:conditional(\\input num _0 [a], \\input num _1 [b]) {

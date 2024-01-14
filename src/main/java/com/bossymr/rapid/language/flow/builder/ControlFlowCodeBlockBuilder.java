@@ -542,7 +542,8 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
             condition = any(RapidPrimitiveType.BOOLEAN);
         } else {
             ReferenceExpression reference = getReference(argument);
-            condition = FunctionCallExpression.present(reference);
+            condition = getReference(createVariable(RapidPrimitiveType.BOOLEAN));
+            call(element, new LiteralExpression(":Present"), ((ReferenceExpression) condition), Map.of(new ArgumentDescriptor.Required(0), reference));
         }
         ifThenElse(condition,
                 builder -> {

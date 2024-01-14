@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class FunctionCallExpression extends SnapshotExpression {
+public class FunctionCallExpression implements Expression {
 
     private final @Nullable SmartPsiElementPointer<RapidExpression> expression;
 
@@ -29,14 +29,13 @@ public class FunctionCallExpression extends SnapshotExpression {
     }
 
     public FunctionCallExpression(@Nullable RapidExpression expression, @NotNull RapidType returnType, @NotNull String name, @NotNull List<Entry> arguments) {
-        super(Snapshot.createSnapshot(returnType));
         this.expression = expression != null ? SmartPointerManager.createPointer(expression) : null;
         this.returnType = returnType;
         this.name = name;
         this.arguments = arguments;
     }
 
-    public static @NotNull FunctionCallExpression constant(@NotNull ReferenceExpression variable, @NotNull Expression value) {
+    public static @NotNull FunctionCallExpression constant(@NotNull Snapshot variable, @NotNull Expression value) {
         RapidType type = variable.getType();
         if (!(type.isArray())) {
             throw new IllegalArgumentException("Cannot create constant expression for variable: " + variable + " of type: " + type);
@@ -48,7 +47,7 @@ public class FunctionCallExpression extends SnapshotExpression {
         return new FunctionCallExpression(arrayType, ":ConstantA", List.of(Entry.pointerOf(variable), Entry.pointerOf(variable)));
     }
 
-    public static @NotNull FunctionCallExpression select(@NotNull ReferenceExpression variable, @NotNull Expression index) {
+    public static @NotNull FunctionCallExpression select(@NotNull Snapshot variable, @NotNull Expression index) {
         RapidType type = variable.getType();
         if (!(type.isArray())) {
             throw new IllegalArgumentException("Cannot create index expression for variable: " + variable + " of type: " + type);
@@ -60,7 +59,7 @@ public class FunctionCallExpression extends SnapshotExpression {
         return new FunctionCallExpression(arrayType, ":SelectA", List.of(Entry.pointerOf(variable), Entry.valueOf(index)));
     }
 
-    public static @NotNull FunctionCallExpression store(@NotNull ReferenceExpression variable, @NotNull Expression index, @NotNull Expression value) {
+    public static @NotNull FunctionCallExpression store(@NotNull Snapshot variable, @NotNull Expression index, @NotNull Expression value) {
         RapidType variableType = variable.getType();
         if (!(variableType.isArray())) {
             throw new IllegalArgumentException("Cannot create store expression for variable: " + variable + " of type: " + variableType);
@@ -72,7 +71,7 @@ public class FunctionCallExpression extends SnapshotExpression {
         return new FunctionCallExpression(variableType, ":StoreA", List.of(Entry.pointerOf(variable), Entry.valueOf(index), Entry.valueOf(value)));
     }
 
-    public static @NotNull FunctionCallExpression select(@NotNull ReferenceExpression variable, @NotNull String componentName) {
+    public static @NotNull FunctionCallExpression select(@NotNull Snapshot variable, @NotNull String componentName) {
         RapidType variableType = variable.getType();
         if (!(variableType.isRecord()) || !(variableType.getRootStructure() instanceof RapidRecord record)) {
             throw new IllegalArgumentException("Cannot create component expression for variable: " + variable + " of type: " + variableType);
@@ -81,7 +80,7 @@ public class FunctionCallExpression extends SnapshotExpression {
         return new FunctionCallExpression(componentType, ":SelectS", List.of(Entry.pointerOf(variable), Entry.valueOf(new LiteralExpression(componentName))));
     }
 
-    public static @NotNull FunctionCallExpression store(@NotNull ReferenceExpression variable, @NotNull String componentName, @NotNull Expression value) {
+    public static @NotNull FunctionCallExpression store(@NotNull Snapshot variable, @NotNull String componentName, @NotNull Expression value) {
         RapidType variableType = variable.getType();
         if (!(variableType.isRecord()) || !(variableType.getRootStructure() instanceof RapidRecord)) {
             throw new IllegalArgumentException("Cannot create store expression for variable: " + variable + " of type: " + variableType);
@@ -89,14 +88,11 @@ public class FunctionCallExpression extends SnapshotExpression {
         return new FunctionCallExpression(variableType, ":StoreS", List.of(Entry.pointerOf(variable), Entry.valueOf(new LiteralExpression(componentName)), Entry.valueOf(value)));
     }
 
-    public static @NotNull Expression present(@NotNull Expression expression) {
-        if (!(expression instanceof ReferenceExpression variable)) {
-            return new LiteralExpression(true);
-        }
+    public static @NotNull FunctionCallExpression present(@NotNull Snapshot variable) {
         return new FunctionCallExpression(RapidPrimitiveType.BOOLEAN, ":Present", List.of(Entry.pointerOf(variable)));
     }
 
-    public static @NotNull FunctionCallExpression length(@NotNull ReferenceExpression variable, @NotNull Expression depth) {
+    public static @NotNull FunctionCallExpression length(@NotNull Snapshot variable, @NotNull Expression depth) {
         if (!(variable.getType().isArray()) || !(depth.getType().isAssignable(RapidPrimitiveType.NUMBER))) {
             throw new IllegalArgumentException("Cannot create dimension expression for variable: " + variable + " at depth: " + depth);
         }
@@ -138,19 +134,31 @@ public class FunctionCallExpression extends SnapshotExpression {
     @Override
     public String toString() {
         return name + arguments.stream()
-                               .map(entry -> (entry.type().equals(RapidPrimitiveType.ANYTYPE) ? "REF " : "") + entry.variable)
+                               .map(entry -> {
+                                   if(entry instanceof Entry.ValueEntry valueEntry) {
+                                       return valueEntry.expression().toString();
+                                   }
+                                   if(entry instanceof Entry.ReferenceEntry referenceEntry) {
+                                       return referenceEntry.snapshot().toString();
+                                   }
+                                   throw new AssertionError();
+                               })
                                .collect(Collectors.joining(", ", "(", ")"));
     }
 
-    public record Entry(@NotNull RapidType type, @NotNull Expression variable) {
+    public sealed interface Entry {
 
-        public static @NotNull Entry valueOf(@NotNull Expression variable) {
-            return new Entry(variable.getType(), variable);
+        static @NotNull ValueEntry valueOf(@NotNull Expression expression) {
+            return new ValueEntry(expression);
         }
 
-        public static @NotNull Entry pointerOf(@NotNull ReferenceExpression variable) {
-            return new Entry(RapidPrimitiveType.ANYTYPE, variable);
+        static @NotNull ReferenceEntry pointerOf(@NotNull Snapshot snapshot) {
+            return new ReferenceEntry(snapshot);
         }
+
+        record ValueEntry(@NotNull Expression expression) implements Entry {}
+
+        record ReferenceEntry(@NotNull Snapshot snapshot) implements Entry {}
 
     }
 }

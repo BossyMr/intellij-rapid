@@ -75,8 +75,8 @@ public class DataFlowState {
         if (type.isArray()) {
             ArraySnapshot snapshot = new ArraySnapshot(parent, type, Optionality.PRESENT);
             ArraySnapshot copy = snapshot.copy();
-            Snapshot defaultSnapshot = createDefaultSnapshot(type.createArrayType(type.getDimensions() - 1), snapshot);
-            add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(copy), FunctionCallExpression.constant(new SnapshotExpression(snapshot), new SnapshotExpression(defaultSnapshot))));
+            Snapshot defaultSnapshot = createDefaultSnapshot(type.createArrayType(type.getDimensions() - 1), copy);
+            add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(copy), FunctionCallExpression.constant(snapshot, new SnapshotExpression(defaultSnapshot))));
             RapidType arrayType = type;
             for (int i = 0; i < 3; i++) {
                 Expression value = getLength(arrayType);
@@ -84,7 +84,7 @@ public class DataFlowState {
                     break;
                 }
                 arrayType = ((RapidArrayType) arrayType).getUnderlyingType();
-                add(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.length(new SnapshotExpression(copy), new LiteralExpression(i + 1)), value));
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.length(copy, new LiteralExpression(i + 1)), value));
             }
             return copy;
         }
@@ -94,7 +94,7 @@ public class DataFlowState {
             for (String componentName : components.keySet()) {
                 RapidType componentType = components.get(componentName);
                 Snapshot defaultSnapshot = createDefaultSnapshot(componentType, snapshot);
-                FunctionCallExpression select = FunctionCallExpression.select(new SnapshotExpression(snapshot), componentName);
+                FunctionCallExpression select = FunctionCallExpression.select(snapshot, componentName);
                 add(new BinaryExpression(BinaryOperator.EQUAL_TO, select, new SnapshotExpression(defaultSnapshot)));
             }
             return snapshot;
@@ -306,18 +306,18 @@ public class DataFlowState {
                     }
                     binaryExpression = new BinaryExpression(binaryExpression.getOperator(), binaryExpression.getRight(), binaryExpression.getLeft());
                 }
-                if (binaryExpression.getLeft() instanceof ReferenceExpression referenceExpression) {
+                if (binaryExpression.getLeft() instanceof SnapshotExpression snapshotExpression) {
                     AggregateExpression aggregateExpression = (AggregateExpression) binaryExpression.getRight();
                     List<? extends Expression> components = aggregateExpression.getExpressions();
-                    if (referenceExpression.getType().getDimensions() > 0) {
-                        add(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.length(referenceExpression, new LiteralExpression(1)), new LiteralExpression(components.size())));
+                    if (snapshotExpression.getType().getDimensions() > 0) {
+                        add(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.length(snapshotExpression.getSnapshot(), new LiteralExpression(1)), new LiteralExpression(components.size())));
                         for (int i = 0; i < components.size(); i++) {
                             Expression component = components.get(i);
-                            IndexExpression indexExpression = new IndexExpression(referenceExpression, new LiteralExpression(i + 1));
+                            IndexExpression indexExpression = new IndexExpression(snapshotExpression, new LiteralExpression(i + 1));
                             assign(indexExpression, component);
                         }
                         return;
-                    } else if (referenceExpression.getType().getRootStructure() instanceof RapidRecord record) {
+                    } else if (snapshotExpression.getType().getRootStructure() instanceof RapidRecord record) {
                         List<? extends RapidComponent> fields = record.getComponents();
                         if (fields.size() != components.size()) {
                             throw new IllegalArgumentException("Cannot add expression: " + expression);
@@ -327,7 +327,7 @@ public class DataFlowState {
                             Expression component = components.get(i);
                             RapidType componentType = Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE);
                             String componentName = Objects.requireNonNullElse(field.getName(), "<ID>");
-                            ComponentExpression componentExpression = new ComponentExpression(componentType, referenceExpression, componentName);
+                            ComponentExpression componentExpression = new ComponentExpression(componentType, snapshotExpression, componentName);
                             assign(componentExpression, component);
                         }
                         return;
@@ -343,7 +343,6 @@ public class DataFlowState {
         if (conditions.contains(expression)) {
             return;
         }
-        assert expression.getComponents().stream().noneMatch(expr -> expr instanceof ReferenceExpression && !(expr instanceof SnapshotExpression));
         conditions.add(expression);
     }
 
@@ -395,20 +394,16 @@ public class DataFlowState {
             }
             Expression index = getSnapshot(indexExpression.getIndex());
             ArraySnapshot replacement = array.copy();
-            SnapshotExpression arrayExpression = new SnapshotExpression(array);
             SnapshotExpression replacementExpression = new SnapshotExpression(replacement);
             assign(indexExpression.getVariable(), replacementExpression);
             SnapshotExpression value = new SnapshotExpression(Snapshot.createSnapshot(indexExpression.getType()));
-            BinaryExpression equalToUpdate = new BinaryExpression(BinaryOperator.EQUAL_TO, replacementExpression, FunctionCallExpression.store(arrayExpression, index, value));
-            assert equalToUpdate.getComponents().stream().noneMatch(expr -> expr instanceof ReferenceExpression && !(expr instanceof SnapshotExpression));
+            BinaryExpression equalToUpdate = new BinaryExpression(BinaryOperator.EQUAL_TO, replacementExpression, FunctionCallExpression.store(array, index, value));
             conditions.add(equalToUpdate);
-            BinaryExpression presentEqual = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(arrayExpression), FunctionCallExpression.present(replacementExpression));
-            assert presentEqual.getComponents().stream().noneMatch(expr -> expr instanceof ReferenceExpression && !(expr instanceof SnapshotExpression));
+            BinaryExpression presentEqual = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(array), FunctionCallExpression.present(replacement));
             conditions.add(presentEqual);
-            for (int i = 0; i < arrayExpression.getType().getDimensions(); i++) {
+            for (int i = 0; i < array.getType().getDimensions(); i++) {
                 LiteralExpression depth = new LiteralExpression(i + 1);
-                BinaryExpression lengthEqual = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.length(arrayExpression, depth), FunctionCallExpression.length(replacementExpression, depth));
-                assert lengthEqual.getComponents().stream().noneMatch(expr -> expr instanceof ReferenceExpression && !(expr instanceof SnapshotExpression));
+                BinaryExpression lengthEqual = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.length(array, depth), FunctionCallExpression.length(replacement, depth));
                 conditions.add(lengthEqual);
             }
             return value;
@@ -419,15 +414,12 @@ public class DataFlowState {
                 throw new IllegalArgumentException("Could not find record snapshot for expression: " + componentExpression + ", found: " + snapshot + " of type: " + snapshot.getType());
             }
             RecordSnapshot replacement = record.copy();
-            SnapshotExpression recordExpression = new SnapshotExpression(record);
             SnapshotExpression replacementExpression = new SnapshotExpression(replacement);
             assign(componentExpression.getVariable(), replacementExpression);
             SnapshotExpression value = new SnapshotExpression(Snapshot.createSnapshot(componentExpression.getType()));
-            BinaryExpression equalToUpdate = new BinaryExpression(BinaryOperator.EQUAL_TO, replacementExpression, FunctionCallExpression.store(recordExpression, componentExpression.getComponent(), value));
-            assert equalToUpdate.getComponents().stream().noneMatch(expr -> expr instanceof ReferenceExpression && !(expr instanceof SnapshotExpression));
+            BinaryExpression equalToUpdate = new BinaryExpression(BinaryOperator.EQUAL_TO, replacementExpression, FunctionCallExpression.store(record, componentExpression.getComponent(), value));
             conditions.add(equalToUpdate);
-            BinaryExpression presentEqual = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(recordExpression), FunctionCallExpression.present(replacementExpression));
-            assert equalToUpdate.getComponents().stream().noneMatch(expr -> expr instanceof ReferenceExpression && !(expr instanceof SnapshotExpression));
+            BinaryExpression presentEqual = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(record), FunctionCallExpression.present(replacement));
             conditions.add(presentEqual);
             return value;
         }
@@ -502,12 +494,18 @@ public class DataFlowState {
 
             @Override
             public @NotNull SnapshotExpression visitIndexExpression(@NotNull IndexExpression expression) {
-                return FunctionCallExpression.select(getSnapshot(expression.getVariable()), getSnapshot(expression.getIndex()));
+                FunctionCallExpression index = FunctionCallExpression.select(getSnapshot(expression.getVariable()).getSnapshot(), getSnapshot(expression.getIndex()));
+                SnapshotExpression variable = new SnapshotExpression(Snapshot.createSnapshot(index.getType()));
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, variable, index));
+                return variable;
             }
 
             @Override
             public @NotNull SnapshotExpression visitComponentExpression(@NotNull ComponentExpression expression) {
-                return FunctionCallExpression.select(getSnapshot(expression.getVariable()), expression.getComponent());
+                FunctionCallExpression component = FunctionCallExpression.select(getSnapshot(expression.getVariable()).getSnapshot(), expression.getComponent());
+                SnapshotExpression variable = new SnapshotExpression(Snapshot.createSnapshot(component.getType()));
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, variable, component));
+                return variable;
             }
         });
     }

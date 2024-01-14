@@ -115,6 +115,6 @@ public class ControlFlowVisitor<R> {
     }
 
     public R visitFunctionCallExpression(@NotNull FunctionCallExpression expression) {
-        return visitSnapshotExpression(expression);
+        return visitExpression(expression);
     }
 }

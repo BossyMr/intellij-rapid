@@ -274,6 +274,11 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     }
 
     @Override
+    public String visitFunctionCallExpression(@NotNull FunctionCallExpression expression) {
+        return expression.toString();
+    }
+
+    @Override
     public String visitConstantExpression(@NotNull LiteralExpression expression) {
         if (expression.getValue() instanceof String) {
             return "\"" + expression.getValue() + "\"";

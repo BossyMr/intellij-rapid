@@ -132,6 +132,20 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                 """);
     }
 
+    public void testMutuallyExclusiveArgument2() throws IOException, ExecutionException {
+        checkByText("""
+                MODULE foo
+                    PROC bar(\\num x | num y | num z)
+                        IF Present(x) THEN
+                            z := y + x + z;
+                        ELSE
+                            z := y - x - z;
+                        ENDIF
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
     public void testMissingVariable() throws IOException, ExecutionException {
         checkByText("""
                 MODULE foo
