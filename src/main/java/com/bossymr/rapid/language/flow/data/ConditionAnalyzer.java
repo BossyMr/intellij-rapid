@@ -4,7 +4,10 @@ import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.expression.*;
 import com.bossymr.rapid.language.flow.expression.FunctionCallExpression.Entry;
-import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.symbol.RapidComponent;
+import com.bossymr.rapid.language.symbol.RapidRecord;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
+import com.bossymr.rapid.language.symbol.RapidVariable;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.microsoft.z3.*;
@@ -72,7 +75,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     }
 
     public static @NotNull Optionality getOptionality(@NotNull DataFlowState state, @NotNull ReferenceExpression variable) {
-        if(!(variable instanceof SnapshotExpression snapshotExpression)) {
+        if (!(variable instanceof SnapshotExpression snapshotExpression)) {
             throw new IllegalArgumentException("Cannot compute optionality for variable: " + variable);
         }
         Constraint constraint = getBooleanValue(state, FunctionCallExpression.present(snapshotExpression.getSnapshot()));
@@ -98,8 +101,8 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                 solver.add(context.mkFalse());
                 return conditionAnalyzer;
             }
-        }        solver.add(queue.toArray(BoolExpr[]::new));
-        System.out.println(solver);
+        }
+        solver.add(queue.toArray(BoolExpr[]::new));
         return conditionAnalyzer;
     }
 
@@ -140,26 +143,31 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             case ":SelectA" -> context.mkSelect(arguments[0], arguments[1]);
             case ":StoreA" -> context.mkStore(arguments[0], arguments[1], arguments[2]);
             case ":SelectS", ":StoreS" -> {
-                Entry.ReferenceEntry referenceEntry = ((Entry.ReferenceEntry) expression.getArguments().get(0));
-                RapidRecord record = ((RapidRecord) referenceEntry.snapshot().getType().getRootStructure());
+                Entry.ValueEntry referenceEntry = ((Entry.ValueEntry) expression.getArguments().get(0));
+                RapidRecord record = ((RapidRecord) referenceEntry.expression().getType().getRootStructure());
                 Objects.requireNonNull(record);
                 Entry.ValueEntry valueEntry = (Entry.ValueEntry) expression.getArguments().get(1);
                 LiteralExpression literalExpression = (LiteralExpression) valueEntry.expression();
                 String componentName = (String) literalExpression.getValue();
                 FuncDecl<?> field = getField(record, componentName);
-                if(expression.getName().equals(":SelectS")) {
+                if (expression.getName().equals(":SelectS")) {
+                    System.out.println("field = " + field);
+                    System.out.println("arguments[0] = " + arguments[0]);
                     yield context.mkApp(field, arguments[0]);
                 } else {
                     // TODO: Fix this method...
+                    System.out.println("field = " + field);
+                    System.out.println("arguments[0] = " + arguments[0]);
+                    System.out.println("arguments[2] = " + arguments[2]);
                     yield context.mkUpdateField(field, arguments[0], arguments[2]);
                 }
             }
             default -> {
                 Sort sort = Objects.requireNonNullElseGet(getSort(expression.getType()), context::getRealSort);
                 Sort[] sorts = Arrays.stream(arguments)
-                                        .map(Expr::getSort)
-                                        .toList()
-                                        .toArray(new Sort[0]);
+                                     .map(Expr::getSort)
+                                     .toList()
+                                     .toArray(new Sort[0]);
                 FuncDecl<?> funcDecl = context.mkFuncDecl(expression.getName(), sorts, sort);
                 yield funcDecl.apply(arguments);
             }
@@ -188,9 +196,9 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         Expr<?>[] expressions = new Expr<?>[arguments.size()];
         for (int i = 0; i < arguments.size(); i++) {
             Entry entry = arguments.get(i);
-            if(entry instanceof Entry.ReferenceEntry referenceEntry) {
+            if (entry instanceof Entry.ReferenceEntry referenceEntry) {
                 expressions[i] = createPointer(referenceEntry.snapshot());
-            } else if(entry instanceof Entry.ValueEntry valueEntry) {
+            } else if (entry instanceof Entry.ValueEntry valueEntry) {
                 expressions[i] = getExpression(null, valueEntry.expression());
             }
         }
@@ -218,7 +226,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             case LESS_THAN_OR_EQUAL -> context.mkLe(getAsNumber(left), getAsNumber(right));
             case EQUAL_TO -> {
                 if (isEqualSort(left, right)) {
-                    if(expression.getLeft() instanceof SnapshotExpression leftSnapshot && expression.getRight() instanceof SnapshotExpression rightSnapshot) {
+                    if (expression.getLeft() instanceof SnapshotExpression leftSnapshot && expression.getRight() instanceof SnapshotExpression rightSnapshot) {
                         yield context.mkAnd(context.mkEq(left, right), context.mkEq(createPointer(leftSnapshot.getSnapshot()), createPointer(rightSnapshot.getSnapshot())));
                     }
                     yield context.mkEq(left, right);
@@ -365,7 +373,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
         if (type.isArray()) {
             Sort sort = Objects.requireNonNullElseGet(getSort(type.createArrayType(type.getDimensions() - 1)), context::getRealSort);
-            return context.mkArraySort(new Sort[]{context.getIntSort()}, sort);
+            return context.mkArraySort(new Sort[]{context.getRealSort()}, sort);
         }
         if (type.isRecord() && type.getRootStructure() instanceof RapidRecord record) {
             Sort[] sorts = record.getComponents().stream()

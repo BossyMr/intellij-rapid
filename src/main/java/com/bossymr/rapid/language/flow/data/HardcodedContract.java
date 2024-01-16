@@ -19,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public enum HardcodedContract {
 
@@ -30,15 +31,13 @@ public enum HardcodedContract {
                 Map<String, Expression> parameters = new HashMap<>();
                 arguments.forEach((argument, expression) -> parameters.put(argument.getName(), expression));
                 Expression expression = parameters.get("OptPar");
-                if (!(expression instanceof ReferenceExpression)) {
+                if (!(expression instanceof ReferenceExpression referenceExpression)) {
                     DataFlowState successorState = callerState.createSuccessorState();
                     Snapshot snapshot = Snapshot.createSnapshot(RapidPrimitiveType.BOOLEAN);
                     successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), new LiteralExpression(true)));
                     return Set.of(new DataFlowFunction.Result.Success(successorState, snapshot));
                 }
-                if (!(expression instanceof SnapshotExpression snapshotExpression)) {
-                    throw new IllegalArgumentException();
-                }
+                SnapshotExpression snapshotExpression = callerState.getSnapshot(referenceExpression);
                 DataFlowState successorState = callerState.createSuccessorState();
                 Snapshot snapshot = Snapshot.createSnapshot(RapidPrimitiveType.BOOLEAN);
                 successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), FunctionCallExpression.present(snapshotExpression.getSnapshot())));
@@ -82,7 +81,12 @@ public enum HardcodedContract {
                     }
                 }
                 return results;
-            });
+            }),
+    COSINE(builder -> builder
+            .withRoutine("Cos", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
+                    .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
+                            .withParameter("Angle", ParameterType.INPUT, RapidPrimitiveType.NUMBER))),
+            DataFlowProcessor.pureProcessor());
 
     private final @NotNull VirtualRoutine routine;
     private final @NotNull ControlFlowBlock block;
@@ -97,7 +101,14 @@ public enum HardcodedContract {
         this.block = new ControlFlowBlock(controlFlow, block -> new DataFlowFunction(block) {
             @Override
             public @NotNull Set<Result> getOutput(@NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
-                return processor.getOutput(block, callerState, instruction, getArguments(controlFlow, instruction.getArguments()));
+                Set<Result> output = processor.getOutput(block, callerState, instruction, getArguments(controlFlow, instruction.getArguments()));
+                return output.stream()
+                             .map(result -> {
+                                 Result normalized = getOutput(result, callerState, instruction);
+                                 result.state().prune();
+                                 return normalized;
+                             })
+                             .collect(Collectors.toSet());
             }
         });
         this.routine = (VirtualRoutine) block.getControlFlow().getElement();
@@ -124,7 +135,37 @@ public enum HardcodedContract {
     @FunctionalInterface
     private interface DataFlowProcessor {
 
-        @NotNull Set<DataFlowFunction.Result> getOutput(@NotNull ControlFlowBlock block, @NotNull DataFlowState callerState, @NotNull CallInstruction instruction, @NotNull Map<Argument, Expression> arguments);
+        static @NotNull DataFlowProcessor pureProcessor() {
+            return (block, callerState, instruction, arguments) -> {
+                Block controlFlow = block.getControlFlow();
+                RapidType returnType = controlFlow.getReturnType();
+                DataFlowState successorState = callerState.createSuccessorState();
+                if (returnType == null) {
+                    return Set.of(new DataFlowFunction.Result.Success(successorState, null));
+                }
+                String name = controlFlow.getModuleName() + ":" + controlFlow.getName();
+                Snapshot snapshot = Snapshot.createSnapshot(returnType);
+                List<Entry> entries = new ArrayList<>();
+                List<Argument> parameters = controlFlow.getArguments();
+                List<Map.Entry<Argument, Expression>> ordered = new ArrayList<>(arguments.entrySet());
+                ordered.sort(Map.Entry.comparingByKey(Comparator.comparing(parameters::indexOf)));
+                for (Map.Entry<Argument, Expression> argument : ordered) {
+                    if (argument.getKey().getParameterType() == ParameterType.INPUT || !(argument.getValue() instanceof SnapshotExpression expression)) {
+                        entries.add(new Entry.ValueEntry(argument.getValue()));
+                        continue;
+                    }
+                    entries.add(new Entry.ReferenceEntry(expression.getSnapshot()));
+                }
+                FunctionCallExpression expression = new FunctionCallExpression(returnType, name, entries);
+                successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), expression));
+                return Set.of(new DataFlowFunction.Result.Success(successorState, snapshot));
+            };
+        }
+
+        @NotNull Set<DataFlowFunction.Result> getOutput(@NotNull ControlFlowBlock block,
+                                                        @NotNull DataFlowState callerState,
+                                                        @NotNull CallInstruction instruction,
+                                                        @NotNull Map<Argument, Expression> arguments);
 
     }
 }

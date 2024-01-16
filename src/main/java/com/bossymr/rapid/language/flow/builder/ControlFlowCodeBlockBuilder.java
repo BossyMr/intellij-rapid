@@ -126,7 +126,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
         if (!(index.getType().isAssignable(RapidPrimitiveType.NUMBER))) {
             throw new IllegalArgumentException("Cannot reference index of type: " + index.getType());
         }
-        return new IndexExpression(getAsVariable(variable), index);
+        return new IndexExpression(variable, index);
     }
 
     @Override

@@ -340,7 +340,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _1;
                                 
                 	STATEMENT_LIST:
-                	0: _1 := :Present(REF _0);
+                	0: _1 := :Present(_0 := _0);
                 	1: if(_1) -> [true: 2, false: 3]
                                 
                 	2: foo:conditional(_a := _0);
@@ -373,10 +373,10 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _4;
                                 
                 	STATEMENT_LIST:
-                	0: _2 := :Present(REF _0);
+                	0: _2 := :Present(_0 := _0);
                 	1: if(_2) -> [true: 2, false: 6]
                                 
-                	2: _3 := :Present(REF _1);
+                	2: _3 := :Present(_0 := _1);
                 	3: if(_3) -> [true: 4, false: 5]
                                 
                 	4: foo:conditional(_a := _0, _b := _1);
@@ -385,7 +385,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	5: foo:conditional(_a := _0);
                 	   goto -> [10];
                                 
-                	6: _4 := :Present(REF _1);
+                	6: _4 := :Present(_0 := _1);
                 	7: if(_4) -> [true: 8, false: 9]
                                 
                 	8: foo:conditional(_b := _1);

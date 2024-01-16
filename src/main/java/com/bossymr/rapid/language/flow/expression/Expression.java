@@ -37,10 +37,10 @@ public interface Expression {
             @Override
             public Object visitFunctionCallExpression(@NotNull FunctionCallExpression expression) {
                 for (Entry value : expression.getArguments()) {
-                    if(value instanceof Entry.ValueEntry valueEntry) {
+                    if (value instanceof Entry.ValueEntry valueEntry) {
                         valueEntry.expression().accept(this);
                     }
-                    if(value instanceof Entry.ReferenceEntry referenceEntry) {
+                    if (value instanceof Entry.ReferenceEntry referenceEntry) {
                         new SnapshotExpression(referenceEntry.snapshot()).accept(this);
                     }
                     if (cancelled.get()) {
@@ -111,29 +111,29 @@ public interface Expression {
             @Override
             public Expression visitFunctionCallExpression(@NotNull FunctionCallExpression expression) {
                 List<Entry> arguments = expression.getArguments().stream()
-                        .map(entry -> {
-                            if(entry instanceof Entry.ValueEntry valueEntry) {
-                                return new Entry.ValueEntry(valueEntry.expression().accept(this));
-                            }
-                            if(entry instanceof Entry.ReferenceEntry referenceEntry) {
-                                SnapshotExpression snapshot = new SnapshotExpression(referenceEntry.snapshot());
-                                Expression replaceValue = snapshot.accept(this);
-                                if(!(replaceValue instanceof SnapshotExpression replaceSnapshot)) {
-                                    throw new IllegalArgumentException("Could not replace snapshot: " + referenceEntry.snapshot() + " with: " + replaceValue);
-                                }
-                                return new Entry.ReferenceEntry(replaceSnapshot.getSnapshot());
-                            }
-                            return entry;
-                        })
-                        .toList();
+                                                  .map(entry -> {
+                                                      if (entry instanceof Entry.ValueEntry valueEntry) {
+                                                          return new Entry.ValueEntry(valueEntry.expression().accept(this));
+                                                      }
+                                                      if (entry instanceof Entry.ReferenceEntry referenceEntry) {
+                                                          SnapshotExpression snapshot = new SnapshotExpression(referenceEntry.snapshot());
+                                                          Expression replaceValue = snapshot.accept(this);
+                                                          if (!(replaceValue instanceof SnapshotExpression replaceSnapshot)) {
+                                                              throw new IllegalArgumentException("Could not replace snapshot: " + referenceEntry.snapshot() + " with: " + replaceValue);
+                                                          }
+                                                          return new Entry.ReferenceEntry(replaceSnapshot.getSnapshot());
+                                                      }
+                                                      return entry;
+                                                  })
+                                                  .toList();
                 return new FunctionCallExpression(expression.getElement(), expression.getType(), expression.getName(), arguments);
             }
 
             @Override
             public Expression visitAggregateExpression(@NotNull AggregateExpression expression) {
                 List<Expression> expressions = expression.getExpressions().stream()
-                        .map(component -> component.accept(this))
-                        .toList();
+                                                         .map(component -> component.accept(this))
+                                                         .toList();
                 AggregateExpression aggregateExpression = new AggregateExpression(expression.getElement(), expression.getType(), expressions);
                 return mapper.apply(aggregateExpression);
             }
@@ -155,14 +155,14 @@ public interface Expression {
 
             @Override
             public Expression visitComponentExpression(@NotNull ComponentExpression expression) {
-                ReferenceExpression variable = (ReferenceExpression) expression.getVariable().accept(this);
+                ReferenceExpression variable = ((ReferenceExpression) expression.getVariable().accept(this));
                 ComponentExpression componentExpression = new ComponentExpression(expression.getElement(), expression.getType(), variable, expression.getComponent());
                 return super.visitComponentExpression(componentExpression);
             }
 
             @Override
             public Expression visitIndexExpression(@NotNull IndexExpression expression) {
-                ReferenceExpression variable = (ReferenceExpression) expression.getVariable().accept(this);
+                ReferenceExpression variable = ((ReferenceExpression) expression.getVariable().accept(this));
                 Expression index = expression.getIndex().accept(this);
                 IndexExpression indexExpression = new IndexExpression(expression.getElement(), variable, index);
                 return super.visitIndexExpression(indexExpression);

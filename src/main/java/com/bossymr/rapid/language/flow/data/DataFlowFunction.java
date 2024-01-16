@@ -234,6 +234,9 @@ public class DataFlowFunction {
                 state.assign(variable, expression);
             }
             Snapshot calleeSnapshot = result.state().getRoots().get(argument);
+            if (calleeSnapshot == null) {
+                continue;
+            }
             Snapshot callerSnapshot = state.getSnapshot(variable).getSnapshot();
             modifications.put(calleeSnapshot, callerSnapshot);
             targets.add(callerSnapshot);
@@ -252,6 +255,9 @@ public class DataFlowFunction {
                 continue;
             }
             Snapshot latestSnapshot = result.state().getSnapshots().get(argument);
+            if (latestSnapshot == null) {
+                continue;
+            }
             Snapshot snapshot = modifications.get(latestSnapshot);
             Expression expression = arguments.get(argument);
             if (expression instanceof ReferenceExpression variable) {

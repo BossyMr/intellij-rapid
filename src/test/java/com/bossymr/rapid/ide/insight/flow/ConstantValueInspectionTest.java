@@ -126,6 +126,41 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
+    public void testPureFunction() {
+        doTest("""
+                MODULE foo
+                    PROC bar()
+                        VAR num angle1;
+                        VAR num angle2;
+                        angle1 := Cos(90);
+                        angle2 := Cos(90);
+                        IF warning descr="Value of expression is always true">angle1 = angle2</warning> THEN
+                        ENDIF
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
+    public void testPureFunctionWithEqualArguments() {
+        doTest("""
+                MODULE foo
+                    PROC bar(num arg1, num arg2)
+                        VAR num angle1;
+                        VAR num angle2;
+                        VAR num arg1;
+                        VAR num arg2;
+                        IF arg1 = arg2 THEN
+                            angle1 := Cos(arg1);
+                            angle2 := Cos(arg2);
+                            IF warning descr="Value of expression is always true">angle1 = angle2</warning> THEN
+                            ENDIF
+                        ENDIF
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
+
     public void testArrayVariableHistory() {
         doTest("""
                 MODULE foo
