@@ -2,8 +2,12 @@ package com.bossymr.rapid.language.psi;
 
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.impl.fragment.RapidExpressionCodeFragmentImpl;
+import com.bossymr.rapid.language.psi.stubs.type.RapidRoutineElementType;
 import com.bossymr.rapid.language.symbol.ModuleType;
 import com.bossymr.rapid.language.symbol.RapidField;
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
+import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
+import com.bossymr.rapid.language.symbol.physical.PhysicalVisibleSymbol;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
@@ -73,6 +77,13 @@ public final class RapidElementFactory {
                 .collect(Collectors.joining(","));
         RapidFile file = createDummyFile("MODULE DUMMY(" + text + ") ENDMODULE");
         return Objects.requireNonNull(file.getModules().get(0).getAttributeList());
+    }
+
+    public @NotNull RapidTypeElement createTypeElement(@NotNull String name) {
+        RapidFile file = createDummyFile("MODULE DUMMY FUNC " + name + " DUMMY() ENDFUNC ENDMODULE");
+        PhysicalModule module = file.getModules().get(0);
+        PhysicalRoutine symbol = ((PhysicalRoutine) module.getSymbols().get(0));
+        return Objects.requireNonNull(symbol.getTypeElement());
     }
 
     /**

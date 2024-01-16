@@ -73,6 +73,11 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
         return SymbolUtil.getType(this);
     }
 
+    public @Nullable RapidTypeElement getTypeElement() {
+        return PsiTreeUtil.getChildOfType(this, RapidTypeElement.class);
+    }
+
+
     public @Nullable RapidParameterList getParameterList() {
         return getStubOrPsiChild(RapidStubElementTypes.PARAMETER_LIST);
     }
