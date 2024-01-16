@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.symbol;
 
+import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.LighterAST;
@@ -11,15 +12,17 @@ import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 
 public enum RoutineType {
-    FUNCTION(RapidTokenTypes.FUNC_KEYWORD, "FUNC"),
-    PROCEDURE(RapidTokenTypes.PROC_KEYWORD, "PROC"),
-    TRAP(RapidTokenTypes.TRAP_KEYWORD, "TRAP");
+    FUNCTION(RapidTokenTypes.FUNC_KEYWORD, RapidTokenTypes.ENDFUNC_KEYWORD, "FUNC"),
+    PROCEDURE(RapidTokenTypes.PROC_KEYWORD, RapidTokenTypes.ENDPROC_KEYWORD, "PROC"),
+    TRAP(RapidTokenTypes.TRAP_KEYWORD, RapidTokenTypes.ENDTRAP_KEYWORD, "TRAP");
 
-    private final IElementType elementType;
-    private final String text;
+    private final @NotNull IElementType headType;
+    private final @NotNull IElementType tailType;
+    private final @NotNull String text;
 
-    RoutineType(@NotNull IElementType elementType, @NotNull String text) {
-        this.elementType = elementType;
+    RoutineType(@NotNull IElementType elementType, @NotNull IElementType tailType, @NotNull String text) {
+        this.headType = elementType;
+        this.tailType = tailType;
         this.text = text;
     }
 
@@ -57,10 +60,22 @@ public enum RoutineType {
     }
 
     public @NotNull IElementType getElementType() {
-        return elementType;
+        return headType;
+    }
+
+    public @NotNull IElementType getTailType() {
+        return tailType;
     }
 
     public @NotNull String getText() {
         return text;
+    }
+
+    public @NotNull String getPresentableText() {
+        return switch (this) {
+            case FUNCTION -> RapidBundle.message("element.type.function");
+            case PROCEDURE -> RapidBundle.message("element.type.procedure");
+            case TRAP -> RapidBundle.message("element.type.trap");
+        };
     }
 }

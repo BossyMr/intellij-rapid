@@ -20,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("UnstableApiUsage")
 public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements DocumentationTarget {
@@ -58,6 +59,9 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
     }
 
     protected @NotNull String getPresentableText() {
+        if (symbol instanceof RapidModule module) {
+            return getPresentableText(module);
+        }
         if (symbol instanceof RapidAtomic atomic) {
             return getPresentableText(atomic);
         }
@@ -86,6 +90,21 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
             return getPresentableText(targetVariable);
         }
         throw new IllegalStateException("Unexpected symbol: " + symbol);
+    }
+
+    private @NotNull String getPresentableText(@NotNull RapidModule module) {
+        StringBuilder stringBuilder = new StringBuilder();
+        appendText(stringBuilder, RapidColor.KEYWORD, "MODULE");
+        stringBuilder.append(" ");
+        appendText(stringBuilder, RapidColor.ATOMIC, module.getPresentableName());
+        if (!(module.getAttributes().isEmpty())) {
+            stringBuilder.append("(");
+            stringBuilder.append(module.getAttributes().stream()
+                                       .map(ModuleType::getText)
+                                       .collect(Collectors.joining(", ")));
+            stringBuilder.append(")");
+        }
+        return stringBuilder.toString();
     }
 
     private @NotNull String getPresentableText(@NotNull RapidAtomic atomic) {
