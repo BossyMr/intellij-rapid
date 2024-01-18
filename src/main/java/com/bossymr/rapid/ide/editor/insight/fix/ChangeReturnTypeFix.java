@@ -12,7 +12,6 @@ import com.intellij.modcommand.ActionContext;
 import com.intellij.modcommand.ModPsiUpdater;
 import com.intellij.modcommand.Presentation;
 import com.intellij.modcommand.PsiUpdateModCommandAction;
-import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,11 +32,6 @@ public class ChangeReturnTypeFix extends PsiUpdateModCommandAction<PhysicalRouti
         return RapidBundle.message("quick.fix.family.change.return.type");
     }
 
-    public String test() {
-        return "";
-    }
-
-    @Override
     protected @Nullable Presentation getPresentation(@NotNull ActionContext context, @NotNull PhysicalRoutine element) {
         if (element.getRoutineType() != RoutineType.FUNCTION) {
             return null;

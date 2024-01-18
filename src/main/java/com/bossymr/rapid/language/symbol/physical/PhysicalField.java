@@ -124,6 +124,11 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     }
 
     @Override
+    public @Nullable RapidTypeElement getTypeElement() {
+        return findChildByType(RapidElementTypes.TYPE_ELEMENT);
+    }
+
+    @Override
     public @NotNull PhysicalPointer<PhysicalField> createPointer() {
         return new PhysicalPointer<>(this);
     }

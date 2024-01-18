@@ -1,6 +1,10 @@
 package com.bossymr.rapid.language.psi;
 
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
+import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.util.PsiTreeUtil;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -9,6 +13,16 @@ import java.util.List;
  * Represents a list of statements.
  */
 public interface RapidStatementList extends RapidElement {
+
+    static @Nullable RapidStatementList getStatementList(@NotNull PsiElement element) {
+        PhysicalRoutine routine = PhysicalRoutine.getRoutine(element);
+        if (routine == null) {
+            return null;
+        }
+        return routine.getStatementLists().stream()
+                      .filter(list -> PsiTreeUtil.isAncestor(list, element, false))
+                      .findFirst().orElseThrow();
+    }
 
     /**
      * Returns the attribute of this statement list.

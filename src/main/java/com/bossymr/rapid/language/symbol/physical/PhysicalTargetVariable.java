@@ -1,9 +1,6 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.language.psi.PhysicalElement;
-import com.bossymr.rapid.language.psi.RapidElementVisitor;
-import com.bossymr.rapid.language.psi.RapidTargetVariable;
-import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.symbol.SymbolUtil;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
@@ -69,5 +66,10 @@ public class PhysicalTargetVariable extends PhysicalElement implements RapidTarg
         return "PhysicalTargetVariable{" +
                 "name='" + getName() + '\'' +
                 '}';
+    }
+
+    @Override
+    public @Nullable RapidTypeElement getTypeElement() {
+        return null;
     }
 }

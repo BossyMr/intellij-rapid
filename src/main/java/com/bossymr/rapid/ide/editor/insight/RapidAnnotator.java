@@ -15,7 +15,6 @@ import com.intellij.lang.annotation.AnnotationBuilder;
 import com.intellij.lang.annotation.AnnotationHolder;
 import com.intellij.lang.annotation.Annotator;
 import com.intellij.lang.annotation.HighlightSeverity;
-import com.intellij.modcommand.ModCommandAction;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -186,13 +185,13 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
     @Override
     public void visitUnaryExpression(@NotNull RapidUnaryExpression expression) {
         RapidExpression component = expression.getExpression();
-        if(component != null) {
-           if(component.getType() != null && expression.getType() == null)  {
-               String sign = expression.getSign().getText();
-               annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.expression.unary.not.applicable", sign, component.getType().getPresentableText()))
-                               .range(expression)
-                               .create();
-           }
+        if (component != null) {
+            if (component.getType() != null && expression.getType() == null) {
+                String sign = expression.getSign().getText();
+                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.expression.unary.not.applicable", sign, component.getType().getPresentableText()))
+                                .range(expression)
+                                .create();
+            }
         }
         super.visitUnaryExpression(expression);
     }
@@ -207,13 +206,13 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
     public void visitBinaryExpression(@NotNull RapidBinaryExpression expression) {
         RapidExpression left = expression.getLeft();
         RapidExpression right = expression.getRight();
-        if(right != null) {
-            if(left.getType() != null && right.getType() != null) {
-                if(expression.getType() == null) {
+        if (right != null) {
+            if (left.getType() != null && right.getType() != null) {
+                if (expression.getType() == null) {
                     String sign = expression.getSign().getText();
                     annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.expression.binary.not.applicable", sign, left.getType().getPresentableText(), right.getType().getPresentableText()))
-                            .range(expression)
-                            .create();
+                                    .range(expression)
+                                    .create();
                 }
             }
         }
@@ -317,7 +316,15 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                             .range(expression)
                             .create();
         }
-        // TODO: "A goto statement may not transfer control into a statement list."
+        if (symbol instanceof RapidLabelStatement label) {
+            RapidStatementList currentList = RapidStatementList.getStatementList(statement);
+            RapidStatementList targetList = RapidStatementList.getStatementList(label);
+            if (currentList != null && targetList != null && !(currentList.equals(targetList))) {
+                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.label.different.statement.list"))
+                                .range(expression)
+                                .create();
+            }
+        }
         super.visitGotoStatement(statement);
     }
 
@@ -354,6 +361,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
         PhysicalRoutine routine = PhysicalRoutine.getRoutine(statement);
         if (routine != null) {
             if (routine.getRoutineType() == RoutineType.FUNCTION) {
+                RapidType returnType = routine.getType();
                 if (expression == null) {
                     annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.return.value.missing"))
                                     .range(statement)
@@ -361,13 +369,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                                     .withFix(new ChangeRoutineTypeFix(routine, RoutineType.TRAP))
                                     .create();
                 } else {
-                    RapidType returnType = routine.getType();
-                    RapidType providedType = expression.getType();
-                    if (providedType == null) {
-                        checkType(returnType, expression);
-                    } else {
-                        checkType(returnType, expression, new ChangeReturnTypeFix(routine, providedType));
-                    }
+                    checkType(returnType, expression);
                 }
             } else if (expression != null) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.return.invalid", routine.getRoutineType().getPresentableText()))
@@ -386,11 +388,8 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     @Override
     public void visitRaiseStatement(@NotNull RapidRaiseStatement statement) {
-        PhysicalRoutine routine = PhysicalRoutine.getRoutine(statement);
-        Objects.requireNonNull(routine);
-        RapidStatementList statementList = routine.getStatementLists().stream()
-                                                  .filter(list -> PsiTreeUtil.isAncestor(list, statement, false))
-                                                  .findFirst().orElseThrow();
+        RapidStatementList statementList = RapidStatementList.getStatementList(statement);
+        Objects.requireNonNull(statementList);
         RapidExpression expression = statement.getExpression();
         if (statementList.getStatementListType() == BlockType.ERROR_CLAUSE) {
             if (expression != null) {
@@ -424,11 +423,8 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
     }
 
     private void checkIfInErrorHandler(@NotNull RapidStatement statement) {
-        PhysicalRoutine routine = PhysicalRoutine.getRoutine(statement);
-        Objects.requireNonNull(routine);
-        RapidStatementList statementList = routine.getStatementLists().stream()
-                                                  .filter(list -> PsiTreeUtil.isAncestor(list, statement, false))
-                                                  .findFirst().orElseThrow();
+        RapidStatementList statementList = RapidStatementList.getStatementList(statement);
+        Objects.requireNonNull(statementList);
         if (statementList.getStatementListType() == BlockType.ERROR_CLAUSE) {
             return;
         }
@@ -464,6 +460,20 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     @Override
     public void visitTestStatement(@NotNull RapidTestStatement statement) {
+        int index = -1;
+        List<RapidTestCaseStatement> statements = statement.getTestCaseStatements();
+        for (int i = 0; i < statements.size(); i++) {
+            RapidTestCaseStatement element = statements.get(i);
+            if (element.isDefault()) {
+                index = i;
+            }
+            if (i > index) {
+                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.test.case.statement.after.default"))
+                                .range(element.getFirstChild())
+                                .withFix(new ReorderTestStatementFix(statement))
+                                .create();
+            }
+        }
         super.visitTestStatement(statement);
     }
 
@@ -493,11 +503,6 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
     }
 
     private void checkType(@Nullable RapidType requiredType, @Nullable RapidExpression expression) {
-        // TODO: Calculate possible actions automatically, depending on what the element is (and what is references)
-        checkType(requiredType, expression, new ModCommandAction[0]);
-    }
-
-    private void checkType(@Nullable RapidType requiredType, @Nullable RapidExpression expression, @NotNull ModCommandAction @NotNull ... actions) {
         if (requiredType == null || expression == null) {
             return;
         }
@@ -515,8 +520,14 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
         AnnotationBuilder builder = annotationHolder.newAnnotation(HighlightSeverity.ERROR, message)
                                                     .tooltip(tooltip)
                                                     .range(expression);
-        for (ModCommandAction action : actions) {
-            builder = builder.withFix(action);
+        if (expression instanceof RapidReferenceExpression referenceExpression) {
+            RapidSymbol symbol = referenceExpression.getSymbol();
+            if (symbol instanceof PhysicalRoutine routine) {
+                builder = builder.withFix(new ChangeReturnTypeFix(routine, requiredType));
+            }
+            if (symbol instanceof PhysicalVariable variable && !(variable instanceof PhysicalTargetVariable)) {
+                builder = builder.withFix(new ChangeVariableTypeFix(variable, requiredType));
+            }
         }
         builder.create();
     }

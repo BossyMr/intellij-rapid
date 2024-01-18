@@ -52,6 +52,7 @@ public class PhysicalParameter extends RapidStubElement<RapidParameterStub> impl
         }
     }
 
+    @Override
     public @Nullable RapidTypeElement getTypeElement() {
         return findChildByType(RapidElementTypes.TYPE_ELEMENT);
     }
