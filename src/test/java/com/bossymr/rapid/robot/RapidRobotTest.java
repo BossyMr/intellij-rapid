@@ -14,7 +14,7 @@ public class RapidRobotTest extends BasePlatformTestCase {
         assertNull(service.getRobotState());
         assertNull(service.getRobot());
         assertFalse(RobotService.isConnected());
-        RapidRobot robot = service.connect(URI.create("http://localhost"), new Credentials("Default User", "robotics".toCharArray()));
+        RapidRobot robot = service.connect(URI.create("http://localhost"), RobotService.DEFAULT_CREDENTIALS);
         assertEquals(robot, service.getRobot());
         assertNotNull(service.getRobotState());
         assertTrue(RobotService.isConnected());

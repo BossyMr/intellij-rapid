@@ -487,7 +487,7 @@ public class RapidValidator {
             if (!(group.isOptional()) && parameters.size() > 1) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.group.mutually.exclusive"))
                         .range(group)
-                        .withFix(new MakeParameterListOptional(group))
+                        .withFix(new MakeParameterListOptionalFix(group))
                         .create();
                 continue;
             }

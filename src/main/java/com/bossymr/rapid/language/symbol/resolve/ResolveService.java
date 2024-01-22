@@ -140,7 +140,7 @@ public final class ResolveService {
     private @Nullable Block getVirtualBlock(@NotNull String routineName) {
         for (HardcodedContract contract : HardcodedContract.values()) {
             if (contract.getRoutine().getName().equalsIgnoreCase(routineName)) {
-                return contract.getBlock().getControlFlow();
+                return contract.getBlock();
             }
         }
         return null;

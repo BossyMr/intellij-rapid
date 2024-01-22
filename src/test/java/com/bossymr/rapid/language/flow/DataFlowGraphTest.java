@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.bossymr.rapid.language.flow.debug.DataFlowGraphService;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.execution.ExecutionException;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
@@ -10,15 +11,22 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class DataFlowGraphTest extends BasePlatformTestCase {
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        try {
+            RobotService.getInstance().disconnect();
+        } catch (IOException | InterruptedException e) {
+            fail();
+        }
         ControlFlowService.getInstance().reload();
     }
 
@@ -54,14 +62,16 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
         if (!(outputDirectory.exists() || outputDirectory.mkdirs())) {
             throw new IOException("Could not create output folder");
         }
-        String output = ControlFlowFormatVisitor.format(dataFlow);
+        String output = ControlFlowFormatVisitor.format(dataFlow.stream().map(ControlFlowBlock::getControlFlow).collect(Collectors.toSet()));
         FileUtil.writeToFile(path.resolve("controlFlow.txt").toFile(), output);
         File outputFile = path.resolve("dataFlow.svg").toFile();
         DataFlowGraphService.convert(outputFile, dataFlow);
     }
 
-    public void testLargeFile() throws IOException, ExecutionException {
-        checkByFile("File.mod");
+    public void testLargeFile() throws IOException, ExecutionException, InterruptedException {
+        // FIXME: TEST statement not being executed when connected to robot...
+        RobotService.getInstance().connect(URI.create("http://localhost"), RobotService.DEFAULT_CREDENTIALS);
+        checkByFile("File2.mod");
     }
 
     public void testLargeArraySize() throws IOException, ExecutionException {

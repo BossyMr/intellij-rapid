@@ -166,18 +166,29 @@ public class DataFlowFunction {
         ReferenceExpression returnValue = instruction.getReturnValue();
         Set<Result> output = new HashSet<>();
         Map<Result, DataFlowState> mappings = new HashMap<>();
+        Map<Argument, Expression> arguments = getArguments(getBlock(), instruction.getArguments());
+        DataFlowState state = callerState.createSuccessorState();
+        for (Argument argument : arguments.keySet()) {
+            Expression expression = arguments.get(argument);
+            if(expression instanceof ReferenceExpression) {
+                continue;
+            }
+            Snapshot snapshot = Snapshot.createSnapshot(expression.getType());
+            SnapshotExpression snapshotExpression = new SnapshotExpression(snapshot);
+            state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshotExpression, expression));
+            arguments.put(argument, snapshotExpression);
+        }
         for (Map.Entry<DataFlowState, Result> entry : results.entrySet()) {
             Result result = entry.getValue();
-            Result actual = getOutput(result, callerState.createSuccessorState(), instruction);
+            Result actual = getOutput(result, state.createSuccessorState(), instruction);
             if (actual != null) {
                 output.add(actual);
                 mappings.put(actual, entry.getKey());
-                usages.computeIfAbsent(callerState, key -> new HashSet<>());
-                usages.get(callerState).add(entry.getKey());
+                usages.computeIfAbsent(state, key -> new HashSet<>());
+                usages.get(state).add(entry.getKey());
             }
         }
         if (returnValue == null) {
-            Map<Argument, Expression> arguments = getArguments(getBlock(), instruction.getArguments());
             if (arguments.keySet().stream().allMatch(argument -> argument.getParameterType() == ParameterType.INPUT)) {
                 /*
                  * This function call will not have any side effects on the caller. As a result, only at most a single
@@ -185,24 +196,30 @@ public class DataFlowFunction {
                  */
                 output.removeIf(result -> {
                     if (result instanceof Result.Success) {
-                        Set<DataFlowState> states = usages.get(callerState);
+                        Set<DataFlowState> states = usages.get(state);
                         states.remove(mappings.get(result));
                         if (states.isEmpty()) {
-                            usages.remove(callerState);
+                            usages.remove(state);
                         }
                         Objects.requireNonNullElseGet(result.state().getPredecessor(), result::state).prune();
                         return true;
                     }
                     return false;
                 });
-                DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getInstruction(), callerState);
+                DataFlowState successorState = DataFlowState.createSuccessorState(state.getInstruction(), state);
                 output.add(new Result.Success(successorState, null));
             }
         }
         return output;
     }
 
+
     protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull CallInstruction instruction) {
+        Map<Argument, Expression> arguments = getArguments(getBlock(), instruction.getArguments());
+        return getOutput(result, state, instruction, arguments);
+    }
+
+    protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull CallInstruction instruction, @NotNull Map<Argument, Expression> arguments) {
         /*
          * Create an empty successor to the specified state.
          *
@@ -223,7 +240,6 @@ public class DataFlowFunction {
         Map<Snapshot, Snapshot> modifications = new HashMap<>();
         Set<Snapshot> targets = new HashSet<>();
 
-        Map<Argument, Expression> arguments = getArguments(getBlock(), instruction.getArguments());
         for (Argument argument : arguments.keySet()) {
             ReferenceExpression variable;
             Expression expression = arguments.get(argument);
@@ -284,6 +300,7 @@ public class DataFlowFunction {
     }
 
     public sealed interface Result {
+
 
         @NotNull DataFlowState state();
 

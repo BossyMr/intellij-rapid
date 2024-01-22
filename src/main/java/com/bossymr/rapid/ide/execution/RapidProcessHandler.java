@@ -47,7 +47,7 @@ public class RapidProcessHandler extends ProcessHandler {
         logger.debug("Subscribing to process event log");
         EventLogService eventLogService = manager.createService(EventLogService.class);
         List<EventLogCategory> categories = eventLogService.getCategories("en").get();
-        if (categories.size() == 0) {
+        if (categories.isEmpty()) {
             logger.warn("Couldn't find process event log");
             return;
         }
@@ -69,7 +69,7 @@ public class RapidProcessHandler extends ProcessHandler {
             stringJoiner.add(message.getMessageType() + " " + "[" + message.getTimestamp() + "]: " + message.getMessageTitle());
             stringJoiner.add(message.getDescription());
             BiConsumer<String, String> append = (name, string) -> {
-                if (string != null && string.length() > 0) {
+                if (string != null && !(string.isEmpty())) {
                     stringJoiner.add(name + ": " + string);
                 }
             };
@@ -131,18 +131,19 @@ public class RapidProcessHandler extends ProcessHandler {
     @Override
     protected void destroyProcessImpl() {
         try {
-
             ExecutionService executionService = manager.createService(ExecutionService.class);
             ExecutionStatus executionStatus = executionService.getState().get();
             if (executionStatus.getState() == ExecutionState.STOPPED) {
+                manager.close();
                 notifyProcessTerminated(0);
                 return;
             }
             executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
                 if (executionStatus.getState() == ExecutionState.STOPPED) {
-                    notifyProcessTerminated(0);
                     try {
                         entity.unsubscribe();
+                        manager.close();
+                        notifyProcessTerminated(0);
                     } catch (IOException | InterruptedException e) {
                         logger.error(e);
                     }

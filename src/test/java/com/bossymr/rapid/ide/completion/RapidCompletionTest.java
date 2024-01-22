@@ -1,15 +1,22 @@
 package com.bossymr.rapid.ide.completion;
 
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.codeInsight.completion.CompletionType;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.List;
 
 public class RapidCompletionTest extends BasePlatformTestCase {
 
     private void doTest(@NotNull String text, @NotNull String... expected) {
+        try {
+            RobotService.getInstance().disconnect();
+        } catch (IOException | InterruptedException e) {
+            fail();
+        }
         myFixture.configureByText(RapidFileType.getInstance(), text);
         myFixture.complete(CompletionType.BASIC);
         List<String> strings = myFixture.getLookupElementStrings();

@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.flow.builder;
 import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.builder.RapidBuilder;
 import com.bossymr.rapid.language.flow.Argument;
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.bossymr.rapid.language.flow.expression.BinaryOperator;
@@ -26,9 +27,7 @@ class ControlFlowBuilderTest {
     private void check(@NotNull Consumer<RapidBuilder> consumer, @NotNull String expected) {
         ControlFlowBuilder builder = new ControlFlowBuilder();
         consumer.accept(builder);
-        Set<ControlFlowBlock> controlFlow = builder.getControlFlow().stream()
-                                                   .map(ControlFlowBlock::new)
-                                                   .collect(Collectors.toSet());
+        Set<Block> controlFlow = builder.getControlFlow();
         String actual = ControlFlowFormatVisitor.format(controlFlow);
         if (expected.isEmpty()) {
             System.out.println(actual);

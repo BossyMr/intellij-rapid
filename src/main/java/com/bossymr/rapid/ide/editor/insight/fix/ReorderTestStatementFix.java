@@ -7,6 +7,7 @@ import com.intellij.codeInspection.util.IntentionFamilyName;
 import com.intellij.modcommand.ActionContext;
 import com.intellij.modcommand.ModPsiUpdater;
 import com.intellij.modcommand.PsiUpdateModCommandAction;
+import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -27,12 +28,15 @@ public class ReorderTestStatementFix extends PsiUpdateModCommandAction<RapidTest
 
     @Override
     protected void invoke(@NotNull ActionContext context, @NotNull RapidTestStatement element, @NotNull ModPsiUpdater updater) {
-        List<RapidTestCaseStatement> statements = new ArrayList<>(element.getTestCaseStatements());
-        statements.sort(Comparator.comparing(statement -> statement.isDefault() ? 1 : 0));
-        List<RapidTestCaseStatement> caseStatements = element.getTestCaseStatements();
-        for (int i = 0; i < caseStatements.size(); i++) {
-            RapidTestCaseStatement statement = caseStatements.get(i);
-            statement.replace(statements.get(i));
+        List<PsiElement> statements = new ArrayList<>();
+        List<RapidTestCaseStatement> unorderedStatements = element.getTestCaseStatements();
+        List<RapidTestCaseStatement> orderedStatements = new ArrayList<>(unorderedStatements);
+        orderedStatements.sort(Comparator.comparing(statement -> statement.isDefault() ? 1 : 0));
+        for (RapidTestCaseStatement statement : orderedStatements) {
+            statements.add(statement.copy());
+        }
+        for (RapidTestCaseStatement statement : unorderedStatements) {
+            statement.replace(statements.get(unorderedStatements.indexOf(statement)));
         }
     }
 }

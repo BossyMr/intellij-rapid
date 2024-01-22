@@ -1,6 +1,8 @@
 package com.bossymr.rapid.ide.editor.formatting;
 
 import com.bossymr.rapid.language.RapidLanguage;
+import com.bossymr.rapid.language.psi.RapidTokenSets;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.formatting.*;
 import com.intellij.psi.codeStyle.CodeStyleSettings;
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings;
@@ -34,6 +36,10 @@ public class RapidFormattingModelBuilder implements FormattingModelBuilder {
 
                 .after(COMMA).spaceIf(common.SPACE_AFTER_COMMA)
                 .before(COMMA).spaceIf(common.SPACE_BEFORE_COMMA)
+
+                .after(RapidTokenSets.STATEMENTS).lineBreakInCode()
+                .before(CASE_KEYWORD).lineBreakInCode()
+                .before(DEFAULT_KEYWORD).lineBreakInCode()
 
                 .withinPairInside(LPARENTH, RPARENTH, PARENTHESISED_EXPRESSION).spaceIf(common.SPACE_WITHIN_PARENTHESES)
                 .withinPairInside(LPARENTH, RPARENTH, ARGUMENT_LIST).spaceIf(common.SPACE_WITHIN_METHOD_CALL_PARENTHESES)

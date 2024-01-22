@@ -1,11 +1,14 @@
 package com.bossymr.rapid.ide.insight.flow;
 
 import com.bossymr.rapid.ide.editor.insight.inspection.flow.ConstantValueInspection;
+import com.bossymr.rapid.ide.editor.insight.inspection.flow.DataFlowProblemInspection;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.ControlFlowService;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.List;
 
 public class ConstantValueInspectionTest extends BasePlatformTestCase {
@@ -13,7 +16,12 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        myFixture.enableInspections(List.of(ConstantValueInspection.class));
+        try {
+            RobotService.getInstance().disconnect();
+        } catch (IOException | InterruptedException e) {
+            fail();
+        }
+        myFixture.enableInspections(List.of(ConstantValueInspection.class, DataFlowProblemInspection.class));
         ControlFlowService.getInstance().reload();
     }
 

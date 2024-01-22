@@ -19,6 +19,8 @@ import java.net.URI;
  */
 public interface RobotService extends PersistentStateComponent<RobotService.State>, Disposable {
 
+    static @NotNull Credentials DEFAULT_CREDENTIALS = new Credentials("Default User", "robotics".toCharArray());
+
     @Topic.AppLevel
     Topic<RobotEventListener> TOPIC = Topic.create("Robot Refresh", RobotEventListener.class);
 

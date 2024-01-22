@@ -37,6 +37,7 @@ public class DataFlowProblemInspection extends DataFlowInspection {
             @Override
             public void visitReferenceExpression(@NotNull RapidReferenceExpression expression) {
                 Map<DataFlowState, Expression> expressions = getExpressions(expression);
+                // TODO: Doesn't add a warning for function call arguments
                 registerOptionality(expression, expressions, holder);
             }
 

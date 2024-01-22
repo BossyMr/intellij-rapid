@@ -37,28 +37,28 @@ public interface Task {
     @Property("active")
     @NotNull TaskActiveState getActivityState();
 
-    @Fetch("{@self}/pcp")
+    @Fetch("/rw/rapid/tasks/{#name}/pcp")
     @NotNull NetworkQuery<List<ProgramPointer>> getProgramPointer();
 
-    @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=activate")
+    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=activate")
     @NotNull NetworkQuery<Void> activate();
 
-    @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=deactivate")
+    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=deactivate")
     @NotNull NetworkQuery<Void> deactivate();
 
-    @Fetch(method = FetchMethod.POST, value = "{@self}/pcp", arguments = "action=set-pp-cursor")
+    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}/pcp", arguments = "action=set-pp-cursor")
     @NotNull NetworkQuery<Void> setProgramPointer(@NotNull @Field("module") String module,
                                                   @NotNull @Field("routine") String routine,
                                                   @Field("line") int row,
                                                   @Field("column") int column);
 
-    @Fetch(value = "{@self}", arguments = "resource=activation-record")
+    @Fetch(value = "/rw/rapid/tasks/{#name}", arguments = "resource=activation-record")
     @NotNull NetworkQuery<StackFrame> getStackFrame(@Argument("stackframe") int stackframe);
 
-    @Subscribable("{@self};excstate")
+    @Subscribable("/rw/rapid/tasks/{#name};excstate")
     @NotNull SubscribableNetworkQuery<TaskExecutionEvent> onExecutionState();
 
-    @Subscribable("{@self}/pcp;programpointerchange")
+    @Subscribable("/rw/rapid/tasks/{#name}/pcp;programpointerchange")
     @NotNull SubscribableNetworkQuery<ProgramPointerEvent> onProgramPointer();
 
 }

@@ -19,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public enum HardcodedContract {
@@ -89,16 +90,18 @@ public enum HardcodedContract {
             DataFlowProcessor.pureProcessor());
 
     private final @NotNull VirtualRoutine routine;
-    private final @NotNull ControlFlowBlock block;
+    private final @NotNull Block controlFlow;
+    private final @NotNull Function<ControlFlowBlock, DataFlowFunction> function;
 
     HardcodedContract(@NotNull Consumer<RapidModuleBuilder> consumer) {
-        this.block = new ControlFlowBlock(computeBlock(consumer));
-        this.routine = (VirtualRoutine) block.getControlFlow().getElement();
+        this.controlFlow = computeBlock(consumer);
+        this.routine = (VirtualRoutine) controlFlow.getElement();
+        this.function = DataFlowFunction::new;
     }
 
     HardcodedContract(@NotNull Consumer<RapidModuleBuilder> consumer, @NotNull DataFlowProcessor processor) {
-        Block controlFlow = computeBlock(consumer);
-        this.block = new ControlFlowBlock(controlFlow, block -> new DataFlowFunction(block) {
+        this.controlFlow = computeBlock(consumer);
+        this.function = block -> new DataFlowFunction(block) {
             @Override
             public @NotNull Set<Result> getOutput(@NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
                 Set<Result> output = processor.getOutput(block, callerState, instruction, getArguments(controlFlow, instruction.getArguments()));
@@ -110,8 +113,8 @@ public enum HardcodedContract {
                              })
                              .collect(Collectors.toSet());
             }
-        });
-        this.routine = (VirtualRoutine) block.getControlFlow().getElement();
+        };
+        this.routine = (VirtualRoutine) controlFlow.getElement();
     }
 
     private static @NotNull Block computeBlock(@NotNull Consumer<RapidModuleBuilder> consumer) {
@@ -128,8 +131,12 @@ public enum HardcodedContract {
         return routine;
     }
 
-    public @NotNull ControlFlowBlock getBlock() {
-        return block;
+    public @NotNull Block getBlock() {
+        return controlFlow;
+    }
+
+    public @NotNull DataFlowFunction getFunction(@NotNull ControlFlowBlock block) {
+        return function.apply(block);
     }
 
     @FunctionalInterface

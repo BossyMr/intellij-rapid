@@ -37,7 +37,6 @@ import java.util.List;
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/ide-infrastructure.html#error-reporting">Intellij Platform
  * Plugin SDK: Error Reporting</a>
  */
-@SuppressWarnings("deprecation")
 public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
 
     private static final @NotNull String SENTRY_URL = "https://770a26d5df85543f57313f65d4474df5@sentry.bossymr.com/2";
@@ -88,6 +87,8 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
 
                     SentryEvent sentryEvent = new SentryEvent(throwable);
                     sentryEvent.setLevel(SentryLevel.ERROR);
+                    sentryEvent.setUser(null);
+                    sentryEvent.setServerName(null);
 
                     IdeaPluginDescriptor descriptor = reportingEvent.getPlugin();
                     if (descriptor != null) {

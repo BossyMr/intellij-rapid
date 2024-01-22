@@ -13,15 +13,15 @@ import java.util.stream.Collectors;
 
 public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
 
-    public static @NotNull String format(@NotNull Set<ControlFlowBlock> blocks) {
+    public static @NotNull String format(@NotNull Set<Block> blocks) {
         StringBuilder stringBuilder = new StringBuilder();
         List<Block> results = new ArrayList<>();
-        for (ControlFlowBlock block : blocks) {
-            RapidSymbol element = block.getControlFlow().getElement();
+        for (Block block : blocks) {
+            RapidSymbol element = block.getElement();
             if (Arrays.stream(HardcodedContract.values()).anyMatch(contract -> contract.getRoutine().equals(element))) {
                 continue;
             }
-            results.add(block.getControlFlow());
+            results.add(block);
         }
         results.sort(Comparator.comparing(block -> block.getModuleName() + ":" + block.getName()));
         ControlFlowFormatVisitor visitor = new ControlFlowFormatVisitor();

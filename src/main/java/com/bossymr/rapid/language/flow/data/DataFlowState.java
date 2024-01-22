@@ -20,9 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiPredicate;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 /**
  * A {@code DataFlowState} represents the state of the program at a specific point. Together, states form the data flow
@@ -73,12 +71,12 @@ public class DataFlowState {
         return block;
     }
 
-    private @NotNull Snapshot createDefaultSnapshot(@NotNull RapidType type, @Nullable Snapshot parent) {
-        Expression expression = createDefaultExpression(type, parent);
+    private @NotNull Snapshot createDefaultSnapshot(@NotNull RapidType type) {
+        Expression expression = createDefaultExpression(type, null);
         if (expression instanceof SnapshotExpression snapshotExpression) {
             return snapshotExpression.getSnapshot();
         }
-        Snapshot snapshot = new VariableSnapshot(parent, type, Optionality.PRESENT);
+        Snapshot snapshot = new VariableSnapshot(null, type, Optionality.PRESENT);
         add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), expression));
         return snapshot;
     }
@@ -105,9 +103,9 @@ public class DataFlowState {
             Map<String, RapidType> components = getComponents(snapshot);
             for (String componentName : components.keySet()) {
                 RapidType componentType = components.get(componentName);
-                Snapshot defaultSnapshot = createDefaultSnapshot(componentType, snapshot);
+                Expression defaultValue = createDefaultExpression(componentType, snapshot);
                 Expression select = FunctionCallExpression.select(snapshot, componentName);
-                add(new BinaryExpression(BinaryOperator.EQUAL_TO, select, new SnapshotExpression(defaultSnapshot)));
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, select, defaultValue));
             }
             return new SnapshotExpression(snapshot);
         }
@@ -248,7 +246,7 @@ public class DataFlowState {
 
     private void initializeDefault() {
         for (Variable variable : functionBlock.getVariables()) {
-            snapshots.put(variable, createDefaultSnapshot(variable.getType(), null));
+            snapshots.put(variable, createDefaultSnapshot(variable.getType()));
         }
         initializeArguments();
         for (Field field : snapshots.keySet()) {
@@ -302,74 +300,67 @@ public class DataFlowState {
     }
 
     public void add(@NotNull Expression expression) {
-        insert(expression.replace(this::getSnapshot));
+        insert(getSnapshot(expression));
     }
 
     private void insert(@NotNull Expression expression) {
         if (!(expression.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             throw new IllegalArgumentException("Cannot add expression: " + expression);
         }
-        boolean wasAggregate = onBinaryExpression(expression, BinaryOperator.EQUAL_TO,
-                leftSide -> leftSide instanceof SnapshotExpression,
-                rightSide -> rightSide instanceof AggregateExpression,
-                (leftSide, rightSide) -> {
-                    SnapshotExpression snapshot = (SnapshotExpression) leftSide;
-                    AggregateExpression aggregate = (AggregateExpression) rightSide;
-                    List<? extends Expression> components = aggregate.getExpressions();
-                    if (leftSide.getType().getDimensions() > 0) {
-                        add(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.length(snapshot.getSnapshot(), new LiteralExpression(1)), new LiteralExpression(components.size())));
-                        for (int i = 0; i < components.size(); i++) {
-                            Expression component = components.get(i);
-                            IndexExpression indexExpression = new IndexExpression(snapshot, new LiteralExpression(i + 1));
-                            add(new BinaryExpression(BinaryOperator.EQUAL_TO, indexExpression, component));
-                        }
-                        return true;
-                    } else if (leftSide.getType().getRootStructure() instanceof RapidRecord record) {
-                        List<? extends RapidComponent> fields = record.getComponents();
-                        if (fields.size() != components.size()) {
-                            return false;
-                        }
-                        for (int i = 0; i < fields.size(); i++) {
-                            RapidComponent field = fields.get(i);
-                            Expression component = components.get(i);
-                            RapidType componentType = Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE);
-                            String componentName = Objects.requireNonNullElse(field.getName(), "<ID>");
-                            ComponentExpression componentExpression = new ComponentExpression(componentType, snapshot, componentName);
-                            add(new BinaryExpression(BinaryOperator.EQUAL_TO, componentExpression, component));
-                        }
-                        return true;
-                    }
-                    return false;
-                });
-        if (wasAggregate) {
+        BinaryExpression aggregateAssignment = getAggregateAssignment(expression);
+        if(aggregateAssignment != null) {
+            performAggregateAssignment(aggregateAssignment);
             return;
         }
-        if (expression.getComponents().stream().anyMatch(expr -> expr instanceof IndexExpression || expr instanceof ComponentExpression)) {
+        if (expression.getComponents().stream().anyMatch(expr -> expr instanceof AggregateExpression || expr instanceof VariableExpression || expr instanceof IndexExpression || expr instanceof ComponentExpression)) {
             throw new IllegalArgumentException("Cannot add expression: " + expression);
-        }
-        if (conditions.contains(expression)) {
-            return;
         }
         conditions.add(expression);
     }
 
-    private boolean onBinaryExpression(@NotNull Expression expression, @NotNull BinaryOperator operator, @NotNull Predicate<Expression> leftSide, @NotNull Predicate<Expression> rightSide, @NotNull BiPredicate<Expression, Expression> consumer) {
-        if (!(expression instanceof BinaryExpression binaryExpression) || !(binaryExpression.getOperator() == operator)) {
-            return false;
+    private @Nullable BinaryExpression getAggregateAssignment(@NotNull Expression expression) {
+        if(!(expression instanceof BinaryExpression binaryExpression)) {
+            return null;
         }
-        if (leftSide.test(binaryExpression.getLeft()) && leftSide.test(binaryExpression.getRight())) {
-            return false;
+        if(binaryExpression.getOperator() != BinaryOperator.EQUAL_TO) {
+            return null;
         }
-        if (rightSide.test(binaryExpression.getLeft()) && rightSide.test(binaryExpression.getRight())) {
-            return false;
+        Expression left = binaryExpression.getLeft();
+        Expression right = binaryExpression.getRight();
+        if(left instanceof SnapshotExpression && right instanceof AggregateExpression) {
+            return binaryExpression;
         }
-        if (leftSide.test(binaryExpression.getLeft()) && rightSide.test(binaryExpression.getRight())) {
-            return consumer.test(binaryExpression.getLeft(), binaryExpression.getRight());
+        if(right instanceof SnapshotExpression && left instanceof AggregateExpression) {
+            return new BinaryExpression(BinaryOperator.EQUAL_TO, right, left);
         }
-        if (leftSide.test(binaryExpression.getRight()) && rightSide.test(binaryExpression.getLeft())) {
-            return consumer.test(binaryExpression.getRight(), binaryExpression.getLeft());
+        return null;
+    }
+
+    private void performAggregateAssignment(@NotNull BinaryExpression expression) {
+        SnapshotExpression snapshot = (SnapshotExpression) expression.getLeft();
+        AggregateExpression aggregate = (AggregateExpression) expression.getRight();
+        List<? extends Expression> components = aggregate.getExpressions();
+        if (snapshot.getType().getDimensions() > 0) {
+            add(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.length(snapshot.getSnapshot(), new LiteralExpression(1)), new LiteralExpression(components.size())));
+            for (int i = 0; i < components.size(); i++) {
+                Expression component = components.get(i);
+                IndexExpression indexExpression = new IndexExpression(snapshot, new LiteralExpression(i + 1));
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, indexExpression, component));
+            }
+        } else if (snapshot.getType().getRootStructure() instanceof RapidRecord record) {
+            List<? extends RapidComponent> fields = record.getComponents();
+            if (fields.size() != components.size()) {
+                return;
+            }
+            for (int i = 0; i < fields.size(); i++) {
+                RapidComponent field = fields.get(i);
+                Expression component = components.get(i);
+                RapidType componentType = Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE);
+                String componentName = Objects.requireNonNullElse(field.getName(), "<ID>");
+                ComponentExpression componentExpression = new ComponentExpression(componentType, snapshot, componentName);
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, componentExpression, component));
+            }
         }
-        return false;
     }
 
     public @NotNull Set<Expression> getConditions() {
@@ -388,8 +379,7 @@ public class DataFlowState {
         if (!(expression.getType().isAssignable(RapidPrimitiveType.BOOLEAN))) {
             throw new IllegalArgumentException("Cannot calculate constraint for expression: " + expression);
         }
-        expression = expression.replace(this::getSnapshot);
-        return ConditionAnalyzer.getBooleanValue(this, expression);
+        return ConditionAnalyzer.getBooleanValue(this, getSnapshot(expression));
     }
 
     public boolean isSatisfiable(@NotNull Set<Snapshot> targets) {
@@ -427,13 +417,13 @@ public class DataFlowState {
             assign(indexExpression.getVariable(), replacementExpression);
             SnapshotExpression value = new SnapshotExpression(Snapshot.createSnapshot(indexExpression.getType()));
             BinaryExpression equalToUpdate = new BinaryExpression(BinaryOperator.EQUAL_TO, replacementExpression, FunctionCallExpression.store(array, index, value));
-            conditions.add(equalToUpdate);
+            insert(equalToUpdate);
             BinaryExpression presentEqual = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(array), FunctionCallExpression.present(replacement));
-            conditions.add(presentEqual);
+            insert(presentEqual);
             for (int i = 0; i < array.getType().getDimensions(); i++) {
                 LiteralExpression depth = new LiteralExpression(i + 1);
                 BinaryExpression lengthEqual = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.length(array, depth), FunctionCallExpression.length(replacement, depth));
-                conditions.add(lengthEqual);
+                insert(lengthEqual);
             }
             return value;
         }
@@ -447,9 +437,9 @@ public class DataFlowState {
             assign(componentExpression.getVariable(), replacementExpression);
             SnapshotExpression value = new SnapshotExpression(Snapshot.createSnapshot(componentExpression.getType()));
             BinaryExpression equalToUpdate = new BinaryExpression(BinaryOperator.EQUAL_TO, replacementExpression, FunctionCallExpression.store(record, componentExpression.getComponent(), value));
-            conditions.add(equalToUpdate);
+            insert(equalToUpdate);
             BinaryExpression presentEqual = new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(record), FunctionCallExpression.present(replacement));
-            conditions.add(presentEqual);
+            insert(presentEqual);
             return value;
         }
         Snapshot snapshot = Snapshot.createSnapshot(expression.getType(), optionality);
@@ -484,10 +474,15 @@ public class DataFlowState {
     }
 
     private @NotNull Expression getSnapshot(@NotNull Expression value) {
-        if (value instanceof ReferenceExpression referenceValue) {
-            return getSnapshot(referenceValue);
+        if(value instanceof ReferenceExpression referenceExpression) {
+            return getSnapshot(referenceExpression);
         }
-        return value;
+        return value.replace(expression -> {
+            if(!(expression instanceof ReferenceExpression referenceExpression)) {
+                return expression;
+            }
+            return getSnapshot(referenceExpression);
+        });
     }
 
     /**

@@ -45,8 +45,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
 
-    private static final Logger logger = Logger.getInstance(RapidDebugRunner.class);
-
     public static final @NotNull String RUNNER_ID = "RapidDebugRunner";
 
     @Override

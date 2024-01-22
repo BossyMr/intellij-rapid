@@ -71,22 +71,20 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
 
     @Override
     public void visitRoutine(@NotNull PhysicalRoutine routine) {
-        if (previous instanceof RapidStatementList) {
-            List<PhysicalParameterGroup> groups = routine.getParameters();
-            if (groups != null) {
-                for (RapidParameterGroup group : groups) {
-                    for (RapidParameter parameter : group.getParameters()) {
-                        process(parameter);
-                    }
+        List<PhysicalParameterGroup> groups = routine.getParameters();
+        if (groups != null) {
+            for (RapidParameterGroup group : groups) {
+                for (RapidParameter parameter : group.getParameters()) {
+                    process(parameter);
                 }
             }
-            Collection<RapidLabelStatement> labelStatements = PsiTreeUtil.findChildrenOfType(routine, RapidLabelStatement.class);
-            for (RapidLabelStatement labelStatement : labelStatements) {
-                process(labelStatement);
-            }
-            for (RapidField field : routine.getFields()) {
-                process(field);
-            }
+        }
+        Collection<RapidLabelStatement> labelStatements = PsiTreeUtil.findChildrenOfType(routine, RapidLabelStatement.class);
+        for (RapidLabelStatement labelStatement : labelStatements) {
+            process(labelStatement);
+        }
+        for (RapidField field : routine.getFields()) {
+            process(field);
         }
         super.visitRoutine(routine);
     }
@@ -121,9 +119,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
 
     @Override
     public void visitForStatement(@NotNull RapidForStatement statement) {
-        if (previous instanceof RapidStatementList) {
-            process(statement.getVariable());
-        }
+        process(statement.getVariable());
         super.visitForStatement(statement);
     }
 

@@ -22,15 +22,13 @@ public class DataFlowAnalyzer {
 
     private final @NotNull ControlFlowBlock block;
     private final @NotNull Deque<DataFlowState> workList;
-    private final @NotNull Set<RapidRoutine> stack;
 
-    private DataFlowAnalyzer(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block, @NotNull Deque<DataFlowState> workList) {
+    private DataFlowAnalyzer(@NotNull ControlFlowBlock block, @NotNull Deque<DataFlowState> workList) {
         this.block = block;
         this.workList = workList;
-        this.stack = stack;
     }
 
-    public static void computeDataFlow(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block) {
+    public static @NotNull DataFlowAnalyzer createDataFlowAnalyzer(@NotNull ControlFlowBlock block) {
         Block controlFlow = block.getControlFlow();
         Deque<DataFlowState> workList = new ArrayDeque<>(controlFlow.getInstructions().size());
         for (EntryInstruction instruction : controlFlow.getEntryInstructions()) {
@@ -38,8 +36,7 @@ public class DataFlowAnalyzer {
             block.getDataFlow().put(instruction.getEntryType(), state);
             workList.add(DataFlowState.createSuccessorState(instruction.getInstruction(), state));
         }
-        DataFlowAnalyzer analyzer = new DataFlowAnalyzer(stack, block, workList);
-        analyzer.process();
+        return new DataFlowAnalyzer(block, workList);
     }
 
     public static @Nullable DataFlowState getPreviousCycle(@NotNull DataFlowState state) {
@@ -68,11 +65,11 @@ public class DataFlowAnalyzer {
         return count;
     }
 
-    public void process() {
+    public void process(@NotNull Set<RapidRoutine> stack) {
         while (!(workList.isEmpty())) {
             ProgressManager.checkCanceled();
             DataFlowState state = workList.removeFirst();
-            List<DataFlowState> successors = process(state);
+            List<DataFlowState> successors = process(stack, state);
             ControlFlowListener.publish().onState(state);
             for (DataFlowState successor : successors) {
                 if (getPreviousCycles(successor) >= 2) {
@@ -86,7 +83,7 @@ public class DataFlowAnalyzer {
         }
     }
 
-    private @NotNull List<DataFlowState> process(@NotNull DataFlowState state) {
+    private @NotNull List<DataFlowState> process(@NotNull Set<RapidRoutine> stack, @NotNull DataFlowState state) {
         List<DataFlowState> chain = state.getPredecessorChain();
         DataFlowState origin = chain.get(chain.size() - 1);
         if (!(block.getDataFlow().containsValue(origin))) {

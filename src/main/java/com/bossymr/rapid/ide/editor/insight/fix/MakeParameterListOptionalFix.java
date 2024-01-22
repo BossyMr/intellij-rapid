@@ -20,11 +20,11 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public final class MakeParameterListOptional implements IntentionAction {
+public final class MakeParameterListOptionalFix implements IntentionAction {
 
     private final PhysicalParameterGroup parameterGroup;
 
-    public MakeParameterListOptional(@NotNull PhysicalParameterGroup parameterGroup) {
+    public MakeParameterListOptionalFix(@NotNull PhysicalParameterGroup parameterGroup) {
         this.parameterGroup = parameterGroup;
     }
 
@@ -40,7 +40,7 @@ public final class MakeParameterListOptional implements IntentionAction {
 
     @Override
     public @NotNull FileModifier getFileModifierForPreview(@NotNull PsiFile target) {
-        return new MakeParameterListOptional(PsiTreeUtil.findSameElementInCopy(parameterGroup, target));
+        return new MakeParameterListOptionalFix(PsiTreeUtil.findSameElementInCopy(parameterGroup, target));
     }
 
     @Override

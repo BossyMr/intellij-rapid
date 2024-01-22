@@ -3,7 +3,6 @@ package com.bossymr.rapid.language.flow;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
-import com.bossymr.rapid.language.flow.data.HardcodedContract;
 import com.bossymr.rapid.language.flow.expression.Expression;
 import com.bossymr.rapid.language.flow.expression.ReferenceExpression;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
@@ -40,6 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * A service used to retrieve the control flow graph for a program.
@@ -69,16 +69,6 @@ public final class ControlFlowService implements Disposable {
         return cache.getDataFlow(routine);
     }
 
-    public @Nullable ControlFlowBlock getDataFlow(@NotNull String name) {
-        for (HardcodedContract value : HardcodedContract.values()) {
-            VirtualRoutine routine = value.getRoutine();
-            if (routine.getName().equals(name)) {
-                return getDataFlow(routine);
-            }
-        }
-        return null;
-    }
-
     /**
      * Computes the control flow and data flow for every routine in the specified project.
      *
@@ -86,15 +76,15 @@ public final class ControlFlowService implements Disposable {
      * @return the control flow and data flow graphs for every routine in the specified project.
      */
     public @NotNull Set<ControlFlowBlock> getDataFlow(@NotNull Project project) {
-        return getDataFlow(project, cache::getDataFlow);
+        return getDataFlow(project, cache::getDataFlow, cache::getDataFlow);
     }
 
-    public @NotNull Set<ControlFlowBlock> getControlFlow(@NotNull Project project) {
-        return getDataFlow(project, cache::getControlFlow);
+    public @NotNull Set<Block> getControlFlow(@NotNull Project project) {
+        return getDataFlow(project, cache::getControlFlow, cache::getControlFLow);
     }
 
-    private @NotNull Set<ControlFlowBlock> getDataFlow(@NotNull Project project, @NotNull Function<PhysicalRoutine, ControlFlowBlock> consumer) {
-        Set<ControlFlowBlock> routines = new HashSet<>();
+    private <T> @NotNull Set<T> getDataFlow(@NotNull Project project, @NotNull Function<PhysicalRoutine, T> consumer, @NotNull Supplier<Collection<T>> supplier) {
+        Set<T> routines = new HashSet<>();
         PsiManager manager = PsiManager.getInstance(project);
         Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(project));
         for (VirtualFile virtualFile : virtualFiles) {
@@ -107,7 +97,7 @@ public final class ControlFlowService implements Disposable {
                 }
             }
         }
-        routines.addAll(cache.getDataFlow());
+        routines.addAll(supplier.get());
         return routines;
     }
 
@@ -142,12 +132,13 @@ public final class ControlFlowService implements Disposable {
             DataFlowFunction function = block.getFunction();
             return function.getOutput(callerState, instruction);
         }
-        ControlFlowBlock block = cache.getControlFlow(routine);
-        if (block.hasDataFlowGraph()) {
+        ControlFlowBlock block = cache.getDataFlowIfAvailable(routine);
+        if (block != null) {
             DataFlowFunction function = block.getFunction();
             return function.getOutput(callerState, instruction);
         }
-        if (!(hasSideEffect(stack, block, instruction))) {
+        Block controlFlow = cache.getControlFlow(routine);
+        if (!(hasSideEffect(stack, controlFlow, instruction))) {
             DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getInstruction(), callerState);
             return Set.of(new DataFlowFunction.Result.Success(successorState, null));
         }
@@ -156,8 +147,7 @@ public final class ControlFlowService implements Disposable {
         return function.getOutput(callerState, instruction);
     }
 
-    private boolean hasSideEffect(@NotNull Set<RapidRoutine> stack, @NotNull ControlFlowBlock block, @NotNull CallInstruction instruction) {
-        Block controlFlow = block.getControlFlow();
+    private boolean hasSideEffect(@NotNull Set<RapidRoutine> stack, @NotNull Block controlFlow, @NotNull CallInstruction instruction) {
         Map<Argument, Expression> arguments = DataFlowFunction.getArguments(controlFlow, instruction.getArguments());
         ReferenceExpression returnValue = instruction.getReturnValue();
         if (returnValue != null) {
@@ -169,9 +159,12 @@ public final class ControlFlowService implements Disposable {
         if (controlFlow.getInstructions().stream().anyMatch(statement -> statement instanceof ThrowInstruction || statement instanceof ExitInstruction)) {
             return true;
         }
-        if (block.hasDataFlowGraph()) {
-            Map<DataFlowState, DataFlowFunction.Result> results = block.getFunction().getResults();
-            return !(results.values().stream().allMatch(result -> result instanceof DataFlowFunction.Result.Success));
+        if(controlFlow.getElement() instanceof RapidRoutine routine) {
+            ControlFlowBlock block = cache.getDataFlowIfAvailable(routine);
+            if(block != null) {
+                Map<DataFlowState, DataFlowFunction.Result> results = block.getFunction().getResults();
+                return !(results.values().stream().allMatch(result -> result instanceof DataFlowFunction.Result.Success));
+            }
         }
         for (Instruction statement : controlFlow.getInstructions()) {
             if (!(statement instanceof CallInstruction callInstruction)) {
@@ -185,12 +178,12 @@ public final class ControlFlowService implements Disposable {
             copy.add(routine);
             if (routine instanceof VirtualRoutine virtualRoutine) {
                 ControlFlowBlock dependency = cache.getDataFlow(Set.of(virtualRoutine), virtualRoutine);
-                if (hasSideEffect(copy, dependency, callInstruction)) {
+                if (hasSideEffect(copy, dependency.getControlFlow(), callInstruction)) {
                     return true;
                 }
             }
             if (routine instanceof PhysicalRoutine) {
-                ControlFlowBlock dependency = cache.getControlFlow(routine);
+                Block dependency = cache.getControlFlow(routine);
                 if (hasSideEffect(copy, dependency, callInstruction)) {
                     return true;
                 }

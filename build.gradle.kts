@@ -6,13 +6,11 @@ plugins {
     // IntelliJ IDEA support
     id("idea")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.8.0"
+    id("org.jetbrains.kotlin.jvm") version "1.9.22"
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.16.1"
-    // Gradle GrammarKit Plugin
-    id("org.jetbrains.grammarkit") version "2022.3.1"
+    id("org.jetbrains.intellij") version "1.17.0"
     // Gradle Sentry Plugin
-    id("io.sentry.jvm.gradle") version "3.12.0"
+    id("io.sentry.jvm.gradle") version "4.2.0"
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
@@ -59,14 +57,38 @@ dependencies {
 }
 
 sentry {
-    // Generates a JVM (Java, Kotlin, etc.) source bundle and uploads your source code to Sentry.
+    // Enables more detailed log output, e.g. for sentry-cli.
+    //
+    // Default is false.
+    debug.set(false)
+
+    // Generates a source bundle and uploads it to Sentry.
     // This enables source context, allowing you to see your source
     // code as part of your stack traces in Sentry.
-    includeSourceContext = true
+    //
+    // Default is disabled. To enable, see the source context guide.
+    includeSourceContext.set(true)
 
-    org = "sentry"
-    projectName = "intellij-rapid"
-    authToken = System.getenv("SENTRY_AUTH_TOKEN")
+    // Includes additional source directories into the source bundle.
+    // These directories are resolved relative to the project directory.
+    // additionalSourceDirsForSourceContext.set(setOf("src/main/java"))
+
+    // Disables or enables dependencies metadata reporting for Sentry.
+    // If enabled, the plugin will collect external dependencies and
+    // upload them to Sentry as part of events. If disabled, all the logic
+    // related to the dependencies metadata report will be excluded.
+    //
+    // Default is enabled.
+    includeDependenciesReport.set(true)
+
+    org.set("sentry")
+    projectName.set("intellij-rapid")
+    authToken.set(System.getenv("SENTRY_AUTH_TOKEN"))
+
+    // Automatically adds Sentry dependencies to your project.
+    autoInstallation {
+        enabled.set(true)
+    }
 }
 
 tasks {
@@ -82,25 +104,6 @@ tasks {
         version.set(properties("pluginVersion"))
         sinceBuild.set(properties("pluginSinceBuild"))
         untilBuild.set(properties("pluginUntilBuild"))
-    }
-
-    // Configure GrammarKit plugin
-    // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-grammar-kit-plugin.html
-    generateLexer {
-        sourceFile.set(file("src/main/grammar/Rapid.flex"))
-        targetDir.set("src/main/gen/com/bossymr/rapid/language/lexer")
-        targetClass.set("_RapidLexer")
-        purgeOldFiles.set(true)
-    }
-
-    // Configure GrammarKit plugin
-    // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-grammar-kit-plugin.html
-    generateParser {
-        sourceFile.set(file("src/main/grammar/Rapid.bnf"))
-        targetRoot.set("src/main/gen")
-        pathToParser.set("/com/bossymr/rapid/language/parser/RapidParser.java")
-        pathToPsiRoot.set("/com/bossymr/rapid/language/psi")
-        purgeOldFiles.set(true)
     }
 
     // Configure UI tests plugin

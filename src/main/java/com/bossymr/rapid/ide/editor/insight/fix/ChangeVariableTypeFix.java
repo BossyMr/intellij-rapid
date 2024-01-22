@@ -1,7 +1,9 @@
 package com.bossymr.rapid.ide.editor.insight.fix;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.RapidElementFactory;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.bossymr.rapid.language.psi.RapidTypeElement;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameter;
 import com.bossymr.rapid.language.symbol.physical.PhysicalTargetVariable;
@@ -18,7 +20,6 @@ import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -37,13 +38,12 @@ public class ChangeVariableTypeFix extends PsiUpdateModCommandAction<PhysicalVar
         return RapidBundle.message("quick.fix.family.change.return.type");
     }
 
-    public String test() {
-        return "";
-    }
-
     @Override
     protected @Nullable Presentation getPresentation(@NotNull ActionContext context, @NotNull PhysicalVariable element) {
         if (element instanceof PhysicalTargetVariable) {
+            return null;
+        }
+        if(element instanceof PhysicalField && newType.isArray()) {
             return null;
         }
         return Presentation.of(RapidBundle.message("quick.fix.text.change.variable.type", element.getPresentableName(), newType.getPresentableText()));
@@ -69,21 +69,7 @@ public class ChangeVariableTypeFix extends PsiUpdateModCommandAction<PhysicalVar
             typeElement.replace(newTypeElement);
         }
         if (newType.isArray()) {
-            if (element instanceof PhysicalField field) {
-                RapidExpression expression = elementFactory.createExpressionFromText("<EXP>");
-                List<RapidExpression> expressions = new ArrayList<>();
-                for (int i = 0; i < newType.getDimensions(); i++) {
-                    expressions.add(expression);
-                }
-                RapidArray array = elementFactory.createArray(expressions);
-                RapidArray previousArray = field.getArray();
-                if (previousArray != null) {
-                    previousArray.replace(array);
-                } else {
-                    PsiElement anchor = Objects.requireNonNullElseGet(field.getNameIdentifier(), field::getTypeElement);
-                    field.addAfter(array, anchor);
-                }
-            } else if (element instanceof PhysicalParameter parameter) {
+             if (element instanceof PhysicalParameter parameter) {
                 List<PsiElement> array = elementFactory.createArray(newType.getDimensions());
                 ASTNode node = parameter.getNode();
                 ASTNode arrayElement = node.findChildByType(RapidTokenTypes.LBRACE);

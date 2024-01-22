@@ -92,6 +92,10 @@ public class DataFlowGraphService extends AnAction {
             writeInstruction(stringBuilder, functionBlock, block, states);
         }
         for (ControlFlowBlock block : blocks) {
+            Block controlFlow = block.getControlFlow();
+            if(controlFlow.getModuleName().isEmpty()) {
+                continue;
+            }
             DataFlowFunction function = block.getFunction();
             Map<DataFlowState, Set<DataFlowState>> usages = function.getUsages();
             for (DataFlowState callerState : usages.keySet()) {

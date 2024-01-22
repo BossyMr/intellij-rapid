@@ -72,6 +72,11 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
     @Override
     public void visitField(@NotNull PhysicalField field) {
         checkSymbolAfter(field, Set.of(PhysicalRoutine.class));
+        RapidArray array = field.getArray();
+        if (array != null) {
+            checkDimensionDepth(array);
+            checkDimensionExpression(array);
+        }
         super.visitField(field);
     }
 
@@ -138,13 +143,6 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
     }
 
     @Override
-    public void visitArray(@NotNull RapidArray array) {
-        checkDimensionDepth(array);
-        checkDimensionExpression(array);
-        super.visitArray(array);
-    }
-
-    @Override
     public void visitArgumentList(@NotNull RapidArgumentList argumentList) {
         super.visitArgumentList(argumentList);
     }
@@ -179,6 +177,28 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     @Override
     public void visitAggregateExpression(@NotNull RapidAggregateExpression expression) {
+        RapidType type = expression.getType();
+        if(type != null) {
+            // TODO: Check array length
+            if(type.isArray()) {
+                RapidType arrayType = type.createArrayType(type.getDimensions() - 1);
+                for (RapidExpression component : expression.getExpressions()) {
+                    checkType(arrayType, component);
+                }
+            }
+            if(type.isRecord() && type.getRootStructure() instanceof RapidRecord record) {
+                List<? extends RapidComponent> components = record.getComponents();
+                List<RapidExpression> expressions = expression.getExpressions();
+                if(components.size() != expressions.size()) {
+                    // TODO: Annotate error
+                }
+                for (int i = 0; i < components.size(); i++) {
+                    RapidComponent component = components.get(i);
+                    RapidExpression value = expressions.get(i);
+                    checkType(component.getType(), value);
+                }
+            }
+        }
         super.visitAggregateExpression(expression);
     }
 
@@ -256,7 +276,26 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                             .range(variable)
                             .create();
         }
-        checkType(RapidPrimitiveType.NUMBER, expression);
+        RapidSymbol symbol = variable instanceof RapidReferenceExpression referenceExpression ? referenceExpression.getSymbol() : null;
+        if (symbol != null && !(symbol instanceof RapidVariable)) {
+            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.expression.not.variable"))
+                            .range(variable)
+                            .create();
+        }
+        RapidArray array = expression.getArray();
+        List<RapidExpression> dimensions = array.getDimensions();
+        for (int i = 0; i < dimensions.size(); i++) {
+            RapidExpression dimension = dimensions.get(i);
+            checkType(RapidPrimitiveType.NUMBER, dimension);
+            if (symbol != null && type != null && type.isArray() && type.getDimensions() < (i + 1)) {
+                AnnotationBuilder builder = annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.array.wrong.degree", symbol.getPresentableName(), type.getDimensions()))
+                                                            .range(dimension);
+                if (symbol instanceof PhysicalVariable field) {
+                    builder = builder.withFix(new ChangeVariableTypeFix(field, type.createArrayType(dimensions.size())));
+                }
+                builder.create();
+            }
+        }
         super.visitIndexExpression(expression);
     }
 
@@ -341,7 +380,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     private void checkConnectTarget(@NotNull RapidExpression expression) {
         checkType(RapidPrimitiveType.NUMBER, expression);
-        if (expression instanceof RapidReferenceExpression referenceExpression) {
+        if (getConnectTargetExpression(expression) instanceof RapidReferenceExpression referenceExpression) {
             RapidSymbol symbol = referenceExpression.getSymbol();
             if (symbol instanceof PhysicalField field) {
                 PhysicalRoutine routine = PhysicalRoutine.getRoutine(field);
@@ -353,6 +392,20 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
         annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.connect.target.invalid"))
                         .range(expression)
                         .create();
+    }
+
+    private @NotNull RapidExpression getConnectTargetExpression(@NotNull RapidExpression expression) {
+        if (expression instanceof RapidIndexExpression indexExpression) {
+            RapidExpression variable = indexExpression.getExpression();
+            return getConnectTargetExpression(variable);
+        }
+        if (expression instanceof RapidReferenceExpression referenceExpression) {
+            RapidExpression qualifier = referenceExpression.getQualifier();
+            if (qualifier != null) {
+                return getConnectTargetExpression(qualifier);
+            }
+        }
+        return expression;
     }
 
     @Override
@@ -460,14 +513,13 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     @Override
     public void visitTestStatement(@NotNull RapidTestStatement statement) {
-        int index = -1;
-        List<RapidTestCaseStatement> statements = statement.getTestCaseStatements();
-        for (int i = 0; i < statements.size(); i++) {
-            RapidTestCaseStatement element = statements.get(i);
+        boolean foundDefault = false;
+        for (RapidTestCaseStatement element : statement.getTestCaseStatements()) {
             if (element.isDefault()) {
-                index = i;
+                foundDefault = true;
+                continue;
             }
-            if (i > index) {
+            if (foundDefault) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.test.case.statement.after.default"))
                                 .range(element.getFirstChild())
                                 .withFix(new ReorderTestStatementFix(statement))

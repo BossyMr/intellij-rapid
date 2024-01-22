@@ -1,5 +1,6 @@
 package com.bossymr.rapid.language.flow.debug;
 
+import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
@@ -21,7 +22,7 @@ public class ViewFlowAction extends AnAction {
         if (project == null) {
             return;
         }
-        Set<ControlFlowBlock> controlFlow = ControlFlowService.getInstance().getControlFlow(project);
+        Set<Block> controlFlow = ControlFlowService.getInstance().getControlFlow(project);
         String text = ControlFlowFormatVisitor.format(controlFlow);
         LightVirtualFile virtualFile = new LightVirtualFile("ControlFlow.txt", text);
         FileEditorManager.getInstance(project).openTextEditor(new OpenFileDescriptor(project, virtualFile), true);

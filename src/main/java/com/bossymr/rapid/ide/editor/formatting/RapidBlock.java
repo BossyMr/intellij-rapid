@@ -166,6 +166,9 @@ public class RapidBlock extends AbstractBlock {
         if (parentType == AGGREGATE_EXPRESSION) {
             return Wrap.createWrap(getWrapType(commonSettings.ARRAY_INITIALIZER_WRAP), commonSettings.ARRAY_INITIALIZER_LBRACE_ON_NEXT_LINE);
         }
+        if(parentType == TEST_STATEMENT && elementType == TEST_CASE_STATEMENT) {
+            return Wrap.createWrap(WrapType.ALWAYS, true);
+        }
         if (parentType == STATEMENT_LIST) {
             ASTNode treeParent = getNode().getTreeParent();
             if (commonSettings.KEEP_SIMPLE_METHODS_IN_ONE_LINE

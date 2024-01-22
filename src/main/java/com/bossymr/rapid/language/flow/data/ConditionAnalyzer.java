@@ -82,8 +82,7 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         return switch (constraint) {
             case ANY_VALUE -> Optionality.UNKNOWN;
             case ALWAYS_TRUE -> Optionality.PRESENT;
-            case ALWAYS_FALSE -> Optionality.MISSING;
-            case NO_VALUE -> Optionality.NO_VALUE;
+            case ALWAYS_FALSE -> Optionality.MISSING;case NO_VALUE -> Optionality.NO_VALUE;
         };
     }
 
@@ -151,14 +150,8 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
                 String componentName = (String) literalExpression.getValue();
                 FuncDecl<?> field = getField(record, componentName);
                 if (expression.getName().equals(":SelectS")) {
-                    System.out.println("field = " + field);
-                    System.out.println("arguments[0] = " + arguments[0]);
                     yield context.mkApp(field, arguments[0]);
                 } else {
-                    // TODO: Fix this method...
-                    System.out.println("field = " + field);
-                    System.out.println("arguments[0] = " + arguments[0]);
-                    System.out.println("arguments[2] = " + arguments[2]);
                     yield context.mkUpdateField(field, arguments[0], arguments[2]);
                 }
             }
@@ -304,21 +297,35 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         if (!(current.getType().equals(RapidPrimitiveType.ANYTYPE))) {
             return current.getType();
         }
-        Expression expression = stack.peekLast();
+        Expression expression = stack.pollLast();
         if (expression == null || expression.equals(EMPTY_EXPRESSION)) {
+            if (expression != null) {
+                stack.addLast(expression);
+            }
             return RapidPrimitiveType.ANYTYPE;
         }
         if (expression instanceof UnaryExpression unaryExpression) {
+            stack.addLast(expression);
             return switch (unaryExpression.getOperator()) {
                 case NOT -> RapidPrimitiveType.BOOLEAN;
                 case NEGATE -> RapidPrimitiveType.NUMBER;
             };
         }
         if (expression instanceof BinaryExpression binaryExpression) {
-            Expression alternative = binaryExpression.getLeft().equals(current) ? binaryExpression.getRight() : binaryExpression.getLeft();
-            RapidType type = getCorrectType(alternative);
+            RapidType type;
+            if (binaryExpression.getLeft().equals(current)) {
+                type = getCorrectType(binaryExpression.getRight());
+            } else if (binaryExpression.getRight().equals(current)) {
+                type = getCorrectType(binaryExpression.getLeft());
+            } else {
+                type = RapidPrimitiveType.ANYTYPE;
+            }
+            stack.addLast(expression);
             return switch (binaryExpression.getOperator()) {
                 case ADD -> {
+                    if (type.equals(RapidPrimitiveType.ANYTYPE)) {
+                        yield RapidPrimitiveType.ANYTYPE;
+                    }
                     if (RapidPrimitiveType.STRING.isAssignable(type)) {
                         yield RapidPrimitiveType.STRING;
                     }
@@ -331,29 +338,35 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             };
         }
         if (expression instanceof AggregateExpression aggregateExpression) {
-            RapidType type = getCorrectType(expression);
+            RapidType type = getCorrectType(aggregateExpression);
             if (type.getDimensions() > 0) {
+                stack.addLast(expression);
                 return type.createArrayType(type.getDimensions() - 1);
             }
             if (type.getRootStructure() instanceof RapidRecord record) {
                 int index = aggregateExpression.getExpressions().indexOf(current);
                 List<? extends RapidComponent> components = record.getComponents();
                 if (index < 0 || index >= components.size()) {
+                    stack.addLast(expression);
                     return RapidPrimitiveType.BOOLEAN;
                 }
                 RapidType componentType = components.get(index).getType();
+                stack.addLast(expression);
                 return Objects.requireNonNullElse(componentType, RapidPrimitiveType.BOOLEAN);
             }
         }
         if (expression instanceof IndexExpression indexExpression) {
             if (current.equals(indexExpression.getIndex())) {
+                stack.addLast(expression);
                 return RapidPrimitiveType.NUMBER;
             }
             if (current.equals(indexExpression.getVariable())) {
                 RapidType correctType = getCorrectType(indexExpression);
+                stack.addLast(expression);
                 return correctType.createArrayType(correctType.getDimensions() + 1);
             }
         }
+        stack.addLast(expression);
         return RapidPrimitiveType.ANYTYPE;
     }
 

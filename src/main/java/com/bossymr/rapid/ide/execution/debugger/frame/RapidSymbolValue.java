@@ -79,6 +79,7 @@ public class RapidSymbolValue extends XNamedValue {
     @Override
     public void computePresentation(@NotNull XValueNode node, @NotNull XValuePlace place) {
         try {
+            // TODO: Slow Operations Error
             String value = getValue();
             RapidType dataType = symbol.getType();
             boolean hasChildren = dataType != null && dataType.getRootStructure() instanceof RapidRecord record && !(record.getComponents().isEmpty());

@@ -132,6 +132,19 @@ public class FunctionCallExpression implements Expression {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FunctionCallExpression that = (FunctionCallExpression) o;
+        return Objects.equals(expression, that.expression) && Objects.equals(returnType, that.returnType) && Objects.equals(name, that.name) && Objects.equals(arguments, that.arguments);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(expression, returnType, name, arguments);
+    }
+
+    @Override
     public String toString() {
         return name + arguments.stream()
                                .map(entry -> {

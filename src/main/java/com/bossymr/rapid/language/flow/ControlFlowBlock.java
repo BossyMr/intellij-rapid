@@ -8,7 +8,9 @@ import com.bossymr.rapid.language.psi.BlockType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class ControlFlowBlock {
 
