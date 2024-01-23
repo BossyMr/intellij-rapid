@@ -27,8 +27,7 @@ public class ServiceInvocationHandler extends AbstractInvocationHandler {
             return manager;
         }
         if (isMethod(method, NetworkProxy.class, "move", NetworkManager.class)) {
-            this.manager = (NetworkManager) args[0];
-            return null;
+            return ((NetworkManager) args[0]).createService(type);
         }
         if (manager == null) {
             throw new IllegalStateException("Entity is not managed");

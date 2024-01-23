@@ -22,18 +22,18 @@ import java.util.Set;
 public class RapidSuspendContext extends XSuspendContext {
 
     private final @NotNull RapidExecutionStack executionStack;
-    private final @NotNull NetworkManager manager;
+    private final @NotNull RapidDebugProcess process;
     private final @NotNull Project project;
     private final @NotNull List<BreakpointEntity> breakpoints;
 
-    public RapidSuspendContext(@NotNull Project project, @NotNull Set<XBreakpoint<?>> breakpoints, @NotNull NetworkManager manager, @NotNull Task task, @NotNull StackFrame stackFrame) {
-        this.manager = manager;
+    public RapidSuspendContext(@NotNull Project project, @NotNull Set<XBreakpoint<?>> breakpoints, @NotNull RapidDebugProcess process, @NotNull Task task, @NotNull StackFrame stackFrame) {
+        this.process = process;
         this.project = project;
         this.breakpoints = breakpoints.stream()
-                .map(breakpoint -> breakpoint.getUserData(RapidDebugProcess.BREAKPOINT_KEY))
-                .filter(Objects::nonNull)
-                .toList();
-        this.executionStack = new RapidExecutionStack(manager, project, task, stackFrame, isAtBreakpoint(task, stackFrame), true);
+                                      .map(breakpoint -> breakpoint.getUserData(RapidDebugProcess.BREAKPOINT_KEY))
+                                      .filter(Objects::nonNull)
+                                      .toList();
+        this.executionStack = new RapidExecutionStack(process, project, task, stackFrame, isAtBreakpoint(task, stackFrame), true);
     }
 
     private boolean isAtBreakpoint(@NotNull Task task, @NotNull StackFrame stackFrame) {
@@ -56,17 +56,17 @@ public class RapidSuspendContext extends XSuspendContext {
 
     @Override
     public void computeExecutionStacks(@NotNull XExecutionStackContainer container) {
-        TaskService taskService = manager.createService(TaskService.class);
-        try {
+        process.execute(() -> {
+            TaskService taskService = process.getManager().createService(TaskService.class);
             List<Task> tasks = taskService.getTasks().get();
             List<RapidExecutionStack> executionStacks = new ArrayList<>();
             for (Task task : tasks) {
                 if (task.getActivityState() == TaskActiveState.DISABLED) continue;
                 StackFrame stackFrame = task.getStackFrame(1).get();
-                RapidExecutionStack stack = new RapidExecutionStack(manager, project, task, stackFrame, isAtBreakpoint(task, stackFrame), task.equals(executionStack.getTask()));
+                RapidExecutionStack stack = new RapidExecutionStack(process, project, task, stackFrame, isAtBreakpoint(task, stackFrame), task.equals(executionStack.getTask()));
                 executionStacks.add(stack);
             }
             container.addExecutionStack(executionStacks, true);
-        } catch (IOException | InterruptedException ignored) {}
+        });
     }
 }

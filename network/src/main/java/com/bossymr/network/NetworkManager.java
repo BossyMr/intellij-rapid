@@ -38,6 +38,16 @@ public interface NetworkManager extends AutoCloseable {
     }
 
     /**
+     * Creates a copy of the specified entity or service which uses this {@code NetworkManager}.
+     *
+     * @param entity the entity or service.
+     * @param <T> the entity or service type.
+     * @return a new copy of the specified entity or service.
+     * @throws IllegalArgumentException if the specified object doesn't represent an entity or service.
+     */
+    <T> @NotNull T move(@NotNull T entity);
+
+    /**
      * Returns the {@code NetworkClient} used by this {@code NetworkManager} to handle network communication.
      *
      * @return the {@code NetworkClient} used by this {@code NetworkManager}.

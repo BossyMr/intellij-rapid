@@ -1,7 +1,9 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
-import com.bossymr.network.NetworkManager;
+import com.bossymr.network.NetworkAction;
 import com.bossymr.network.ResponseStatusException;
+import com.bossymr.network.client.NetworkRequest;
+import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
@@ -33,7 +35,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 public class RapidStackFrame extends XStackFrame {
 
@@ -43,11 +44,11 @@ public class RapidStackFrame extends XStackFrame {
     private final @NotNull StackFrame stackFrame;
     private final @Nullable String equalityObject;
     private final @Nullable RapidSourcePosition sourcePosition;
-    private final @NotNull NetworkManager manager;
+    private final @NotNull RapidDebugProcess process;
 
-    public RapidStackFrame(@NotNull NetworkManager manager, @NotNull Project project, @NotNull StackFrame stackFrame) {
+    public RapidStackFrame(@NotNull RapidDebugProcess process, @NotNull Project project, @NotNull StackFrame stackFrame) {
         this.project = project;
-        this.manager = manager;
+        this.process = process;
         this.equalityObject = stackFrame.getRoutine();
         this.sourcePosition = findSourcePosition(stackFrame);
         this.stackFrame = stackFrame;
@@ -98,14 +99,23 @@ public class RapidStackFrame extends XStackFrame {
     @Override
     public void computeChildren(@NotNull XCompositeNode node) {
         if (node.isObsolete()) return;
-        CompletableFuture.runAsync(() -> ReadAction.run(() -> {
+        process.execute(() -> ReadAction.run(() -> {
             RapidSymbol symbol = ResolveService.getInstance(project).findSymbol(stackFrame.getRoutine());
             XValueChildrenList childrenList = new XValueChildrenList();
+            NetworkAction manager = new NetworkAction(process.getManager()) {
+                @Override
+                protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                    if (throwable instanceof ResponseStatusException e && e.getResponse().code() == 400) {
+                        return false;
+                    }
+                    return super.onFailure(request, throwable);
+                }
+            };
             if (!(symbol instanceof PhysicalRoutine routine)) {
                 return;
             }
             for (PhysicalField field : routine.getFields()) {
-                childrenList.add(new RapidSymbolValue(manager, field, stackFrame));
+                childrenList.add(new RapidSymbolValue(process, field, stackFrame));
             }
             List<PhysicalParameterGroup> parameters = routine.getParameters();
             if (parameters != null) {
@@ -114,27 +124,21 @@ public class RapidStackFrame extends XStackFrame {
                         try {
                             QueryableSymbol queryableSymbol = RapidSymbolValue.findSymbol(manager, parameter, stackFrame);
                             SymbolValue symbolValue = queryableSymbol.getValue().get();
-                            if (symbolValue.getValue().length() > 0) {
-                                childrenList.add(new RapidSymbolValue(manager, parameter, stackFrame));
+                            if (!symbolValue.getValue().isEmpty()) {
+                                childrenList.add(new RapidSymbolValue(process, parameter, stackFrame));
                             }
                         } catch (ResponseStatusException e) {
-                            if (e.getResponse().code() == 400) {
-                                // If an optional parameter is not provided, attempting to retrieve its value will
-                                // throw a ResponseStatusException with code 400.
-                                continue;
+                            if (e.getResponse().code() != 400) {
+                                throw e;
                             }
-                            logger.error(e);
-                        } catch (IOException | InterruptedException e) {
-                            logger.error(e);
                         }
                     }
                 }
             }
             PhysicalModule module = PsiTreeUtil.getStubOrPsiParentOfType(routine, PhysicalModule.class);
-
             if (module != null) {
                 for (RapidField child : module.getFields()) {
-                    childrenList.add(new RapidSymbolValue(manager, child, stackFrame));
+                    childrenList.add(new RapidSymbolValue(process, child, stackFrame));
                 }
             }
             node.addChildren(childrenList, true);

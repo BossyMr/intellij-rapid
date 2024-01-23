@@ -12,6 +12,7 @@ import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.intellij.execution.DefaultExecutionResult;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.ExecutionResult;
@@ -104,8 +105,7 @@ public class RapidRunProfileState implements RunProfileState {
         return manager;
     }
 
-    public @NotNull NetworkManager setupExecution() throws IOException, InterruptedException {
-        NetworkManager manager = getNetworkManager();
+    public void setupExecution(@NotNull NetworkManager manager) throws IOException, InterruptedException {
         for (TaskState state : states) {
             if (state.getName() == null) continue;
             if (state.getModuleName() != null) {
@@ -114,7 +114,6 @@ public class RapidRunProfileState implements RunProfileState {
             activate(manager, state, state.getName());
         }
         robot.download();
-        return manager;
     }
 
     private void upload(@NotNull String taskName, @NotNull String moduleName) throws IOException, InterruptedException {
@@ -146,17 +145,21 @@ public class RapidRunProfileState implements RunProfileState {
         }
     }
 
-
     @Override
     public @Nullable ExecutionResult execute(@NotNull Executor executor, @NotNull ProgramRunner<?> runner) throws ExecutionException {
         try {
-            NetworkManager manager = setupExecution();
-            RapidProcessHandler processHandler = RapidProcessHandler.create(manager);
+            NetworkManager manager = getNetworkManager();
+            RapidProcessHandler processHandler = new RapidProcessHandler(manager);
             ConsoleView consoleView = TextConsoleBuilderFactory.getInstance()
-                    .createBuilder(getProject())
-                    .filters(new RapidFileFilter(project))
-                    .getConsole();
+                                                               .createBuilder(getProject())
+                                                               .filters(new RapidFileFilter(project))
+                                                               .getConsole();
             consoleView.attachToProcess(processHandler);
+            if(!processHandler.check(getTasks())) {
+                setupExecution(manager);
+                processHandler.onExecutionState();
+                processHandler.start();
+            }
             return new DefaultExecutionResult(consoleView, processHandler);
         } catch (IOException e) {
             throw new ExecutionException(RapidBundle.message("run.execution.exception"));

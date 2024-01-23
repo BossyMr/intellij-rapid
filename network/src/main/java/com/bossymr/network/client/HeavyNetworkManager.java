@@ -141,6 +141,19 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @Override
+    public <T> @NotNull T move(@NotNull T entity) {
+        return HeavyNetworkManager.move(entity, this);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> @NotNull T move(@NotNull T entity, @NotNull NetworkManager manager) {
+        if (!(entity instanceof NetworkProxy proxy)) {
+            throw new IllegalArgumentException("Argument '" + entity + "' doesn't represent an @Entity or @Service");
+        }
+        return (T) proxy.move(manager);
+    }
+
+    @Override
     public @NotNull <T> NetworkQuery<T> createQuery(@NotNull NetworkRequest<T> request) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");

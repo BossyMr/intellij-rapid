@@ -68,8 +68,9 @@ public class DataFlowAnalyzer {
     public void process(@NotNull Set<RapidRoutine> stack) {
         while (!(workList.isEmpty())) {
             ProgressManager.checkCanceled();
-            DataFlowState state = workList.removeFirst();
+            DataFlowState state = workList.getLast();
             List<DataFlowState> successors = process(stack, state);
+            workList.removeLast();
             ControlFlowListener.publish().onState(state);
             for (DataFlowState successor : successors) {
                 if (getPreviousCycles(successor) >= 2) {

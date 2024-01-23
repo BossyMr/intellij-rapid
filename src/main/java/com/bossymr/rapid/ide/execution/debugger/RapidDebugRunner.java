@@ -23,7 +23,6 @@ import com.intellij.execution.runners.AsyncProgramRunner;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.ui.RunContentDescriptor;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.xdebugger.XDebugProcess;
 import com.intellij.xdebugger.XDebugProcessStarter;
@@ -64,7 +63,8 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
             return Promises.rejectedPromise();
         }
         try {
-            NetworkManager manager = state.setupExecution();
+            NetworkManager manager = new NetworkAction(state.getNetworkManager());
+            state.setupExecution(manager);
             setupExecution(manager);
             Project project = environment.getProject();
             AsyncPromise<RunContentDescriptor> promise = new AsyncPromise<>();

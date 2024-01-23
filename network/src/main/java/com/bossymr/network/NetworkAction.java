@@ -64,6 +64,11 @@ public class NetworkAction implements NetworkManager {
     }
 
     @Override
+    public <T> @NotNull T move(@NotNull T entity) {
+        return HeavyNetworkManager.move(entity, this);
+    }
+
+    @Override
     public void track(@NotNull NetworkAction action) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");

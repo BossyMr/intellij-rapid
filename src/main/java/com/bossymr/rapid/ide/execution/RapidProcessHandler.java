@@ -3,12 +3,19 @@ package com.bossymr.rapid.ide.execution;
 import com.bossymr.network.NetworkAction;
 import com.bossymr.network.NetworkManager;
 import com.bossymr.network.SubscriptionPriority;
+import com.bossymr.network.client.NetworkRequest;
+import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.robot.CloseableMastership;
 import com.bossymr.rapid.robot.network.EventLogCategory;
 import com.bossymr.rapid.robot.network.EventLogMessage;
 import com.bossymr.rapid.robot.network.EventLogService;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.program.BuildLogError;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
+import com.intellij.execution.ExecutionException;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.process.ProcessOutputType;
 import com.intellij.openapi.diagnostic.Logger;
@@ -28,15 +35,45 @@ public class RapidProcessHandler extends ProcessHandler {
     private final @NotNull NetworkManager manager;
 
     public RapidProcessHandler(@NotNull NetworkManager manager) throws IOException, InterruptedException {
-        this.manager = new NetworkAction(manager);
+        this.manager = new NetworkAction(manager) {
+            @Override
+            protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                handleException(throwable);
+                return false;
+            }
+        };
         subscribe();
     }
 
-    public static @NotNull RapidProcessHandler create(@NotNull NetworkManager manager) throws IOException, InterruptedException {
-        RapidProcessHandler processHandler = new RapidProcessHandler(manager);
-        processHandler.onExecutionState();
-        processHandler.start();
-        return processHandler;
+    public boolean check(@NotNull List<TaskState> tasks) throws IOException, InterruptedException, ExecutionException {
+        boolean hasError = false;
+        for (TaskState taskState : tasks) {
+            if(taskState.getName() == null) {
+                continue;
+            }
+            if(!taskState.isEnabled()) {
+                continue;
+            }
+            TaskService service = manager.createService(TaskService.class);
+            Task task = service.getTask(taskState.getName()).get();
+            Program program = task.getProgram().get();
+            List<BuildLogError> events = program.getBuildErrors().get();
+            for (BuildLogError event : events) {
+                String message = event.getModuleName() + ":" + event.getRow() + ": " + event.getErrorMessage();
+                notifyTextAvailable(message, ProcessOutputType.STDERR);
+            }
+            hasError = hasError || !events.isEmpty();
+        }
+        return hasError;
+    }
+
+    protected void handleException(@NotNull Throwable throwable) throws IOException, InterruptedException {
+        while (throwable instanceof CompletionException) {
+            throwable = throwable.getCause();
+        }
+        notifyTextAvailable(throwable + "\n", ProcessOutputType.STDERR);
+        notifyProcessTerminated(1);
+        manager.close();
     }
 
     public @NotNull NetworkManager getNetworkManager() {
@@ -59,7 +96,6 @@ public class RapidProcessHandler extends ProcessHandler {
                 message = event.getMessage("en").get();
                 logger.debug("Retrieved message '" + message + "' for event '" + event + "'");
             } catch (IOException e) {
-                logger.error(e);
                 return;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -83,24 +119,7 @@ public class RapidProcessHandler extends ProcessHandler {
         });
     }
 
-    private void onFailure(@NotNull Throwable throwable) {
-        while (throwable instanceof CompletionException) {
-            throwable = throwable.getCause();
-        }
-        notifyTextAvailable(throwable + "\n", ProcessOutputType.STDERR);
-        notifyProcessTerminated(1);
-        try {
-            manager.close();
-        } catch (IOException e) {
-            e.addSuppressed(throwable);
-            logger.error(e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        logger.error(throwable);
-    }
-
-    private void start() throws IOException, InterruptedException {
+    public void start() throws IOException, InterruptedException {
         logger.debug("Starting process");
         ExecutionService executionService = manager.createService(ExecutionService.class);
         try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
@@ -110,7 +129,7 @@ public class RapidProcessHandler extends ProcessHandler {
         }
     }
 
-    private void onExecutionState() throws IOException, InterruptedException {
+    public void onExecutionState() throws IOException, InterruptedException {
         ExecutionService executionService = manager.createService(ExecutionService.class);
         executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
             if (event.getState().equals(ExecutionState.STOPPED)) {
@@ -118,8 +137,7 @@ public class RapidProcessHandler extends ProcessHandler {
                 notifyProcessTerminated(0);
                 try {
                     this.manager.close();
-                } catch (IOException e) {
-                    logger.error(e);
+                } catch (IOException ignored) {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -144,15 +162,11 @@ public class RapidProcessHandler extends ProcessHandler {
                         entity.unsubscribe();
                         manager.close();
                         notifyProcessTerminated(0);
-                    } catch (IOException | InterruptedException e) {
-                        logger.error(e);
-                    }
+                    } catch (IOException | InterruptedException ignored) {}
                 }
             });
             executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
-        } catch (IOException | InterruptedException ex) {
-            onFailure(ex);
-        }
+        } catch (IOException | InterruptedException ignored) {}
     }
 
     @Override
@@ -160,8 +174,7 @@ public class RapidProcessHandler extends ProcessHandler {
         notifyProcessDetached();
         try {
             manager.close();
-        } catch (IOException e) {
-            logger.error(e);
+        } catch (IOException ignored) {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

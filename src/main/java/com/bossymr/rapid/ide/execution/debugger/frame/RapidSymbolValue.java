@@ -1,6 +1,9 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
+import com.bossymr.network.NetworkAction;
 import com.bossymr.network.NetworkManager;
+import com.bossymr.network.client.NetworkRequest;
+import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
@@ -12,6 +15,7 @@ import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolValue;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.xdebugger.frame.*;
@@ -29,11 +33,11 @@ public class RapidSymbolValue extends XNamedValue {
 
     private final @NotNull RapidVariable symbol;
     private final @NotNull StackFrame stackFrame;
-    private final @NotNull NetworkManager manager;
+    private final @NotNull RapidDebugProcess process;
 
-    public RapidSymbolValue(@NotNull NetworkManager manager, @NotNull RapidVariable symbol, @NotNull StackFrame stackFrame) {
+    public RapidSymbolValue(@NotNull RapidDebugProcess process, @NotNull RapidVariable symbol, @NotNull StackFrame stackFrame) {
         super(symbol.getName() != null ? symbol.getName() : "");
-        this.manager = manager;
+        this.process = process;
         this.symbol = symbol;
         this.stackFrame = stackFrame;
     }
@@ -68,7 +72,7 @@ public class RapidSymbolValue extends XNamedValue {
 
     public static @NotNull QueryableSymbol findSymbol(@NotNull NetworkManager manager, @NotNull RapidVariable symbol, @NotNull StackFrame stackFrame) throws IOException, InterruptedException {
         SymbolModel symbolModel = manager.createService(RapidService.class)
-                .findSymbol(getCanonicalName(symbol, stackFrame)).get();
+                                         .findSymbol(getCanonicalName(symbol, stackFrame)).get();
         if (!(symbolModel instanceof QueryableSymbol queryableSymbol)) {
             throw new IllegalStateException();
         }
@@ -78,18 +82,28 @@ public class RapidSymbolValue extends XNamedValue {
     @SuppressWarnings("UnstableApiUsage")
     @Override
     public void computePresentation(@NotNull XValueNode node, @NotNull XValuePlace place) {
-        try {
-            // TODO: Slow Operations Error
-            String value = getValue();
-            RapidType dataType = symbol.getType();
-            boolean hasChildren = dataType != null && dataType.getRootStructure() instanceof RapidRecord record && !(record.getComponents().isEmpty());
-            node.setPresentation(symbol.getTargetPresentation().getIcon(), new RapidValuePresentation(dataType, value), hasChildren);
-        } catch (IOException e) {
-            node.setPresentation(null, new XErrorValuePresentation(e.getLocalizedMessage()), false);
-        } catch (InterruptedException ignored) {}
+        process.execute(() -> {
+            try {
+                ReadAction.run(() -> {
+                    String value = getValue();
+                    RapidType dataType = symbol.getType();
+                    boolean hasChildren = dataType != null && dataType.getRootStructure() instanceof RapidRecord record && !(record.getComponents().isEmpty());
+                    node.setPresentation(symbol.getTargetPresentation().getIcon(), new RapidValuePresentation(dataType, value), hasChildren);
+                });
+            } catch (IOException e) {
+                node.setPresentation(null, new XErrorValuePresentation("<unknown>"), false);
+            }
+        });
     }
 
     protected @NotNull String getValue() throws IOException, InterruptedException {
+        NetworkManager manager = new NetworkAction(process.getManager()) {
+            @Override
+            protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                close();
+                return false;
+            }
+        };
         QueryableSymbol queryableSymbol = findSymbol(manager, symbol, stackFrame);
         SymbolValue value = queryableSymbol.getValue().get();
         return value.getValue();
@@ -139,7 +153,7 @@ public class RapidSymbolValue extends XNamedValue {
             XValueChildrenList childrenList = new XValueChildrenList();
             List<? extends RapidComponent> components = record.getComponents();
             for (int i = 0; i < components.size(); i++) {
-                childrenList.add(new RapidComponentValue(manager, components.get(i), i));
+                childrenList.add(new RapidComponentValue(process, components.get(i), i));
             }
             node.addChildren(childrenList, true);
         }
@@ -149,8 +163,8 @@ public class RapidSymbolValue extends XNamedValue {
 
         private final int index;
 
-        public RapidComponentValue(@NotNull NetworkManager manager, @NotNull RapidComponent symbol, int index) {
-            super(manager, symbol, stackFrame);
+        public RapidComponentValue(@NotNull RapidDebugProcess process, @NotNull RapidComponent symbol, int index) {
+            super(process, symbol, stackFrame);
             this.index = index;
         }
 

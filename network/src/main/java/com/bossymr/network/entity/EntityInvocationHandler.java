@@ -30,7 +30,7 @@ import java.util.Objects;
 public class EntityInvocationHandler extends AbstractInvocationHandler {
 
     private final @NotNull Class<?> type;
-    private @Nullable NetworkManager manager;
+    private final @Nullable NetworkManager manager;
     private @NotNull EntityModel model;
 
     public EntityInvocationHandler(@Nullable NetworkManager manager, @NotNull Class<?> type, @NotNull EntityModel model) {
@@ -45,8 +45,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             return manager;
         }
         if (isMethod(method, NetworkProxy.class, "move", NetworkManager.class)) {
-            this.manager = (NetworkManager) args[0];
-            return null;
+            return ((NetworkManager) args[0]).createEntity(type, model);
         }
         if (isMethod(method, EntityProxy.class, "refresh")) {
             if (model.reference("self") == null) {
