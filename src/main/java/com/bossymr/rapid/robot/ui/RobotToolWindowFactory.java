@@ -11,11 +11,6 @@ import org.jetbrains.annotations.NotNull;
 public class RobotToolWindowFactory implements ToolWindowFactory, DumbAware {
 
     @Override
-    public boolean isApplicable(@NotNull Project project) {
-        return ToolWindowFactory.super.isApplicable(project);
-    }
-
-    @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
         ContentFactory contentFactory = ContentFactory.getInstance();
         RobotToolWindow robotToolWindow = RobotToolWindowService.getInstance(project).getToolWindow();

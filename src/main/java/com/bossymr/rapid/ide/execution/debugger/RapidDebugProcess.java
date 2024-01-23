@@ -16,7 +16,6 @@ import com.bossymr.rapid.robot.network.robotware.rapid.task.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Breakpoint;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
-import com.intellij.execution.ExecutionException;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.module.Module;
@@ -39,8 +38,8 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
 
 public class RapidDebugProcess extends XDebugProcess {
@@ -53,7 +52,7 @@ public class RapidDebugProcess extends XDebugProcess {
     );
     private final @NotNull Project project;
 
-    private final @NotNull ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final @NotNull ExecutorService executorService;
 
     /**
      * A {@code Phaser} used to control access to start the program.
@@ -73,9 +72,12 @@ public class RapidDebugProcess extends XDebugProcess {
     private final @NotNull NetworkManager manager;
     private final @NotNull RapidProcessHandler processHandler;
 
-    public RapidDebugProcess(@NotNull Project project, @NotNull XDebugSession session, @NotNull List<TaskState> taskStates, @NotNull NetworkManager manager) throws IOException, InterruptedException, ExecutionException {
+    private final @NotNull Callable<Void> setup;
+
+    public RapidDebugProcess(@NotNull Project project, @NotNull XDebugSession session, @NotNull ExecutorService executorService, @NotNull List<TaskState> taskStates, @NotNull NetworkManager manager, @NotNull Callable<Void> setup) {
         super(session);
         this.project = project;
+        this.executorService = executorService;
         this.tasks = taskStates;
         this.processHandler = new RapidProcessHandler(manager) {
             @Override
@@ -85,8 +87,8 @@ public class RapidDebugProcess extends XDebugProcess {
                 getSession().stop();
             }
         };
+        this.setup = setup;
         this.manager = processHandler.getNetworkManager();
-        subscribeToExecutionStatus();
     }
 
     public void execute(@NotNull NetworkRunnable callable) {
@@ -98,22 +100,6 @@ public class RapidDebugProcess extends XDebugProcess {
 
     public @NotNull NetworkManager getManager() {
         return manager;
-    }
-
-    private void subscribeToExecutionStatus() {
-        execute(() -> {
-            ExecutionService executionService = getExecutionService();
-            executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
-                switch (event.getState()) {
-                    case RUNNING -> getSession().sessionResumed();
-                    case STOPPED -> {
-                        try {
-                            onProgramStop();
-                        } catch (IOException | InterruptedException ignored) {}
-                    }
-                }
-            });
-        });
     }
 
     private void onProgramStop() throws IOException, InterruptedException {
@@ -148,14 +134,35 @@ public class RapidDebugProcess extends XDebugProcess {
     public void sessionInitialized() {
         getSession().getConsoleView().attachToProcess(processHandler);
         execute(() -> {
-            if (!processHandler.check(tasks)) {
+            setup.call();
+            if (processHandler.check(tasks)) {
+                getSession().stop();
                 return;
             }
+            setup();
             ExecutionService executionService = getExecutionService();
             try {
                 executionService.resetProgramPointer().get();
                 start(ExecutionMode.CONTINUE);
             } catch (IOException | InterruptedException ignored) {}
+        });
+    }
+
+    public void setup() throws IOException, InterruptedException {
+        processHandler.setup();
+        ExecutionService executionService = getExecutionService();
+        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+            executionService.resetProgramPointer().get();
+        }
+        executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+            switch (event.getState()) {
+                case RUNNING -> getSession().sessionResumed();
+                case STOPPED -> {
+                    try {
+                        onProgramStop();
+                    } catch (IOException | InterruptedException ignored) {}
+                }
+            }
         });
     }
 
@@ -416,10 +423,10 @@ public class RapidDebugProcess extends XDebugProcess {
         execute(() -> start(ExecutionMode.CONTINUE));
     }
 
-    public record BreakpointEntity(@NotNull String taskName, @NotNull Breakpoint breakpoint) {}
-
     @FunctionalInterface
     public interface NetworkRunnable {
         void compute() throws Exception;
     }
+
+    public record BreakpointEntity(@NotNull String taskName, @NotNull Breakpoint breakpoint) {}
 }

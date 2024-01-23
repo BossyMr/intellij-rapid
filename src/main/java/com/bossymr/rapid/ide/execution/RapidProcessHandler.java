@@ -34,7 +34,7 @@ public class RapidProcessHandler extends ProcessHandler {
     private static final Logger logger = Logger.getInstance(RapidProcessHandler.class);
     private final @NotNull NetworkManager manager;
 
-    public RapidProcessHandler(@NotNull NetworkManager manager) throws IOException, InterruptedException {
+    public RapidProcessHandler(@NotNull NetworkManager manager) {
         this.manager = new NetworkAction(manager) {
             @Override
             protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
@@ -42,7 +42,6 @@ public class RapidProcessHandler extends ProcessHandler {
                 return false;
             }
         };
-        subscribe();
     }
 
     public boolean check(@NotNull List<TaskState> tasks) throws IOException, InterruptedException, ExecutionException {
@@ -59,7 +58,7 @@ public class RapidProcessHandler extends ProcessHandler {
             Program program = task.getProgram().get();
             List<BuildLogError> events = program.getBuildErrors().get();
             for (BuildLogError event : events) {
-                String message = event.getModuleName() + ":" + event.getRow() + ": " + event.getErrorMessage();
+                String message = event.getModuleName() + ":" + event.getRow() + ":" + event.getColumn() + ": " + event.getErrorMessage();
                 notifyTextAvailable(message, ProcessOutputType.STDERR);
             }
             hasError = hasError || !events.isEmpty();
@@ -80,7 +79,7 @@ public class RapidProcessHandler extends ProcessHandler {
         return manager;
     }
 
-    private void subscribe() throws IOException, InterruptedException {
+    public void setup() throws IOException, InterruptedException {
         logger.debug("Subscribing to process event log");
         EventLogService eventLogService = manager.createService(EventLogService.class);
         List<EventLogCategory> categories = eventLogService.getCategories("en").get();

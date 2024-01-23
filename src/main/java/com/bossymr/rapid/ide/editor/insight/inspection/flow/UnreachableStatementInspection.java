@@ -1,15 +1,22 @@
 package com.bossymr.rapid.ide.editor.insight.inspection.flow;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.ide.editor.insight.fix.SubstituteRangeFix;
 import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
-import com.intellij.codeInspection.*;
+import com.intellij.codeInspection.LocalInspectionTool;
+import com.intellij.codeInspection.ProblemHighlightType;
+import com.intellij.codeInspection.ProblemsHolder;
+import com.intellij.codeInspection.util.IntentionFamilyName;
+import com.intellij.modcommand.ModPsiUpdater;
+import com.intellij.modcommand.PsiUpdateModCommandQuickFix;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
+import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.PsiFile;
@@ -32,41 +39,16 @@ public class UnreachableStatementInspection extends LocalInspectionTool {
                     return;
                 }
                 List<TextRange> ranges = getTextRanges(statements);
-                InspectionManager manager = InspectionManager.getInstance(routine.getProject());
-                PsiFile containingFile = routine.getContainingFile();
                 for (TextRange range : ranges) {
-                    TextRange rangeInElement = normalizeTextRange(range, routine);
-                    SubstituteRangeFix quickFix = createQuickFix(containingFile, rangeInElement);
-                    ProblemDescriptor descriptor = manager.createProblemDescriptor(routine, rangeInElement.shiftLeft(routine.getTextRange().getStartOffset()), RapidBundle.message("inspection.message.unreachable.statement"), ProblemHighlightType.LIKE_UNUSED_SYMBOL, isOnTheFly, quickFix);
-                    holder.registerProblem(descriptor);
+                    TextRange rangeInElement = getActualTextRange(range, routine);
+                    RemoveUnreachableStatementFix quickFix = new RemoveUnreachableStatementFix(rangeInElement);
+                    holder.registerProblem(routine, RapidBundle.message("inspection.message.unreachable.statement"), ProblemHighlightType.LIKE_UNUSED_SYMBOL, rangeInElement, quickFix);
                 }
             }
         };
     }
 
-    private @NotNull SubstituteRangeFix createQuickFix(@NotNull PsiFile file, @NotNull TextRange range) {
-        if (isParentCompactIfStatement(file, range)) {
-            return SubstituteRangeFix.modify(RapidBundle.message("quick.fix.text.delete.unreachable.code"), file, range, "THEN ENDIF");
-        } else {
-            return SubstituteRangeFix.delete(RapidBundle.message("quick.fix.text.delete.unreachable.code"), file, range);
-        }
-    }
-
-    private boolean isParentCompactIfStatement(@NotNull PsiFile file, @NotNull TextRange range) {
-        RapidStatement statement = PsiTreeUtil.getParentOfType(file.findElementAt(range.getStartOffset()), RapidStatement.class);
-        if (statement == null) {
-            return false;
-        }
-        if (!(statement.getParent() instanceof RapidStatementList statementList)) {
-            return false;
-        }
-        if (!(statementList.getParent() instanceof RapidIfStatement ifStatement)) {
-            return false;
-        }
-        return ifStatement.isCompact();
-    }
-
-    private @NotNull TextRange normalizeTextRange(@NotNull TextRange range, @NotNull PhysicalRoutine routine) {
+    private @NotNull TextRange getActualTextRange(@NotNull TextRange range, @NotNull PhysicalRoutine routine) {
         PsiElement element = routine.getContainingFile().findElementAt(range.getStartOffset());
         if (element == null) {
             return range;
@@ -162,5 +144,49 @@ public class UnreachableStatementInspection extends LocalInspectionTool {
             return range;
         }
         return TextRange.create(sibling.getTextRange().getEndOffset(), range.getEndOffset());
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    private static class RemoveUnreachableStatementFix extends PsiUpdateModCommandQuickFix {
+
+        private final @NotNull TextRange range;
+
+        private RemoveUnreachableStatementFix(@NotNull TextRange range) {
+            this.range = range;
+        }
+
+        @Override
+        protected void applyFix(@NotNull Project project, @NotNull PsiElement element, @NotNull ModPsiUpdater updater) {
+            PsiFile file = element.getContainingFile();
+            PsiDocumentManager manager = PsiDocumentManager.getInstance(project);
+            Document document = manager.getDocument(file);
+            if (document == null) {
+                return;
+            }
+            document.deleteString(range.getStartOffset(), range.getEndOffset());
+            if (isInCompactIfStatement(file)) {
+                document.replaceString(range.getStartOffset(), range.getEndOffset(), "THEN ENDIF");
+            }
+        }
+
+        private boolean isInCompactIfStatement(@NotNull PsiFile file) {
+            PsiElement startElement = file.findElementAt(range.getStartOffset());
+            RapidStatement statement = PsiTreeUtil.getParentOfType(startElement, RapidStatement.class);
+            if (statement == null) {
+                return false;
+            }
+            if (!(statement.getParent() instanceof RapidStatementList statementList)) {
+                return false;
+            }
+            if (!(statementList.getParent() instanceof RapidIfStatement ifStatement)) {
+                return false;
+            }
+            return ifStatement.isCompact();
+        }
+
+        @Override
+        public @IntentionFamilyName @NotNull String getFamilyName() {
+            return RapidBundle.message("quick.fix.text.delete.unreachable.code");
+        }
     }
 }

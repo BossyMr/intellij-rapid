@@ -12,7 +12,6 @@ import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
-import com.google.common.util.concurrent.AtomicDouble;
 import com.intellij.execution.DefaultExecutionResult;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.ExecutionResult;
@@ -155,11 +154,15 @@ public class RapidRunProfileState implements RunProfileState {
                                                                .filters(new RapidFileFilter(project))
                                                                .getConsole();
             consoleView.attachToProcess(processHandler);
-            if(!processHandler.check(getTasks())) {
-                setupExecution(manager);
-                processHandler.onExecutionState();
-                processHandler.start();
+            if (processHandler.check(getTasks())) {
+                processHandler.startNotify();
+                processHandler.destroyProcess();
+                return new DefaultExecutionResult(consoleView, processHandler);
             }
+            setupExecution(manager);
+            processHandler.setup();
+            processHandler.onExecutionState();
+            processHandler.start();
             return new DefaultExecutionResult(consoleView, processHandler);
         } catch (IOException e) {
             throw new ExecutionException(RapidBundle.message("run.execution.exception"));
