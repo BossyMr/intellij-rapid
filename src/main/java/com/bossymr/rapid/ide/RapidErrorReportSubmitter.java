@@ -44,13 +44,6 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
     static {
         Sentry.init(options -> {
             options.setDsn(SENTRY_URL);
-            /*
-             * Sentry is only used to report exceptions caught by IntelliJ - otherwise it logs exceptions which
-             * shouldn't be logged, or exceptions which are also caught by IntelliJ, which leads to the exception being
-             * logged twice.
-             */
-            options.setEnableUncaughtExceptionHandler(false);
-            options.setEnableAutoSessionTracking(false);
             boolean isInternal = ApplicationManager.getApplication().isInternal();
             options.setEnvironment(isInternal ? "development" : "production");
         });

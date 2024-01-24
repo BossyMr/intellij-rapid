@@ -21,10 +21,9 @@ import com.intellij.execution.executors.DefaultDebugExecutor;
 import com.intellij.execution.runners.AsyncProgramRunner;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.ui.RunContentDescriptor;
-import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.ThrowableComputable;
 import com.intellij.xdebugger.XDebugProcess;
 import com.intellij.xdebugger.XDebugProcessStarter;
 import com.intellij.xdebugger.XDebugSession;
@@ -70,25 +69,28 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
         AsyncPromise<RunContentDescriptor> promise = new AsyncPromise<>();
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         XDebuggerManager debuggerManager = XDebuggerManager.getInstance(project);
-        executorService.submit(() -> ReadAction.compute((ThrowableComputable<Void, Exception>) () -> {
-            XDebugSession session = debuggerManager.startSession(environment, new XDebugProcessStarter() {
-                @Override
-                public @NotNull XDebugProcess start(@NotNull XDebugSession session) throws ExecutionException {
-                    try {
-                        NetworkManager manager = state.getNetworkManager();
-                        return new RapidDebugProcess(project, session, executorService, state.getTasks(), manager, () -> {
-                            state.setupExecution(manager);
-                            setupExecution(manager);
-                            return null;
-                        });
-                    } catch (IOException | InterruptedException e) {
-                        throw new ExecutionException(RapidBundle.message("run.execution.exception"));
+        ApplicationManager.getApplication().invokeLater(() -> {
+            try {
+                XDebugSession session = debuggerManager.startSession(environment, new XDebugProcessStarter() {
+                    @Override
+                    public @NotNull XDebugProcess start(@NotNull XDebugSession session) throws ExecutionException {
+                        try {
+                            NetworkManager manager = state.getNetworkManager();
+                            return new RapidDebugProcess(project, session, executorService, state.getTasks(), manager, () -> {
+                                state.setupExecution(manager);
+                                setupExecution(manager);
+                                return null;
+                            });
+                        } catch (IOException | InterruptedException e) {
+                            throw new ExecutionException(RapidBundle.message("run.execution.exception"));
+                        }
                     }
-                }
-            });
-            promise.setResult(session.getRunContentDescriptor());
-            return null;
-        }));
+                });
+                promise.setResult(session.getRunContentDescriptor());
+            } catch (ExecutionException e) {
+                promise.setError(e);
+            }
+        });
         return promise;
     }
 
@@ -96,7 +98,7 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
         ModuleEntity module = modules.get(breakpoint.getModuleName());
         ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
         try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-            module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.TRY, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
+            module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.FORCE, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
         }
     }
 

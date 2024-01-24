@@ -54,7 +54,7 @@ public class RapidRobot implements Disposable {
 
     @Topic.AppLevel
     public static final Topic<StateListener> STATE_TOPIC = Topic.create("Robot State", StateListener.class);
-    private static final Logger logger = Logger.getInstance(RapidRobot.class);
+
     private @NotNull State state = new State();
     private @Nullable NetworkManager manager;
     private @NotNull Set<RapidTask> tasks;

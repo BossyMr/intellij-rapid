@@ -23,6 +23,7 @@ import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.runners.ProgramRunner;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
@@ -147,6 +148,7 @@ public class RapidRunProfileState implements RunProfileState {
     @Override
     public @Nullable ExecutionResult execute(@NotNull Executor executor, @NotNull ProgramRunner<?> runner) throws ExecutionException {
         try {
+            FileDocumentManager.getInstance().saveAllDocuments();
             NetworkManager manager = getNetworkManager();
             RapidProcessHandler processHandler = new RapidProcessHandler(manager);
             ConsoleView consoleView = TextConsoleBuilderFactory.getInstance()

@@ -93,7 +93,11 @@ public class RapidDebugProcess extends XDebugProcess {
 
     public void execute(@NotNull NetworkRunnable callable) {
         executorService.submit(() -> {
-            callable.compute();
+            try {
+                callable.compute();
+            } catch (Exception e) {
+                logger.error(e);
+            }
             return null;
         });
     }

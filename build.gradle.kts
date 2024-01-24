@@ -81,6 +81,10 @@ sentry {
     // Default is enabled.
     includeDependenciesReport.set(true)
 
+    // Includes additional source directories into the source bundle.
+    // These directories are resolved relative to the project directory.
+    additionalSourceDirsForSourceContext.set(setOf("src/main/java", "network/src/main/java"))
+
     org.set("sentry")
     projectName.set("intellij-rapid")
     authToken.set(System.getenv("SENTRY_AUTH_TOKEN"))
