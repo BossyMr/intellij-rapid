@@ -123,18 +123,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             Map<String, Object> constants = new HashMap<>();
             for (Field field : type.getFields()) {
                 if (field.isEnumConstant()) {
-                    Deserializable deserializable = field.getAnnotation(Deserializable.class);
-                    String name;
-                    if (deserializable != null) {
-                        name = deserializable.value();
-                    } else {
-                        name = field.getName();
-                        throw new IllegalArgumentException("Enum Constant '" + name + "' of '" + type + "' is not annotated as deserializable");
-                    }
-                    if (constants.containsKey(name)) {
-                        throw new IllegalArgumentException("Enum contains duplicate constant '" + name + "'");
-                    }
-                    constants.put(name, field.get(null));
+                    getField(field, constants);
                 }
             }
             if (constants.containsKey(value)) {
@@ -142,6 +131,24 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             }
         }
         throw new IllegalStateException("Unable to convert '" + value + "' into '" + type + "'");
+    }
+
+    private void getField(@NotNull Field field, Map<String, Object> constants) throws IllegalAccessException {
+        Deserializable deserializable = field.getAnnotation(Deserializable.class);
+        if (deserializable != null) {
+            for (String value : deserializable.value()) {
+                if (constants.containsKey(value)) {
+                    throw new IllegalArgumentException("Enum contains duplicate constant '" + value + "'");
+                }
+                constants.put(value, field.get(null));
+            }
+        } else {
+            String name = field.getName();
+            if (constants.containsKey(name)) {
+                throw new IllegalArgumentException("Enum contains duplicate constant '" + name + "'");
+            }
+            constants.put(name, field.get(null));
+        }
     }
 
     private @NotNull Class<?> getBoxType(@NotNull Class<?> type) {

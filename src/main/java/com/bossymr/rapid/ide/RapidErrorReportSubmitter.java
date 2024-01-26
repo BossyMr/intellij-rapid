@@ -44,9 +44,13 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
     static {
         Sentry.init(options -> {
             options.setDsn(SENTRY_URL);
+            options.setEnableUserInteractionTracing(false);
+            options.setEnableUserInteractionBreadcrumbs(false);
+            options.setEnableUncaughtExceptionHandler(false);
             boolean isInternal = ApplicationManager.getApplication().isInternal();
             options.setEnvironment(isInternal ? "development" : "production");
         });
+        Sentry.setUser(null);
     }
 
     @Override
@@ -80,8 +84,6 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
 
                     SentryEvent sentryEvent = new SentryEvent(throwable);
                     sentryEvent.setLevel(SentryLevel.ERROR);
-                    sentryEvent.setUser(null);
-                    sentryEvent.setServerName(null);
 
                     IdeaPluginDescriptor descriptor = reportingEvent.getPlugin();
                     if (descriptor != null) {

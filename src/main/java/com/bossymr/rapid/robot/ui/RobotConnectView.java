@@ -3,7 +3,6 @@ package com.bossymr.rapid.robot.ui;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.RobotService;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
@@ -24,8 +23,6 @@ import java.io.IOException;
 import java.net.URI;
 
 public class RobotConnectView extends DialogWrapper {
-
-    private static final Logger logger = Logger.getInstance(RobotConnectView.class);
 
     private final Project project;
 
@@ -91,7 +88,8 @@ public class RobotConnectView extends DialogWrapper {
     public RobotConnectView(@NotNull Project project, @NotNull URI path) {
         this(project);
         hostField.setText(path.getHost());
-        portField.setText(String.valueOf(path.getPort()));
+        int port = path.getPort() >= 0 ? path.getPort() : 80;
+        portField.setText(String.valueOf(port));
     }
 
     private void checkAuthenticationType(@NotNull AuthenticationType authenticationType) {

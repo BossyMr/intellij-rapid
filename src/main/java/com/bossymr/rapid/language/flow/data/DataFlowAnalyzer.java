@@ -10,10 +10,7 @@ import com.intellij.openapi.progress.ProgressManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A {@code DataFlowAnalyzer} is an analyzer which analyzes a block.
@@ -90,7 +87,8 @@ public class DataFlowAnalyzer {
         if (!(block.getDataFlow().containsValue(origin))) {
             return List.of();
         }
-        for (DataFlowState successor : state.getSuccessors()) {
+        List<DataFlowState> successors = new ArrayList<>(state.getSuccessors());
+        for (DataFlowState successor : successors) {
             successor.prune(workList::remove);
         }
         state.clear();

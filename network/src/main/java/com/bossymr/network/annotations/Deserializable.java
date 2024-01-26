@@ -20,5 +20,5 @@ public @interface Deserializable {
      *
      * @return the serialized value of this enum constant.
      */
-    @NotNull String value();
+    @NotNull String[] value();
 }

@@ -2,6 +2,7 @@ package com.bossymr.rapid.ide.execution.debugger;
 
 import com.bossymr.network.NetworkManager;
 import com.bossymr.network.SubscriptionPriority;
+import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.RapidProcessHandler;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.debugger.breakpoints.RapidLineBreakpointHandler;
@@ -13,7 +14,10 @@ import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.*;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.*;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleEntity;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleText;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.QueryMode;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ReplaceMode;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Breakpoint;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
 import com.intellij.execution.process.ProcessHandler;
@@ -38,7 +42,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Phaser;
 
@@ -72,9 +75,7 @@ public class RapidDebugProcess extends XDebugProcess {
     private final @NotNull NetworkManager manager;
     private final @NotNull RapidProcessHandler processHandler;
 
-    private final @NotNull Callable<Void> setup;
-
-    public RapidDebugProcess(@NotNull Project project, @NotNull XDebugSession session, @NotNull ExecutorService executorService, @NotNull List<TaskState> taskStates, @NotNull NetworkManager manager, @NotNull Callable<Void> setup) {
+    public RapidDebugProcess(@NotNull Project project, @NotNull XDebugSession session, @NotNull ExecutorService executorService, @NotNull List<TaskState> taskStates, @NotNull NetworkManager manager) {
         super(session);
         this.project = project;
         this.executorService = executorService;
@@ -87,7 +88,6 @@ public class RapidDebugProcess extends XDebugProcess {
                 getSession().stop();
             }
         };
-        this.setup = setup;
         this.manager = processHandler.getNetworkManager();
     }
 
@@ -96,7 +96,8 @@ public class RapidDebugProcess extends XDebugProcess {
             try {
                 callable.compute();
             } catch (Exception e) {
-                logger.error(e);
+                getSession().reportError(RapidBundle.message("run.execution.exception"));
+                getSession().stop();
             }
             return null;
         });
@@ -107,6 +108,9 @@ public class RapidDebugProcess extends XDebugProcess {
     }
 
     private void onProgramStop() throws IOException, InterruptedException {
+        if(processHandler.isProcessTerminating()) {
+            return;
+        }
         phaser.register();
         try {
             List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
@@ -138,7 +142,6 @@ public class RapidDebugProcess extends XDebugProcess {
     public void sessionInitialized() {
         getSession().getConsoleView().attachToProcess(processHandler);
         execute(() -> {
-            setup.call();
             if (processHandler.check(tasks)) {
                 getSession().stop();
                 return;
@@ -181,7 +184,10 @@ public class RapidDebugProcess extends XDebugProcess {
         for (XBreakpoint<?> breakpoint : breakpoints) {
             if (isAtBreakpoint(stackFrame, breakpoint)) {
                 logger.debug("Breakpoint '" + breakpoint + "' reached");
-                getSession().breakpointReached(breakpoint, null, suspendContext);
+                boolean shouldSuspend = getSession().breakpointReached(breakpoint, null, suspendContext);
+                if (!(shouldSuspend)) {
+                    execute(() -> start(ExecutionMode.CONTINUE));
+                }
                 return;
             }
         }
@@ -262,7 +268,11 @@ public class RapidDebugProcess extends XDebugProcess {
             BreakpointEntity breakpointEntity = registerBreakpoint(taskName, moduleName, sourcePosition.getLine());
             breakpoint.putUserData(BREAKPOINT_KEY, breakpointEntity);
             if (breakpoint instanceof XLineBreakpoint<?> lineBreakpoint) {
-                getSession().setBreakpointVerified(lineBreakpoint);
+                if(breakpointEntity != null) {
+                    getSession().setBreakpointVerified(lineBreakpoint);
+                } else {
+                    getSession().setBreakpointInvalid(lineBreakpoint, null);
+                }
             }
             breakpoints.add(breakpoint);
         });
@@ -303,13 +313,9 @@ public class RapidDebugProcess extends XDebugProcess {
             StackFrame stackFrame = task.getStackFrame(1).get();
             if (!(stackFrame.toTextRange().equals(breakpoint.toTextRange()))) {
                 logger.debug("Removing breakpoint '" + breakpoint + "'");
-                ModuleInfo moduleInfo = task.getModule(breakpoint.getModuleName()).get();
-                ModuleEntity module = moduleInfo.getModule().get();
+                ModuleEntity module = task.getModule(breakpoint.getModuleName()).get();
                 if (module != null) {
-                    ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
-                    try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-                        module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.FORCE, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
-                    }
+                    unregisterBreakpoint(manager, module, task, breakpoint);
                 }
                 return true;
             } else {
@@ -319,6 +325,13 @@ public class RapidDebugProcess extends XDebugProcess {
             phaser.arriveAndDeregister();
         }
         return false;
+    }
+
+    public static void unregisterBreakpoint(@NotNull NetworkManager manager, @NotNull ModuleEntity module, @NotNull Task task, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
+        ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
+        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+            module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.FORCE, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
+        }
     }
 
     /**

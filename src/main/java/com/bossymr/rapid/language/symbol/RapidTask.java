@@ -113,14 +113,11 @@ public class RapidTask implements RapidSymbol {
         Set<VirtualFile> virtualFiles = new HashSet<>();
         for (File file : files) {
             if (!(file.exists())) {
-                /*
-                 * Ideally, this task should not be accessed.
-                 */
                 continue;
             }
             VirtualFile virtualFile = VirtualFileManager.getInstance().findFileByNioPath(file.toPath());
             if (virtualFile == null) {
-                throw new IllegalStateException("File '" + file + "' not found");
+                continue;
             }
             virtualFiles.add(virtualFile);
         }

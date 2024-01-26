@@ -193,6 +193,9 @@ public class RobotToolWindow implements Disposable {
             List<AbstractTreeNode<?>> selectedNodes = new ArrayList<>();
             for (TreePath treePath : treePaths) {
                 AbstractTreeNode<?> selectedNode = getSelectedNode(treePath);
+                if(selectedNode == null) {
+                    continue;
+                }
                 selectedNodes.add(selectedNode);
             }
             return selectedNodes;

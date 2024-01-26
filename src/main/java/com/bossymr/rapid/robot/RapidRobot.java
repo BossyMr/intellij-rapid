@@ -8,6 +8,7 @@ import com.bossymr.network.client.proxy.EntityProxy;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidTask;
+import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.impl.SymbolConverter;
 import com.bossymr.rapid.robot.network.ControllerService;
@@ -32,7 +33,6 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.application.WriteAction;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
@@ -66,9 +66,9 @@ public class RapidRobot implements Disposable {
         }
         setState(state);
         this.symbols = SymbolConverter.getSymbols(state.symbols.stream()
-                .map(symbol -> symbol.convert(SymbolModel.class, null))
-                .filter(Objects::nonNull)
-                .toList());
+                                                               .map(symbol -> symbol.convert(SymbolModel.class, null))
+                                                               .filter(Objects::nonNull)
+                                                               .toList());
         this.tasks = getPersistedTasks();
     }
 
@@ -116,8 +116,8 @@ public class RapidRobot implements Disposable {
                 .setSymbolType(SymbolType.ANY);
         List<SymbolModel> symbols = manager.createService(RapidService.class).findSymbols(query).get();
         state.symbols = symbols.stream()
-                .map(Entity::convert)
-                .collect(Collectors.toSet());
+                               .map(Entity::convert)
+                               .collect(Collectors.toSet());
         Map<String, Set<String>> states = new HashMap<>();
         for (SymbolModel symbol : symbols) {
             String title = symbol.getTitle();
@@ -246,7 +246,7 @@ public class RapidRobot implements Disposable {
         if (manager == null) {
             return null;
         }
-        SymbolModel model = getSymbol(manager, "RAPID" + "/" + name);
+        SymbolModel model = getSymbol(manager, "RAPID" + "/" + (name.contains("/") ? name.substring(0, name.indexOf('/')) : name));
         if (model == null) {
             if (state.cache == null) {
                 state.cache = new HashSet<>();
@@ -261,6 +261,12 @@ public class RapidRobot implements Disposable {
         }
         state.symbols.add(Entity.convert(model));
         RobotEventListener.publish().onSymbol(this, symbol);
+        if(name.contains("/")) {
+            if(name.indexOf("/") != name.lastIndexOf("/")) {
+                throw new IllegalArgumentException("Cannot retrieve symbol: " + name);
+            }
+            return (VirtualSymbol) ResolveService.findChild(symbol, name.substring(name.indexOf("/") + 1));
+        }
         return symbol;
     }
 
@@ -327,9 +333,12 @@ public class RapidRobot implements Disposable {
 
     public void upload() throws IOException, InterruptedException {
         for (RapidTask task : getTasks()) {
-            Set<File> virtualFiles = new HashSet<>(task.getFiles());
-            upload(task, virtualFiles);
+            upload(task);
         }
+    }
+
+    public void upload(@NotNull RapidTask task) throws IOException, InterruptedException {
+        upload(task, task.getFiles());
     }
 
     public void upload(@NotNull RapidTask task, @NotNull Set<File> modules) throws IOException, InterruptedException {
@@ -395,8 +404,8 @@ public class RapidRobot implements Disposable {
         State state = getState(path, networkAction);
         Objects.requireNonNull(state.symbols);
         List<SymbolModel> models = state.symbols.stream()
-                .map(symbol -> symbol.convert(SymbolModel.class, manager))
-                .toList();
+                                                .map(symbol -> symbol.convert(SymbolModel.class, manager))
+                                                .toList();
         this.symbols = SymbolConverter.getSymbols(models);
         setState(state);
         this.tasks = getPersistedTasks();
@@ -517,9 +526,9 @@ public class RapidRobot implements Disposable {
         @Override
         public String toString() {
             return "State{" +
-                   "name='" + name + '\'' +
-                   ", path='" + path + '\'' +
-                   '}';
+                    "name='" + name + '\'' +
+                    ", path='" + path + '\'' +
+                    '}';
         }
     }
 
@@ -623,11 +632,11 @@ public class RapidRobot implements Disposable {
         @Override
         public String toString() {
             return "Entity{" +
-                   "title='" + title + '\'' +
-                   ", type='" + type + '\'' +
-                   ", fields=" + fields +
-                   ", links=" + links +
-                   '}';
+                    "title='" + title + '\'' +
+                    ", type='" + type + '\'' +
+                    ", fields=" + fields +
+                    ", links=" + links +
+                    '}';
         }
 
         @Override

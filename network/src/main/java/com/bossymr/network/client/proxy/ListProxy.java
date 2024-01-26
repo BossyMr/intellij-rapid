@@ -63,7 +63,7 @@ public class ListProxy<T> extends AbstractList<T> {
             }
             return model;
         } catch (IOException e) {
-            throw new ProxyException(e);
+            throw new ProxyException("Could not send request: " + request, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ProxyException(e);

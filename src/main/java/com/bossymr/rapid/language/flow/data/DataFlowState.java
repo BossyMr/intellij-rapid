@@ -473,13 +473,13 @@ public class DataFlowState {
         return null;
     }
 
-    private @NotNull Expression getSnapshot(@NotNull Expression value) {
-        if(value instanceof ReferenceExpression referenceExpression) {
+    public @NotNull Expression getSnapshot(@NotNull Expression expression) {
+        if(expression instanceof ReferenceExpression referenceExpression) {
             return getSnapshot(referenceExpression);
         }
-        return value.replace(expression -> {
-            if(!(expression instanceof ReferenceExpression referenceExpression)) {
-                return expression;
+        return expression.replace(component -> {
+            if(!(component instanceof ReferenceExpression referenceExpression)) {
+                return component;
             }
             return getSnapshot(referenceExpression);
         });

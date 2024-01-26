@@ -28,66 +28,60 @@ public enum HardcodedContract {
             .withRoutine("Present", RoutineType.FUNCTION, RapidPrimitiveType.BOOLEAN, routineBuilder -> routineBuilder
                     .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
                             .withParameter("OptPar", ParameterType.REFERENCE, RapidPrimitiveType.ANYTYPE))),
-            (block, callerState, instruction, arguments) -> {
-                Map<String, Expression> parameters = new HashMap<>();
-                arguments.forEach((argument, expression) -> parameters.put(argument.getName(), expression));
-                Expression expression = parameters.get("OptPar");
-                if (!(expression instanceof ReferenceExpression referenceExpression)) {
-                    DataFlowState successorState = callerState.createSuccessorState();
-                    Snapshot snapshot = Snapshot.createSnapshot(RapidPrimitiveType.BOOLEAN);
-                    successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), new LiteralExpression(true)));
-                    return Set.of(new DataFlowFunction.Result.Success(successorState, snapshot));
+            context -> {
+                Expression expression = context.getArgument("OptPar");
+                DataFlowState successorState = context.getCallerState().createSuccessorState();
+                Snapshot returnValue = Snapshot.createSnapshot(RapidPrimitiveType.BOOLEAN);
+                if (!(expression instanceof SnapshotExpression variable)) {
+                    successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(returnValue), new LiteralExpression(true)));
+                    return Set.of(new DataFlowFunction.Result.Success(successorState, returnValue));
                 }
-                SnapshotExpression snapshotExpression = callerState.getSnapshot(referenceExpression);
-                DataFlowState successorState = callerState.createSuccessorState();
-                Snapshot snapshot = Snapshot.createSnapshot(RapidPrimitiveType.BOOLEAN);
-                successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), FunctionCallExpression.present(snapshotExpression.getSnapshot())));
-                return Set.of(new DataFlowFunction.Result.Success(successorState, snapshot));
+                successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(returnValue), FunctionCallExpression.present(variable.getSnapshot())));
+                return Set.of(new DataFlowFunction.Result.Success(successorState, returnValue));
             }),
     DIM(builder -> builder
             .withRoutine("Dim", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
                     .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
                             .withParameter("ArrPar", ParameterType.REFERENCE, RapidPrimitiveType.ANYTYPE)
                             .withParameter("DimNo", ParameterType.INPUT, RapidPrimitiveType.NUMBER))),
-            (block, callerState, instruction, arguments) -> {
-                RapidType returnType = Objects.requireNonNull(block.getControlFlow().getReturnType());
-                Map<String, Expression> parameters = new HashMap<>();
-                arguments.forEach((argument, expression) -> parameters.put(argument.getName(), expression));
-                RapidExpression expression = instruction.getElement() instanceof RapidExpression element ? element : null;
-                Expression parameter = parameters.get("ArrPar");
-                if (!(parameter instanceof SnapshotExpression array) || !(array.getType().isArray())) {
+            context -> {
+                Expression argument = context.getArgument("ArrPar");
+                DataFlowState callerState = context.getCallerState();
+                if (!(argument instanceof SnapshotExpression array) || !(array.getType().isArray())) {
                     return Set.of(new DataFlowFunction.Result.Error(callerState.createSuccessorState(), Snapshot.createSnapshot(RapidPrimitiveType.NUMBER)));
                 }
+                Snapshot returnValue = Snapshot.createSnapshot(RapidPrimitiveType.NUMBER);
+                Expression degree = context.getArgument("DimNo");
                 Set<DataFlowFunction.Result> results = new HashSet<>();
-                Expression degree = parameters.get("DimNo");
-                ReferenceExpression returnValue = instruction.getReturnValue();
-                if (returnValue != null) {
-                    SnapshotExpression snapshot = callerState.createSnapshot(returnValue);
-                    Expression previousLength = null;
-                    ReferenceExpression variable = array;
-                    for (int i = 1; i <= 3; i++) {
-                        variable = new IndexExpression(variable, new LiteralExpression(0));
-                        DataFlowState successSuccessorState = callerState.createSuccessorState();
-                        if (previousLength != null) {
-                            successSuccessorState.add(new BinaryExpression(BinaryOperator.GREATER_THAN, previousLength, new LiteralExpression(0)));
-                            DataFlowState errorSuccessorState = callerState.createSuccessorState();
-                            errorSuccessorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, previousLength, new LiteralExpression(0)));
-                            errorSuccessorState.add(new BinaryExpression(BinaryOperator.GREATER_THAN_OR_EQUAL, degree, new LiteralExpression(i)));
-                            results.add(new DataFlowFunction.Result.Error(errorSuccessorState, Snapshot.createSnapshot(RapidPrimitiveType.NUMBER)));
-                        }
-                        successSuccessorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, degree, new LiteralExpression(i)));
-                        previousLength = new FunctionCallExpression(expression, returnType, ":Dim", List.of(Entry.pointerOf(array.getSnapshot()), Entry.valueOf(degree)));
-                        successSuccessorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, previousLength));
-                        results.add(new DataFlowFunction.Result.Success(successSuccessorState, snapshot.getSnapshot()));
+                ReferenceExpression variable = array;
+                Expression previousLength = null;
+                RapidExpression element = context.getInstruction().getElement() instanceof RapidExpression expression ? expression : null;
+                for (int i = 1; i <= 3; i++) {
+                    DataFlowState successState = callerState.createSuccessorState();
+                    if(previousLength != null) {
+                        successState.add(new BinaryExpression(BinaryOperator.GREATER_THAN, previousLength, new LiteralExpression(0)));
+                        DataFlowState errorState = callerState.createSuccessorState();
+                        errorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, degree, new LiteralExpression(i)));
+                        errorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, previousLength, new LiteralExpression(0)));
+                        results.add(new DataFlowFunction.Result.Error(errorState));
                     }
+                    // To retrieve the 1st, 2nd, or 3rd the specified degree must be equal to the current degree
+                    successState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, degree, new LiteralExpression(i)));
+                    previousLength = new FunctionCallExpression(element, RapidPrimitiveType.NUMBER, ":Dim", List.of(Entry.pointerOf(array.getSnapshot()), Entry.valueOf(new LiteralExpression(i))));
+                    successState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(returnValue), previousLength));
+                    results.add(new DataFlowFunction.Result.Success(successState, returnValue));
+                    array = callerState.getSnapshot(new IndexExpression(variable, new LiteralExpression(0)));
                 }
+                DataFlowState errorState = callerState.createSuccessorState();
+                errorState.add(new BinaryExpression(BinaryOperator.OR, new BinaryExpression(BinaryOperator.LESS_THAN, degree, new LiteralExpression(0)), new BinaryExpression(BinaryOperator.GREATER_THAN, degree, new LiteralExpression(3))));
+                results.add(new DataFlowFunction.Result.Error(errorState));
                 return results;
             }),
     COSINE(builder -> builder
             .withRoutine("Cos", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
                     .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
                             .withParameter("Angle", ParameterType.INPUT, RapidPrimitiveType.NUMBER))),
-            DataFlowProcessor.pureProcessor());
+            DataFlowProcessor.pureMethod());
 
     private final @NotNull VirtualRoutine routine;
     private final @NotNull Block controlFlow;
@@ -104,7 +98,7 @@ public enum HardcodedContract {
         this.function = block -> new DataFlowFunction(block) {
             @Override
             public @NotNull Set<Result> getOutput(@NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
-                Set<Result> output = processor.getOutput(block, callerState, instruction, getArguments(controlFlow, instruction.getArguments()));
+                Set<Result> output = processor.getOutput(new DataFlowContext(block, callerState, instruction));
                 return output.stream()
                              .map(result -> {
                                  Result normalized = getOutput(result, callerState, instruction);
@@ -142,37 +136,91 @@ public enum HardcodedContract {
     @FunctionalInterface
     private interface DataFlowProcessor {
 
-        static @NotNull DataFlowProcessor pureProcessor() {
-            return (block, callerState, instruction, arguments) -> {
-                Block controlFlow = block.getControlFlow();
+        static @NotNull DataFlowProcessor pureMethod() {
+            return context -> {
+                Block controlFlow = context.getBlock().getControlFlow();
                 RapidType returnType = controlFlow.getReturnType();
-                DataFlowState successorState = callerState.createSuccessorState();
+                DataFlowState successorState = context.getCallerState().createSuccessorState();
                 if (returnType == null) {
                     return Set.of(new DataFlowFunction.Result.Success(successorState, null));
                 }
-                String name = controlFlow.getModuleName() + ":" + controlFlow.getName();
-                Snapshot snapshot = Snapshot.createSnapshot(returnType);
-                List<Entry> entries = new ArrayList<>();
-                List<Argument> parameters = controlFlow.getArguments();
-                List<Map.Entry<Argument, Expression>> ordered = new ArrayList<>(arguments.entrySet());
-                ordered.sort(Map.Entry.comparingByKey(Comparator.comparing(parameters::indexOf)));
-                for (Map.Entry<Argument, Expression> argument : ordered) {
-                    if (argument.getKey().getParameterType() == ParameterType.INPUT || !(argument.getValue() instanceof SnapshotExpression expression)) {
-                        entries.add(new Entry.ValueEntry(argument.getValue()));
-                        continue;
-                    }
-                    entries.add(new Entry.ReferenceEntry(expression.getSnapshot()));
-                }
-                FunctionCallExpression expression = new FunctionCallExpression(returnType, name, entries);
-                successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), expression));
-                return Set.of(new DataFlowFunction.Result.Success(successorState, snapshot));
+                Snapshot returnValue = Snapshot.createSnapshot(returnType);
+                FunctionCallExpression expression = context.createFunctionCallExpression();
+                successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(returnValue), expression));
+                return Set.of(new DataFlowFunction.Result.Success(successorState, returnValue));
             };
         }
 
-        @NotNull Set<DataFlowFunction.Result> getOutput(@NotNull ControlFlowBlock block,
-                                                        @NotNull DataFlowState callerState,
-                                                        @NotNull CallInstruction instruction,
-                                                        @NotNull Map<Argument, Expression> arguments);
+        @NotNull Set<DataFlowFunction.Result> getOutput(@NotNull DataFlowContext context);
+    }
 
+    public static final class DataFlowContext {
+
+        private final @NotNull ControlFlowBlock block;
+        private final @NotNull DataFlowState callerState;
+        private final @NotNull CallInstruction instruction;
+
+        private final @NotNull Map<Argument, Expression> arguments;
+        private final @NotNull Map<String, Expression> argumentsByName;
+
+        public DataFlowContext(@NotNull ControlFlowBlock block, @NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
+            this.block = block;
+            this.callerState = callerState;
+            this.instruction = instruction;
+            this.arguments = DataFlowFunction.getArguments(block.getControlFlow(), instruction.getArguments());
+            arguments.replaceAll((argument, expression) -> callerState.getSnapshot(expression));
+            this.argumentsByName = new HashMap<>();
+            arguments.forEach((argument, expression) -> argumentsByName.put(argument.getName(), expression));
+        }
+
+        public @NotNull FunctionCallExpression createFunctionCallExpression() {
+            RapidType returnType = getControlFlow().getReturnType();
+            if(returnType == null) {
+                throw new IllegalStateException("Cannot create function call expression for block: " + getControlFlow());
+            }
+            RapidExpression element = instruction.getElement() instanceof RapidExpression expression ? expression : null;
+            String functionName = getControlFlow().getModuleName() + ":" + getControlFlow().getName();
+            return new FunctionCallExpression(element, returnType, functionName, getEntries());
+        }
+
+        public @NotNull List<Entry> getEntries() {
+            List<Entry> entries = new ArrayList<>();
+            ArrayList<Map.Entry<Argument, Expression>> ordered = new ArrayList<>(arguments.entrySet());
+            ordered.sort(Map.Entry.comparingByKey(Comparator.comparing(argument -> getControlFlow().getArguments().indexOf(argument))));
+            for (Map.Entry<Argument, Expression> entry : ordered) {
+                if(entry.getKey().getParameterType() == ParameterType.INPUT) {
+                    entries.add(new Entry.ValueEntry(entry.getValue()));
+                } else if(!(entry.getValue() instanceof SnapshotExpression snapshot)) {
+                    entries.add(new Entry.ValueEntry(entry.getValue()));
+                } else {
+                    entries.add(new Entry.ReferenceEntry(snapshot.getSnapshot()));
+                }
+            }
+            return entries;
+        }
+
+        public @NotNull Map<Argument, Expression> getArguments() {
+            return arguments;
+        }
+
+        public Expression getArgument(@NotNull String name) {
+            return argumentsByName.get(name);
+        }
+
+        public @NotNull ControlFlowBlock getBlock() {
+            return block;
+        }
+
+        public @NotNull Block.FunctionBlock getControlFlow() {
+            return (Block.FunctionBlock) getBlock().getControlFlow();
+        }
+
+        public @NotNull DataFlowState getCallerState() {
+            return callerState;
+        }
+
+        public @NotNull CallInstruction getInstruction() {
+            return instruction;
+        }
     }
 }

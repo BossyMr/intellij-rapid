@@ -141,7 +141,7 @@ public class SymbolQuery extends HashMap<String, String> {
             if (deserializable == null) {
                 throw new IllegalStateException("Field '" + constant.name() + "' of '" + constant.getClass().getName() + "' is not deserializable");
             }
-            return deserializable.value();
+            return deserializable.value()[0];
         } catch (NoSuchFieldException e) {
             throw new IllegalStateException(e);
         }

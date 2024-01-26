@@ -12,7 +12,7 @@ public enum TaskExecutionState {
     STARTED,
 
 
-    @Deserializable("stop")
+    @Deserializable({"stopped", "stop"})
     STOPPED,
 
 

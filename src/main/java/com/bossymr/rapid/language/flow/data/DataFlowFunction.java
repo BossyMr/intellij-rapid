@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.expression.*;
 import com.bossymr.rapid.language.flow.instruction.CallInstruction;
 import com.bossymr.rapid.language.symbol.ParameterType;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -308,7 +309,12 @@ public class DataFlowFunction {
 
         record Success(@NotNull DataFlowState state, @Nullable Snapshot variable) implements Result {}
 
-        record Error(@NotNull DataFlowState state, @Nullable Snapshot variable) implements Result {}
+        record Error(@NotNull DataFlowState state, @Nullable Snapshot variable) implements Result {
+
+            public Error(@NotNull DataFlowState state) {
+                this(state, Snapshot.createSnapshot(RapidPrimitiveType.NUMBER));
+            }
+        }
 
         record Exit(@NotNull DataFlowState state) implements Result {
             @Override

@@ -156,12 +156,14 @@ public class RapidProcessHandler extends ProcessHandler {
                 return;
             }
             executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
-                if (executionStatus.getState() == ExecutionState.STOPPED) {
+                if (event.getState() == ExecutionState.STOPPED) {
                     try {
                         entity.unsubscribe();
                         manager.close();
                         notifyProcessTerminated(0);
-                    } catch (IOException | InterruptedException ignored) {}
+                    } catch (IOException ex) {
+                        logger.error(ex);
+                    } catch (InterruptedException ignored) {}
                 }
             });
             executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();

@@ -40,8 +40,10 @@ public class UnreachableStatementInspection extends LocalInspectionTool {
                 }
                 List<TextRange> ranges = getTextRanges(statements);
                 for (TextRange range : ranges) {
-                    TextRange rangeInElement = getActualTextRange(range, routine);
-                    RemoveUnreachableStatementFix quickFix = new RemoveUnreachableStatementFix(rangeInElement);
+                    TextRange rangeInFile = getActualTextRange(range, routine);
+                    RemoveUnreachableStatementFix quickFix = new RemoveUnreachableStatementFix(rangeInFile);
+                    int startOffset = routine.getTextRange().getStartOffset();
+                    TextRange rangeInElement = rangeInFile.shiftLeft(startOffset);
                     holder.registerProblem(routine, RapidBundle.message("inspection.message.unreachable.statement"), ProblemHighlightType.LIKE_UNUSED_SYMBOL, rangeInElement, quickFix);
                 }
             }

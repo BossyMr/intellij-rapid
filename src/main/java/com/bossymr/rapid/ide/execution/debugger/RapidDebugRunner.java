@@ -5,12 +5,11 @@ import com.bossymr.network.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.RapidRunProfileState;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
-import com.bossymr.rapid.robot.CloseableMastership;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskActiveState;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.module.*;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleEntity;
+import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Breakpoint;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
 import com.intellij.execution.ExecutionException;
@@ -69,37 +68,38 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
         AsyncPromise<RunContentDescriptor> promise = new AsyncPromise<>();
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         XDebuggerManager debuggerManager = XDebuggerManager.getInstance(project);
-        ApplicationManager.getApplication().invokeLater(() -> {
+        executorService.submit(() -> {
             try {
-                XDebugSession session = debuggerManager.startSession(environment, new XDebugProcessStarter() {
-                    @Override
-                    public @NotNull XDebugProcess start(@NotNull XDebugSession session) throws ExecutionException {
-                        try {
-                            NetworkManager manager = state.getNetworkManager();
-                            return new RapidDebugProcess(project, session, executorService, state.getTasks(), manager, () -> {
-                                state.setupExecution(manager);
-                                setupExecution(manager);
-                                return null;
-                            });
-                        } catch (IOException | InterruptedException e) {
-                            throw new ExecutionException(RapidBundle.message("run.execution.exception"));
-                        }
+                NetworkManager manager = state.getNetworkManager();
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    try {
+                        XDebugSession session = debuggerManager.startSession(environment, new XDebugProcessStarter() {
+                            @Override
+                            public @NotNull XDebugProcess start(@NotNull XDebugSession session) {
+                                RapidDebugProcess process = new RapidDebugProcess(project, session, executorService, state.getTasks(), manager);
+                                process.execute(() -> {
+                                    state.setupExecution(process.getManager());
+                                    setupExecution(process.getManager());
+                                });
+                                return process;
+                            }
+                        });
+                        promise.setResult(session.getRunContentDescriptor());
+                    } catch (ExecutionException e) {
+                        promise.setError(e);
                     }
                 });
-                promise.setResult(session.getRunContentDescriptor());
-            } catch (ExecutionException e) {
-                promise.setError(e);
+            } catch (IOException e) {
+                throw new ExecutionException(RapidBundle.message("run.execution.exception"));
             }
+            return null;
         });
         return promise;
     }
 
     private void removeBreakpoint(@NotNull NetworkManager manager, @NotNull Task task, @NotNull Map<String, ModuleEntity> modules, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
         ModuleEntity module = modules.get(breakpoint.getModuleName());
-        ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
-        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-            module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.FORCE, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
-        }
+        RapidDebugProcess.unregisterBreakpoint(manager, module, task, breakpoint);
     }
 
     private @NotNull Map<String, ModuleEntity> getModules(@NotNull Task task) throws IOException, InterruptedException {

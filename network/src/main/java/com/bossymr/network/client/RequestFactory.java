@@ -162,7 +162,7 @@ public class RequestFactory {
         if (object instanceof Enum<?> enumerated) {
             var field = object.getClass().getField(enumerated.name());
             Deserializable annotation = field.getAnnotation(Deserializable.class);
-            return annotation != null ? annotation.value() : enumerated.name();
+            return annotation != null ? annotation.value()[0] : enumerated.name();
         }
         return String.valueOf(object);
     }

@@ -110,6 +110,11 @@ public class RapidRunProfileState implements RunProfileState {
             if (state.getName() == null) continue;
             if (state.getModuleName() != null) {
                 upload(state.getName(), state.getModuleName());
+            } else {
+                RapidTask task = robot.getTask(state.getName());
+                if(task != null) {
+                    robot.upload(task);
+                }
             }
             activate(manager, state, state.getName());
         }
