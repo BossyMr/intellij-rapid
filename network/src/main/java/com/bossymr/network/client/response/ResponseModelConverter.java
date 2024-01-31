@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ResponseModelConverter implements ResponseConverter<ResponseModel> {
 
@@ -152,7 +154,13 @@ public class ResponseModelConverter implements ResponseConverter<ResponseModel> 
 
     private @NotNull Document parse(byte @NotNull [] body) {
         try {
-            return builder.parse(new ByteArrayInputStream(new String(body, StandardCharsets.UTF_8).getBytes(StandardCharsets.UTF_8)));
+            String input = new String(body, StandardCharsets.UTF_8);
+            Pattern pattern = Pattern.compile("\"([^\"]*)\"");
+            Matcher matcher = pattern.matcher(input);
+            input = matcher.replaceAll(result -> result.group()
+                                                       .replaceAll("<", "&lt;")
+                                                       .replaceAll(">", "&gt;"));
+            return builder.parse(new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)));
         } catch (SAXException | IOException e) {
             throw new RuntimeException(new String(body), e);
         }

@@ -191,6 +191,9 @@ public class RapidBlock extends AbstractBlock {
         if (parentType == ASSIGNMENT_STATEMENT) {
             return Wrap.createWrap(commonSettings.ASSIGNMENT_WRAP, true);
         }
+        if(TokenSet.create(ENDIF_KEYWORD, ENDFOR_KEYWORD, ENDWHILE_KEYWORD, ENDTEST_KEYWORD, ENDPROC_KEYWORD, ENDFUNC_KEYWORD, ENDTRAP_KEYWORD).contains(elementType)) {
+            return Wrap.createWrap(WrapType.ALWAYS, true);
+        }
         return null;
     }
 

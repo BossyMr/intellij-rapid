@@ -7,7 +7,6 @@ import com.bossymr.network.annotations.Field;
 import com.bossymr.network.annotations.Property;
 import com.bossymr.network.client.FetchMethod;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.BuildLogEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

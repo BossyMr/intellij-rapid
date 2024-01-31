@@ -1,11 +1,14 @@
 package com.bossymr.rapid.ide.search;
 
 import com.bossymr.rapid.language.symbol.RapidSymbol;
+import com.bossymr.rapid.robot.RapidRobot;
+import com.bossymr.rapid.robot.RobotService;
 import com.intellij.find.usages.api.PsiUsage;
 import com.intellij.find.usages.api.Usage;
 import com.intellij.find.usages.api.UsageSearchParameters;
 import com.intellij.find.usages.api.UsageSearcher;
 import com.intellij.model.psi.PsiSymbolReference;
+import com.intellij.model.psi.PsiSymbolReferenceService;
 import com.intellij.model.search.LeafOccurrence;
 import com.intellij.model.search.LeafOccurrenceMapper;
 import com.intellij.model.search.SearchContext;
@@ -25,20 +28,25 @@ import java.util.List;
 public class RapidSymbolUsageSearcher implements UsageSearcher {
 
     public static @NotNull Query<? extends PsiUsage> collectSearchRequests(@NotNull RapidSymbol symbol, @NotNull String name, @NotNull Project project, @NotNull SearchScope searchScope) {
+        RapidRobot robot = RobotService.getInstance().getRobot();
+        if(robot != null) {
+            searchScope = searchScope.union(robot.getSearchScope(project));
+        }
         return SearchService.getInstance()
-                .searchWord(project, name)
-                .caseSensitive(false)
-                .inContexts(SearchContext.IN_CODE, SearchContext.IN_COMMENTS, SearchContext.IN_STRINGS)
-                .inScope(searchScope)
-                .buildQuery(LeafOccurrenceMapper.withPointer(symbol.createPointer(), RapidSymbolUsageSearcher::collectReferences))
-                .mapping(PsiUsage::textUsage);
+                            .searchWord(project, name)
+                            .caseSensitive(false)
+                            .inContexts(SearchContext.IN_CODE, SearchContext.IN_COMMENTS, SearchContext.IN_STRINGS)
+                            .inScope(searchScope)
+                            .buildQuery(LeafOccurrenceMapper.withPointer(symbol.createPointer(), RapidSymbolUsageSearcher::collectReferences))
+                            .mapping(PsiUsage::textUsage);
     }
 
     @Contract(pure = true)
     private static @NotNull Collection<? extends PsiSymbolReference> collectReferences(@NotNull RapidSymbol symbol, @NotNull LeafOccurrence occurrence) {
         List<PsiSymbolReference> references = new ArrayList<>();
+        PsiSymbolReferenceService service = PsiSymbolReferenceService.getService();
         PsiTreeUtil.treeWalkUp(occurrence.getStart(), occurrence.getScope(), (element, previous) -> {
-            references.addAll(element.getOwnReferences());
+            references.addAll(service.getReferences(element));
             return references.isEmpty();
         });
         return references;

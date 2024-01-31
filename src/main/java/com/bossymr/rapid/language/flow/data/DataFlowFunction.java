@@ -56,21 +56,26 @@ public class DataFlowFunction {
     }
 
     public static <T> @NotNull Map<Argument, T> getArguments(@NotNull Block functionBlock, @NotNull Map<ArgumentDescriptor, T> values) {
-        List<Argument> arguments = new ArrayList<>();
+        Map<String, Argument> optionalArguments = new HashMap<>();
+        List<Argument> requiredArguments = new ArrayList<>();
         for (ArgumentGroup argumentGroup : functionBlock.getArgumentGroups()) {
-            arguments.addAll(argumentGroup.arguments());
+            if(argumentGroup.isOptional()) {
+                for (Argument argument : argumentGroup.arguments()) {
+                    optionalArguments.put(argument.getName(), argument);
+                }
+            } else if(!argumentGroup.arguments().isEmpty()) {
+                requiredArguments.add(argumentGroup.arguments().get(0));
+            }
         }
         Map<Argument, T> result = new HashMap<>();
         values.forEach((descriptor, value) -> {
             if (descriptor instanceof ArgumentDescriptor.Required required) {
-                if (required.index() < arguments.size()) {
-                    result.put(arguments.get(required.index()), value);
+                if (required.index() < requiredArguments.size()) {
+                    result.put(requiredArguments.get(required.index()), value);
                 }
             } else if (descriptor instanceof ArgumentDescriptor.Optional optional) {
-                for (Argument element : arguments) {
-                    if (element.getName().equals(optional.name())) {
-                        result.put(element, value);
-                    }
+                if(optionalArguments.containsKey(optional.name())) {
+                    result.put(optionalArguments.get(optional.name()), value);
                 }
             } else {
                 throw new AssertionError();
@@ -127,7 +132,7 @@ public class DataFlowFunction {
         Field field = getField(result.state(), snapshot);
         if(Objects.equals(snapshot, result.variable())) {
             if (returnVariable == null) {
-                returnVariable = Snapshot.createSnapshot(snapshot.getType(), snapshot.getOptionality());
+                returnVariable = Snapshot.createSnapshot(snapshot.getType(), Optionality.PRESENT);
             }
         }
         if(field != null) {
@@ -169,6 +174,15 @@ public class DataFlowFunction {
         Map<Result, DataFlowState> mappings = new HashMap<>();
         Map<Argument, Expression> arguments = getArguments(getBlock(), instruction.getArguments());
         DataFlowState state = callerState.createSuccessorState();
+        Block controlFlow = block.getControlFlow();
+        for (ArgumentGroup argumentGroup : controlFlow.getArgumentGroups()) {
+            if(argumentGroup.isOptional() || argumentGroup.arguments().isEmpty()) {
+                continue;
+            }
+            if(argumentGroup.arguments().stream().noneMatch(arguments::containsKey)) {
+                return Set.of(new Result.Error(callerState.createSuccessorState()));
+            }
+        }
         for (Argument argument : arguments.keySet()) {
             Expression expression = arguments.get(argument);
             if(expression instanceof ReferenceExpression) {
@@ -265,6 +279,7 @@ public class DataFlowFunction {
         ReferenceExpression callerVariable = instruction.getReturnValue();
         if (calleeSnapshot != null && callerVariable != null) {
             successorState.assign(callerVariable, new SnapshotExpression(calleeSnapshot));
+
         }
 
         for (Argument argument : arguments.keySet()) {
@@ -275,10 +290,14 @@ public class DataFlowFunction {
             if (latestSnapshot == null) {
                 continue;
             }
-            Snapshot snapshot = modifications.get(latestSnapshot);
+            Snapshot snapshot = modifications.getOrDefault(latestSnapshot, latestSnapshot);
             Expression expression = arguments.get(argument);
             if (expression instanceof ReferenceExpression variable) {
                 successorState.assign(variable, new SnapshotExpression(snapshot));
+                Snapshot root = successorState.getRoot(variable);
+                if(root != null) {
+                    successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(snapshot), FunctionCallExpression.present(root)));
+                }
             }
         }
 

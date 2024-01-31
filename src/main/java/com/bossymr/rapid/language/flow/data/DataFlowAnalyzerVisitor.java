@@ -4,7 +4,10 @@ import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.snapshots.Snapshot;
 import com.bossymr.rapid.language.flow.expression.*;
 import com.bossymr.rapid.language.flow.instruction.*;
+import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
+import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -90,10 +93,35 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     public @NotNull List<DataFlowState> visitReturnInstruction(@NotNull ReturnInstruction instruction) {
         Expression returnValue = instruction.getReturnValue();
         SnapshotExpression snapshot = getReferenceExpression(returnValue);
+        if(isUnknownFunction()) {
+            for (Argument argument : block.getControlFlow().getArguments()) {
+                if(argument.getParameterType() != ParameterType.INPUT) {
+                    SnapshotExpression expression = new SnapshotExpression(Snapshot.createSnapshot(argument.getType(), Optionality.UNKNOWN));
+                    state.assign(new VariableExpression(argument), expression);
+
+                }
+            }
+        }
         DataFlowState compactState = state.createCompactState(getTargets(snapshot));
         Snapshot returnSnapshot = snapshot != null ? snapshot.getSnapshot() : null;
         block.getFunction().registerOutput(state, new DataFlowFunction.Result.Success(compactState, returnSnapshot));
         return List.of();
+    }
+
+    private boolean isUnknownFunction() {
+        RapidSymbol element = block.getControlFlow().getElement();
+        if(!(element instanceof RapidRoutine routine)) {
+            return false;
+        }
+        if(routine instanceof PhysicalRoutine) {
+            return false;
+        }
+        for (HardcodedContract value : HardcodedContract.values()) {
+            if(value.getRoutine().equals(routine)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -109,8 +137,13 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
             snapshots.add(variable.getSnapshot());
         }
         Block block = state.getFunctionBlock();
+        List<DataFlowState> chain = state.getPredecessorChain();
         for (ArgumentGroup argumentGroup : block.getArgumentGroups()) {
             for (Argument argument : argumentGroup.arguments()) {
+                if(argument.getParameterType() != ParameterType.INPUT) {
+                    Snapshot snapshot = chain.get(chain.size() - 1).getRoots().get(argument);
+                    snapshots.add(snapshot);
+                }
                 SnapshotExpression snapshot = state.getSnapshot(new VariableExpression(argument));
                 snapshots.add(snapshot.getSnapshot());
             }

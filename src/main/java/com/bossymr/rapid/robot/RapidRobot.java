@@ -8,6 +8,7 @@ import com.bossymr.network.client.proxy.EntityProxy;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidTask;
+import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.impl.SymbolConverter;
@@ -33,9 +34,12 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.application.WriteAction;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
+import com.intellij.psi.search.LocalSearchScope;
+import com.intellij.psi.search.SearchScope;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -227,6 +231,14 @@ public class RapidRobot implements Disposable {
      */
     public @NotNull Set<RapidTask> getTasks() {
         return tasks.stream().filter(RapidTask::isValid).collect(Collectors.toSet());
+    }
+
+    public @NotNull SearchScope getSearchScope(@NotNull Project project) {
+        PhysicalModule[] modules = getTasks().stream()
+                                           .flatMap(task -> task.getModules(project).stream())
+                                           .toList()
+                                           .toArray(PhysicalModule[]::new);
+        return new LocalSearchScope(modules);
     }
 
     /**

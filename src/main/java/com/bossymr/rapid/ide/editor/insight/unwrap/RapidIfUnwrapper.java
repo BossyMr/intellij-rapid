@@ -24,9 +24,10 @@ public class RapidIfUnwrapper extends RapidUnwrapper {
 
     @Override
     protected void doUnwrap(@NotNull PsiElement element, @NotNull Context context) throws IncorrectOperationException {
+        // FIXME:
         RapidIfStatement statement = (RapidIfStatement) element;
         RapidStatementList thenBranch = statement.getThenBranch();
-        context.extractElement(thenBranch, element);
+        context.extractStatementList(thenBranch, element);
         context.delete(element);
     }
 }

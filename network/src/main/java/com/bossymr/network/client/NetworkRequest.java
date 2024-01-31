@@ -157,4 +157,14 @@ public class NetworkRequest<T> {
         builder = builder.method(method.name(), bodyPublisher);
         return builder.build();
     }
+
+    @Override
+    public String toString() {
+        return "NetworkRequest{" +
+                "method=" + method +
+                ", path=" + path +
+                ", fields=" + fields +
+                ", type=" + type +
+                '}';
+    }
 }

@@ -65,18 +65,32 @@ public class DataFlowAnalyzer {
     public void process(@NotNull Set<RapidRoutine> stack) {
         while (!(workList.isEmpty())) {
             ProgressManager.checkCanceled();
-            DataFlowState state = workList.getLast();
-            List<DataFlowState> successors = process(stack, state);
-            workList.removeLast();
-            ControlFlowListener.publish().onState(state);
-            for (DataFlowState successor : successors) {
-                if (getPreviousCycles(successor) >= 2) {
-                    continue;
+            Deque<DataFlowState> copy = new ArrayDeque<>(workList);
+            DataFlowState state = workList.removeLast();
+            List<DataFlowState> original = state.getSuccessors();
+            try {
+                List<DataFlowState> successors = process(stack, state);
+                ControlFlowListener.publish().onState(state);
+                for (DataFlowState successor : successors) {
+                    if (getPreviousCycles(successor) >= 2) {
+                        continue;
+                    }
+                    if (workList.contains(successor)) {
+                        continue;
+                    }
+                    workList.add(successor);
                 }
-                if (workList.contains(successor)) {
-                    continue;
+            } catch (RuntimeException e) {
+                List<DataFlowState> successors = new ArrayList<>(state.getSuccessors());
+                for (DataFlowState successor : successors) {
+                    if (original.contains(successor)) {
+                        continue;
+                    }
+                    successor.clear();
                 }
-                workList.add(successor);
+                workList.clear();
+                workList.addAll(copy);
+                throw e;
             }
         }
     }

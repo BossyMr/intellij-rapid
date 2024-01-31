@@ -16,12 +16,10 @@ import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.model.Pointer;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.util.concurrency.annotations.RequiresReadLock;
-import org.eclipse.sisu.inject.Soft;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.SoftReference;
-import java.lang.ref.WeakReference;
 import java.util.*;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -88,6 +86,7 @@ public class CacheEntry {
         }
         ControlFlowListener.publish().onBlock(block);
     }
+
 
     private @NotNull ControlFlowBlock getControlFlowBlock(@NotNull RapidRoutine routine) {
         if(result != null) {

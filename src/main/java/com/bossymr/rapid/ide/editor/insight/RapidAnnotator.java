@@ -78,6 +78,8 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
             checkDimensionDepth(array);
             checkDimensionExpression(array);
         }
+        RapidExpression initializer = field.getInitializer();
+        checkType(field.getType(), initializer);
         super.visitField(field);
     }
 
@@ -88,6 +90,30 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     @Override
     public void visitRoutine(@NotNull PhysicalRoutine routine) {
+        PsiElement nameIdentifier = routine.getNameIdentifier();
+        if(nameIdentifier != null) {
+            RoutineType routineType = routine.getRoutineType();
+            if(routine.getParameterList() == null && routineType != RoutineType.TRAP) {
+                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.missing.parameter.list"))
+                                .range(nameIdentifier)
+                                .create();
+            }
+            if(routine.getParameterList() != null && routineType == RoutineType.TRAP) {
+                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.unexpected.parameter.list"))
+                                .range(nameIdentifier)
+                                .create();
+            }
+            if(routine.getTypeElement() == null && routineType == RoutineType.FUNCTION) {
+                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.missing.return.type"))
+                                .range(nameIdentifier)
+                                .create();
+            }
+            if(routine.getTypeElement() != null && routineType != RoutineType.FUNCTION) {
+                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.return.type.unexpected"))
+                                .range(nameIdentifier)
+                                .create();
+            }
+        }
         super.visitRoutine(routine);
     }
 
@@ -120,15 +146,6 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
 
     @Override
     public void visitParameterList(@NotNull RapidParameterList parameterList) {
-        for (PhysicalParameterGroup group : parameterList.getParameters()) {
-            List<PhysicalParameter> parameters = group.getParameters();
-            if (!(group.isOptional()) && parameters.size() > 1) {
-                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.group.mutually.exclusive"))
-                                .range(group)
-                                .withFix(new MakeParameterListOptionalFix(group))
-                                .create();
-            }
-        }
         super.visitParameterList(parameterList);
     }
 
@@ -167,183 +184,120 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
         if (!(referenceExpression.getSymbol() instanceof RapidRoutine routine)) {
             return;
         }
-        List<? extends RapidParameterGroup> parameters = routine.getParameters();
-        if (parameters == null) {
+        List<? extends RapidParameterGroup> parameterGroups = routine.getParameters();
+        if (parameterGroups == null) {
             return;
         }
-        List<RapidParameter> previous = new ArrayList<>();
-        for (RapidArgument argument : argumentList.getArguments()) {
-            RapidParameter parameter = getParameter(routine, argumentList, previous, argument);
-            if (parameter == null) {
-                continue;
+        Map<String, RapidParameter> parametersByName = new HashMap<>();
+        for (RapidParameterGroup parameterGroup : parameterGroups) {
+            for (RapidParameter parameter : parameterGroup.getParameters()) {
+                parametersByName.put(parameter.getName(), parameter);
             }
-            if (!(previous.isEmpty())) {
-                int index = parameters.indexOf(parameter.getParameterGroup());
-                RapidParameter last = previous.get(previous.size() - 1);
-                int prev = parameters.indexOf(last.getParameterGroup());
-                if (prev > index) {
-                    annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.order"))
-                                    .range(argument)
+        }
+        Map<RapidArgument, RapidParameter> parameters = getParameters(routine.getPresentableName(), parameterGroups, argumentList);
+        List<RapidArgument> arguments = argumentList.getArguments();
+        for (RapidArgument argument : parameters.keySet()) {
+            RapidParameter parameter = parameters.get(argument);
+            if (argument instanceof RapidConditionalArgument || argument instanceof RapidOptionalArgument) {
+                String text = argument.getParameter().getText();
+                if (parameter == null) {
+                    annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.routine.parameter.not.found", text))
+                                    .range(argument.getParameter())
                                     .create();
-                    continue;
-                }
-                if (prev == index) {
-                    annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.exclusive", parameter.getName(), last.getName()))
-                                    .range(argument)
-                                    .create();
-                    continue;
-                }
-            }
-            previous.add(parameter);
-            if (parameter.getParameterGroup().isOptional()) {
-                if (argument instanceof RapidRequiredArgument) {
-                    annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.optional", parameter.getName()))
-                                    .range(argument)
-                                    .create();
-                    continue;
-                }
-                if (argument instanceof RapidOptionalArgument && argument.getArgument() == null) {
-                    RapidType type = parameter.getType();
-                    if (type != null && !(type.getPresentableText().equals("switch"))) {
-                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.optional.parameter.not.switch", parameter.getName()))
+                } else {
+                    if (!parameter.getParameterGroup().isOptional()) {
+                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.required", text))
                                         .range(argument)
                                         .create();
-                        continue;
+                    } else {
+                        List<RapidArgument> previous = arguments.subList(0, arguments.indexOf(argument));
+                        Optional<RapidArgument> previousExclusive = previous.stream().filter(arg -> parameters.containsKey(arg) && parameters.get(arg).getParameterGroup().equals(parameter.getParameterGroup())).findFirst();
+                        if (previousExclusive.isPresent()) {
+                            RapidParameter previousParameter = parameters.get(previousExclusive.get());
+                            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.exclusive", previousParameter.getPresentableName(), parameter.getPresentableName()))
+                                            .range(argument)
+                                            .create();
+                        }
                     }
                 }
-            } else {
-                if (!(argument instanceof RapidRequiredArgument)) {
-                    annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.required", parameter.getName()))
+            }
+            if (argument instanceof RapidRequiredArgument) {
+                if (parameter != null && parameter.getName() != null && argument.getParameter() != null) {
+                    String parameterName = argument.getParameter().getText();
+                    if (!parameterName.equals(parameter.getName())) {
+                        if (parametersByName.containsKey(parameterName)) {
+                            if (!parametersByName.get(parameterName).getParameterGroup().isOptional()) {
+                                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.order"))
+                                                .range(argument)
+                                                .create();
+                            } else {
+                                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.optional", parameterName))
+                                                .range(argument)
+                                                .create();
+                            }
+                        } else {
+                            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.routine.parameter.not.found", parameterName))
+                                            .range(argument)
+                                            .create();
+                        }
+                    }
+                }
+            }
+            if (parameter != null && argument instanceof RapidOptionalArgument && argument.getArgument() == null) {
+                RapidType type = parameter.getType();
+                if (type != null && !(type.getPresentableText().equals("switch"))) {
+                    annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.optional.parameter.not.switch", parameter.getName()))
                                     .range(argument)
                                     .create();
-                    continue;
                 }
             }
-            checkType(parameter.getType(), argument.getArgument());
-            checkParameterArgument(parameter, argument);
+            if (parameter != null) {
+                checkType(parameter.getType(), argument.getArgument());
+            }
         }
-        List<? extends RapidParameterGroup> missing = new ArrayList<>(parameters);
-        List<RapidParameterGroup> groups = previous.stream()
-                                                   .map(RapidParameter::getParameterGroup)
-                                                   .toList();
-        missing.removeIf(RapidParameterGroup::isOptional);
-        missing.removeIf(groups::contains);
-        if (!missing.isEmpty()) {
-            long size = parameters.stream().filter(group -> !(group.isOptional())).count();
-            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.routine.call.number.of.components", routine.getName(), size))
+    }
+
+    private @NotNull Map<@NotNull RapidArgument, @Nullable RapidParameter> getParameters(@NotNull String routineName, @NotNull List<? extends RapidParameterGroup> parameterGroups, @NotNull RapidArgumentList argumentList) {
+        List<RapidRequiredArgument> requiredArguments = argumentList.getArguments().stream()
+                                                                    .filter(argument -> argument instanceof RapidRequiredArgument)
+                                                                    .map(argument -> (RapidRequiredArgument) argument)
+                                                                    .toList();
+        List<? extends RapidParameter> requiredParameters = parameterGroups.stream()
+                                                                           .filter(parameterGroup -> !parameterGroup.isOptional())
+                                                                           .map(RapidParameterGroup::getParameters)
+                                                                           .filter(parameters -> !parameters.isEmpty())
+                                                                           .map(parameters -> parameters.get(0))
+                                                                           .toList();
+        Map<String, RapidParameter> parameters = new HashMap<>();
+        for (RapidParameterGroup parameterGroup : parameterGroups) {
+            for (RapidParameter parameter : parameterGroup.getParameters()) {
+                String name = parameter.getName();
+                if (name == null) {
+                    continue;
+                }
+                parameters.put(name, parameter);
+            }
+        }
+        if (requiredParameters.size() != requiredArguments.size()) {
+            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.routine.call.number.of.components", routineName, requiredParameters.size()))
                             .range(argumentList)
                             .create();
         }
-    }
-
-    private @Nullable RapidReferenceExpression getReferenceExpression(@NotNull RapidExpression expression) {
-        if (expression instanceof RapidReferenceExpression referenceExpression) {
-            return referenceExpression;
-        }
-        if (expression instanceof RapidIndexExpression indexExpression) {
-            if (indexExpression.getExpression() instanceof RapidReferenceExpression referenceExpression) {
-                return referenceExpression;
-            }
-        }
-        return null;
-    }
-
-    private void checkParameterArgument(@NotNull RapidParameter parameter, @NotNull RapidArgument argument) {
-        RapidExpression expression = argument.getArgument();
-        if (expression == null) return;
-        if (parameter.getParameterType() == ParameterType.INPUT) return;
-        RapidReferenceExpression referenceExpression = getReferenceExpression(expression);
-        if (referenceExpression == null) {
-            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.expression.not.variable"))
-                            .range(expression)
-                            .create();
-            return;
-        }
-        RapidSymbol symbol = referenceExpression.getSymbol();
-        if (symbol == null) return;
-        if (!(symbol instanceof RapidVariable variable)) {
-            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.expression.not.variable"))
-                            .range(expression)
-                            .create();
-            return;
-        }
-        if (variable instanceof RapidField field) {
-            if (!(variable.isModifiable()) && parameter.getParameterType() != ParameterType.REFERENCE) {
-                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.variable.read.only", variable.getName()))
-                                .range(referenceExpression)
-                                .create();
-                return;
-            }
-            if (field.getFieldType() == FieldType.CONSTANT
-                    && parameter.getParameterType() != ParameterType.REFERENCE) {
-                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.variable.constant", variable.getName()))
-                                .range(referenceExpression)
-                                .create();
-                return;
-            }
-            if (field.getFieldType() == FieldType.VARIABLE
-                    && parameter.getParameterType() == ParameterType.PERSISTENT) {
-                annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.persistent", variable.getName()))
-                                .range(referenceExpression)
-                                .create();
-                return;
-            }
-        }
-        switch (parameter.getParameterType()) {
-            case VARIABLE -> {
-                if (variable instanceof RapidParameter other) {
-                    if (other.getParameterType() == ParameterType.PERSISTENT) {
-                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.persistent", variable.getName()))
-                                        .range(referenceExpression)
-                                        .create();
-                    }
+        Map<RapidArgument, RapidParameter> result = new HashMap<>();
+        for (RapidArgument argument : argumentList.getArguments()) {
+            if (argument instanceof RapidRequiredArgument requiredArgument) {
+                int index = requiredArguments.indexOf(requiredArgument);
+                if (index >= requiredParameters.size()) {
+                    result.put(argument, null);
+                } else {
+                    result.put(argument, requiredParameters.get(index));
                 }
-            }
-            case PERSISTENT -> {
-                if (variable instanceof RapidParameter other) {
-                    if (other.getParameterType() == ParameterType.INPUT) {
-                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.input", variable.getName()))
-                                        .range(referenceExpression)
-                                        .create();
-                    }
-                    if (other.getParameterType() == ParameterType.VARIABLE) {
-                        annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.variable", variable.getName()))
-                                        .range(referenceExpression)
-                                        .create();
-                    }
-                }
+            } else if (argument instanceof RapidOptionalArgument || argument instanceof RapidConditionalArgument) {
+                String parameterName = argument.getParameter().getText();
+                result.put(argument, parameters.get(parameterName));
             }
         }
-    }
-
-    private @Nullable RapidParameter getParameter(@NotNull RapidRoutine routine, @NotNull RapidArgumentList argumentList, @NotNull List<RapidParameter> previous, @NotNull RapidArgument argument) {
-        if (argument.getParameter() != null) {
-            RapidSymbol symbol = argument.getParameter().getSymbol();
-            if (symbol == null) return null;
-            if (symbol instanceof RapidParameter parameter) {
-                return parameter;
-            }
-            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.reference.not.parameter", symbol.getName()))
-                            .range(argument.getParameter())
-                            .create();
-        } else {
-            List<? extends RapidParameterGroup> groups = routine.getParameters();
-            if (groups == null) return null;
-            for (RapidParameterGroup group : groups) {
-                if (group.isOptional()) continue;
-                List<? extends RapidParameter> parameters = group.getParameters();
-                if (parameters.isEmpty()) continue;
-                if (parameters.stream().anyMatch(previous::contains)) {
-                    continue;
-                }
-                return parameters.get(0);
-            }
-            long size = groups.stream().filter(group -> !(group.isOptional())).count();
-            annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.routine.call.number.of.components", routine.getName(), size))
-                            .range(argumentList)
-                            .create();
-        }
-        return null;
+        return result;
     }
 
     @Override
@@ -941,9 +895,9 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
             }
             if (ModuleType.MUTUALLY_EXCLUSIVE.containsKey(moduleType)) {
                 List<ModuleType> exlusiveList = ModuleType.MUTUALLY_EXCLUSIVE.get(moduleType);
-                Optional<ModuleType> exlusiveType = attributes.stream().filter(exlusiveList::contains).findFirst();
-                if (exlusiveType.isPresent()) {
-                    ModuleType otherType = exlusiveType.orElseThrow();
+                Optional<ModuleType> exclusiveType = attributes.stream().filter(exlusiveList::contains).findFirst();
+                if (exclusiveType.isPresent()) {
+                    ModuleType otherType = exclusiveType.orElseThrow();
                     annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.module.attribute.mutually.exclusive", otherType.getText(), moduleType.getText()))
                                     .range(element)
                                     .withFix(new RemoveModuleAttributeFix(element.getPsi()))

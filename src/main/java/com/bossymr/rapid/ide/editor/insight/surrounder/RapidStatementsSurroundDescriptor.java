@@ -3,6 +3,7 @@ package com.bossymr.rapid.ide.editor.insight.surrounder;
 import com.bossymr.rapid.language.psi.RapidStatementList;
 import com.intellij.lang.surroundWith.SurroundDescriptor;
 import com.intellij.lang.surroundWith.Surrounder;
+import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiWhiteSpace;
@@ -20,6 +21,15 @@ public class RapidStatementsSurroundDescriptor implements SurroundDescriptor {
 
     @Override
     public PsiElement @NotNull [] getElementsToSurround(PsiFile file, int startOffset, int endOffset) {
+        return getStatementsInOffset(file, startOffset, endOffset);
+    }
+
+    public static @NotNull PsiElement[] getStatementsInOffset(@NotNull PsiElement element) {
+        TextRange range = element.getTextRange();
+        return getStatementsInOffset(element.getContainingFile(), range.getStartOffset(), range.getEndOffset());
+    }
+
+    public static @NotNull PsiElement[] getStatementsInOffset(@NotNull PsiFile file, int startOffset, int endOffset) {
         PsiElement startElement = file.findElementAt(startOffset);
         if (startElement instanceof PsiWhiteSpace) {
             startElement = file.findElementAt(startElement.getTextRange().getEndOffset());
@@ -39,11 +49,11 @@ public class RapidStatementsSurroundDescriptor implements SurroundDescriptor {
         if (statementList == null) {
             return PsiElement.EMPTY_ARRAY;
         }
-        PsiElement startChild = getParentInside(startElement, parent);
+        PsiElement startChild = getParentInside(startElement, statementList);
         if (startElement.getTextRange().getStartOffset() != startChild.getTextRange().getStartOffset()) {
             return PsiElement.EMPTY_ARRAY;
         }
-        PsiElement stopChild = getParentInside(endElement, parent);
+        PsiElement stopChild = getParentInside(endElement, statementList);
         if (endElement.getTextRange().getEndOffset() != stopChild.getTextRange().getEndOffset()) {
             return PsiElement.EMPTY_ARRAY;
         }
@@ -59,7 +69,7 @@ public class RapidStatementsSurroundDescriptor implements SurroundDescriptor {
         return elements.toArray(PsiElement.EMPTY_ARRAY);
     }
 
-    private @NotNull PsiElement getParentInside(@NotNull PsiElement element, @NotNull PsiElement parent) {
+    private static @NotNull PsiElement getParentInside(@NotNull PsiElement element, @NotNull PsiElement parent) {
         if (element.equals(parent)) {
             return element;
         }

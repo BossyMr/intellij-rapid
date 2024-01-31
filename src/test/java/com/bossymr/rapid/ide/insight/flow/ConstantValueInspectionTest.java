@@ -30,6 +30,25 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
         myFixture.checkHighlighting(true, true, true, true);
     }
 
+    public void testInputVariable() {
+        doTest("""
+                MODULE foo
+                    PROC bar(num x)
+                        VAR num variable := -1;
+                        Abs(variable);
+                        IF <warning descr="Value of expression is always true">variable = 1</warning> THEN
+                        ENDIF
+                    ENDPROC
+                    
+                    PROC Abs(VAR num value)
+                        IF value < 0 THEN
+                            value := -value;
+                        ENDIF
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
     public void testEquality() {
         doTest("""
                 MODULE foo
@@ -189,7 +208,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                         num baz1;
                         num baz2;
                     ENDRECORD
-                
+                                
                     PROC bar(num x)
                         VAR baz variable := [1, 2];
                         IF <warning descr="Value of expression is always true">variable.baz2 = 2</warning> THEN

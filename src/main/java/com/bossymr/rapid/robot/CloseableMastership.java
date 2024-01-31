@@ -5,6 +5,7 @@ import com.bossymr.network.NetworkManager;
 import com.bossymr.network.client.NetworkRequest;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipDomain;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipService;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipStatus;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,6 +26,10 @@ public interface CloseableMastership extends AutoCloseable {
         if (isHolding != null && isHolding) {
             return action::close;
         } else {
+            MastershipStatus status = mastershipDomain.getStatus();
+            if(status != MastershipStatus.NO_MASTER) {
+                throw new IOException("Could not request mastership. Mastership is already held by: " + mastershipDomain.getApplication());
+            }
             mastershipDomain.request().get();
             return () -> {
                 mastershipDomain.release().get();

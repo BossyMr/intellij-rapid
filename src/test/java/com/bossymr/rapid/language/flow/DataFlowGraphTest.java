@@ -69,10 +69,48 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
     }
 
     public void testLargeFile() throws IOException, ExecutionException, InterruptedException {
-        // FIXME: TEST statement not being executed when connected to robot...
         RobotService.getInstance().connect(URI.create("http://localhost"), RobotService.DEFAULT_CREDENTIALS);
-        checkByFile("File2.mod");
+        checkByFile("File.mod");
     }
+
+    public void testFieldVariable() throws IOException, ExecutionException {
+        checkByText("""
+                MODULE TestModule
+                                
+                    VAR num queue{100};
+                    VAR num index := 1;
+                                
+                    PROC DUMMY()
+                        FOR i FROM 2 TO index DO
+                            IF i = 3 THEN ENDIF
+                            queue{i - 1} := queue{i};
+                        ENDFOR
+                    ENDPROC
+                ENDMODULE
+                """);
+    }
+
+    public void testUnknownFunction() throws IOException, ExecutionException {
+        try {
+            RobotService.getInstance().connect(URI.create("http://localhost:80"), RobotService.DEFAULT_CREDENTIALS);
+        } catch (IOException | InterruptedException e) {
+            fail();
+        }
+        checkByText("""
+                MODULE foo
+                    FUNC num askChoice(string question, string choice1, string choice2, string choice3, string choice4, string choice5)
+                        VAR num value;
+                   
+                        TPReadFK value, question, choice1, choice2, choice3, choice4, choice5;
+                        IF value = 0 THEN
+                            value := value + 1;
+                        ENDIF
+                        RETURN value;
+                    ENDFUNC
+                ENDMODULE
+                """);
+    }
+
 
     public void testLargeArraySize() throws IOException, ExecutionException {
         checkByText("""

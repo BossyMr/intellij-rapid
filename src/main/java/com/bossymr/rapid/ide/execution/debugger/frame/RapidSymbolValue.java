@@ -7,6 +7,7 @@ import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
+import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.language.type.RapidType;
@@ -17,7 +18,6 @@ import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolValue;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.xdebugger.frame.*;
 import com.intellij.xdebugger.frame.presentation.XErrorValuePresentation;
 import org.jetbrains.annotations.Contract;
@@ -57,9 +57,13 @@ public class RapidSymbolValue extends XNamedValue {
         } else if (parent instanceof PhysicalSymbol physicalSymbol) {
             String taskName = stackFrame.getRoutine().split("/")[1];
             stringJoiner.add(taskName);
-            PhysicalModule module = PsiTreeUtil.getParentOfType(physicalSymbol, PhysicalModule.class, false);
+            PhysicalModule module = PhysicalModule.getModule(physicalSymbol);
             if (module == null) throw new IllegalStateException();
             stringJoiner.add(module.getName());
+            PhysicalRoutine routine = PhysicalRoutine.getRoutine(physicalSymbol);
+            if(routine != null) {
+                stringJoiner.add(routine.getName());
+            }
             stringJoiner.add(physicalSymbol.getName());
         } else {
             throw new IllegalStateException();

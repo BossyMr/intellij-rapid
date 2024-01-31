@@ -43,7 +43,9 @@ public class RobotConnectView extends DialogWrapper {
 
         JPanel hostPanel = new JPanel(new GridBagLayout());
         hostField = new JTextField();
+        hostField.setText("localhost");
         portField = new JTextField();
+        portField.setText("80");
         authenticationComboBox = new ComboBox<>(new AuthenticationType[]{AuthenticationType.DEFAULT, AuthenticationType.PASSWORD});
 
         userPanel = new JPanel(new GridBagLayout());

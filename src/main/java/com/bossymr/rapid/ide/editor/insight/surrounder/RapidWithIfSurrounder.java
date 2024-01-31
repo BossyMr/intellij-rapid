@@ -2,8 +2,10 @@ package com.bossymr.rapid.ide.editor.insight.surrounder;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.psi.RapidElementFactory;
-import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidIfStatement;
+import com.bossymr.rapid.language.psi.RapidStatementList;
+import com.bossymr.rapid.language.psi.RapidTokenTypes;
+import com.intellij.lang.ASTNode;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
@@ -22,24 +24,27 @@ public class RapidWithIfSurrounder extends RapidStatementSurrounder {
 
     @Override
     public @Nullable TextRange surroundElements(@NotNull Project project, @NotNull Editor editor, PsiElement @NotNull [] elements) throws IncorrectOperationException {
+        // FIXME
         PsiElement element = elements[0].getParent();
         if (element == null) {
             return null;
         }
         RapidIfStatement statement = surroundElements(project, element, elements, "");
-        RapidExpression condition = statement.getCondition();
-        if (condition == null) {
-            return null;
-        }
-        return condition.getTextRange();
+        ASTNode node = statement.getNode();
+        ASTNode ifKeyword = node.findChildByType(RapidTokenTypes.IF_KEYWORD);
+        Objects.requireNonNull(ifKeyword);
+        int offset = ifKeyword.getStartOffset() + ifKeyword.getTextLength() + 1;
+        return TextRange.create(offset, offset);
     }
 
-    public @NotNull RapidIfStatement surroundElements(@NotNull Project project, @NotNull PsiElement element, PsiElement @NotNull [] elements, @NotNull String condition) {
+    public @NotNull RapidIfStatement surroundElements(@NotNull Project project, @NotNull PsiElement parent, PsiElement @NotNull [] elements, @NotNull String condition) {
         RapidElementFactory elementFactory = RapidElementFactory.getInstance(project);
-        RapidIfStatement statement = (RapidIfStatement) elementFactory.createStatementFromText("IF " + condition + "THEN\nENDIF");
-        element.addBefore(statement, elements[0]);
-        Objects.requireNonNull(statement.getThenBranch()).addRange(elements[0], elements[elements.length - 1]);
-        element.deleteChildRange(elements[0], elements[elements.length - 1]);
-        return statement;
+        RapidIfStatement statement = (RapidIfStatement) elementFactory.createStatementFromText("IF " + condition + " THEN\nENDIF");
+        RapidStatementList thenBranch = statement.getThenBranch();
+        Objects.requireNonNull(thenBranch);
+        thenBranch.addRange(elements[0], elements[elements.length - 1]);
+        PsiElement element = parent.addBefore(statement, elements[0]);
+        parent.deleteChildRange(elements[0], elements[elements.length - 1]);
+        return (RapidIfStatement) element;
     }
 }

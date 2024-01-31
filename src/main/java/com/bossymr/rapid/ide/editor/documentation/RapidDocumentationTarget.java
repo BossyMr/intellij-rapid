@@ -2,9 +2,11 @@ package com.bossymr.rapid.ide.editor.documentation;
 
 import com.bossymr.rapid.ide.editor.highlight.RapidColor;
 import com.bossymr.rapid.language.RapidLanguage;
+import com.bossymr.rapid.language.psi.RapidArray;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidTargetVariable;
 import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.symbol.physical.PhysicalField;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.codeInsight.daemon.impl.HighlightInfoType;
 import com.intellij.codeInsight.documentation.DocumentationManagerUtil;
@@ -157,12 +159,34 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
         appendVisibility(stringBuilder, field);
         appendText(stringBuilder, RapidColor.KEYWORD, field.getFieldType().getText());
         stringBuilder.append(" ");
-        appendType(stringBuilder, field.getType());
+        RapidType type = field.getType();
+        appendType(stringBuilder, type);
         appendText(stringBuilder, switch (field.getFieldType()) {
             case VARIABLE -> RapidColor.VARIABLE;
             case CONSTANT -> RapidColor.CONSTANT;
             case PERSISTENT -> RapidColor.PERSISTENT;
         }, field.getPresentableName());
+        if (type != null && type.isArray()) {
+            appendText(stringBuilder, RapidColor.BRACES, "{");
+            if (field instanceof PhysicalField physicalField && physicalField.getArray() != null) {
+                RapidArray array = physicalField.getArray();
+                List<RapidExpression> dimensions = array.getDimensions();
+                for (int i = 0; i < dimensions.size(); i++) {
+                    if(i > 0) {
+                        appendText(stringBuilder, RapidColor.COMMA, ", ");
+                    }
+                    HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), dimensions.get(i).getText(), 1);
+                }
+            } else {
+                for (int i = 0; i < type.getDimensions(); i++) {
+                    if(i > 0) {
+                        appendText(stringBuilder, RapidColor.COMMA, ", ");
+                    }
+                    appendText(stringBuilder, RapidColor.OPERATOR_SIGN, "*");
+                }
+            }
+            appendText(stringBuilder, RapidColor.BRACES, "}");
+        }
         RapidExpression initializer = field.getInitializer();
         if (initializer != null) {
             appendText(stringBuilder, RapidColor.OPERATOR_SIGN, " := ");

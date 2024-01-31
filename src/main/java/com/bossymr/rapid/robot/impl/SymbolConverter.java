@@ -156,7 +156,9 @@ public final class SymbolConverter {
         List<VirtualParameterGroup> groups = new ArrayList<>();
         Map<String, SymbolModel> parameters = this.states.get(state.getTitle());
         Collection<SymbolModel> states = parameters != null ? parameters.values() : List.of();
-        assert states.size() == state.getParameterCount() : state;
+        if(states.size() != state.getParameterCount()) {
+            throw new IllegalStateException("Expected: " + state.getParameterCount() + " elements (" + state + "), got: " + states);
+        }
         for (int i = 0; i < state.getParameterCount(); i++) {
             groups.add(null);
         }

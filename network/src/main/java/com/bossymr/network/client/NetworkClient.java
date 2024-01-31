@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -49,6 +50,9 @@ public class NetworkClient {
         this.httpClient = new OkHttpClient.Builder()
                 .authenticator(new DigestAuthenticator(credentials))
                 .cookieJar(cookieJar)
+                .callTimeout(Duration.ofSeconds(10))
+                .writeTimeout(Duration.ofSeconds(10))
+                .readTimeout(Duration.ofSeconds(30))
                 .addInterceptor(chain -> {
                     Response response = chain.proceed(chain.request());
                     logger.atDebug().log("Request {} -> {}", chain.request(), response);
@@ -60,6 +64,10 @@ public class NetworkClient {
                 .dispatcher(dispatcher)
                 .build();
         this.subscriptionGroup = new SubscriptionGroup(this);
+    }
+
+    public @NotNull URI getDefaultPath() {
+        return defaultPath;
     }
 
     public @NotNull OkHttpClient getHttpClient() {

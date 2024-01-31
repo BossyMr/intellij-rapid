@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class RapidRunProfileState implements RunProfileState {
@@ -92,10 +93,10 @@ public class RapidRunProfileState implements RunProfileState {
     }
 
     /**
-     * Returns a {@code NetworkEngine} which is connected to the specified robot. If the robot is not connected,
+     * Returns a {@code NetworkManager} which is connected to the specified robot. If the robot is not connected,
      * attempts to reconnect, which might fail.
      *
-     * @return an asynchronous request which will complete with a {@code NetworkEngine} connected to the robot.
+     * @return the {@code NetworkManager}.
      */
     public @NotNull NetworkManager getNetworkManager() throws IOException, InterruptedException {
         NetworkManager manager = robot.getNetworkManager();
@@ -112,7 +113,7 @@ public class RapidRunProfileState implements RunProfileState {
                 upload(state.getName(), state.getModuleName());
             } else {
                 RapidTask task = robot.getTask(state.getName());
-                if(task != null) {
+                if (task != null) {
                     robot.upload(task);
                 }
             }
@@ -154,28 +155,33 @@ public class RapidRunProfileState implements RunProfileState {
     public @Nullable ExecutionResult execute(@NotNull Executor executor, @NotNull ProgramRunner<?> runner) throws ExecutionException {
         try {
             FileDocumentManager.getInstance().saveAllDocuments();
-            NetworkManager manager = getNetworkManager();
-            RapidProcessHandler processHandler = new RapidProcessHandler(manager);
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            NetworkManager manager = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return getNetworkManager();
+                } catch (IOException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }, executorService).join();
+            RapidProcessHandler processHandler = new RapidProcessHandler(manager, getTasks(), executorService);
             ConsoleView consoleView = TextConsoleBuilderFactory.getInstance()
                                                                .createBuilder(getProject())
                                                                .filters(new RapidFileFilter(project))
                                                                .getConsole();
             consoleView.attachToProcess(processHandler);
-            if (processHandler.check(getTasks())) {
-                processHandler.startNotify();
-                processHandler.destroyProcess();
-                return new DefaultExecutionResult(consoleView, processHandler);
-            }
-            setupExecution(manager);
-            processHandler.setup();
-            processHandler.onExecutionState();
-            processHandler.start();
+            processHandler.execute(() -> {
+                if (processHandler.check()) {
+                    processHandler.destroyProcess();
+                } else {
+                    setupExecution(processHandler.getNetworkManager());
+                    processHandler.setup();
+                    processHandler.onExecutionState();
+                    processHandler.start();
+                }
+            });
             return new DefaultExecutionResult(consoleView, processHandler);
-        } catch (IOException e) {
+        } catch (CompletionException | CancellationException e) {
             throw new ExecutionException(RapidBundle.message("run.execution.exception"));
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new ExecutionException(e);
         }
     }
 }

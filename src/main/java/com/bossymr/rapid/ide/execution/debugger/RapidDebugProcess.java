@@ -1,12 +1,16 @@
 package com.bossymr.rapid.ide.execution.debugger;
 
+import com.bossymr.network.NetworkAction;
 import com.bossymr.network.NetworkManager;
+import com.bossymr.network.ResponseStatusException;
 import com.bossymr.network.SubscriptionPriority;
+import com.bossymr.network.client.NetworkRequest;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.RapidProcessHandler;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.debugger.breakpoints.RapidLineBreakpointHandler;
 import com.bossymr.rapid.ide.execution.debugger.frame.RapidSuspendContext;
+import com.bossymr.rapid.ide.execution.filter.RapidFileFilter;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.CloseableMastership;
 import com.bossymr.rapid.robot.RapidRobot;
@@ -80,7 +84,7 @@ public class RapidDebugProcess extends XDebugProcess {
         this.project = project;
         this.executorService = executorService;
         this.tasks = taskStates;
-        this.processHandler = new RapidProcessHandler(manager) {
+        this.processHandler = new RapidProcessHandler(manager, tasks, executorService) {
             @Override
             protected void handleException(@NotNull Throwable throwable) throws IOException, InterruptedException {
                 super.handleException(throwable);
@@ -108,7 +112,7 @@ public class RapidDebugProcess extends XDebugProcess {
     }
 
     private void onProgramStop() throws IOException, InterruptedException {
-        if(processHandler.isProcessTerminating()) {
+        if (processHandler.isProcessTerminating()) {
             return;
         }
         phaser.register();
@@ -141,8 +145,9 @@ public class RapidDebugProcess extends XDebugProcess {
     @Override
     public void sessionInitialized() {
         getSession().getConsoleView().attachToProcess(processHandler);
+        getSession().getConsoleView().addMessageFilter(new RapidFileFilter(project));
         execute(() -> {
-            if (processHandler.check(tasks)) {
+            if (processHandler.check()) {
                 getSession().stop();
                 return;
             }
@@ -230,15 +235,25 @@ public class RapidDebugProcess extends XDebugProcess {
      * @return the asynchronous request.
      */
     public @Nullable BreakpointEntity registerBreakpoint(@NotNull String taskName, @NotNull String moduleName, int line) throws IOException, InterruptedException {
-        TaskService taskService = manager.createService(TaskService.class);
-        Task task = taskService.getTask(taskName).get();
-        Program program = task.getProgram().get();
-        program.setBreakpoint(moduleName, line + 1, 0).get();
-        Breakpoint breakpoint = findBreakpoint(program.getBreakpoints().get(), moduleName, line);
-        if (breakpoint == null) {
+        NetworkAction action = new NetworkAction(manager) {
+            @Override
+            protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                return false;
+            }
+        };
+        try (action) {
+            TaskService taskService = action.createService(TaskService.class);
+            Task task = taskService.getTask(taskName).get();
+            Program program = task.getProgram().get();
+            program.setBreakpoint(moduleName, line + 1, 0).get();
+            Breakpoint breakpoint = findBreakpoint(program.getBreakpoints().get(), moduleName, line);
+            if (breakpoint == null) {
+                return null;
+            }
+            return new BreakpointEntity(taskName, breakpoint);
+        } catch (ResponseStatusException e) {
             return null;
         }
-        return new BreakpointEntity(taskName, breakpoint);
     }
 
     private @Nullable Breakpoint findBreakpoint(@NotNull List<Breakpoint> breakpoints, @NotNull String moduleName, int line) {
@@ -268,7 +283,7 @@ public class RapidDebugProcess extends XDebugProcess {
             BreakpointEntity breakpointEntity = registerBreakpoint(taskName, moduleName, sourcePosition.getLine());
             breakpoint.putUserData(BREAKPOINT_KEY, breakpointEntity);
             if (breakpoint instanceof XLineBreakpoint<?> lineBreakpoint) {
-                if(breakpointEntity != null) {
+                if (breakpointEntity != null) {
                     getSession().setBreakpointVerified(lineBreakpoint);
                 } else {
                     getSession().setBreakpointInvalid(lineBreakpoint, null);

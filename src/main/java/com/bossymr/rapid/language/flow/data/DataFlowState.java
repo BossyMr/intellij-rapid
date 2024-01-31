@@ -290,6 +290,9 @@ public class DataFlowState {
         Optionality optionality = getQuickOptionality(expression);
         SnapshotExpression snapshot = createSnapshot(variable, optionality);
         insert(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, expression));
+        if(optionality == Optionality.UNKNOWN && expression instanceof SnapshotExpression snapshotExpression) {
+            insert(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(snapshot.getSnapshot()), FunctionCallExpression.present(snapshotExpression.getSnapshot())));
+        }
     }
 
     private @NotNull Optionality getQuickOptionality(@NotNull Expression expression) {
@@ -471,6 +474,57 @@ public class DataFlowState {
             }
         }
         return null;
+    }
+
+    public @Nullable Snapshot getRoot(@NotNull ReferenceExpression expression) {
+        return expression.accept(new ControlFlowVisitor<>() {
+            @Override
+            public Snapshot visitVariableExpression(@NotNull VariableExpression expression) {
+                Field field = expression.getField();
+                if (roots.containsKey(field)) {
+                    return roots.get(field);
+                }
+                if(predecessor != null) {
+                    return predecessor.getRoot(expression);
+                }
+                return null;
+            }
+
+            @Override
+            public Snapshot visitComponentExpression(@NotNull ComponentExpression expression) {
+                Snapshot root = getRoot(expression.getVariable());
+                if (root == null) {
+                    return null;
+                }
+                Snapshot snapshot = Snapshot.createSnapshot(expression.getType(), root);
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), FunctionCallExpression.select(root, expression.getComponent())));
+                return snapshot;
+            }
+
+            @Override
+            public Snapshot visitSnapshotExpression(@NotNull SnapshotExpression snapshot) {
+                return snapshot.getSnapshot();
+            }
+
+            @Override
+            public Snapshot visitIndexExpression(@NotNull IndexExpression expression) {
+                Snapshot root = getRoot(expression.getVariable());
+                if (root == null) {
+                    return null;
+                }
+                Snapshot snapshot = Snapshot.createSnapshot(expression.getType(), root);
+                Expression index = expression.getIndex();
+                if(expression.getIndex() instanceof ReferenceExpression referenceExpression) {
+                    Snapshot indexSnapshot = getRoot(referenceExpression);
+                    if(indexSnapshot == null) {
+                        return null;
+                    }
+                    index = new SnapshotExpression(indexSnapshot);
+                }
+                add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), FunctionCallExpression.select(root, index)));
+                return snapshot;
+            }
+        });
     }
 
     public @NotNull Expression getSnapshot(@NotNull Expression expression) {

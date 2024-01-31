@@ -8,9 +8,7 @@ import com.bossymr.rapid.language.psi.BlockType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.function.BooleanSupplier;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class ControlFlowBlock {
 
@@ -30,10 +28,6 @@ public class ControlFlowBlock {
 
     public @NotNull Block getControlFlow() {
         return controlFlow;
-    }
-
-    public boolean hasDataFlowGraph() {
-        return !(dataFlow.isEmpty()) || controlFlow.getEntryInstructions().isEmpty();
     }
 
     public @NotNull Set<DataFlowState> getDataFlow(@NotNull Instruction instruction) {

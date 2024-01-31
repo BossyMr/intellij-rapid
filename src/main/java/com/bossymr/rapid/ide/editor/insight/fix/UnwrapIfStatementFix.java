@@ -23,6 +23,6 @@ public class UnwrapIfStatementFix extends PsiUpdateModCommandAction<RapidIfState
 
     @Override
     protected void invoke(@NotNull ActionContext context, @NotNull RapidIfStatement element, @NotNull ModPsiUpdater updater) {
-        new RapidIfUnwrapper().doUnwrap(element);
+        new RapidIfUnwrapper().unwrap(element);
     }
 }

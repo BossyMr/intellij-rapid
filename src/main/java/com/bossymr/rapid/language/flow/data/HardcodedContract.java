@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.flow.data;
 
 import com.bossymr.rapid.language.builder.RapidModuleBuilder;
 import com.bossymr.rapid.language.flow.Argument;
+import com.bossymr.rapid.language.flow.ArgumentGroup;
 import com.bossymr.rapid.language.flow.Block;
 import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.builder.ControlFlowBuilder;
@@ -42,7 +43,8 @@ public enum HardcodedContract {
     DIM(builder -> builder
             .withRoutine("Dim", RoutineType.FUNCTION, RapidPrimitiveType.NUMBER, routineBuilder -> routineBuilder
                     .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
-                            .withParameter("ArrPar", ParameterType.REFERENCE, RapidPrimitiveType.ANYTYPE)
+                            .withParameter("ArrPar", ParameterType.REFERENCE, RapidPrimitiveType.ANYTYPE))
+                    .withParameterGroup(false, parameterGroupBuilder -> parameterGroupBuilder
                             .withParameter("DimNo", ParameterType.INPUT, RapidPrimitiveType.NUMBER))),
             context -> {
                 Expression argument = context.getArgument("ArrPar");
@@ -58,7 +60,7 @@ public enum HardcodedContract {
                 RapidExpression element = context.getInstruction().getElement() instanceof RapidExpression expression ? expression : null;
                 for (int i = 1; i <= 3; i++) {
                     DataFlowState successState = callerState.createSuccessorState();
-                    if(previousLength != null) {
+                    if (previousLength != null) {
                         successState.add(new BinaryExpression(BinaryOperator.GREATER_THAN, previousLength, new LiteralExpression(0)));
                         DataFlowState errorState = callerState.createSuccessorState();
                         errorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, degree, new LiteralExpression(i)));
@@ -98,7 +100,17 @@ public enum HardcodedContract {
         this.function = block -> new DataFlowFunction(block) {
             @Override
             public @NotNull Set<Result> getOutput(@NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
-                Set<Result> output = processor.getOutput(new DataFlowContext(block, callerState, instruction));
+                DataFlowContext context = new DataFlowContext(block, callerState, instruction);
+                Map<Argument, Expression> arguments = context.getArguments();
+                for (ArgumentGroup argumentGroup : context.getControlFlow().getArgumentGroups()) {
+                    if(argumentGroup.isOptional() || argumentGroup.arguments().isEmpty()) {
+                        continue;
+                    }
+                    if(argumentGroup.arguments().stream().noneMatch(arguments::containsKey)) {
+                        return Set.of(new Result.Error(callerState.createSuccessorState()));
+                    }
+                }
+                Set<Result> output = processor.getOutput(context);
                 return output.stream()
                              .map(result -> {
                                  Result normalized = getOutput(result, callerState, instruction);
@@ -175,7 +187,7 @@ public enum HardcodedContract {
 
         public @NotNull FunctionCallExpression createFunctionCallExpression() {
             RapidType returnType = getControlFlow().getReturnType();
-            if(returnType == null) {
+            if (returnType == null) {
                 throw new IllegalStateException("Cannot create function call expression for block: " + getControlFlow());
             }
             RapidExpression element = instruction.getElement() instanceof RapidExpression expression ? expression : null;
@@ -188,9 +200,9 @@ public enum HardcodedContract {
             ArrayList<Map.Entry<Argument, Expression>> ordered = new ArrayList<>(arguments.entrySet());
             ordered.sort(Map.Entry.comparingByKey(Comparator.comparing(argument -> getControlFlow().getArguments().indexOf(argument))));
             for (Map.Entry<Argument, Expression> entry : ordered) {
-                if(entry.getKey().getParameterType() == ParameterType.INPUT) {
+                if (entry.getKey().getParameterType() == ParameterType.INPUT) {
                     entries.add(new Entry.ValueEntry(entry.getValue()));
-                } else if(!(entry.getValue() instanceof SnapshotExpression snapshot)) {
+                } else if (!(entry.getValue() instanceof SnapshotExpression snapshot)) {
                     entries.add(new Entry.ValueEntry(entry.getValue()));
                 } else {
                     entries.add(new Entry.ReferenceEntry(snapshot.getSnapshot()));
