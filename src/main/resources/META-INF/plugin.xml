@@ -10,6 +10,11 @@
     <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+
+        <!-- Icons -->
+
+        <iconMapper mappingFile="RapidIconMappings.json"/>
+
         <!-- File Type -->
 
         <fileType name="RAPID" language="RAPID" extensions="mod"

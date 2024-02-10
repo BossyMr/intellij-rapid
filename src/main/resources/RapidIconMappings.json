@@ -1,0 +1,9 @@
+{
+  "icons": {
+    "expUi": {
+      "robot": {
+        "toolWindow.svg": "icons/toolWindow.svg"
+      }
+    }
+  }
+}
