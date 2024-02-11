@@ -28,7 +28,7 @@ public interface CloseableMastership extends AutoCloseable {
         } else {
             MastershipStatus status = mastershipDomain.getStatus();
             if(status != MastershipStatus.NO_MASTER) {
-                throw new IOException("Could not request mastership. Mastership is already held by: " + mastershipDomain.getApplication());
+                throw new MastershipException(mastershipType, mastershipDomain.getApplication());
             }
             mastershipDomain.request().get();
             return () -> {

@@ -78,7 +78,7 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
                             public @NotNull XDebugProcess start(@NotNull XDebugSession session) {
                                 RapidDebugProcess process = new RapidDebugProcess(project, session, executorService, state.getTasks(), manager);
                                 process.execute(() -> {
-                                    state.setupExecution(process.getManager());
+                                    state.setupProject(process.getManager());
                                     setupExecution(process.getManager());
                                 });
                                 return process;

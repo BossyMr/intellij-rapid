@@ -45,7 +45,7 @@ public interface Snapshot {
         if (parent != null && !(parent instanceof ArraySnapshot || parent instanceof RecordSnapshot)) {
             throw new IllegalArgumentException("Cannot create snapshot with parent: " + parent + ", of type: " + parent.getType());
         }
-        return createSnapshot(type, parent, Optionality.PRESENT);
+        return createSnapshot(type, parent, Optionality.PRESENT, true);
     }
 
     /**
@@ -56,17 +56,17 @@ public interface Snapshot {
      * @return a new snapshot.
      */
     static @NotNull Snapshot createSnapshot(@NotNull RapidType type, @NotNull Optionality optionality) {
-        return createSnapshot(type, null, optionality);
+        return createSnapshot(type, null, optionality, true);
     }
 
-    private static @NotNull Snapshot createSnapshot(@NotNull RapidType type, @Nullable Snapshot parent, @NotNull Optionality optionality) {
+    static @NotNull Snapshot createSnapshot(@NotNull RapidType type, @Nullable Snapshot parent, @NotNull Optionality optionality, boolean hasIdentity) {
         if (type.isArray()) {
-            return new ArraySnapshot(parent, type, optionality);
+            return new ArraySnapshot(parent, type, optionality, hasIdentity);
+        } else if (type.isRecord()) {
+            return new RecordSnapshot(parent, type, optionality, hasIdentity);
+        } else {
+            return new VariableSnapshot(parent, type, optionality, hasIdentity);
         }
-        if (type.isRecord()) {
-            return new RecordSnapshot(parent, type, optionality);
-        }
-        return new VariableSnapshot(parent, type, optionality);
     }
 
     /**
@@ -90,4 +90,6 @@ public interface Snapshot {
      * @return the type of this snapshot.
      */
     @NotNull RapidType getType();
+
+    boolean hasIdentity();
 }

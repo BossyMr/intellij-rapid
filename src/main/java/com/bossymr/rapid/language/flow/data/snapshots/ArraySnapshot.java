@@ -13,8 +13,10 @@ public class ArraySnapshot implements Snapshot {
     private final @Nullable Snapshot parent;
     private final @NotNull RapidType type;
     private final @NotNull Optionality optionality;
+    private final boolean hasIdentity;
 
-    public ArraySnapshot(@Nullable Snapshot parent, @NotNull RapidType type, @NotNull Optionality optionality) {
+    public ArraySnapshot(@Nullable Snapshot parent, @NotNull RapidType type, @NotNull Optionality optionality, boolean hasIdentity) {
+        this.hasIdentity = hasIdentity;
         if (!(type.isArray())) {
             throw new IllegalArgumentException("Cannot create array snapshot for variable of type: " + type);
         }
@@ -34,7 +36,7 @@ public class ArraySnapshot implements Snapshot {
     }
 
     public @NotNull ArraySnapshot copy() {
-        return new ArraySnapshot(parent, type, optionality);
+        return new ArraySnapshot(parent, type, optionality, hasIdentity);
     }
 
     @Override
@@ -43,18 +45,18 @@ public class ArraySnapshot implements Snapshot {
     }
 
     @Override
-    public boolean equals(Object object) {
-        return super.equals(object);
+    public boolean hasIdentity() {
+        return hasIdentity;
     }
 
     @Override
-    public int hashCode() {
-        return super.hashCode();
+    public boolean equals(Object object) {
+        return hasIdentity && super.equals(object);
     }
 
     @Override
     public String toString() {
-        return "~" + hashCode() + "[" + switch (getOptionality()) {
+        return "~" + hashCode() + (hasIdentity ? "" : "I") + "[" + switch (getOptionality()) {
             case PRESENT -> "P";
             case UNKNOWN -> "P/M";
             case MISSING -> "M";

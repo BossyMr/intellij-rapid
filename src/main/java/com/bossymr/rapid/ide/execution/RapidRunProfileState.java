@@ -8,8 +8,11 @@ import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.filter.RapidFileFilter;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidTask;
+import com.bossymr.rapid.robot.CloseableMastership;
+import com.bossymr.rapid.robot.MastershipException;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
 import com.intellij.execution.DefaultExecutionResult;
@@ -19,6 +22,7 @@ import com.intellij.execution.Executor;
 import com.intellij.execution.configurations.RunConfiguration;
 import com.intellij.execution.configurations.RunProfileState;
 import com.intellij.execution.filters.TextConsoleBuilderFactory;
+import com.intellij.execution.process.ProcessOutputType;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.runners.ProgramRunner;
 import com.intellij.execution.ui.ConsoleView;
@@ -106,7 +110,7 @@ public class RapidRunProfileState implements RunProfileState {
         return manager;
     }
 
-    public void setupExecution(@NotNull NetworkManager manager) throws IOException, InterruptedException {
+    public void setupProject(@NotNull NetworkManager manager) throws IOException, InterruptedException {
         for (TaskState state : states) {
             if (state.getName() == null) continue;
             if (state.getModuleName() != null) {
@@ -158,6 +162,8 @@ public class RapidRunProfileState implements RunProfileState {
             ExecutorService executorService = Executors.newSingleThreadExecutor();
             NetworkManager manager = CompletableFuture.supplyAsync(() -> {
                 try {
+                    // Although this seems unnecessary, this method calls a method which will throw an exception,
+                    // as it will block. As a result, it needs to be called from another thread.
                     return getNetworkManager();
                 } catch (IOException | InterruptedException e) {
                     throw new RuntimeException(e);
@@ -170,13 +176,13 @@ public class RapidRunProfileState implements RunProfileState {
                                                                .getConsole();
             consoleView.attachToProcess(processHandler);
             processHandler.execute(() -> {
-                if (processHandler.check()) {
-                    processHandler.destroyProcess();
-                } else {
-                    setupExecution(processHandler.getNetworkManager());
-                    processHandler.setup();
-                    processHandler.onExecutionState();
+                try (CloseableMastership ignored = CloseableMastership.withMastership(processHandler.getNetworkManager(), MastershipType.RAPID)) {
+                    setupProject(processHandler.getNetworkManager());
+                    processHandler.setupEventLog();
+                    processHandler.setupExecutionState();
                     processHandler.start();
+                } catch (MastershipException e) {
+                    processHandler.notifyTextAvailable(e.getLocalizedMessage(), ProcessOutputType.STDERR);
                 }
             });
             return new DefaultExecutionResult(consoleView, processHandler);

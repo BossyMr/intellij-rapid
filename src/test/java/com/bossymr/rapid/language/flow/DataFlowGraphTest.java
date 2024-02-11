@@ -75,12 +75,12 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
 
     public void testFieldVariable() throws IOException, ExecutionException {
         checkByText("""
-                MODULE TestModule
+                MODULE foo
                                 
                     VAR num queue{100};
                     VAR num index := 1;
                                 
-                    PROC DUMMY()
+                    PROC bar()
                         FOR i FROM 2 TO index DO
                             IF i = 3 THEN ENDIF
                             queue{i - 1} := queue{i};

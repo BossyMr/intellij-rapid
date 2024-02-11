@@ -15,6 +15,8 @@
 
         <iconMapper mappingFile="RapidIconMappings.json"/>
 
+        <iconProvider implementation="com.bossymr.rapid.language.symbol.RapidIconProvider"/>
+
         <!-- File Type -->
 
         <fileType name="RAPID" language="RAPID" extensions="mod"
@@ -158,9 +160,6 @@
         <notificationGroup displayType="STICKY_BALLOON" id="Robot connection errors" bundle="messages.RapidBundle"
                            key="notification.group.robot.connect.error"/>
 
-        <notificationGroup displayType="BALLOON" id="Robot mastership errors" bundle="messages.RapidBundle"
-                           key="notification.group.robot.mastership.error"/>
-
         <notificationGroup displayType="BALLOON" id="Data flow diagrams" bundle="messages.RapidBundle"
                            key="notification.group.data.flow.export"/>
 
@@ -203,8 +202,8 @@
             <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>
         </group>
 
-        <action id="com.bossymr.rapid.robot.actions.ConnectAction" icon="AllIcons.General.Add"
-                class="com.bossymr.rapid.robot.actions.ConnectAction" text="Connect..."/>
+        <action id="com.bossymr.rapid.robot.actions.ConnectRobotAction" icon="AllIcons.General.Add"
+                class="com.bossymr.rapid.robot.actions.ConnectRobotAction" text="Connect..."/>
 
         <action id="com.bossymr.rapid.robot.actions.RefreshAction" icon="AllIcons.Actions.Refresh"
                 class="com.bossymr.rapid.robot.actions.RefreshAction" text="Refresh">
@@ -216,7 +215,14 @@
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl F2"/>
         </action>
 
-        <action id="com.bossymr.rapid.robot.actions.DeleteAction" class="com.bossymr.rapid.robot.actions.DeleteAction"
+        <action id="com.bossymr.rapid.robot.actions.DeleteRobotAction"
+                class="com.bossymr.rapid.robot.actions.DeleteRobotAction"
+                text="Delete">
+            <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
+        </action>
+
+        <action id="com.bossymr.rapid.robot.actions.DeleteModuleAction"
+                class="com.bossymr.rapid.robot.actions.DeleteModuleAction"
                 text="Delete">
             <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
         </action>
@@ -231,17 +237,18 @@
 
         <!-- Context Menu (right-click) in Robot Tool Window -->
         <group id="RobotContextMenu">
-            <reference id="com.bossymr.rapid.robot.actions.ConnectAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.ConnectRobotAction"/>
             <separator/>
             <reference id="$Cut"/>
             <reference id="$Copy"/>
             <reference id="$Paste"/>
             <separator/>
-            <reference id="com.bossymr.rapid.robot.actions.DeleteAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.DeleteRobotAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.DeleteModuleAction"/>
         </group>
 
         <group id="RobotToolWindow">
-            <reference id="com.bossymr.rapid.robot.actions.ConnectAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.ConnectRobotAction"/>
             <reference id="com.bossymr.rapid.robot.actions.RefreshAction"/>
             <reference id="com.bossymr.rapid.robot.actions.DisconnectAction"/>
             <separator/>

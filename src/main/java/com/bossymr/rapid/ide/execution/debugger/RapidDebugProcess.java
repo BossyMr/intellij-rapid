@@ -161,7 +161,7 @@ public class RapidDebugProcess extends XDebugProcess {
     }
 
     public void setup() throws IOException, InterruptedException {
-        processHandler.setup();
+        processHandler.setupEventLog();
         ExecutionService executionService = getExecutionService();
         try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
             executionService.resetProgramPointer().get();

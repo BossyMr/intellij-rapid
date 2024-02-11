@@ -1,6 +1,5 @@
 package com.bossymr.rapid.ide.structure;
 
-import com.bossymr.rapid.language.symbol.RapidComponent;
 import com.bossymr.rapid.language.symbol.physical.PhysicalComponent;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRecord;
 import com.intellij.ide.structureView.StructureViewTreeElement;
@@ -23,8 +22,8 @@ public class RapidRecordTreeElement extends RapidSymbolTreeElement<PhysicalRecor
         PhysicalRecord element = getValue();
         if (element == null) return Collections.emptyList();
         List<StructureViewTreeElement> elements = new ArrayList<>();
-        for (RapidComponent component : element.getComponents()) {
-            elements.add(new RapidComponentTreeElement((PhysicalComponent) component));
+        for (PhysicalComponent component : element.getComponents()) {
+            elements.add(new RapidComponentTreeElement(component));
         }
         return elements;
     }

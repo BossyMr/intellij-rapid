@@ -13,11 +13,13 @@ public class RecordSnapshot implements Snapshot {
     private final @Nullable Snapshot parent;
     private final @NotNull RapidType type;
     private final @NotNull Optionality optionality;
+    private final boolean hasIdentity;
 
-    public RecordSnapshot(@Nullable Snapshot parent, @NotNull RapidType type, @NotNull Optionality optionality) {
+    public RecordSnapshot(@Nullable Snapshot parent, @NotNull RapidType type, @NotNull Optionality optionality, boolean hasIdentity) {
         this.parent = parent;
         this.type = type;
         this.optionality = optionality;
+        this.hasIdentity = hasIdentity;
     }
 
     @Override
@@ -31,7 +33,7 @@ public class RecordSnapshot implements Snapshot {
     }
 
     public @NotNull RecordSnapshot copy() {
-        return new RecordSnapshot(parent, type, optionality);
+        return new RecordSnapshot(parent, type, optionality, hasIdentity);
     }
 
     @Override
@@ -40,18 +42,18 @@ public class RecordSnapshot implements Snapshot {
     }
 
     @Override
-    public boolean equals(Object object) {
-        return super.equals(object);
+    public boolean hasIdentity() {
+        return hasIdentity;
     }
 
     @Override
-    public int hashCode() {
-        return super.hashCode();
+    public boolean equals(Object object) {
+        return hasIdentity && super.equals(object);
     }
 
     @Override
     public String toString() {
-        return "~" + hashCode() + "[" + switch (getOptionality()) {
+        return "~" + hashCode() + (hasIdentity ? "" : "I") + "[" + switch (getOptionality()) {
             case PRESENT -> "P";
             case UNKNOWN -> "P/M";
             case MISSING -> "M";

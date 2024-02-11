@@ -1,7 +1,5 @@
 package com.bossymr.rapid.ide.structure;
 
-import com.bossymr.rapid.language.symbol.RapidField;
-import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidStructure;
 import com.bossymr.rapid.language.symbol.physical.*;
 import com.intellij.ide.structureView.StructureViewTreeElement;
@@ -39,11 +37,11 @@ public class RapidModuleTreeElement extends PsiTreeElementBase<PhysicalModule> {
                 elements.add(new RapidRecordTreeElement(record));
             }
         }
-        for (RapidField field : element.getFields()) {
-            elements.add(new RapidFieldTreeElement((PhysicalField) field));
+        for (PhysicalField field : element.getFields()) {
+            elements.add(new RapidFieldTreeElement(field));
         }
-        for (RapidRoutine routine : element.getRoutines()) {
-            elements.add(new RapidRoutineTreeElement((PhysicalRoutine) routine));
+        for (PhysicalRoutine routine : element.getRoutines()) {
+            elements.add(new RapidRoutineTreeElement(routine));
         }
         return elements;
     }

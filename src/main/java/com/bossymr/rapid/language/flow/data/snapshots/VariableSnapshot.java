@@ -23,9 +23,11 @@ public class VariableSnapshot implements Snapshot {
     private final @Nullable Snapshot snapshot;
     private final @NotNull RapidType type;
     private final @NotNull Optionality optionality;
+    private final boolean hasIdentity;
 
-    public VariableSnapshot(@Nullable Snapshot snapshot, @NotNull RapidType type, @NotNull Optionality optionality) {
+    public VariableSnapshot(@Nullable Snapshot snapshot, @NotNull RapidType type, @NotNull Optionality optionality, boolean hasIdentity) {
         this.snapshot = snapshot;
+        this.hasIdentity = hasIdentity;
         if (type.getDimensions() > 0) {
             throw new IllegalArgumentException("Cannot create VariableSnapshot for variable of type: " + type);
         }
@@ -52,22 +54,22 @@ public class VariableSnapshot implements Snapshot {
     }
 
     @Override
-    public boolean equals(Object o) {
-        return super.equals(o);
+    public boolean hasIdentity() {
+        return hasIdentity;
     }
 
     @Override
-    public int hashCode() {
-        return super.hashCode();
+    public boolean equals(Object object) {
+        return hasIdentity && super.equals(object);
     }
 
     @Override
     public String toString() {
-        return "~" + hashCode() + "[" + switch (getOptionality()) {
+        return "~" + hashCode() + (hasIdentity ? "" : "I") + "[" + switch (getOptionality()) {
             case PRESENT -> "P";
             case UNKNOWN -> "P/M";
             case MISSING -> "M";
             case NO_VALUE -> "";
-        } + "]";
+        } + "]" + (hasIdentity ? "" : "I");
     }
 }

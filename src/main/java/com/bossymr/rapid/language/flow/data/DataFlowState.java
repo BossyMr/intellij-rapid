@@ -76,14 +76,14 @@ public class DataFlowState {
         if (expression instanceof SnapshotExpression snapshotExpression) {
             return snapshotExpression.getSnapshot();
         }
-        Snapshot snapshot = new VariableSnapshot(null, type, Optionality.PRESENT);
+        Snapshot snapshot = new VariableSnapshot(null, type, Optionality.PRESENT, true);
         add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(snapshot), expression));
         return snapshot;
     }
 
     private @NotNull Expression createDefaultExpression(@NotNull RapidType type, @Nullable Snapshot parent) {
         if (type.isArray()) {
-            ArraySnapshot snapshot = new ArraySnapshot(parent, type, Optionality.PRESENT);
+            ArraySnapshot snapshot = new ArraySnapshot(parent, type, Optionality.PRESENT, true);
             ArraySnapshot copy = snapshot.copy();
             Expression defaultValue = createDefaultExpression(type.createArrayType(type.getDimensions() - 1), copy);
             add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(copy), FunctionCallExpression.constant(snapshot, defaultValue)));
@@ -99,7 +99,7 @@ public class DataFlowState {
             return new SnapshotExpression(copy);
         }
         if (type.isRecord()) {
-            RecordSnapshot snapshot = new RecordSnapshot(parent, type, Optionality.PRESENT);
+            RecordSnapshot snapshot = new RecordSnapshot(parent, type, Optionality.PRESENT, true);
             Map<String, RapidType> components = getComponents(snapshot);
             for (String componentName : components.keySet()) {
                 RapidType componentType = components.get(componentName);
@@ -113,7 +113,7 @@ public class DataFlowState {
         if (defaultValue != null) {
             return new LiteralExpression(defaultValue);
         }
-        return new SnapshotExpression(new VariableSnapshot(parent, type, Optionality.PRESENT));
+        return new SnapshotExpression(new VariableSnapshot(parent, type, Optionality.PRESENT, true));
     }
 
     private @NotNull Map<String, RapidType> getComponents(@NotNull RecordSnapshot snapshot) {

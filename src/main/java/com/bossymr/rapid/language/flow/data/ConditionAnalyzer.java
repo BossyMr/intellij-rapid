@@ -424,7 +424,9 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         }
         String name = getName(snapshot);
         Expr<?> expr = context.mkConst(name, sort);
-        symbols.put(snapshot, expr);
+        if (snapshot.hasIdentity()) {
+            symbols.put(snapshot, expr);
+        }
         switch (snapshot.getOptionality()) {
             case PRESENT -> queue.add(getAsBoolean(FunctionCallExpression.present(snapshot).accept(this)));
             case MISSING -> {
@@ -435,7 +437,9 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
             case UNKNOWN -> {}
         }
         if (!(correctType.equals(expression.getType()))) {
-            symbols.remove(snapshot);
+            if (snapshot.hasIdentity()) {
+                symbols.remove(snapshot);
+            }
             if (suffixes.get(snapshot.hashCode()).decrementAndGet() == 0) {
                 suffixes.remove(snapshot.hashCode());
             }

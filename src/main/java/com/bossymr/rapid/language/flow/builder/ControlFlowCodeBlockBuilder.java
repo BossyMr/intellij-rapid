@@ -110,7 +110,8 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                 return new VariableExpression(expression, variable);
             }
         }
-        return getAsVariable(any(expression, type));
+        Snapshot snapshot = Snapshot.createSnapshot(type, null, Optionality.PRESENT, false);
+        return new SnapshotExpression(snapshot);
     }
 
     @Override

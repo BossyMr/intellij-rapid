@@ -47,6 +47,13 @@ public interface Task {
     @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=deactivate")
     @NotNull NetworkQuery<Void> deactivate();
 
+    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=unloadmod")
+    @NotNull NetworkQuery<Void> loadModule(@NotNull @Field("modulepath") String modulePath,
+                                           @Field("replace") boolean replace);
+
+    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=unloadmod")
+    @NotNull NetworkQuery<Void> unloadModule(@NotNull @Field("module") String moduleName);
+
     @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}/pcp", arguments = "action=set-pp-cursor")
     @NotNull NetworkQuery<Void> setProgramPointer(@NotNull @Field("module") String module,
                                                   @NotNull @Field("routine") String routine,

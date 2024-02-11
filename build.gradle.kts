@@ -8,7 +8,7 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.9.22"
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.17.0"
+    id("org.jetbrains.intellij") version "1.17.1"
     // Gradle Sentry Plugin
     id("io.sentry.jvm.gradle") version "4.2.0"
 }

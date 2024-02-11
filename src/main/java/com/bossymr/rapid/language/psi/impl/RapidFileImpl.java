@@ -38,6 +38,10 @@ public class RapidFileImpl extends AbstractRapidFile implements RapidFile {
 
     @Override
     protected @Nullable Icon getElementIcon(int flags) {
+        List<PhysicalModule> modules = getModules();
+        if (modules.size() == 1) {
+            return modules.get(0).getIcon(flags);
+        }
         return getFileType().getIcon();
     }
 

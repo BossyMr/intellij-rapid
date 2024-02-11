@@ -421,9 +421,36 @@ public class RapidRobot implements Disposable {
         this.symbols = SymbolConverter.getSymbols(models);
         setState(state);
         this.tasks = getPersistedTasks();
+        if (!(getLocalModules(tasks).equals(getRemoteModules(networkAction)))) {
+            download();
+        }
         RobotEventListener.publish().onRefresh(this, networkAction);
         setManager(networkAction);
         return networkAction;
+    }
+
+    private @NotNull List<String> getLocalModules(@NotNull Set<RapidTask> tasks) {
+        List<String> modules = new ArrayList<>();
+        for (RapidTask task : tasks) {
+            for (File module : task.getFiles()) {
+                String name = module.getName();
+                modules.add(task.getName() + ":" + name.substring(0, name.lastIndexOf('.')));
+            }
+        }
+        return modules;
+    }
+
+    private @NotNull List<String> getRemoteModules(@NotNull NetworkManager manager) throws IOException, InterruptedException {
+        TaskService service = manager.createService(TaskService.class);
+        List<Task> tasks = service.getTasks().get();
+        List<String> modules = new ArrayList<>();
+        for (Task task : tasks) {
+            List<ModuleInfo> infos = task.getModules().get();
+            for (ModuleInfo module : infos) {
+                modules.add(task.getName() + ":" + module.getName());
+            }
+        }
+        return modules;
     }
 
     private void setManager(@NotNull NetworkManager manager) {

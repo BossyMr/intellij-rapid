@@ -14,7 +14,7 @@ public final class RapidIcons {
     public static final Icon RAPID =  IconLoader.getIcon("/icons/toolWindow.svg", RapidIcons.class);
     public static final Icon TASK = AllIcons.Nodes.Module;
     public static final Icon MODULE = AllIcons.Nodes.Method;
-    public static final Icon SYSTEM_MODULE = AllIcons.Nodes.AbstractClass;
+    public static final Icon SYSTEM_MODULE = AllIcons.Nodes.Method;
     public static final Icon ALIAS = AllIcons.Nodes.Alias;
     public static final Icon ATOMIC = AllIcons.Nodes.Type;
     public static final Icon COMPONENT = AllIcons.Nodes.Class;
