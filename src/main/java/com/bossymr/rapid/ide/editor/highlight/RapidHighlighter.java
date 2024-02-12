@@ -21,7 +21,7 @@ public class RapidHighlighter extends SyntaxHighlighterBase {
     private static final Map<IElementType, RapidColor> HIGHLIGHTS = new HashMap<>();
 
     static {
-        fillMap(RapidTokenSets.OPERATIONS, RapidColor.OPERATOR_SIGN);
+        fillMap(RapidTokenSets.OPERATORS, RapidColor.OPERATOR_SIGN);
         fillMap(RapidTokenSets.KEYWORDS, RapidColor.KEYWORD);
         fillMap(RapidTokenSets.PLACEHOLDERS, RapidColor.VALID_STRING_ESCAPE);
 

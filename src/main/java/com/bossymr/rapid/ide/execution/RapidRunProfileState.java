@@ -160,22 +160,21 @@ public class RapidRunProfileState implements RunProfileState {
         try {
             FileDocumentManager.getInstance().saveAllDocuments();
             ExecutorService executorService = Executors.newSingleThreadExecutor();
-            NetworkManager manager = CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<NetworkManager> future = CompletableFuture.supplyAsync(() -> {
                 try {
-                    // Although this seems unnecessary, this method calls a method which will throw an exception,
-                    // as it will block. As a result, it needs to be called from another thread.
                     return getNetworkManager();
                 } catch (IOException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-            }, executorService).join();
-            RapidProcessHandler processHandler = new RapidProcessHandler(manager, getTasks(), executorService);
+            }, executorService);
+            RapidProcessHandler processHandler = new RapidProcessHandler(future, getTasks(), executorService);
             ConsoleView consoleView = TextConsoleBuilderFactory.getInstance()
                                                                .createBuilder(getProject())
                                                                .filters(new RapidFileFilter(project))
                                                                .getConsole();
             consoleView.attachToProcess(processHandler);
             processHandler.execute(() -> {
+                processHandler.getNetworkManager();
                 try (CloseableMastership ignored = CloseableMastership.withMastership(processHandler.getNetworkManager(), MastershipType.RAPID)) {
                     setupProject(processHandler.getNetworkManager());
                     processHandler.setupEventLog();

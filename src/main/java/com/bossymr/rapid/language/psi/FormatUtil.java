@@ -1,7 +1,9 @@
 package com.bossymr.rapid.language.psi;
 
 import com.bossymr.rapid.language.symbol.*;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -73,19 +75,7 @@ public class FormatUtil {
 
     public static @NotNull String format(@NotNull RapidComponent component, @NotNull EnumSet<Option> options) {
         StringBuilder buffer = new StringBuilder();
-        if (options.contains(Option.SHOW_TYPE) && !(options.contains(Option.SHOW_TYPE_AFTER))) {
-            if (component.getType() != null) {
-                buffer.append(component.getType().getPresentableText()).append(" ");
-            }
-        }
-        if (options.contains(Option.SHOW_NAME)) {
-            buffer.append(component.getName());
-        }
-        if (options.contains(Option.SHOW_TYPE) && options.contains(Option.SHOW_TYPE_AFTER)) {
-            if (component.getType() != null) {
-                buffer.append(":").append(component.getType().getPresentableText()).append(" ");
-            }
-        }
+        format(buffer, component.getName(), component.getType(), options);
         return buffer.toString();
     }
 
@@ -101,19 +91,7 @@ public class FormatUtil {
      */
     public static @NotNull String format(@NotNull RapidAlias alias, @NotNull EnumSet<Option> options) {
         StringBuilder buffer = new StringBuilder();
-        if (options.contains(Option.SHOW_TYPE) && !(options.contains(Option.SHOW_TYPE_AFTER))) {
-            if (alias.getType() != null) {
-                buffer.append(alias.getType().getPresentableText()).append(" ");
-            }
-        }
-        if (options.contains(Option.SHOW_NAME)) {
-            buffer.append(alias.getName());
-        }
-        if (options.contains(Option.SHOW_TYPE) && options.contains(Option.SHOW_TYPE_AFTER)) {
-            if (alias.getType() != null) {
-                buffer.append(":").append(alias.getType().getPresentableText()).append(" ");
-            }
-        }
+        format(buffer, alias.getName(), alias.getType(), options);
         return buffer.toString();
     }
 
@@ -145,19 +123,7 @@ public class FormatUtil {
                 case PERSISTENT -> "CONST ";
             });
         }
-        if (options.contains(Option.SHOW_TYPE) && !(options.contains(Option.SHOW_TYPE_AFTER))) {
-            if (field.getType() != null) {
-                buffer.append(field.getType().getPresentableText()).append(" ");
-            }
-        }
-        if (options.contains(Option.SHOW_NAME)) {
-            buffer.append(field.getName());
-        }
-        if (options.contains(Option.SHOW_TYPE) && options.contains(Option.SHOW_TYPE_AFTER)) {
-            if (field.getType() != null) {
-                buffer.append(":").append(field.getType().getPresentableText());
-            }
-        }
+        format(buffer, field.getName(), field.getType(), options);
         if (options.contains(Option.SHOW_INITIALIZER)) {
             RapidExpression expression = field.getInitializer();
             if (expression != null) {
@@ -168,6 +134,23 @@ public class FormatUtil {
         }
         return buffer.toString();
     }
+
+    private static void format(@NotNull StringBuilder buffer, @Nullable String name, @Nullable RapidType type, @NotNull EnumSet<Option> options) {
+        if (options.contains(Option.SHOW_TYPE) && !(options.contains(Option.SHOW_TYPE_AFTER))) {
+            if (type != null) {
+                buffer.append(type.getPresentableText()).append(" ");
+            }
+        }
+        if (options.contains(Option.SHOW_NAME)) {
+            buffer.append(name);
+        }
+        if (options.contains(Option.SHOW_TYPE) && options.contains(Option.SHOW_TYPE_AFTER)) {
+            if (type != null) {
+                buffer.append(":").append(type.getPresentableText()).append(" ");
+            }
+        }
+    }
+
 
     /**
      * Formats the specified routine, using the specified options. This method specifies a maximum number of parameters,

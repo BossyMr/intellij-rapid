@@ -15,11 +15,6 @@ public abstract class RapidSymbolTreeElement<T extends PsiElement & RapidVisible
         super(element);
     }
 
-    @Override
-    public @Nullable T getValue() {
-        return super.getValue();
-    }
-
     public @NotNull Visibility getVisibility() {
         return getValue() != null ? getValue().getVisibility() : Visibility.GLOBAL;
     }

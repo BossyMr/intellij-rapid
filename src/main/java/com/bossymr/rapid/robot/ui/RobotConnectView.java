@@ -89,9 +89,10 @@ public class RobotConnectView extends DialogWrapper {
 
     public RobotConnectView(@NotNull Project project, @NotNull URI path) {
         this(project);
-        hostField.setText(path.getHost());
-        int port = path.getPort() >= 0 ? path.getPort() : 80;
-        portField.setText(String.valueOf(port));
+        String host = path.getHost();
+        hostField.setText(host);
+        int port = path.getPort();
+        portField.setText(port >= 0 ? String.valueOf(port) : "");
     }
 
     private void checkAuthenticationType(@NotNull AuthenticationType authenticationType) {
@@ -114,7 +115,8 @@ public class RobotConnectView extends DialogWrapper {
                         new Credentials(userField.getText(), passwordField.getPassword());
                 try {
                     service.connect(path, credentials);
-                } catch (InterruptedException | IOException ignored) {}
+                } catch (InterruptedException | IOException ignored) {
+                }
             }
         };
         ProgressManager.getInstance().runProcessWithProgressAsynchronously(task, new BackgroundableProcessIndicator(task));

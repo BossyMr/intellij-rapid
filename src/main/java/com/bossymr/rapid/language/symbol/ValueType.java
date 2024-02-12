@@ -47,5 +47,5 @@ public enum ValueType {
     /**
      * An unknown value type represents a value which was not successfully resolved.
      */
-    UNKNOWN;
+    UNKNOWN
 }

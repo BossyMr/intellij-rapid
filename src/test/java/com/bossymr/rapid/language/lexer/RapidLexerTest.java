@@ -7,12 +7,12 @@ import org.jetbrains.annotations.NotNull;
 public class RapidLexerTest extends LexerTestCase {
 
     @Override
-    protected @NotNull String getPathToTestDataFile(String extension) {
+    protected @NotNull String getPathToTestDataFile(@NotNull String extension) {
         return getDirPath() + "/" + getTestName(true) + extension;
     }
 
     @Override
-    protected void doFileTest(String fileExt) {
+    protected void doFileTest(@NotNull String fileExt) {
         super.doFileTest(fileExt);
     }
 

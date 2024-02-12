@@ -10,8 +10,8 @@ import com.bossymr.rapid.robot.RobotService;
 import com.intellij.codeInsight.documentation.DocumentationManagerProtocol;
 import com.intellij.lang.ASTNode;
 import com.intellij.model.Symbol;
-import com.intellij.model.psi.PsiSymbolDeclaration;
 import com.intellij.model.psi.PsiSymbolReference;
+import com.intellij.model.psi.PsiSymbolReferenceService;
 import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
 import com.intellij.platform.backend.documentation.DocumentationLinkHandler;
@@ -43,10 +43,10 @@ public class RapidDocumentationTargetProvider implements DocumentationTargetProv
             element = element.getParent();
         }
         List<Symbol> symbols = new ArrayList<>();
-        for (PsiSymbolDeclaration declaration : element.getOwnDeclarations()) {
-            symbols.add(declaration.getSymbol());
+        if (element instanceof PhysicalSymbol symbol && symbol.getNameIdentifier() != null) {
+            symbols.add(symbol);
         }
-        for (PsiSymbolReference reference : element.getOwnReferences()) {
+        for (PsiSymbolReference reference : PsiSymbolReferenceService.getService().getReferences(element)) {
             symbols.addAll(reference.resolveReference());
         }
         Project project = file.getProject();

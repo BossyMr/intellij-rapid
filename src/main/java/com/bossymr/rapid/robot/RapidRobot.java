@@ -98,11 +98,11 @@ public class RapidRobot implements Disposable {
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         setCredentials(path, credentials);
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
-        RobotNetworkAction networkAction = new RobotNetworkAction(manager);
-        State state = getState(path, networkAction);
+        RobotNetworkAction action = new RobotNetworkAction(manager);
+        State state = getState(path, action);
         RapidRobot robot = new RapidRobot(state);
         RobotEventListener.publish().onRefresh(robot, manager);
-        robot.setManager(networkAction);
+        robot.setManager(action);
         robot.download();
         return robot;
     }
@@ -111,7 +111,12 @@ public class RapidRobot implements Disposable {
         State state = new State();
         state.path = path.getScheme() + "://" + path.getHost() + ":" + path.getPort();
         state.cache = new HashSet<>();
-        Identity identity = manager.createService(ControllerService.class).getIdentity().get();
+        Identity identity;
+        try {
+            identity = manager.createService(ControllerService.class).getIdentity().get();
+        } catch (IllegalArgumentException e) {
+            throw new IOException(e);
+        }
         state.name = identity.getName();
         SymbolQuery query = new SymbolQuery()
                 .setRecursive(true)
@@ -235,9 +240,9 @@ public class RapidRobot implements Disposable {
 
     public @NotNull SearchScope getSearchScope(@NotNull Project project) {
         PhysicalModule[] modules = getTasks().stream()
-                                           .flatMap(task -> task.getModules(project).stream())
-                                           .toList()
-                                           .toArray(PhysicalModule[]::new);
+                                             .flatMap(task -> task.getModules(project).stream())
+                                             .toList()
+                                             .toArray(PhysicalModule[]::new);
         return new LocalSearchScope(modules);
     }
 
@@ -273,8 +278,8 @@ public class RapidRobot implements Disposable {
         }
         state.symbols.add(Entity.convert(model));
         RobotEventListener.publish().onSymbol(this, symbol);
-        if(name.contains("/")) {
-            if(name.indexOf("/") != name.lastIndexOf("/")) {
+        if (name.contains("/")) {
+            if (name.indexOf("/") != name.lastIndexOf("/")) {
                 throw new IllegalArgumentException("Cannot retrieve symbol: " + name);
             }
             return (VirtualSymbol) ResolveService.findChild(symbol, name.substring(name.indexOf("/") + 1));
@@ -421,11 +426,11 @@ public class RapidRobot implements Disposable {
         this.symbols = SymbolConverter.getSymbols(models);
         setState(state);
         this.tasks = getPersistedTasks();
+        RobotEventListener.publish().onRefresh(this, networkAction);
+        setManager(networkAction);
         if (!(getLocalModules(tasks).equals(getRemoteModules(networkAction)))) {
             download();
         }
-        RobotEventListener.publish().onRefresh(this, networkAction);
-        setManager(networkAction);
         return networkAction;
     }
 

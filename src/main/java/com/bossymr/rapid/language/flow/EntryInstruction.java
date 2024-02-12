@@ -4,7 +4,6 @@ import com.bossymr.rapid.language.flow.expression.Expression;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.psi.BlockType;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
@@ -50,7 +49,7 @@ public class EntryInstruction {
 
     public static class ErrorEntryInstruction extends EntryInstruction {
 
-        private final @Nullable List<Expression> exceptions;
+        private final @NotNull List<Expression> exceptions;
 
         public ErrorEntryInstruction(@NotNull Instruction instruction, @NotNull List<Expression> exceptions) {
             super(BlockType.ERROR_CLAUSE, instruction);

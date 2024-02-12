@@ -16,7 +16,7 @@ public class RapidConnectStatementImpl extends PhysicalElement implements RapidC
     @Override
     public @Nullable RapidExpression getLeft() {
         List<RapidExpression> expressions = findChildrenByType(RapidElementTypes.EXPRESSIONS);
-        return expressions.size() > 0 ? expressions.get(0) : null;
+        return expressions.isEmpty() ? null : expressions.get(0);
     }
 
     @Override

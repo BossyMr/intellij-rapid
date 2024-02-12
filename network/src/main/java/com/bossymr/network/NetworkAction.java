@@ -93,7 +93,7 @@ public class NetworkAction implements NetworkManager {
                     entity = action.manager;
                 }
                 return response;
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
                 NetworkManager entity = this;
                 while (entity instanceof NetworkAction action) {
                     if (!(onFailure(request, e))) {

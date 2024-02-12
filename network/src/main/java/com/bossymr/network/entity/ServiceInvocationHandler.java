@@ -14,7 +14,7 @@ import java.util.Objects;
 public class ServiceInvocationHandler extends AbstractInvocationHandler {
 
     private final @NotNull Class<?> type;
-    private @Nullable NetworkManager manager;
+    private final @NotNull NetworkManager manager;
 
     public ServiceInvocationHandler(@NotNull NetworkManager manager, @NotNull Class<?> type) {
         this.manager = manager;
@@ -29,9 +29,6 @@ public class ServiceInvocationHandler extends AbstractInvocationHandler {
         if (isMethod(method, NetworkProxy.class, "move", NetworkManager.class)) {
             return ((NetworkManager) args[0]).createService(type);
         }
-        if (manager == null) {
-            throw new IllegalStateException("Entity is not managed");
-        }
         return new RequestFactory(manager).createQuery(type, proxy, method, args);
     }
 
@@ -45,7 +42,7 @@ public class ServiceInvocationHandler extends AbstractInvocationHandler {
     @Override
     public int hashCode(@NotNull Object proxy) {
         int result = type.hashCode();
-        result = 31 * result + (manager != null ? manager.hashCode() : 0);
+        result = 31 * result + manager.hashCode();
         return result;
     }
 

@@ -37,7 +37,7 @@ public class RapidBinaryExpressionImpl extends RapidExpressionImpl implements Ra
 
     @Override
     public PsiElement getSign() {
-        return findChildByType(RapidTokenSets.OPERATIONS);
+        return findChildByType(RapidTokenSets.OPERATORS);
     }
 
     @Override

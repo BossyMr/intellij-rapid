@@ -23,7 +23,7 @@ public interface Authenticator {
      * Attempts to retrieve the authentication challenge in the specified response, and reauthenticate its original
      * request. This method is called on unsuccessful responses to requests which were authenticated by this
      * authenticator, and should attempt to reauthenticate the request if possible (such as if a challenge is stale). If
-     * the request cannot be re-authenticated, {@code null} should be returned, in which case the unsuccesful repsonse
+     * the request cannot be re-authenticated, {@code null} should be returned, in which case the unsuccessful response
      * will be returned.
      *
      * @param response the unsuccessful response.

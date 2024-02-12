@@ -40,5 +40,4 @@ public interface RootService {
      */
     @NotNull RobotWareService getRobotWareService();
 
-
 }

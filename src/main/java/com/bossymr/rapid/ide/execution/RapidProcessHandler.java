@@ -6,9 +6,11 @@ import com.bossymr.network.SubscriptionPriority;
 import com.bossymr.network.client.NetworkRequest;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
+import com.bossymr.rapid.robot.CloseableMastership;
 import com.bossymr.rapid.robot.network.EventLogCategory;
 import com.bossymr.rapid.robot.network.EventLogMessage;
 import com.bossymr.rapid.robot.network.EventLogService;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
@@ -25,25 +27,27 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiConsumer;
 
 public class RapidProcessHandler extends ProcessHandler {
 
     private static final Logger logger = Logger.getInstance(RapidProcessHandler.class);
-    private final @NotNull NetworkManager manager;
+
+    private final @NotNull CompletableFuture<NetworkManager> manager;
     private final @NotNull List<TaskState> tasks;
 
     private final @NotNull ExecutorService executorService;
 
-    public RapidProcessHandler(@NotNull NetworkManager manager, @NotNull List<TaskState> tasks, @NotNull ExecutorService executorService) {
-        this.manager = new NetworkAction(manager) {
+    public RapidProcessHandler(@NotNull CompletableFuture<NetworkManager> future, @NotNull List<TaskState> tasks, @NotNull ExecutorService executorService) {
+        this.manager = future.thenApply(manager -> new NetworkAction(manager) {
             @Override
             protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                 handleException(throwable);
                 return false;
             }
-        };
+        });
         this.tasks = tasks;
         this.executorService = executorService;
     }
@@ -65,7 +69,7 @@ public class RapidProcessHandler extends ProcessHandler {
 
     public boolean check() throws IOException, InterruptedException, ExecutionException {
         boolean hasError = false;
-        TaskService service = manager.createService(TaskService.class);
+        TaskService service = getNetworkManager().createService(TaskService.class);
         for (TaskState taskState : tasks) {
             if (taskState.getName() == null) {
                 continue;
@@ -87,23 +91,23 @@ public class RapidProcessHandler extends ProcessHandler {
 
     protected void handleException(@NotNull Throwable throwable) throws IOException, InterruptedException {
         notifyProcessTerminated(1);
-        manager.close();
+        getNetworkManager().close();
     }
 
     public @NotNull NetworkManager getNetworkManager() {
-        return manager;
+        return manager.join();
     }
 
     public void setupEventLog() throws IOException, InterruptedException {
         logger.debug("Subscribing to process event log");
-        EventLogService eventLogService = manager.createService(EventLogService.class);
+        EventLogService eventLogService = getNetworkManager().createService(EventLogService.class);
         List<EventLogCategory> categories = eventLogService.getCategories("en").get();
         if (categories.isEmpty()) {
             logger.warn("Couldn't find process event log");
             return;
         }
         for (int i = 1; i < categories.size(); i++) {
-            try (NetworkManager action = new NetworkAction(manager)) {
+            try (NetworkManager action = new NetworkAction(getNetworkManager())) {
                 EventLogCategory category = action.move(categories.get(i));
                 category.onMessage().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
                     logger.debug("Received event '" + event + "'");
@@ -139,20 +143,20 @@ public class RapidProcessHandler extends ProcessHandler {
 
     public void start() throws IOException, InterruptedException {
         logger.debug("Starting process");
-        ExecutionService executionService = manager.createService(ExecutionService.class);
+        ExecutionService executionService = getNetworkManager().createService(ExecutionService.class);
         executionService.resetProgramPointer().get();
         executionService.start(RegainMode.REGAIN, ExecutionMode.CONTINUE, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.DISABLED, TaskExecutionMode.NORMAL).get();
         logger.debug("Started process");
     }
 
     public void setupExecutionState() throws IOException, InterruptedException {
-        ExecutionService executionService = manager.createService(ExecutionService.class);
+        ExecutionService executionService = getNetworkManager().createService(ExecutionService.class);
         executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
             if (event.getState().equals(ExecutionState.STOPPED)) {
                 logger.debug("Program stopped");
                 notifyProcessTerminated(0);
                 try {
-                    this.manager.close();
+                    getNetworkManager().close();
                 } catch (IOException ignored) {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -165,39 +169,51 @@ public class RapidProcessHandler extends ProcessHandler {
     @Override
     protected void destroyProcessImpl() {
         execute(() -> {
-            ExecutionService executionService = manager.createService(ExecutionService.class);
+            ExecutionService executionService = getNetworkManager().createService(ExecutionService.class);
             ExecutionStatus executionStatus = executionService.getState().get();
             if (executionStatus.getState() == ExecutionState.STOPPED) {
-                manager.close();
                 notifyProcessTerminated(0);
                 return;
             }
             executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
                 if (event.getState() == ExecutionState.STOPPED) {
-                    try {
-                        entity.unsubscribe();
-                        manager.close();
-                        notifyProcessTerminated(0);
-                    } catch (IOException ex) {
-                        logger.error(ex);
-                    } catch (InterruptedException ignored) {}
+                    notifyProcessTerminated(0);
                 }
             });
-            executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
+            try (CloseableMastership ignored = CloseableMastership.withMastership(getNetworkManager(), MastershipType.RAPID)) {
+                executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
+            }
+            Thread.sleep(100);
+            ExecutionStatus laterExecutionStatus = executionService.getState().get();
+            if (laterExecutionStatus.getState() == ExecutionState.STOPPED) {
+                notifyProcessTerminated(0);
+            }
         });
-    }
-
-    @Override
-    protected void notifyProcessTerminated(int exitCode) {
-        super.notifyProcessTerminated(exitCode);
-        executorService.shutdown();
     }
 
     @Override
     protected void detachProcessImpl() {
         notifyProcessDetached();
+    }
+
+    @Override
+    protected void notifyProcessTerminated(int exitCode) {
+        super.notifyProcessTerminated(exitCode);
+        executorService.shutdownNow();
         try {
-            manager.close();
+            getNetworkManager().close();
+        } catch (IOException ignored) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    @Override
+    protected void notifyProcessDetached() {
+        super.notifyProcessDetached();
+        executorService.shutdownNow();
+        try {
+            getNetworkManager().close();
         } catch (IOException ignored) {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

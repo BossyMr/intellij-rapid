@@ -75,11 +75,16 @@ class NetworkActionTest {
 
                 @Override
                 protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {
-                    throw new IllegalStateException();
+                    throw new IllegalStateException(throwable);
                 }
             };
             NetworkRequest<String> successRequest = new NetworkRequest<>(URI.create("/success"), GenericType.of(String.class));
-            assertThrows(IllegalArgumentException.class, () -> action.createQuery(successRequest).get());
+            try {
+                action.createQuery(successRequest).get();
+            } catch (IllegalStateException e) {
+                // As the request will throw an exception if successful, the onFailure handler will also be called.
+                assertInstanceOf(IllegalArgumentException.class, e.getCause());
+            }
             NetworkRequest<String> failureRequest = new NetworkRequest<>(URI.create("/failure"), GenericType.of(String.class));
             assertThrows(IllegalStateException.class, () -> action.createQuery(failureRequest).get());
         }

@@ -31,7 +31,7 @@ public class NetworkRequest<T> {
      * response into the specified type.
      *
      * @param path the request path.
-     * @param type the respones type.
+     * @param type the responses type.
      */
     public NetworkRequest(@NotNull URI path, @NotNull GenericType<T> type) {
         this(FetchMethod.GET, path, type);

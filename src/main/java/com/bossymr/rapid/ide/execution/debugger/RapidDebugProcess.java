@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Phaser;
 
@@ -79,12 +80,12 @@ public class RapidDebugProcess extends XDebugProcess {
     private final @NotNull NetworkManager manager;
     private final @NotNull RapidProcessHandler processHandler;
 
-    public RapidDebugProcess(@NotNull Project project, @NotNull XDebugSession session, @NotNull ExecutorService executorService, @NotNull List<TaskState> taskStates, @NotNull NetworkManager manager) {
+    public RapidDebugProcess(@NotNull Project project, @NotNull XDebugSession session, @NotNull ExecutorService executorService, @NotNull List<TaskState> taskStates, @NotNull CompletableFuture<NetworkManager> future) {
         super(session);
         this.project = project;
         this.executorService = executorService;
         this.tasks = taskStates;
-        this.processHandler = new RapidProcessHandler(manager, tasks, executorService) {
+        this.processHandler = new RapidProcessHandler(future, tasks, executorService) {
             @Override
             protected void handleException(@NotNull Throwable throwable) throws IOException, InterruptedException {
                 super.handleException(throwable);

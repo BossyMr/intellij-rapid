@@ -48,7 +48,7 @@ import java.util.function.Supplier;
 public final class ControlFlowService implements Disposable {
 
     @Topic.AppLevel
-    public static Topic<ControlFlowListener> TOPIC = Topic.create("Control Flow", ControlFlowListener.class);
+    public static final Topic<ControlFlowListener> TOPIC = Topic.create("Control Flow", ControlFlowListener.class);
 
     private final @NotNull LazyInitializer.LazyValue<AtomicReference<Context>> context = LazyInitializer.create(() -> new AtomicReference<>(new Context()));
 

@@ -21,19 +21,19 @@ import static com.intellij.patterns.StandardPatterns.string;
 
 public class RapidKeywordCompletionContributor extends CompletionContributor {
 
-    public static ElementPattern<PsiElement> BEFORE_MODULE = psiElement().andNot(psiElement().afterLeaf(psiElement()));
+    public static final ElementPattern<PsiElement> BEFORE_MODULE = psiElement().andNot(psiElement().afterLeaf(psiElement()));
 
-    public static ElementPattern<PsiElement> ATTRIBUTE_LIST = psiElement().withSuperParent(2, RapidAttributeList.class);
+    public static final ElementPattern<PsiElement> ATTRIBUTE_LIST = psiElement().withSuperParent(2, RapidAttributeList.class);
 
-    public static PsiElementPattern<PsiElement, ?> INSIDE_MODULE = psiElement().withSuperParent(2, PhysicalModule.class);
+    public static final PsiElementPattern<PsiElement, ?> INSIDE_MODULE = psiElement().withSuperParent(2, PhysicalModule.class);
 
-    public static ElementPattern<PsiElement> PARAMETER_TYPE = psiElement()
+    public static final ElementPattern<PsiElement> PARAMETER_TYPE = psiElement()
             .withParent(RapidReferenceExpression.class)
             .withSuperParent(2, psiElement(RapidTypeElement.class))
             .withSuperParent(3, psiElement(PhysicalParameter.class))
             .andNot(psiElement().afterLeaf("VAR", "PERS", "INOUT"));
 
-    public static ElementPattern<PsiElement> STATEMENT = or(
+    public static final ElementPattern<PsiElement> STATEMENT = or(
             psiElement().withParent(RapidStatementList.class),
             // The start of a new statement.
             psiElement()
@@ -41,12 +41,12 @@ public class RapidKeywordCompletionContributor extends CompletionContributor {
                     .withSuperParent(2, RapidProcedureCallStatement.class)
                     .andNot(psiElement().afterSibling(psiElement())));
 
-    public static ElementPattern<PsiElement> CONNECT_STATEMENT_WITH = psiElement()
+    public static final ElementPattern<PsiElement> CONNECT_STATEMENT_WITH = psiElement()
             .withParent(RapidReferenceExpression.class)
             .withSuperParent(2, RapidConnectStatement.class)
             .afterLeafSkipping(psiElement().withParent(RapidExpression.class), psiElement().withText("CONNECT"));
 
-    public static ElementPattern<PsiElement> IF_STATEMENT_THEN = psiElement()
+    public static final ElementPattern<PsiElement> IF_STATEMENT_THEN = psiElement()
             .withParent(RapidReferenceExpression.class)
             .afterLeafSkipping(psiElement().withParent(RapidExpression.class), psiElement().withText(string().oneOf("IF", "ELSEIF")));
 

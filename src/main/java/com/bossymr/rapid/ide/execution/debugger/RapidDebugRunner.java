@@ -36,6 +36,7 @@ import org.jetbrains.concurrency.Promises;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -70,13 +71,13 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
         XDebuggerManager debuggerManager = XDebuggerManager.getInstance(project);
         executorService.submit(() -> {
             try {
-                NetworkManager manager = state.getNetworkManager();
+                CompletableFuture<NetworkManager> future = CompletableFuture.completedFuture(state.getNetworkManager());
                 ApplicationManager.getApplication().invokeLater(() -> {
                     try {
                         XDebugSession session = debuggerManager.startSession(environment, new XDebugProcessStarter() {
                             @Override
                             public @NotNull XDebugProcess start(@NotNull XDebugSession session) {
-                                RapidDebugProcess process = new RapidDebugProcess(project, session, executorService, state.getTasks(), manager);
+                                RapidDebugProcess process = new RapidDebugProcess(project, session, executorService, state.getTasks(), future);
                                 process.execute(() -> {
                                     state.setupProject(process.getManager());
                                     setupExecution(process.getManager());

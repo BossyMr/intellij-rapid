@@ -52,7 +52,7 @@ public class RapidUnaryExpressionImpl extends RapidExpressionImpl implements Rap
 
     @Override
     public @NotNull PsiElement getSign() {
-        return findNotNullChildByType(RapidTokenSets.OPERATIONS);
+        return findNotNullChildByType(RapidTokenSets.OPERATORS);
     }
 
     @Override

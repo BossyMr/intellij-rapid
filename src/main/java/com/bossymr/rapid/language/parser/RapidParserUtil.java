@@ -12,8 +12,8 @@ import com.intellij.psi.tree.TokenSet;
  */
 public final class RapidParserUtil extends GeneratedParserUtilBase {
 
-    public static WhitespacesAndCommentsBinder ADJACENT_LINE_COMMENTS = (tokens, atStreamEdge, getter) -> {
-        if (tokens.size() == 0) return 0;
+    public static final WhitespacesAndCommentsBinder ADJACENT_LINE_COMMENTS = (tokens, atStreamEdge, getter) -> {
+        if (tokens.isEmpty()) return 0;
         int result = tokens.size();
         for (int i = tokens.size() - 1; i >= 0; i--) {
             final IElementType elementType = tokens.get(i);

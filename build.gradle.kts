@@ -47,13 +47,13 @@ configurations {
 
 dependencies {
     implementation(project(mapOf("path" to ":network")))
-    implementation("org.slf4j:slf4j-jdk14:2.0.5")
+    implementation("org.slf4j:slf4j-jdk14:2.0.12")
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
-    testImplementation(platform("org.junit:junit-bom:5.9.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.9.0")
-    testImplementation("org.junit.platform:junit-platform-launcher:1.9.0")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.2")
+    testImplementation("org.junit.platform:junit-platform-launcher:1.10.2")
 }
 
 sentry {
@@ -67,7 +67,7 @@ sentry {
     // code as part of your stack traces in Sentry.
     //
     // Default is disabled. To enable, see the source context guide.
-    includeSourceContext.set(true)
+    includeSourceContext.set(false)
 
     // Includes additional source directories into the source bundle.
     // These directories are resolved relative to the project directory.
@@ -87,7 +87,6 @@ sentry {
 
     org.set("sentry")
     projectName.set("intellij-rapid")
-    authToken.set(System.getenv("SENTRY_AUTH_TOKEN"))
 
     // Automatically adds Sentry dependencies to your project.
     autoInstallation {
