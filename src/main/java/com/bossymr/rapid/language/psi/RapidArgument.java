@@ -31,6 +31,30 @@ public interface RapidArgument extends RapidElement {
      */
     @Nullable RapidExpression getArgument();
 
+    private static @Nullable RapidParameter getSymbol(@NotNull RapidArgument argument) {
+        RapidReferenceExpression parameter = argument.getParameter();
+        if (parameter != null) {
+            return getSymbol(parameter);
+        }
+        RapidRoutine routine = getRoutine(argument);
+        if (routine == null) {
+            return null;
+        }
+        PsiElement parent = argument.getParent();
+        if (!(parent instanceof RapidArgumentList argumentList)) {
+            return null;
+        }
+        List<RapidParameter> previous = new ArrayList<>();
+        for (RapidArgument otherArgument : argumentList.getArguments()) {
+            RapidParameter symbol = getSymbol(routine, previous, otherArgument);
+            previous.add(symbol);
+            if (otherArgument.equals(argument)) {
+                return symbol;
+            }
+        }
+        return null;
+    }
+
     private static @Nullable RapidParameter getSymbol(@NotNull RapidReferenceExpression parameter) {
         RapidSymbol symbol = parameter.getSymbol();
         if (symbol == null) {
@@ -42,31 +66,7 @@ public interface RapidArgument extends RapidElement {
         return null;
     }
 
-    default @Nullable RapidParameter getSymbol() {
-        RapidReferenceExpression parameter = getParameter();
-        if (parameter != null) {
-            return getSymbol(parameter);
-        }
-        RapidRoutine routine = getRoutine();
-        if (routine == null) {
-            return null;
-        }
-        PsiElement parent = getParent();
-        if (!(parent instanceof RapidArgumentList argumentList)) {
-            return null;
-        }
-        List<RapidParameter> previous = new ArrayList<>();
-        for (RapidArgument argument : argumentList.getArguments()) {
-            RapidParameter symbol = getSymbol(routine, previous, argument);
-            previous.add(symbol);
-            if (argument.equals(this)) {
-                return symbol;
-            }
-        }
-        return null;
-    }
-
-    private @Nullable RapidParameter getSymbol(@NotNull RapidRoutine routine, @NotNull List<RapidParameter> previous, @NotNull RapidArgument argument) {
+    private static @Nullable RapidParameter getSymbol(@NotNull RapidRoutine routine, @NotNull List<RapidParameter> previous, @NotNull RapidArgument argument) {
         RapidReferenceExpression parameter = argument.getParameter();
         if (parameter != null) {
             return getSymbol(parameter);
@@ -88,8 +88,8 @@ public interface RapidArgument extends RapidElement {
         return null;
     }
 
-    private @Nullable RapidRoutine getRoutine() {
-        RapidCallExpression expression = PsiTreeUtil.getParentOfType(this, RapidCallExpression.class);
+    private static @Nullable RapidRoutine getRoutine(@NotNull RapidArgument argument) {
+        RapidCallExpression expression = PsiTreeUtil.getParentOfType(argument, RapidCallExpression.class);
         if (expression == null) {
             return null;
         }
@@ -102,5 +102,9 @@ public interface RapidArgument extends RapidElement {
             return null;
         }
         return routine;
+    }
+
+    default @Nullable RapidParameter getSymbol() {
+        return getSymbol(this);
     }
 }
