@@ -1,4 +1,5 @@
-fun properties(key: String) = project.findProperty(key).toString()
+fun properties(key: String) = providers.gradleProperty(key)
+fun environment(key: String) = providers.environmentVariable(key)
 
 plugins {
     // Java support
@@ -14,10 +15,9 @@ plugins {
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
-sourceSets["main"].java.srcDirs("src/main/grammar")
 
-group = properties("pluginGroup")
-version = properties("pluginGroup")
+group = properties("pluginGroup").get()
+version = properties("pluginVersion").get()
 
 // Configure project's dependencies
 repositories {
@@ -26,17 +26,21 @@ repositories {
 
 // Set the JVM language level used to build the project. Use Java 11 for 2020.3+, and Java 17 for 2022.2+.
 kotlin {
-    jvmToolchain(17)
+    @Suppress("UnstableApiUsage")
+    jvmToolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+        vendor = JvmVendorSpec.JETBRAINS
+    }
 }
 
 // Configure Gradle IntelliJ Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    pluginName.set(properties("pluginName"))
-    version.set(properties("platformVersion"))
-    type.set(properties("platformType"))
+    pluginName = properties("pluginName")
+    version = properties("platformVersion")
+    type = properties("platformType")
 
     // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
-    plugins.set(properties("platformPlugins").split(',').map(String::trim).filter(String::isNotEmpty))
+    plugins = properties("platformPlugins").map { it.split(',').map(String::trim).filter(String::isNotEmpty) }
 }
 
 configurations {
@@ -57,36 +61,8 @@ dependencies {
 }
 
 sentry {
-    // Enables more detailed log output, e.g. for sentry-cli.
-    //
-    // Default is false.
-    debug.set(false)
-
-    // Generates a source bundle and uploads it to Sentry.
-    // This enables source context, allowing you to see your source
-    // code as part of your stack traces in Sentry.
-    //
-    // Default is disabled. To enable, see the source context guide.
-    includeSourceContext.set(false)
-
-    // Includes additional source directories into the source bundle.
-    // These directories are resolved relative to the project directory.
-    // additionalSourceDirsForSourceContext.set(setOf("src/main/java"))
-
-    // Disables or enables dependencies metadata reporting for Sentry.
-    // If enabled, the plugin will collect external dependencies and
-    // upload them to Sentry as part of events. If disabled, all the logic
-    // related to the dependencies metadata report will be excluded.
-    //
-    // Default is enabled.
-    includeDependenciesReport.set(true)
-
-    // Includes additional source directories into the source bundle.
-    // These directories are resolved relative to the project directory.
-    additionalSourceDirsForSourceContext.set(setOf("src/main/java", "network/src/main/java"))
-
-    org.set("sentry")
-    projectName.set("intellij-rapid")
+    org = "sentry"
+    projectName = "intellij-rapid"
 
     // Automatically adds Sentry dependencies to your project.
     autoInstallation {
@@ -96,7 +72,7 @@ sentry {
 
 tasks {
     wrapper {
-        gradleVersion = properties("gradleVersion")
+        gradleVersion = properties("gradleVersion").get()
     }
 
     test {
@@ -104,9 +80,9 @@ tasks {
     }
 
     patchPluginXml {
-        version.set(properties("pluginVersion"))
-        sinceBuild.set(properties("pluginSinceBuild"))
-        untilBuild.set(properties("pluginUntilBuild"))
+        version = properties("pluginVersion")
+        sinceBuild = properties("pluginSinceBuild")
+        untilBuild = properties("pluginUntilBuild")
     }
 
     // Configure UI tests plugin
@@ -119,17 +95,18 @@ tasks {
     }
 
     signPlugin {
-        certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
-        privateKey.set(System.getenv("PRIVATE_KEY"))
-        password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
+        certificateChain = System.getenv("CERTIFICATE_CHAIN")
+        privateKey = System.getenv("PRIVATE_KEY")
+        password = System.getenv("PRIVATE_KEY_PASSWORD")
     }
 
     publishPlugin {
         dependsOn("patchChangelog")
-        token.set(System.getenv("PUBLISH_TOKEN"))
+        token = System.getenv("PUBLISH_TOKEN")
         // pluginVersion is based on the SemVer (https://semver.org) and supports pre-release labels, like 2.1.7-alpha.3
         // Specify pre-release label to publish the plugin in a custom Release Channel automatically. Read more:
         // https://plugins.jetbrains.com/docs/intellij/deployment.html#specifying-a-release-channel
-        channels.set(listOf(properties("pluginVersion").split('-').getOrElse(1) { "default" }.split('.').first()))
+        channels =
+            properties("pluginVersion").map { listOf(it.split('-').getOrElse(1) { "default" }.split('.').first()) }
     }
 }
