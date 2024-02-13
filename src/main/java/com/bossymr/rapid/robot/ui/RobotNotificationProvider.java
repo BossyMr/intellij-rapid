@@ -42,7 +42,7 @@ public class RobotNotificationProvider implements EditorNotificationProvider, Du
         private ConnectRobotNotificationPanel(@NotNull FileEditor fileEditor) {
             super(fileEditor, LightColors.RED);
             setText(RapidBundle.message("editor.notification.no.robot"));
-            createActionLabel("Connect", "com.bossymr.rapid.robot.actions.ConnectAction");
+            createActionLabel("Connect", "com.bossymr.rapid.robot.actions.ConnectRobotAction");
         }
 
         @Override

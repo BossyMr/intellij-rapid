@@ -71,13 +71,13 @@ public class RobotToolWindow implements Disposable {
         EditSourceOnEnterKeyHandler.install(tree);
         TreeSpeedSearch.installOn(tree);
 
-        AnAction action = ActionManager.getInstance().getAction("com.bossymr.rapid.robot.actions.ConnectAction");
+        AnAction action = ActionManager.getInstance().getAction("com.bossymr.rapid.robot.actions.ConnectRobotAction");
 
         tree.getEmptyText().setText(RapidBundle.message("robot.tool.window.no.content"));
         tree.getEmptyText().appendLine("");
         tree.getEmptyText().appendText(RapidBundle.message("robot.tool.window.no.content.action"),
                 SimpleTextAttributes.LINK_PLAIN_ATTRIBUTES,
-                e -> ActionUtil.invokeAction(action, panel, "RobotToolWindow", null, null));
+                e -> ActionUtil.invokeAction(action, panel, ActionPlaces.UNKNOWN, null, null));
 
         RobotEventListener.connect(new RobotEventListener() {
 
@@ -156,9 +156,9 @@ public class RobotToolWindow implements Disposable {
                 List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
                 if (selectedNodes == null) return null;
                 return selectedNodes.stream()
-                        .map(AbstractTreeNode::getValue)
-                        .filter(Objects::nonNull)
-                        .toArray(Object[]::new);
+                                    .map(AbstractTreeNode::getValue)
+                                    .filter(Objects::nonNull)
+                                    .toArray(Object[]::new);
             }
             return null;
         }
@@ -173,11 +173,11 @@ public class RobotToolWindow implements Disposable {
             List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
             if (selectedNodes == null) return null;
             return selectedNodes.stream()
-                    .map(AbstractTreeNode::getValue)
-                    .filter(element -> element instanceof PsiElement)
-                    .map(element -> ((PsiElement) element))
-                    .filter(PsiElement::isValid)
-                    .toArray(PsiElement[]::new);
+                                .map(AbstractTreeNode::getValue)
+                                .filter(element -> element instanceof PsiElement)
+                                .map(element -> ((PsiElement) element))
+                                .filter(PsiElement::isValid)
+                                .toArray(PsiElement[]::new);
         }
 
 
@@ -193,7 +193,7 @@ public class RobotToolWindow implements Disposable {
             List<AbstractTreeNode<?>> selectedNodes = new ArrayList<>();
             for (TreePath treePath : treePaths) {
                 AbstractTreeNode<?> selectedNode = getSelectedNode(treePath);
-                if(selectedNode == null) {
+                if (selectedNode == null) {
                     continue;
                 }
                 selectedNodes.add(selectedNode);
