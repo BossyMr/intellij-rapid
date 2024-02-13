@@ -1,0 +1,93 @@
+RapidFile:Modules.mod
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')
+  PsiWhiteSpace('\n\n')
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    RapidAttributeList:(SYSMODULE, READONLY)
+      PsiElement(Rapid:()('(')
+      PsiElement(Rapid:SYSMODULE)('SYSMODULE')
+      PsiElement(Rapid:,)(',')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:READONLY)('READONLY')
+      PsiElement(Rapid:))(')')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')
+  PsiWhiteSpace('\n\n')
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    RapidAttributeList:(SYSMODULE READONLY)
+      PsiElement(Rapid:()('(')
+      PsiElement(Rapid:SYSMODULE)('SYSMODULE')
+      PsiWhiteSpace(' ')
+      PsiErrorElement:'READONLY' unexpected
+        PsiElement(Rapid:READONLY)('READONLY')
+      PsiElement(Rapid:))(')')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')
+  PsiWhiteSpace('\n\n')
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    RapidAttributeList:(SYSMODULE,, READONLY)
+      PsiElement(Rapid:()('(')
+      PsiElement(Rapid:SYSMODULE)('SYSMODULE')
+      PsiElement(Rapid:,)(',')
+      PsiErrorElement:Rapid:NOSTEPIN, Rapid:NOVIEW, Rapid:READONLY, Rapid:SYSMODULE or Rapid:VIEWONLY expected, got ','
+        <empty list>
+      PsiElement(Rapid:,)(',')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:READONLY)('READONLY')
+      PsiElement(Rapid:))(')')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')
+  PsiWhiteSpace('\n\n')
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    RapidAttributeList:(SYSMODULE,
+      PsiElement(Rapid:()('(')
+      PsiElement(Rapid:SYSMODULE)('SYSMODULE')
+      PsiElement(Rapid:,)(',')
+      PsiErrorElement:Rapid:NOSTEPIN, Rapid:NOVIEW, Rapid:READONLY, Rapid:SYSMODULE or Rapid:VIEWONLY expected, got 'ENDMODULE'
+        <empty list>
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')
+  PsiWhiteSpace('\n\n')
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    RapidAttributeList:(
+      PsiElement(Rapid:()('(')
+      PsiErrorElement:Rapid:NOSTEPIN, Rapid:NOVIEW, Rapid:READONLY, Rapid:SYSMODULE or Rapid:VIEWONLY expected, got 'MODULE'
+        <empty list>
+  PsiWhiteSpace('\n\n')
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    PsiErrorElement:<alias>, <field>, <record>, <routine>, Rapid:(, Rapid:<DDN>, Rapid:<RDN> or Rapid:<TDN> expected, got 'MODULE'
+      <empty list>
+  PsiWhiteSpace('\n\n')
+  PhysicalModule{name='null'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got 'MODULE'
+      <empty list>
+  PsiWhiteSpace(' ')
+  PhysicalModule{name='null'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got 'ENDMODULE'
+      <empty list>
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')

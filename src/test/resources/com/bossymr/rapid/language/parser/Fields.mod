@@ -1,0 +1,7 @@
+MODULE DUMMY
+
+    LOCAL VAR TYPE DUMMY{size} := "";
+
+    TASK PERS NO_TYPE;
+
+ENDMODULE

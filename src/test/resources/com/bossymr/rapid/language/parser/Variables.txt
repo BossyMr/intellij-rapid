@@ -1,0 +1,142 @@
+RapidFile:Variables.mod
+  PhysicalModule{name='DUMMY'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('DUMMY')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRoutine{name='routine1'}
+      PsiElement(Rapid:PROC)('PROC')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('routine1')
+      RapidParameterList:()
+        PsiElement(Rapid:()('(')
+        PsiElement(Rapid:))(')')
+      PsiWhiteSpace('\n        ')
+      RapidStatementList
+        PhysicalField{name='value1'}
+          PsiElement(Rapid:VAR)('VAR')
+          PsiWhiteSpace(' ')
+          RapidTypeElement:num
+            RapidReferenceExpressionImpl{text=num}
+              PsiElement(Rapid:IDENTIFIER)('num')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid:IDENTIFIER)('value1')
+          PsiElement(Rapid:;)(';')
+        PsiWhiteSpace('\n        ')
+        PhysicalField{name='value2'}
+          PsiElement(Rapid:VAR)('VAR')
+          PsiWhiteSpace(' ')
+          RapidTypeElement:num
+            RapidReferenceExpressionImpl{text=num}
+              PsiElement(Rapid:IDENTIFIER)('num')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid:IDENTIFIER)('value2')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid::=)(':=')
+          PsiWhiteSpace(' ')
+          RapidBinaryExpression:value1 * 2
+            RapidReferenceExpressionImpl{text=value1}
+              PsiElement(Rapid:IDENTIFIER)('value1')
+            PsiWhiteSpace(' ')
+            PsiElement(Rapid:*)('*')
+            PsiWhiteSpace(' ')
+            RapidLiteralExpression:2
+              PsiElement(Rapid:INTEGER_LITERAL)('2')
+          PsiElement(Rapid:;)(';')
+        PsiWhiteSpace('\n        ')
+        PhysicalField{name='value3'}
+          PsiElement(Rapid:CONST)('CONST')
+          PsiWhiteSpace(' ')
+          RapidTypeElement:num
+            RapidReferenceExpressionImpl{text=num}
+              PsiElement(Rapid:IDENTIFIER)('num')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid:IDENTIFIER)('value3')
+          PsiElement(Rapid:;)(';')
+        PsiWhiteSpace('\n        ')
+        PhysicalField{name='value4'}
+          PsiElement(Rapid:PERS)('PERS')
+          PsiWhiteSpace(' ')
+          RapidTypeElement:bool
+            RapidReferenceExpressionImpl{text=bool}
+              PsiElement(Rapid:IDENTIFIER)('bool')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid:IDENTIFIER)('value4')
+          PsiElement(Rapid:;)(';')
+        PsiWhiteSpace('\n        ')
+        RapidAssignmentStatement:value4 := value3 = value2;
+          RapidReferenceExpressionImpl{text=value4}
+            PsiElement(Rapid:IDENTIFIER)('value4')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid::=)(':=')
+          PsiWhiteSpace(' ')
+          RapidBinaryExpression:value3 = value2
+            RapidReferenceExpressionImpl{text=value3}
+              PsiElement(Rapid:IDENTIFIER)('value3')
+            PsiWhiteSpace(' ')
+            PsiElement(Rapid:=)('=')
+            PsiWhiteSpace(' ')
+            RapidReferenceExpressionImpl{text=value2}
+              PsiElement(Rapid:IDENTIFIER)('value2')
+          PsiElement(Rapid:;)(';')
+        PsiWhiteSpace('\n        ')
+        RapidAssignmentStatement:value3 := 1 * 2;
+          RapidReferenceExpressionImpl{text=value3}
+            PsiElement(Rapid:IDENTIFIER)('value3')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid::=)(':=')
+          PsiWhiteSpace(' ')
+          RapidBinaryExpression:1 * 2
+            RapidLiteralExpression:1
+              PsiElement(Rapid:INTEGER_LITERAL)('1')
+            PsiWhiteSpace(' ')
+            PsiElement(Rapid:*)('*')
+            PsiWhiteSpace(' ')
+            RapidLiteralExpression:2
+              PsiElement(Rapid:INTEGER_LITERAL)('2')
+          PsiElement(Rapid:;)(';')
+      PsiWhiteSpace('\n    ')
+      PsiElement(Rapid:ENDPROC)('ENDPROC')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRoutine{name='routine2'}
+      PsiElement(Rapid:PROC)('PROC')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('routine2')
+      RapidParameterList:()
+        PsiElement(Rapid:()('(')
+        PsiElement(Rapid:))(')')
+      PsiWhiteSpace('\n        ')
+      RapidStatementList
+        PhysicalField{name='null'}
+          PsiElement(Rapid:VAR)('VAR')
+          PsiWhiteSpace(' ')
+          RapidTypeElement:value1
+            RapidReferenceExpressionImpl{text=value1}
+              PsiElement(Rapid:IDENTIFIER)('value1')
+          PsiErrorElement:Rapid:<ID> or Rapid:IDENTIFIER expected, got ';'
+            <empty list>
+          PsiElement(Rapid:;)(';')
+        PsiWhiteSpace('\n        ')
+        RapidProcedureCallStatement:num value2;
+          RapidReferenceExpressionImpl{text=num}
+            PsiElement(Rapid:IDENTIFIER)('num')
+          PsiWhiteSpace(' ')
+          RapidArgumentList:value2
+            RapidRequiredArgument:null
+              RapidReferenceExpressionImpl{text=value2}
+                PsiElement(Rapid:IDENTIFIER)('value2')
+          PsiElement(Rapid:;)(';')
+        PsiWhiteSpace('\n        ')
+        PhysicalField{name='value3'}
+          PsiElement(Rapid:CONST)('CONST')
+          PsiWhiteSpace(' ')
+          RapidTypeElement:num
+            RapidReferenceExpressionImpl{text=num}
+              PsiElement(Rapid:IDENTIFIER)('num')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid:IDENTIFIER)('value3')
+          PsiElement(Rapid:;)(';')
+      PsiWhiteSpace('\n    ')
+      PsiElement(Rapid:ENDPROC)('ENDPROC')
+    PsiWhiteSpace('\n\n')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')

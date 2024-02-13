@@ -1,0 +1,277 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>com.bossymr.intellij-rapid</id>
+    <name>Rapid</name>
+    <vendor>BossyMr</vendor>
+
+    <description><![CDATA[
+    Adds language support for the RAPID programming language to IntelliJ IDEA.
+
+    <ul>
+        <li><i>Code Insight:</i> Adds syntax highlighting and more advanced context-based highlighting. Highlights troublesome code
+        together with an understandable error message and, for some errors, presents possible solutions which it can
+        automatically perform.</li>
+        <li><i>Editor Support:</i> Provides context-sensitive code completion. As well as a customizable code formatter, with a
+        settings menu similar to that of other languages supported by IntelliJ IDEA.</li>
+        <li><i>Refactoring:</i> Supports refactorings to improve productivity, such as a refactoring to safely rename elements and
+        all of its associated usages.</li>
+        <li><i>Data Flow Analysis:</i> Highlights unreachable code or expressions which might otherwise produce an undesirable
+        result, such as indexes which are out of bounds or variables which might not be present. The plugin builds a data flow
+        graph for the program.</li>
+        <li><i>Robot Integration:</i> Integrates with a local or remote robot. Automatically fetches builtin elements from the remote
+        robot as well as existing modules on the robot. Supports uploading and running a local program on the robot from
+        IntelliJ. Also supports debugging programs using breakpoints and variable values.</li>
+    </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+
+        <!-- Icons -->
+
+        <iconMapper mappingFile="RapidIconMappings.json"/>
+
+        <iconProvider implementation="com.bossymr.rapid.language.symbol.RapidIconProvider"/>
+
+        <!-- File Type -->
+
+        <fileType name="RAPID" language="RAPID" extensions="mod"
+                  implementationClass="com.bossymr.rapid.language.RapidFileType" fieldName="INSTANCE"/>
+
+        <!-- Language -->
+
+        <lang.parserDefinition language="RAPID"
+                               implementationClass="com.bossymr.rapid.language.parser.RapidParserDefinition"/>
+
+        <!-- Syntax Highlighting -->
+
+        <annotator language="RAPID"
+                   implementationClass="com.bossymr.rapid.ide.editor.highlight.RapidHighlighterAnnotator"/>
+
+        <colorSettingsPage implementation="com.bossymr.rapid.ide.editor.highlight.RapidColorSettingsPage"/>
+
+        <lang.syntaxHighlighterFactory language="RAPID"
+                                       implementationClass="com.bossymr.rapid.ide.editor.highlight.RapidHighlighterFactory"/>
+
+        <!-- Inspection -->
+
+        <annotator language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.insight.RapidAnnotator"/>
+
+        <!-- Navigation -->
+
+        <navbar implementation="com.bossymr.rapid.ide.RapidNavigationBar"/>
+
+        <lang.psiStructureViewFactory language="RAPID"
+                                      implementationClass="com.bossymr.rapid.ide.structure.RapidStructureViewBuilderFactory"/>
+
+        <gotoSymbolContributor implementation="com.bossymr.rapid.ide.navigation.RapidSymbolNavigationContributor"/>
+
+        <gotoClassContributor implementation="com.bossymr.rapid.ide.navigation.RapidClassNavigationContributor"/>
+
+        <lang.findUsagesProvider language="RAPID" implementationClass="com.bossymr.rapid.ide.RapidFindUsagesProvider"/>
+
+        <!-- Hierarchy -->
+
+        <callHierarchyProvider language="RAPID"
+                               implementationClass="com.bossymr.rapid.ide.hierarchy.RapidCallHierarchyProvider"/>
+
+        <!-- Refactoring -->
+
+        <lang.surroundDescriptor language="RAPID"
+                                 implementationClass="com.bossymr.rapid.ide.editor.insight.surrounder.RapidStatementsSurroundDescriptor"/>
+
+        <lang.unwrapDescriptor language="RAPID"
+                               implementationClass="com.bossymr.rapid.ide.editor.insight.unwrap.RapidUnwrapDescriptor"/>
+
+        <lang.refactoringSupport language="RAPID"
+                                 implementationClass="com.bossymr.rapid.ide.editor.refactoring.RapidRefactoringSupportProvider"/>
+
+        <lang.namesValidator language="RAPID"
+                             implementationClass="com.bossymr.rapid.ide.editor.refactoring.RapidNamesValidator"/>
+
+        <!-- Completion  -->
+
+        <completion.contributor language="RAPID"
+                                implementationClass="com.bossymr.rapid.ide.editor.completion.RapidKeywordCompletionContributor"/>
+
+        <completion.contributor language="RAPID"
+                                implementationClass="com.bossymr.rapid.ide.editor.completion.RapidCompletionContributor"/>
+
+        <!-- Formatting -->
+
+        <langCodeStyleSettingsProvider
+                implementation="com.bossymr.rapid.ide.editor.formatting.RapidLanguageCodeStyleSettingsProvider"/>
+
+        <lang.formatter language="RAPID"
+                        implementationClass="com.bossymr.rapid.ide.editor.formatting.RapidFormattingModelBuilder"/>
+
+        <!-- Miscellaneous -->
+
+        <lang.commenter language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.RapidCommenter"/>
+
+        <lang.braceMatcher language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.RapidBraceMatcher"/>
+
+        <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.RapidQuoteHandler"/>
+
+        <!-- Execution -->
+
+        <configurationType implementation="com.bossymr.rapid.ide.execution.configurations.RapidConfigurationType"/>
+
+        <!-- Debugging -->
+
+        <programRunner implementation="com.bossymr.rapid.ide.execution.debugger.RapidDebugRunner"/>
+
+        <xdebugger.settings implementation="com.bossymr.rapid.ide.execution.debugger.settings.RapidDebuggerSettings"/>
+
+        <xdebugger.breakpointType
+                implementation="com.bossymr.rapid.ide.execution.debugger.breakpoints.RapidLineBreakpointType"/>
+
+        <!-- Error Handling -->
+
+        <errorHandler implementation="com.bossymr.rapid.ide.RapidErrorReportSubmitter"/>
+
+        <!-- Documentation -->
+
+        <platform.backend.documentation.linkHandler
+                implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
+
+        <platform.backend.documentation.targetProvider
+                implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
+
+        <!-- Search -->
+
+        <searcher forClass="com.intellij.find.usages.api.UsageSearchParameters"
+                  implementationClass="com.bossymr.rapid.ide.search.RapidSymbolUsageSearcher"/>
+        <searcher forClass="com.intellij.refactoring.rename.api.RenameUsageSearchParameters"
+                  implementationClass="com.bossymr.rapid.ide.editor.refactoring.RapidRenameUsageSearcher"/>
+
+        <!-- PsiElement  -->
+
+        <stubElementTypeHolder externalIdPrefix="rapid." class="com.bossymr.rapid.language.psi.RapidStubElementTypes"/>
+
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidAliasIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidFieldIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidRecordIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidRoutineIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidSymbolIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidModuleIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidFunctionIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidTrapIndex"/>
+        <stubIndex implementation="com.bossymr.rapid.language.psi.stubs.index.RapidProcedureIndex"/>
+
+        <patterns.patternClass className="com.bossymr.rapid.language.patterns.RapidPatterns" alias="rapid"/>
+
+        <!-- Robot -->
+
+        <applicationService serviceInterface="com.bossymr.rapid.robot.RobotService"
+                            serviceImplementation="com.bossymr.rapid.robot.impl.RobotServiceImpl"/>
+
+        <projectService serviceImplementation="com.bossymr.rapid.robot.ui.RobotToolWindowService"/>
+
+        <toolWindow id="Robot" anchor="right" icon="com.bossymr.rapid.RapidIcons.ROBOT_TOOL_WINDOW"
+                    factoryClass="com.bossymr.rapid.robot.ui.RobotToolWindowFactory"/>
+
+        <editorNotificationProvider implementation="com.bossymr.rapid.robot.ui.RobotNotificationProvider"/>
+
+        <notificationGroup displayType="STICKY_BALLOON" id="Robot connection errors" bundle="messages.RapidBundle"
+                           key="notification.group.robot.connect.error"/>
+
+        <notificationGroup displayType="BALLOON" id="Data flow diagrams" bundle="messages.RapidBundle"
+                           key="notification.group.data.flow.export"/>
+
+        <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
+
+        <!-- Inspections -->
+
+        <localInspection language="RAPID" enabledByDefault="true" level="WARNING"
+                         groupPath="Rapid" groupKey="inspection.group.declaration.redundancy"
+                         bundle="messages.RapidBundle" key="inspection.name.unused.declaration"
+                         shortName="RapidUnusedDeclaration"
+                         implementationClass="com.bossymr.rapid.ide.editor.insight.inspection.UnusedDeclarationInspection"/>
+        <localInspection language="RAPID" enabledByDefault="true" level="WARNING"
+                         groupPath="Rapid" groupKey="inspection.name.probable.bugs"
+                         bundle="messages.RapidBundle" key="inspection.name.constant.expression"
+                         shortName="RapidConstantValue"
+                         implementationClass="com.bossymr.rapid.ide.editor.insight.inspection.flow.ConstantValueInspection"/>
+        <localInspection language="RAPID" enabledByDefault="true" level="WARNING"
+                         groupPath="Rapid" groupKey="inspection.name.probable.bugs"
+                         bundle="messages.RapidBundle" key="inspection.name.unreachable.statement"
+                         shortName="RapidUnreachableCode"
+                         implementationClass="com.bossymr.rapid.ide.editor.insight.inspection.flow.UnreachableStatementInspection"/>
+        <localInspection language="RAPID" enabledByDefault="true" level="WARNING"
+                         groupPath="Rapid" groupKey="inspection.name.probable.bugs"
+                         bundle="messages.RapidBundle" key="inspection.name.data.flow.problems"
+                         implementationClass="com.bossymr.rapid.ide.editor.insight.inspection.flow.DataFlowProblemInspection"/>
+    </extensions>
+
+    <actions>
+        <group id="Internal.Rapid" text="Rapid" popup="true" internal="true">
+            <add-to-group group-id="Internal"/>
+            <action id="ViewControlFlow" class="com.bossymr.rapid.language.flow.debug.ViewFlowAction"
+                    text="View Control Flow" internal="true"/>
+            <action id="ViewDataFlow" class="com.bossymr.rapid.language.flow.debug.DataFlowGraphService"
+                    text="View Data Flow" internal="true"/>
+        </group>
+
+        <group id="NewRapid">
+            <action id="NewRapidFile" class="com.bossymr.rapid.ide.actions.RapidCreateFileAction"/>
+            <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>
+        </group>
+
+        <action id="com.bossymr.rapid.robot.actions.ConnectRobotAction" icon="AllIcons.General.Add"
+                class="com.bossymr.rapid.robot.actions.ConnectRobotAction" text="Connect..."/>
+
+        <action id="com.bossymr.rapid.robot.actions.RefreshAction" icon="AllIcons.Actions.Refresh"
+                class="com.bossymr.rapid.robot.actions.RefreshAction" text="Refresh">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl F5"/>
+        </action>
+
+        <action id="com.bossymr.rapid.robot.actions.DisconnectAction" icon="AllIcons.Actions.Suspend"
+                class="com.bossymr.rapid.robot.actions.DisconnectAction" text="Disconnect">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl F2"/>
+        </action>
+
+        <action id="com.bossymr.rapid.robot.actions.DeleteRobotAction"
+                class="com.bossymr.rapid.robot.actions.DeleteRobotAction"
+                text="Delete">
+            <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
+        </action>
+
+        <action id="com.bossymr.rapid.robot.actions.DeleteModuleAction"
+                class="com.bossymr.rapid.robot.actions.DeleteModuleAction"
+                text="Delete">
+            <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
+        </action>
+
+        <!-- Action to download program from Robot -->
+        <action id="com.bossymr.rapid.robot.actions.DownloadAction" icon="AllIcons.Actions.CheckOut"
+                class="com.bossymr.rapid.robot.actions.DownloadAction" text="Download"/>
+
+        <!-- Action to upload program to Robot -->
+        <action id="com.bossymr.rapid.robot.actions.UploadAction" icon="AllIcons.Vcs.Push"
+                class="com.bossymr.rapid.robot.actions.UploadAction" text="Upload"/>
+
+        <!-- Context Menu (right-click) in Robot Tool Window -->
+        <group id="RobotContextMenu">
+            <reference id="com.bossymr.rapid.robot.actions.ConnectRobotAction"/>
+            <separator/>
+            <reference id="$Cut"/>
+            <reference id="$Copy"/>
+            <reference id="$Paste"/>
+            <separator/>
+            <reference id="com.bossymr.rapid.robot.actions.DeleteRobotAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.DeleteModuleAction"/>
+        </group>
+
+        <group id="RobotToolWindow">
+            <reference id="com.bossymr.rapid.robot.actions.ConnectRobotAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.RefreshAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.DisconnectAction"/>
+            <separator/>
+            <reference id="com.bossymr.rapid.robot.actions.DownloadAction"/>
+            <reference id="com.bossymr.rapid.robot.actions.UploadAction"/>
+        </group>
+    </actions>
+</idea-plugin>
