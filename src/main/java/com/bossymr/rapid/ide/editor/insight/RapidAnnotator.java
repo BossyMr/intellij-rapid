@@ -91,24 +91,24 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
     @Override
     public void visitRoutine(@NotNull PhysicalRoutine routine) {
         PsiElement nameIdentifier = routine.getNameIdentifier();
-        if(nameIdentifier != null) {
+        if (nameIdentifier != null) {
             RoutineType routineType = routine.getRoutineType();
-            if(routine.getParameterList() == null && routineType != RoutineType.TRAP) {
+            if (routine.getParameterList() == null && routineType != RoutineType.TRAP) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.missing.parameter.list"))
                                 .range(nameIdentifier)
                                 .create();
             }
-            if(routine.getParameterList() != null && routineType == RoutineType.TRAP) {
+            if (routine.getParameterList() != null && routineType == RoutineType.TRAP) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.unexpected.parameter.list"))
                                 .range(nameIdentifier)
                                 .create();
             }
-            if(routine.getTypeElement() == null && routineType == RoutineType.FUNCTION) {
+            if (routine.getTypeElement() == null && routineType == RoutineType.FUNCTION) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.missing.return.type"))
                                 .range(nameIdentifier)
                                 .create();
             }
-            if(routine.getTypeElement() != null && routineType != RoutineType.FUNCTION) {
+            if (routine.getTypeElement() != null && routineType != RoutineType.FUNCTION) {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.return.type.unexpected"))
                                 .range(nameIdentifier)
                                 .create();
@@ -601,6 +601,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.return.invalid", routine.getRoutineType().getPresentableText()))
                                 .range(expression)
                                 .withFix(new RemoveElementFix(expression, RapidBundle.message("quick.fix.family.remove.return.value")))
+                                .withFix(new ChangeRoutineTypeFix(routine, RoutineType.FUNCTION))
                                 .create();
             }
         }
@@ -748,11 +749,32 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                                                     .range(expression);
         if (expression instanceof RapidReferenceExpression referenceExpression) {
             RapidSymbol symbol = referenceExpression.getSymbol();
+            if (symbol instanceof PhysicalVariable variable && !(variable instanceof PhysicalTargetVariable)) {
+                builder = builder.withFix(new ChangeVariableTypeFix(variable, requiredType));
+            }
+        }
+        if (expression instanceof RapidFunctionCallExpression callExpression) {
+            RapidSymbol symbol = callExpression.getReferenceExpression().getSymbol();
             if (symbol instanceof PhysicalRoutine routine) {
                 builder = builder.withFix(new ChangeReturnTypeFix(routine, requiredType));
             }
-            if (symbol instanceof PhysicalVariable variable && !(variable instanceof PhysicalTargetVariable)) {
-                builder = builder.withFix(new ChangeVariableTypeFix(variable, requiredType));
+        }
+        PsiElement parent = expression.getParent();
+        if (parent instanceof RapidReturnStatement statement) {
+            PhysicalRoutine routine = PhysicalRoutine.getRoutine(statement);
+            if (routine != null) {
+                builder = builder.withFix(new ChangeReturnTypeFix(routine, providedType));
+            }
+        }
+        if (parent instanceof RapidAssignmentStatement statement) {
+            if (statement.getLeft() instanceof RapidReferenceExpression referenceExpression) {
+                RapidSymbol symbol = referenceExpression.getSymbol();
+                if (symbol instanceof PhysicalRoutine routine) {
+                    builder = builder.withFix(new ChangeReturnTypeFix(routine, providedType));
+                }
+                if (symbol instanceof PhysicalVariable field) {
+                    builder = builder.withFix(new ChangeVariableTypeFix(field, providedType));
+                }
             }
         }
         builder.create();
