@@ -5,7 +5,9 @@ import com.bossymr.rapid.language.psi.impl.fragment.RapidExpressionCodeFragmentI
 import com.bossymr.rapid.language.symbol.ModuleType;
 import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
+import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.physical.*;
+import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
@@ -91,6 +93,19 @@ public final class RapidElementFactory {
         PhysicalModule module = file.getModules().get(0);
         PhysicalRoutine symbol = ((PhysicalRoutine) module.getSymbols().get(0));
         return Objects.requireNonNull(symbol.getTypeElement());
+    }
+
+    public @NotNull RapidParameterList createParameterList() {
+        PhysicalRoutine routine = createRoutine(RoutineType.PROCEDURE, null, "DUMMY");
+        return Objects.requireNonNull(routine.getParameterList());
+    }
+
+    public @NotNull PhysicalRoutine createRoutine(@NotNull RoutineType routineType, @Nullable RapidType type, @NotNull String name) {
+        String typeText = type != null ? " " + type.getText() : "";
+        String parameterList = routineType != RoutineType.TRAP ? "()" : "";
+        RapidFile file = createDummyFile("MODULE DUMMY " + routineType.getText() + typeText + " " + name + parameterList + " END" + routineType.getText());
+        PhysicalModule module = file.getModules().get(0);
+        return (PhysicalRoutine) module.getSymbols().get(0);
     }
 
     public @NotNull RapidArray createArray(@NotNull List<RapidExpression> expressions) {

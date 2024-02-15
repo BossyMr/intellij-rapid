@@ -1,15 +1,20 @@
 package com.bossymr.rapid.ide.editor.insight.fix;
 
 import com.bossymr.rapid.RapidBundle;
+import com.bossymr.rapid.language.psi.RapidElementFactory;
+import com.bossymr.rapid.language.psi.RapidParameterList;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInspection.util.IntentionFamilyName;
-import com.intellij.lang.ASTFactory;
 import com.intellij.lang.ASTNode;
 import com.intellij.modcommand.ActionContext;
 import com.intellij.modcommand.ModPsiUpdater;
 import com.intellij.modcommand.Presentation;
 import com.intellij.modcommand.PsiUpdateModCommandAction;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiManager;
+import com.intellij.psi.impl.source.tree.Factory;
+import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,13 +45,33 @@ public class ChangeRoutineTypeFix extends PsiUpdateModCommandAction<PhysicalRout
 
     @Override
     protected void invoke(@NotNull ActionContext context, @NotNull PhysicalRoutine element, @NotNull ModPsiUpdater updater) {
-        RoutineType currentRoutineType = element.getRoutineType();
         ASTNode node = element.getNode();
-        ASTNode head = node.findChildByType(currentRoutineType.getElementType());
-        ASTNode tail = node.findChildByType(currentRoutineType.getTailType());
+        RoutineType currentType = element.getRoutineType();
+        ASTNode head = node.findChildByType(currentType.getElementType());
         Objects.requireNonNull(head);
+        ASTNode tail = node.findChildByType(currentType.getTailType());
         Objects.requireNonNull(tail);
-        node.replaceChild(head, ASTFactory.leaf(routineType.getElementType(), routineType.getText()));
-        node.replaceChild(tail, ASTFactory.leaf(routineType.getTailType(), "END" + routineType.getText()));
+        PsiManager manager = element.getManager();
+        node.replaceChild(head, createLeaf(routineType.getElementType(), routineType.getText(), manager));
+        node.replaceChild(tail, createLeaf(routineType.getTailType(), "END" + routineType.getText(), manager));
+        RapidParameterList parameterList = element.getParameterList();
+        if (routineType == RoutineType.TRAP) {
+            if (parameterList != null) {
+                parameterList.delete();
+            }
+        }
+        if (routineType != RoutineType.TRAP) {
+            if (parameterList == null) {
+                PsiElement identifier = element.getNameIdentifier();
+                if (identifier != null) {
+                    RapidParameterList result = RapidElementFactory.getInstance(context.project()).createParameterList();
+                    element.addAfter(identifier, result);
+                }
+            }
+        }
+    }
+
+    private @NotNull ASTNode createLeaf(@NotNull IElementType elementType, @NotNull String text, @NotNull PsiManager manager) {
+        return Factory.createSingleLeafElement(elementType, text, null, manager);
     }
 }
