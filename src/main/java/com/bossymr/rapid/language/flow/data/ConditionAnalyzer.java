@@ -29,6 +29,22 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
     private final @NotNull Deque<Expression> stack = new ArrayDeque<>();
     private final @NotNull List<BoolExpr> queue;
 
+    static {
+        System.setProperty("z3.skipLibraryLoad", "true");
+        try {
+            System.loadLibrary("z3");
+            System.loadLibrary("z3java");
+        } catch (UnsatisfiedLinkError e) {
+            try {
+                System.loadLibrary("libz3");
+                System.loadLibrary("libz3java");
+            } catch (UnsatisfiedLinkError ex) {
+                e.addSuppressed(ex);
+                throw e;
+            }
+        }
+    }
+
     private ConditionAnalyzer(@NotNull Context context, @NotNull List<BoolExpr> queue) {
         this.context = context;
         this.queue = queue;
