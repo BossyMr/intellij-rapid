@@ -880,9 +880,11 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
             List<PhysicalModule> modules = file.getModules();
             if (modules.size() > 1) {
                 PsiDirectory containingDirectory = containingFile.getContainingDirectory();
-                PsiFile correctFile = containingDirectory.findFile(name + RapidFileType.DEFAULT_DOT_EXTENSION);
-                if (correctFile == null) {
-                    annotationBuilder = annotationBuilder.withFix(new MoveModuleToSeparateFileFix(module));
+                if (containingDirectory != null) {
+                    PsiFile correctFile = containingDirectory.findFile(name + RapidFileType.DEFAULT_DOT_EXTENSION);
+                    if (correctFile == null) {
+                        annotationBuilder = annotationBuilder.withFix(new MoveModuleToSeparateFileFix(module));
+                    }
                 }
             }
             boolean canRenameFile = modules.stream().noneMatch(otherModule -> fileName.equals(otherModule.getName()));
