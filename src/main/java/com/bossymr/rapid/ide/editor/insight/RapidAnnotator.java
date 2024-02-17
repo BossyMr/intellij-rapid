@@ -16,6 +16,8 @@ import com.intellij.lang.annotation.AnnotationBuilder;
 import com.intellij.lang.annotation.AnnotationHolder;
 import com.intellij.lang.annotation.Annotator;
 import com.intellij.lang.annotation.HighlightSeverity;
+import com.intellij.lang.injection.InjectedLanguageManager;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -870,7 +872,15 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
             return;
         }
         PsiFile containingFile = module.getContainingFile();
-        String fileName = containingFile.getViewProvider().getVirtualFile().getNameWithoutExtension();
+        InjectedLanguageManager manager = InjectedLanguageManager.getInstance(module.getProject());
+        if (manager.isInjectedFragment(containingFile)) {
+            return;
+        }
+        VirtualFile virtualFile = containingFile.getVirtualFile();
+        if (virtualFile == null) {
+            return;
+        }
+        String fileName = virtualFile.getNameWithoutExtension();
         if (name.equals(fileName)) {
             return;
         }
