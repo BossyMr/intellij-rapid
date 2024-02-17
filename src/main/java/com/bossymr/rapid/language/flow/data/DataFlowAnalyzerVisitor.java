@@ -28,6 +28,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     @Override
     public @NotNull List<DataFlowState> visitAssignmentInstruction(@NotNull AssignmentInstruction instruction) {
         DataFlowState previousCycle = DataFlowAnalyzer.getPreviousCycle(state);
+        Expression expression = instruction.getExpression();
         if (previousCycle != null) {
             /*
              * If this block is in a loop (i.e. a state with this instruction is a predecessor to this state) and
@@ -36,9 +37,10 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
              * assigned in the expression. For example, x2 := x1 + 1 or x3 := x1 + 1 (if x1 is the latest snapshot
              * for x at that point).
              */
-            state.assign(instruction.getVariable(), null);
+            Snapshot snapshot = Snapshot.createSnapshot(expression.getType());
+            state.assign(instruction.getVariable(), new SnapshotExpression(snapshot, expression));
         } else {
-            state.assign(instruction.getVariable(), instruction.getExpression());
+            state.assign(instruction.getVariable(), expression);
         }
         return getSuccessors(instruction);
     }

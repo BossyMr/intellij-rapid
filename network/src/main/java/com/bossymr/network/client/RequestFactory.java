@@ -29,13 +29,9 @@ public class RequestFactory {
     }
 
     public @Nullable Object createQuery(@NotNull Class<?> type, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
-        if (method.getReturnType().isAnnotationPresent(Service.class)) {
-            Class<?> returnType = method.getReturnType();
-            if (returnType.isAnnotationPresent(Service.class)) {
-                return manager.createService((returnType));
-            } else {
-                throw new ProxyException();
-            }
+        Class<?> returnType = method.getReturnType();
+        if (returnType.isAnnotationPresent(Service.class)) {
+            return manager.createService((returnType));
         }
         Service service = type.getAnnotation(Service.class);
         String path = service != null ? service.value() : "";
@@ -88,36 +84,36 @@ public class RequestFactory {
         MultiMap<String, String> map = collect(method, args, annotation -> annotation instanceof Path argument ? argument.value() : null);
         List<String> query = new ArrayList<>();
         String replaced = Pattern.compile("\\{([^}]*)}").matcher(path)
-                .replaceAll(result -> {
-                    String value = result.group().substring(1, result.group().length() - 1);
-                    if (value.startsWith("@")) {
-                        if (!(proxy instanceof EntityProxy model)) {
-                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a link");
-                        }
-                        URI link = model.getReference(value.substring(1));
-                        if (link == null) {
-                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
-                        }
-                        if (link.getQuery() != null) {
-                            query.add(link.getQuery());
-                        }
-                        return link.getPath();
-                    }
-                    if (value.startsWith("#")) {
-                        if (!(proxy instanceof EntityProxy model)) {
-                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a field");
-                        }
-                        String field = model.getProperty(value.substring(1));
-                        if (field == null) {
-                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing field '" + value + "'");
-                        }
-                        return field;
-                    }
-                    if (map.containsKey(value)) {
-                        return map.get(value);
-                    }
-                    throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' does not provide value for '" + value + "'");
-                });
+                                 .replaceAll(result -> {
+                                     String value = result.group().substring(1, result.group().length() - 1);
+                                     if (value.startsWith("@")) {
+                                         if (!(proxy instanceof EntityProxy model)) {
+                                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a link");
+                                         }
+                                         URI link = model.getReference(value.substring(1));
+                                         if (link == null) {
+                                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
+                                         }
+                                         if (link.getQuery() != null) {
+                                             query.add(link.getQuery());
+                                         }
+                                         return link.getPath();
+                                     }
+                                     if (value.startsWith("#")) {
+                                         if (!(proxy instanceof EntityProxy model)) {
+                                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a field");
+                                         }
+                                         String field = model.getProperty(value.substring(1));
+                                         if (field == null) {
+                                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing field '" + value + "'");
+                                         }
+                                         return field;
+                                     }
+                                     if (map.containsKey(value)) {
+                                         return map.get(value);
+                                     }
+                                     throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' does not provide value for '" + value + "'");
+                                 });
         if (query.isEmpty()) {
             return replaced;
         }

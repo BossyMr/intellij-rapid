@@ -22,11 +22,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class ControlFlowModuleBuilder implements RapidModuleBuilder {
 
     private final @NotNull String moduleName;
+    private final @NotNull AtomicInteger counter = new AtomicInteger();
     private final @NotNull Map<BlockDescriptor, Block> controlFlow;
 
     public ControlFlowModuleBuilder(@NotNull String name, @NotNull Map<BlockDescriptor, Block> controlFlow) {
@@ -38,7 +40,7 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
     public @NotNull RapidModuleBuilder withField(@NotNull String name, @NotNull FieldType fieldType, @NotNull RapidType valueType, @NotNull Consumer<RapidCodeBlockBuilder> consumer) {
         BlockDescriptor blockDescriptor = new BlockDescriptor(moduleName, name);
         VirtualField field = new VirtualField(moduleName, name, fieldType, valueType, true);
-        Block.FieldBlock block = new Block.FieldBlock(field, moduleName);
+        Block.FieldBlock block = new Block.FieldBlock(field, moduleName, name);
         ControlFlowCodeBlockBuilder builder = new ControlFlowCodeBlockBuilder(block, new ControlFlowBlockBuilder(block));
         consumer.accept(builder);
         // If the initializer does not return a value, return an error expression.
@@ -50,12 +52,9 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
 
     @Override
     public @NotNull RapidModuleBuilder withField(@NotNull RapidField field) {
-        String name = field.getName();
-        if (name == null) {
-            return this;
-        }
+        String name = Objects.requireNonNullElseGet(field.getName(), () -> "<unknown>:" + counter.getAndIncrement());
         BlockDescriptor blockDescriptor = new BlockDescriptor(moduleName, name);
-        Block.FieldBlock block = new Block.FieldBlock(field, moduleName);
+        Block.FieldBlock block = new Block.FieldBlock(field, moduleName, name);
         ControlFlowCodeBlockBuilder builder = new ControlFlowCodeBlockBuilder(block, new ControlFlowBlockBuilder(block));
         builder.returnValue(getInitializer(builder, field));
         controlFlow.put(blockDescriptor, block);
@@ -98,7 +97,7 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
         BlockDescriptor blockDescriptor = new BlockDescriptor(moduleName, name);
         List<VirtualParameterGroup> parameterGroups = routineType != RoutineType.TRAP ? new ArrayList<>() : null;
         VirtualRoutine routine = new VirtualRoutine(moduleName, name, routineType, getRoutineType(routineType, returnType), parameterGroups);
-        Block.FunctionBlock block = new Block.FunctionBlock(routine, moduleName);
+        Block.FunctionBlock block = new Block.FunctionBlock(routine, moduleName, name);
         ControlFlowRoutineBuilder builder = new ControlFlowRoutineBuilder(block, routine);
         consumer.accept(builder);
         controlFlow.put(blockDescriptor, block);
@@ -107,12 +106,9 @@ public class ControlFlowModuleBuilder implements RapidModuleBuilder {
 
     @Override
     public @NotNull RapidModuleBuilder withRoutine(@NotNull RapidRoutine routine) {
-        String name = routine.getName();
-        if (name == null) {
-            return this;
-        }
+        String name = Objects.requireNonNullElseGet(routine.getName(), () -> "<unknown>:" + counter.getAndIncrement());
         BlockDescriptor blockDescriptor = new BlockDescriptor(moduleName, name);
-        Block.FunctionBlock block = new Block.FunctionBlock(routine, moduleName);
+        Block.FunctionBlock block = new Block.FunctionBlock(routine, moduleName, name);
         Map<RapidExpression, ReferenceExpression> variables = new HashMap<>();
         for (RapidField field : routine.getFields()) {
             Variable variable = block.createVariable(field.getName(), field.getFieldType(), Objects.requireNonNullElse(field.getType(), RapidPrimitiveType.ANYTYPE));

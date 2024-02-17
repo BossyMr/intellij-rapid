@@ -1,9 +1,11 @@
 package com.bossymr.rapid.language.symbol.physical;
 
 import com.intellij.model.Pointer;
+import com.intellij.openapi.util.TextRange;
 import com.intellij.platform.backend.navigation.NavigationRequest;
 import com.intellij.platform.backend.navigation.NavigationTarget;
 import com.intellij.platform.backend.presentation.TargetPresentation;
+import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,6 +30,8 @@ public class PhysicalNavigationTarget implements NavigationTarget {
 
     @Override
     public @Nullable NavigationRequest navigationRequest() {
-        return NavigationRequest.sourceNavigationRequest(symbol.getContainingFile(), symbol.getTextRange());
+        PsiElement identifier = symbol.getNameIdentifier();
+        TextRange range = identifier != null ? identifier.getTextRange() : symbol.getTextRange();
+        return NavigationRequest.sourceNavigationRequest(symbol.getContainingFile(), range);
     }
 }

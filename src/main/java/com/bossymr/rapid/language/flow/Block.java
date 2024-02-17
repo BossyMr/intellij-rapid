@@ -155,8 +155,8 @@ public sealed abstract class Block {
         private final @NotNull RoutineType routineType;
         private final @NotNull List<ArgumentGroup> argumentGroups;
 
-        public FunctionBlock(@NotNull RapidRoutine routine, @NotNull String moduleName) {
-            super(routine, moduleName, Objects.requireNonNull(routine.getName()), routine.getType());
+        public FunctionBlock(@NotNull RapidRoutine routine, @NotNull String moduleName, @NotNull String name) {
+            super(routine, moduleName, name, routine.getType());
             this.routineType = routine.getRoutineType();
             this.argumentGroups = routineType != RoutineType.TRAP ? new ArrayList<>() : List.of();
         }
@@ -195,8 +195,8 @@ public sealed abstract class Block {
 
         private final @NotNull FieldType fieldType;
 
-        public FieldBlock(@NotNull RapidField field, @NotNull String moduleName) {
-            super(field, moduleName, Objects.requireNonNull(field.getName()), field.getType());
+        public FieldBlock(@NotNull RapidField field, @NotNull String moduleName, @NotNull String name) {
+            super(field, moduleName, name, field.getType());
             this.fieldType = field.getFieldType();
         }
 

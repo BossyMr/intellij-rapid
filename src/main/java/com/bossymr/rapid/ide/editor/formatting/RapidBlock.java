@@ -209,6 +209,9 @@ public class RapidBlock extends AbstractBlock {
             // Do not indent the keyword, as the keyword might create a new symbol, which itself would be indented.
             return Indent.getNoneIndent();
         }
+        if (elementType == MODULE) {
+            return Indent.getNoneIndent();
+        }
         if (elementType == COMMENT) {
             // If the comment is at the start of the element, it should not be indented.
             ASTNode keyword = child.getTreeParent().findChildByType(RapidTokenSets.KEYWORDS);

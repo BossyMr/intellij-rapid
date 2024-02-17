@@ -7,14 +7,15 @@ import com.bossymr.rapid.language.flow.BlockDescriptor;
 import com.bossymr.rapid.language.symbol.RapidField;
 import com.bossymr.rapid.language.symbol.RapidModule;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
-import com.bossymr.rapid.language.symbol.RapidSymbol;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class ControlFlowBuilder implements RapidBuilder {
 
+    private final @NotNull AtomicInteger counter = new AtomicInteger();
     private final @NotNull Map<BlockDescriptor, Block> controlFlow;
 
     public ControlFlowBuilder() {
@@ -30,7 +31,7 @@ public class ControlFlowBuilder implements RapidBuilder {
 
     @Override
     public @NotNull RapidBuilder withModule(@NotNull RapidModule module) {
-        String name = Objects.requireNonNullElse(module.getName(), RapidSymbol.getDefaultText());
+        String name = Objects.requireNonNullElseGet(module.getName(), () -> "<unknown>:" + counter.getAndIncrement());
         ControlFlowModuleBuilder builder = new ControlFlowModuleBuilder(name, controlFlow);
         for (RapidField field : module.getFields()) {
             builder.withField(field);
