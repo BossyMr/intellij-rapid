@@ -6,6 +6,7 @@ import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.Instruction;
 import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.symbol.RapidLabelStatement;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInspection.LocalInspectionTool;
 import com.intellij.codeInspection.ProblemHighlightType;
@@ -109,7 +110,7 @@ public class UnreachableStatementInspection extends LocalInspectionTool {
             return;
         }
         for (RapidStatement statement : statementList.getStatements()) {
-            if (statement instanceof RapidGotoStatement) {
+            if (statement instanceof RapidGotoStatement || statement instanceof RapidLabelStatement) {
                 continue;
             }
             statements.add(statement);
