@@ -1,16 +1,11 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.expression.Expression;
-import com.bossymr.rapid.language.flow.expression.ReferenceExpression;
-import com.bossymr.rapid.language.flow.instruction.CallInstruction;
-import com.bossymr.rapid.language.flow.instruction.ExitInstruction;
-import com.bossymr.rapid.language.flow.instruction.Instruction;
-import com.bossymr.rapid.language.flow.instruction.ThrowInstruction;
-import com.bossymr.rapid.language.psi.RapidFile;
+import com.bossymr.rapid.language.flow.instruction.*;
 import com.bossymr.rapid.language.psi.RapidReferenceExpression;
+import com.bossymr.rapid.language.psi.stubs.index.RapidModuleIndex;
 import com.bossymr.rapid.language.symbol.ParameterType;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
@@ -33,10 +28,7 @@ import com.microsoft.z3.Z3Exception;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -53,6 +45,8 @@ public final class ControlFlowService implements Disposable {
     private final @NotNull LazyInitializer.LazyValue<AtomicReference<Context>> context = LazyInitializer.create(() -> new AtomicReference<>(new Context()));
 
     private final @NotNull ControlFlowCache cache = new ControlFlowCache();
+
+    private final @NotNull Map<Block, Boolean> sideEffectCache = new WeakHashMap<>();
 
     public static @NotNull ControlFlowService getInstance() {
         return ApplicationManager.getApplication().getService(ControlFlowService.class);
@@ -127,43 +121,47 @@ public final class ControlFlowService implements Disposable {
     }
 
     private @NotNull Set<DataFlowFunction.Result> getDataFlow(@NotNull Set<RapidRoutine> stack, @NotNull RapidRoutine routine, @NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
-        if (routine instanceof VirtualRoutine) {
-            ControlFlowBlock block = cache.getDataFlow(stack, routine);
-            DataFlowFunction function = block.getFunction();
-            return function.getOutput(callerState, instruction);
-        }
-        ControlFlowBlock block = cache.getDataFlowIfAvailable(routine);
-        if (block != null) {
-            DataFlowFunction function = block.getFunction();
-            return function.getOutput(callerState, instruction);
-        }
         Block controlFlow = cache.getControlFlow(routine);
-        if (!(hasSideEffect(stack, controlFlow, instruction))) {
+        if (!(hasSideEffect(controlFlow, instruction))) {
             DataFlowState successorState = DataFlowState.createSuccessorState(callerState.getInstruction(), callerState);
             return Set.of(new DataFlowFunction.Result.Success(successorState, null));
         }
-        block = cache.getDataFlow(stack, routine);
+        ControlFlowBlock block = cache.getDataFlow(stack, routine);
         DataFlowFunction function = block.getFunction();
         return function.getOutput(callerState, instruction);
     }
 
-    private boolean hasSideEffect(@NotNull Set<RapidRoutine> stack, @NotNull Block controlFlow, @NotNull CallInstruction instruction) {
+    public boolean hasSideEffect(@NotNull Block controlFlow, @NotNull CallInstruction instruction) {
+        if (!(controlFlow instanceof Block.FunctionBlock functionBlock)) {
+            return false;
+        }
+        RapidRoutine routine = functionBlock.getElement();
         Map<Argument, Expression> arguments = DataFlowFunction.getArguments(controlFlow, instruction.getArguments());
-        ReferenceExpression returnValue = instruction.getReturnValue();
+        Expression returnValue = instruction.getReturnValue();
         if (returnValue != null) {
             return true;
         }
         if (arguments.keySet().stream().anyMatch(argument -> argument.getParameterType() != ParameterType.INPUT)) {
             return true;
         }
-        if (controlFlow.getInstructions().stream().anyMatch(statement -> statement instanceof ThrowInstruction || statement instanceof ExitInstruction)) {
+        return hasSideEffect(Set.of(routine), controlFlow);
+    }
+
+    private boolean hasSideEffect(@NotNull Set<RapidRoutine> stack, @NotNull Block controlFlow) {
+        if (sideEffectCache.containsKey(controlFlow)) {
+            return sideEffectCache.get(controlFlow);
+        }
+        if (controlFlow.getInstructions().stream().anyMatch(statement -> statement instanceof ThrowInstruction || statement instanceof ExitInstruction || statement instanceof TryNextInstruction || statement instanceof RetryInstruction)) {
+            sideEffectCache.put(controlFlow, true);
             return true;
         }
-        if(controlFlow.getElement() instanceof RapidRoutine routine) {
+        if (controlFlow.getElement() instanceof RapidRoutine routine) {
             ControlFlowBlock block = cache.getDataFlowIfAvailable(routine);
-            if(block != null) {
+            if (block != null) {
                 Map<DataFlowState, DataFlowFunction.Result> results = block.getFunction().getResults();
-                return !(results.values().stream().allMatch(result -> result instanceof DataFlowFunction.Result.Success));
+                boolean hasSideEffects = !(results.values().stream().allMatch(result -> result instanceof DataFlowFunction.Result.Success));
+                sideEffectCache.put(controlFlow, hasSideEffects);
+                return hasSideEffects;
             }
         }
         for (Instruction statement : controlFlow.getInstructions()) {
@@ -175,20 +173,25 @@ public final class ControlFlowService implements Disposable {
                 continue;
             }
             Set<RapidRoutine> copy = new HashSet<>(stack);
-            copy.add(routine);
+            if (!(copy.add(routine))) {
+                continue;
+            }
             if (routine instanceof VirtualRoutine virtualRoutine) {
                 ControlFlowBlock dependency = cache.getDataFlow(Set.of(virtualRoutine), virtualRoutine);
-                if (hasSideEffect(copy, dependency.getControlFlow(), callInstruction)) {
+                if (hasSideEffect(copy, dependency.getControlFlow())) {
+                    sideEffectCache.put(controlFlow, true);
                     return true;
                 }
             }
             if (routine instanceof PhysicalRoutine) {
                 Block dependency = cache.getControlFlow(routine);
-                if (hasSideEffect(copy, dependency, callInstruction)) {
+                if (hasSideEffect(copy, dependency)) {
+                    sideEffectCache.put(controlFlow, true);
                     return true;
                 }
             }
         }
+        sideEffectCache.put(controlFlow, false);
         return false;
     }
 
