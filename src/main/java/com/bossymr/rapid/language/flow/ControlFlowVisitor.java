@@ -62,10 +62,6 @@ public class ControlFlowVisitor<R> {
         return visitInstruction(instruction);
     }
 
-    public R visitErrorInstruction(@NotNull ErrorInstruction instruction) {
-        return visitInstruction(instruction);
-    }
-
     public R visitCallInstruction(@NotNull CallInstruction instruction) {
         return visitInstruction(instruction);
     }
