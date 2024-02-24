@@ -5,7 +5,6 @@ import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidTokenSets;
 import com.bossymr.rapid.language.psi.impl.RapidExpressionImpl;
-import com.bossymr.rapid.language.symbol.ValueType;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTNode;
@@ -46,30 +45,37 @@ public class RapidBinaryExpressionImpl extends RapidExpressionImpl implements Ra
         RapidType right = getRight() != null ? getRight().getType() : null;
         IElementType sign = getSign().getNode().getElementType();
         if (left == null || right == null) return null;
-        if (left.getDimensions() == 0 && right.getDimensions() == 0 && List.of(OR_KEYWORD, XOR_KEYWORD, AND_KEYWORD, LT, LE, GT, GE).contains(sign)) {
+        if (left.getDimensions() == 0 && right.getDimensions() == 0 && List.of(OR_KEYWORD, XOR_KEYWORD, AND_KEYWORD).contains(sign)) {
             return RapidPrimitiveType.BOOLEAN;
         }
-        if (sign == LTGT) {
-            return RapidPrimitiveType.BOOLEAN;
-        }
-        if (sign == EQ) {
-            if (left.isAssignable(right) && left.getValueType() == ValueType.VALUE_TYPE) {
+        if (sign == LT || sign == GT || sign == LE || sign == GE) {
+            if (left.isAssignable(RapidPrimitiveType.NUMBER) && right.isAssignable(RapidPrimitiveType.NUMBER)) {
                 return RapidPrimitiveType.BOOLEAN;
             }
+            return null;
         }
-        if (left.isAssignable(RapidPrimitiveType.NUMBER) && right.isAssignable(RapidPrimitiveType.NUMBER))
-            return RapidPrimitiveType.NUMBER;
-        if (left.isAssignable(RapidPrimitiveType.DOUBLE) && right.isAssignable(RapidPrimitiveType.DOUBLE))
+        if (sign == EQ || sign == LTGT) {
+            return RapidPrimitiveType.BOOLEAN;
+        }
+        if (left.isAssignable(RapidPrimitiveType.DOUBLE) && right.isAssignable(RapidPrimitiveType.DOUBLE)) {
             return RapidPrimitiveType.DOUBLE;
+        }
+        if (left.isAssignable(RapidPrimitiveType.NUMBER) && right.isAssignable(RapidPrimitiveType.NUMBER)) {
+            return RapidPrimitiveType.NUMBER;
+        }
         if (sign == ASTERISK) {
-            if ((left.isAssignable(RapidPrimitiveType.NUMBER) && right.isAssignable(RapidPrimitiveType.POSITION)))
+            if ((left.isAssignable(RapidPrimitiveType.NUMBER) && right.isAssignable(RapidPrimitiveType.POSITION))) {
                 return RapidPrimitiveType.POSITION;
-            if ((left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.NUMBER)))
+            }
+            if ((left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.NUMBER))) {
                 return RapidPrimitiveType.POSITION;
-            if (left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.POSITION))
+            }
+            if (left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.POSITION)) {
                 return RapidPrimitiveType.POSITION;
-            if (left.isAssignable(RapidPrimitiveType.ORIENTATION) && right.isAssignable(RapidPrimitiveType.ORIENTATION))
+            }
+            if (left.isAssignable(RapidPrimitiveType.ORIENTATION) && right.isAssignable(RapidPrimitiveType.ORIENTATION)) {
                 return RapidPrimitiveType.ORIENTATION;
+            }
         }
         if (sign == BACKSLASH) {
             if (left.isAssignable(RapidPrimitiveType.POSITION) && right.isAssignable(RapidPrimitiveType.NUMBER))
