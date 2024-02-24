@@ -125,7 +125,7 @@ public class FormatUtil {
         }
         format(buffer, field.getName(), field.getType(), options);
         if (options.contains(Option.SHOW_INITIALIZER)) {
-            RapidExpression expression = field.getInitializer();
+            RapidExpression expression = field.getDetachedInitializer();
             if (expression != null) {
                 buffer.append(" := ");
                 String text = format(expression);

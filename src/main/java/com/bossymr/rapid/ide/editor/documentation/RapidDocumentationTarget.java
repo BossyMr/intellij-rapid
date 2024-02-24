@@ -194,10 +194,10 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
             }
             appendText(stringBuilder, RapidColor.BRACES, "}");
         }
-        RapidExpression initializer = field.getInitializer();
+        RapidExpression initializer = field.getDetachedInitializer();
         if (initializer != null) {
             appendText(stringBuilder, RapidColor.OPERATOR_SIGN, " := ");
-            HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), field.getInitializer().getText(), 1);
+            HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), initializer.getText(), 1);
         }
         appendText(stringBuilder, RapidColor.SEMICOLON, ";");
         return stringBuilder.toString();
