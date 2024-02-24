@@ -1,0 +1,100 @@
+RapidFile:IfStatements.mod
+  PhysicalModule{name='IfStatements'}
+    PsiElement(Rapid:MODULE)('MODULE')
+    PsiWhiteSpace(' ')
+    PsiElement(Rapid:IDENTIFIER)('IfStatements')
+    PsiWhiteSpace('\n\n    ')
+    PhysicalRoutine{name='name'}
+      PsiElement(Rapid:PROC)('PROC')
+      PsiWhiteSpace(' ')
+      PsiElement(Rapid:IDENTIFIER)('name')
+      RapidParameterList:()
+        PsiElement(Rapid:()('(')
+        PsiElement(Rapid:))(')')
+      PsiWhiteSpace('\n        ')
+      RapidStatementList
+        RapidIfStatement
+          PsiElement(Rapid:IF)('IF')
+          PsiWhiteSpace(' ')
+          RapidLiteralExpression:TRUE
+            PsiElement(Rapid:TRUE)('TRUE')
+          PsiWhiteSpace(' ')
+          RapidStatementList
+            PsiElement(Rapid:<SMT>)('<SMT>')
+        PsiWhiteSpace('\n\n        ')
+        RapidIfStatement
+          PsiElement(Rapid:IF)('IF')
+          PsiWhiteSpace(' ')
+          RapidLiteralExpression:TRUE
+            PsiElement(Rapid:TRUE)('TRUE')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid:THEN)('THEN')
+          PsiWhiteSpace('\n            ')
+          PsiComment(Rapid:COMMENT)('!')
+          PsiWhiteSpace('\n        ')
+          RapidStatementList
+            <empty list>
+          PsiElement(Rapid:ELSEIF)('ELSEIF')
+          PsiWhiteSpace(' ')
+          RapidStatementList
+            RapidIfStatement
+              RapidLiteralExpression:FALSE
+                PsiElement(Rapid:FALSE)('FALSE')
+              PsiWhiteSpace(' ')
+              PsiElement(Rapid:THEN)('THEN')
+              PsiWhiteSpace('\n            ')
+              PsiComment(Rapid:COMMENT)('!')
+              PsiWhiteSpace('\n        ')
+              RapidStatementList
+                <empty list>
+          PsiElement(Rapid:ENDIF)('ENDIF')
+        PsiWhiteSpace('\n\n        ')
+        RapidIfStatement
+          PsiElement(Rapid:IF)('IF')
+          PsiWhiteSpace(' ')
+          RapidLiteralExpression:TRUE
+            PsiElement(Rapid:TRUE)('TRUE')
+          PsiWhiteSpace(' ')
+          PsiElement(Rapid:THEN)('THEN')
+          PsiWhiteSpace('\n            ')
+          PsiComment(Rapid:COMMENT)('!')
+          PsiWhiteSpace('\n        ')
+          RapidStatementList
+            <empty list>
+          PsiElement(Rapid:ELSEIF)('ELSEIF')
+          PsiWhiteSpace(' ')
+          RapidStatementList
+            RapidIfStatement
+              RapidLiteralExpression:FALSE
+                PsiElement(Rapid:FALSE)('FALSE')
+              PsiWhiteSpace(' ')
+              PsiElement(Rapid:THEN)('THEN')
+              PsiWhiteSpace('\n            ')
+              PsiComment(Rapid:COMMENT)('!')
+              PsiWhiteSpace('\n        ')
+              RapidStatementList
+                <empty list>
+              PsiElement(Rapid:ELSEIF)('ELSEIF')
+              PsiWhiteSpace(' ')
+              RapidStatementList
+                RapidIfStatement
+                  RapidLiteralExpression:TRUE
+                    PsiElement(Rapid:TRUE)('TRUE')
+                  PsiWhiteSpace(' ')
+                  PsiElement(Rapid:THEN)('THEN')
+                  PsiWhiteSpace('\n            ')
+                  PsiComment(Rapid:COMMENT)('!')
+                  PsiWhiteSpace('\n        ')
+                  RapidStatementList
+                    <empty list>
+                  PsiElement(Rapid:ELSE)('ELSE')
+                  PsiWhiteSpace('\n            ')
+                  PsiComment(Rapid:COMMENT)('!')
+                  PsiWhiteSpace('\n        ')
+                  RapidStatementList
+                    <empty list>
+          PsiElement(Rapid:ENDIF)('ENDIF')
+      PsiWhiteSpace('\n    ')
+      PsiElement(Rapid:ENDPROC)('ENDPROC')
+    PsiWhiteSpace('\n\n')
+    PsiElement(Rapid:ENDMODULE)('ENDMODULE')
