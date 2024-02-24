@@ -36,6 +36,8 @@ public class RapidFormattingModelBuilder implements FormattingModelBuilder {
                 .after(COMMA).spaceIf(common.SPACE_AFTER_COMMA)
                 .before(COMMA).spaceIf(common.SPACE_BEFORE_COMMA)
 
+                .around(LINE).spaces(1)
+
                 .before(SEMICOLON).none()
                 .before(COLON).none()
 

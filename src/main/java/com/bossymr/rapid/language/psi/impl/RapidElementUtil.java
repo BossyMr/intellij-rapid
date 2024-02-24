@@ -4,10 +4,10 @@ import com.bossymr.rapid.language.psi.RapidElementFactory;
 import com.bossymr.rapid.language.psi.RapidTokenTypes;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.impl.PsiImplUtil;
 import com.intellij.psi.impl.source.tree.CompositeElement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
+import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
@@ -103,13 +103,20 @@ public final class RapidElementUtil {
      * @param separator the separator type.
      */
     public static void deleteSeparator(@NotNull CompositeElement element, @NotNull ASTNode child, @NotNull IElementType separator) {
-        ASTNode next = PsiImplUtil.skipWhitespaceAndComments(child.getTreeNext());
-        if (next != null && next.getElementType() == separator) {
-            element.deleteChildInternal(next);
+        PsiElement next = PsiTreeUtil.skipWhitespacesAndCommentsForward(child.getPsi());
+        ASTNode nextNode = next != null ? next.getNode() : null;
+        if (next != null && nextNode.getElementType() == separator) {
+            element.deleteChildInternal(nextNode);
         } else {
-            ASTNode previous = PsiImplUtil.skipWhitespaceAndCommentsBack(child.getTreePrev());
-            if (previous != null && previous.getElementType() == separator) {
-                element.deleteChildInternal(previous);
+            ASTNode previousNode = child.getTreePrev();
+            if (previousNode != null) {
+                PsiElement previous = PsiTreeUtil.skipWhitespacesAndCommentsBackward(previousNode.getPsi());
+                if (previous != null) {
+                    ASTNode node = previous.getNode();
+                    if (node.getElementType() == separator) {
+                        element.deleteChildInternal(node);
+                    }
+                }
             }
         }
     }

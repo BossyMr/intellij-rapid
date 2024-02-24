@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidParameterGroupStub;
 import com.bossymr.rapid.language.symbol.RapidParameterGroup;
+import com.intellij.extapi.psi.ASTDelegatePsiElement;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.impl.source.tree.TreeElement;
 import com.intellij.psi.tree.TokenSet;
@@ -62,6 +63,13 @@ public class PhysicalParameterGroup extends RapidStubElement<RapidParameterGroup
 
     @Override
     public void deleteChildInternal(@NotNull ASTNode child) {
+        if (child.getElementType() == RapidElementTypes.PARAMETER) {
+            List<PhysicalParameter> parameters = getParameters();
+            if (parameters.size() == 1) {
+                ((ASTDelegatePsiElement) getParent()).deleteChildInternal(getNode());
+                return;
+            }
+        }
         if (child.getElementType().equals(RapidElementTypes.PARAMETER)) {
             RapidElementUtil.deleteSeparator(this, child, RapidTokenTypes.LINE);
         }

@@ -9,7 +9,6 @@ import com.intellij.ide.hierarchy.HierarchyNodeDescriptor;
 import com.intellij.ide.hierarchy.HierarchyTreeStructure;
 import com.intellij.ide.util.treeView.AlphaComparator;
 import com.intellij.ide.util.treeView.NodeDescriptor;
-import com.intellij.ide.util.treeView.SourceComparator;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionPlaces;
 import com.intellij.openapi.actionSystem.IdeActions;
@@ -82,6 +81,6 @@ public class RapidCallHierarchyBrowser extends CallHierarchyBrowserBase {
     protected @Nullable Comparator<NodeDescriptor<?>> getComparator() {
         HierarchyBrowserManager manager = HierarchyBrowserManager.getInstance(getProject());
         HierarchyBrowserManager.State state = manager.getState();
-        return state != null && state.SORT_ALPHABETICALLY ? AlphaComparator.INSTANCE : SourceComparator.INSTANCE;
+        return state != null && state.SORT_ALPHABETICALLY ? AlphaComparator.INSTANCE : null;
     }
 }
