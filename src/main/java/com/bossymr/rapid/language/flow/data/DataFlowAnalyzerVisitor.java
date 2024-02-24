@@ -18,11 +18,13 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     private final @NotNull DataFlowState state;
     private final @NotNull Set<RapidRoutine> stack;
     private final @NotNull ControlFlowBlock block;
+    private final @NotNull Set<DataFlowAnalyzer.Entry> entries;
 
-    public DataFlowAnalyzerVisitor(@NotNull Set<RapidRoutine> stack, @NotNull DataFlowState state, @NotNull ControlFlowBlock block) {
+    public DataFlowAnalyzerVisitor(@NotNull Set<DataFlowAnalyzer.Entry> entries, @NotNull Set<RapidRoutine> stack, @NotNull DataFlowState state, @NotNull ControlFlowBlock block) {
         this.state = state;
         this.stack = stack;
         this.block = block;
+        this.entries = entries;
     }
 
     @Override
@@ -53,20 +55,102 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     @Override
     public @NotNull List<DataFlowState> visitConditionalBranchingInstruction(@NotNull ConditionalBranchingInstruction instruction) {
         Expression value = instruction.getCondition();
+        if (Objects.equals(instruction.getTrue(), instruction.getFalse())) {
+            DataFlowState branch = visitBranch(instruction.getTrue(), null);
+            return branch != null ? List.of(branch) : List.of();
+        }
+        Instruction commonSuccessor = getCommonSuccessor(instruction);
+        boolean thenPure = commonSuccessor != null && instruction.getTrue() != null && isPureBranch(instruction.getTrue(), commonSuccessor);
+        boolean elsePure = commonSuccessor != null && instruction.getFalse() != null && isPureBranch(instruction.getFalse(), commonSuccessor);
         List<DataFlowState> states = new ArrayList<>(2);
-        if (instruction.getTrue() != null && instruction.getTrue().equals(instruction.getFalse())) {
-            states.add(visitBranch(instruction.getTrue(), null));
-        } else {
-            Constraint constraint = state.getConstraint(value);
-            if (constraint == Constraint.ANY_VALUE || constraint == Constraint.ALWAYS_TRUE) {
-                states.add(visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(true))));
-            }
-            if (constraint == Constraint.ANY_VALUE || constraint == Constraint.ALWAYS_FALSE) {
-                states.add(visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(false))));
-            }
+        Constraint constraint = state.getConstraint(value);
+        if (constraint == Constraint.ANY_VALUE || constraint == Constraint.ALWAYS_TRUE) {
+            DataFlowState branch = visitBranch(instruction.getTrue(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(true)));
+            states.add(branch);
+        }
+        if (constraint == Constraint.ANY_VALUE || constraint == Constraint.ALWAYS_FALSE) {
+            DataFlowState branch = visitBranch(instruction.getFalse(), new BinaryExpression(BinaryOperator.EQUAL_TO, value, new LiteralExpression(false)));
+            states.add(branch);
         }
         states.removeIf(Objects::isNull);
+        if (states.size() == 2 && thenPure && elsePure) {
+            entries.add(new DataFlowAnalyzer.Entry(states.get(0), commonSuccessor));
+        }
         return states;
+    }
+
+    private boolean isPureBranch(@NotNull Instruction instruction, @NotNull Instruction commonSuccessor) {
+        if (instruction.equals(commonSuccessor)) {
+            return true;
+        }
+        Deque<Instruction> deque = new ArrayDeque<>();
+        deque.addLast(instruction);
+        while (!(deque.isEmpty())) {
+            Instruction nextInstruction = deque.removeFirst();
+            if (nextInstruction instanceof TryNextInstruction || nextInstruction instanceof RetryInstruction) {
+                return false;
+            }
+            if (nextInstruction instanceof ThrowInstruction || nextInstruction instanceof ExitInstruction) {
+                return false;
+            }
+            if (nextInstruction instanceof AssignmentInstruction) {
+                return false;
+            }
+            if (nextInstruction instanceof CallInstruction callInstruction) {
+                ControlFlowService service = ControlFlowService.getInstance();
+                if (service.hasSideEffect(block.getControlFlow(), callInstruction)) {
+                    return false;
+                }
+            }
+            for (Instruction successor : nextInstruction.getSuccessors()) {
+                if (successor.equals(commonSuccessor)) {
+                    continue;
+                }
+                deque.addLast(successor);
+            }
+        }
+        return true;
+    }
+
+    private @Nullable Instruction getCommonSuccessor(@NotNull Instruction instruction) {
+        return getCommonSuccessor(new HashSet<>(), instruction);
+    }
+
+    private @Nullable Instruction getCommonSuccessor(@NotNull Set<Instruction> visited, @NotNull Instruction instruction) {
+        if (!(visited.add(instruction))) {
+            return null;
+        }
+        List<Instruction> successors = instruction.getSuccessors();
+        if (successors.isEmpty()) {
+            return null;
+        }
+        if (instruction instanceof ConditionalBranchingInstruction) {
+            if (successors.size() == 1) {
+                return successors.get(0);
+            }
+            List<Instruction> successorChain = getCommonSuccessors(visited, successors.get(0));
+            Instruction successor = successors.get(1);
+            while (successor != null) {
+                if (successorChain.contains(successor)) {
+                    return successor;
+                }
+                successor = getCommonSuccessor(visited, successor);
+            }
+            return null;
+        }
+        if (successors.size() > 1) {
+            return null;
+        }
+        return successors.get(0);
+    }
+
+    private @NotNull List<Instruction> getCommonSuccessors(@NotNull Set<Instruction> visited, @NotNull Instruction instruction) {
+        List<Instruction> instructions = new ArrayList<>();
+        Instruction successor = instruction;
+        while ((successor = getCommonSuccessor(visited, successor)) != null) {
+            instructions.add(successor);
+        }
+        return instructions;
     }
 
     private @Nullable DataFlowState visitBranch(@Nullable Instruction successor, @Nullable Expression condition) {
@@ -95,9 +179,9 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
     public @NotNull List<DataFlowState> visitReturnInstruction(@NotNull ReturnInstruction instruction) {
         Expression returnValue = instruction.getReturnValue();
         SnapshotExpression snapshot = getReferenceExpression(returnValue);
-        if(isUnknownFunction()) {
+        if (isUnknownFunction()) {
             for (Argument argument : block.getControlFlow().getArguments()) {
-                if(argument.getParameterType() != ParameterType.INPUT) {
+                if (argument.getParameterType() != ParameterType.INPUT) {
                     SnapshotExpression expression = new SnapshotExpression(Snapshot.createSnapshot(argument.getType(), Optionality.UNKNOWN));
                     state.assign(new VariableExpression(argument), expression);
 
@@ -112,14 +196,14 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
 
     private boolean isUnknownFunction() {
         RapidSymbol element = block.getControlFlow().getElement();
-        if(!(element instanceof RapidRoutine routine)) {
+        if (!(element instanceof RapidRoutine routine)) {
             return false;
         }
-        if(routine instanceof PhysicalRoutine) {
+        if (routine instanceof PhysicalRoutine) {
             return false;
         }
         for (HardcodedContract value : HardcodedContract.values()) {
-            if(value.getRoutine().equals(routine)) {
+            if (value.getRoutine().equals(routine)) {
                 return false;
             }
         }
@@ -142,7 +226,7 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
         List<DataFlowState> chain = state.getPredecessorChain();
         for (ArgumentGroup argumentGroup : block.getArgumentGroups()) {
             for (Argument argument : argumentGroup.arguments()) {
-                if(argument.getParameterType() != ParameterType.INPUT) {
+                if (argument.getParameterType() != ParameterType.INPUT) {
                     Snapshot snapshot = chain.get(chain.size() - 1).getRoots().get(argument);
                     snapshots.add(snapshot);
                 }
@@ -170,20 +254,6 @@ public class DataFlowAnalyzerVisitor extends ControlFlowVisitor<List<DataFlowSta
             return state.getSnapshot(reference);
         }
         return state.createSnapshot(value);
-    }
-
-    private @NotNull List<DataFlowState> createSuccessorState(@NotNull Instruction successor) {
-        DataFlowState successorState = DataFlowState.createSuccessorState(successor, state);
-        return List.of(successorState);
-    }
-
-    @Override
-    public @NotNull List<DataFlowState> visitErrorInstruction(@NotNull ErrorInstruction instruction) {
-        Instruction successor = instruction.getSuccessor();
-        if (successor != null) {
-            return createSuccessorState(successor);
-        }
-        return List.of();
     }
 
     @Override

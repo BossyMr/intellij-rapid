@@ -103,20 +103,21 @@ public enum HardcodedContract {
                 DataFlowContext context = new DataFlowContext(block, callerState, instruction);
                 Map<Argument, Expression> arguments = context.getArguments();
                 for (ArgumentGroup argumentGroup : context.getControlFlow().getArgumentGroups()) {
-                    if(argumentGroup.isOptional() || argumentGroup.arguments().isEmpty()) {
+                    if (argumentGroup.isOptional() || argumentGroup.arguments().isEmpty()) {
                         continue;
                     }
-                    if(argumentGroup.arguments().stream().noneMatch(arguments::containsKey)) {
+                    if (argumentGroup.arguments().stream().noneMatch(arguments::containsKey)) {
                         return Set.of(new Result.Error(callerState.createSuccessorState()));
                     }
                 }
                 Set<Result> output = processor.getOutput(context);
                 return output.stream()
                              .map(result -> {
-                                 Result normalized = getOutput(result, callerState, instruction);
+                                 Result normalized = getOutput(result, callerState, instruction, arguments, false);
                                  result.state().prune();
                                  return normalized;
                              })
+                             .filter(Objects::nonNull)
                              .collect(Collectors.toSet());
             }
         };

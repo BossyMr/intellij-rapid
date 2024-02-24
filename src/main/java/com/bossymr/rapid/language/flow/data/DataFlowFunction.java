@@ -59,11 +59,11 @@ public class DataFlowFunction {
         Map<String, Argument> optionalArguments = new HashMap<>();
         List<Argument> requiredArguments = new ArrayList<>();
         for (ArgumentGroup argumentGroup : functionBlock.getArgumentGroups()) {
-            if(argumentGroup.isOptional()) {
+            if (argumentGroup.isOptional()) {
                 for (Argument argument : argumentGroup.arguments()) {
                     optionalArguments.put(argument.getName(), argument);
                 }
-            } else if(!argumentGroup.arguments().isEmpty()) {
+            } else if (!argumentGroup.arguments().isEmpty()) {
                 requiredArguments.add(argumentGroup.arguments().get(0));
             }
         }
@@ -74,7 +74,7 @@ public class DataFlowFunction {
                     result.put(requiredArguments.get(required.index()), value);
                 }
             } else if (descriptor instanceof ArgumentDescriptor.Optional optional) {
-                if(optionalArguments.containsKey(optional.name())) {
+                if (optionalArguments.containsKey(optional.name())) {
                     result.put(optionalArguments.get(optional.name()), value);
                 }
             } else {
@@ -98,7 +98,7 @@ public class DataFlowFunction {
 
     public void registerOutput(@NotNull DataFlowState returnState, @NotNull Result result) {
         Result normalized = normalizeResult(result);
-        if(results.containsValue(normalized)) {
+        if (results.containsValue(normalized)) {
             return;
         }
         results.put(returnState, normalized);
@@ -130,20 +130,20 @@ public class DataFlowFunction {
 
     private @NotNull Snapshot normalizeSnapshot(@NotNull Result result, @NotNull Snapshot snapshot, @NotNull DataFlowState state) {
         Field field = getField(result.state(), snapshot);
-        if(Objects.equals(snapshot, result.variable())) {
+        if (Objects.equals(snapshot, result.variable())) {
             if (returnVariable == null) {
                 returnVariable = Snapshot.createSnapshot(snapshot.getType(), Optionality.PRESENT);
             }
         }
-        if(field != null) {
+        if (field != null) {
             Snapshot normalized = snapshots.computeIfAbsent(field, key -> Snapshot.createSnapshot(snapshot.getType(), snapshot.getOptionality()));
-            if(Objects.equals(snapshot, result.variable())) {
+            if (Objects.equals(snapshot, result.variable())) {
                 Objects.requireNonNull(returnVariable);
                 state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, new SnapshotExpression(normalized), new SnapshotExpression(returnVariable)));
             }
             return normalized;
         }
-        if(Objects.equals(snapshot, result.variable())) {
+        if (Objects.equals(snapshot, result.variable())) {
             Objects.requireNonNull(returnVariable);
             return returnVariable;
         }
@@ -169,33 +169,37 @@ public class DataFlowFunction {
     }
 
     public @NotNull Set<Result> getOutput(@NotNull DataFlowState callerState, @NotNull CallInstruction instruction) {
-        ReferenceExpression returnValue = instruction.getReturnValue();
         Set<Result> output = new HashSet<>();
-        Map<Result, DataFlowState> mappings = new HashMap<>();
         Map<Argument, Expression> arguments = getArguments(getBlock(), instruction.getArguments());
-        DataFlowState state = callerState.createSuccessorState();
         Block controlFlow = block.getControlFlow();
         for (ArgumentGroup argumentGroup : controlFlow.getArgumentGroups()) {
-            if(argumentGroup.isOptional() || argumentGroup.arguments().isEmpty()) {
+            if (argumentGroup.isOptional() || argumentGroup.arguments().isEmpty()) {
                 continue;
             }
-            if(argumentGroup.arguments().stream().noneMatch(arguments::containsKey)) {
+            if (argumentGroup.arguments().stream().noneMatch(arguments::containsKey)) {
                 return Set.of(new Result.Error(callerState.createSuccessorState()));
             }
         }
-        for (Argument argument : arguments.keySet()) {
-            Expression expression = arguments.get(argument);
-            if(expression instanceof ReferenceExpression) {
-                continue;
+        boolean requiresArgumentHandling = arguments.values().stream().anyMatch(expression -> !(expression instanceof ReferenceExpression));
+        DataFlowState state = requiresArgumentHandling ? callerState.createSuccessorState() : callerState;
+        if (requiresArgumentHandling) {
+            for (Argument argument : arguments.keySet()) {
+                Expression expression = arguments.get(argument);
+                if (expression instanceof ReferenceExpression) {
+                    continue;
+                }
+                Snapshot snapshot = Snapshot.createSnapshot(expression.getType());
+                SnapshotExpression snapshotExpression = new SnapshotExpression(snapshot);
+                state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshotExpression, expression));
+                arguments.put(argument, snapshotExpression);
             }
-            Snapshot snapshot = Snapshot.createSnapshot(expression.getType());
-            SnapshotExpression snapshotExpression = new SnapshotExpression(snapshot);
-            state.add(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshotExpression, expression));
-            arguments.put(argument, snapshotExpression);
         }
-        for (Map.Entry<DataFlowState, Result> entry : results.entrySet()) {
+        Map<Result, DataFlowState> mappings = new HashMap<>();
+        for (Iterator<Map.Entry<DataFlowState, Result>> iterator = results.entrySet().iterator(); iterator.hasNext(); ) {
+            Map.Entry<DataFlowState, Result> entry = iterator.next();
             Result result = entry.getValue();
-            Result actual = getOutput(result, state.createSuccessorState(), instruction);
+            boolean isSatisfiable = output.isEmpty() && !(iterator.hasNext());
+            Result actual = getOutput(result, state.createSuccessorState(), instruction, arguments, isSatisfiable);
             if (actual != null) {
                 output.add(actual);
                 mappings.put(actual, entry.getKey());
@@ -203,38 +207,25 @@ public class DataFlowFunction {
                 usages.get(state).add(entry.getKey());
             }
         }
-        if (returnValue == null) {
-            if (arguments.keySet().stream().allMatch(argument -> argument.getParameterType() == ParameterType.INPUT)) {
-                /*
-                 * This function call will not have any side effects on the caller. As a result, only at most a single
-                 * empty success state needs to be returned.
-                 */
-                output.removeIf(result -> {
-                    if (result instanceof Result.Success) {
-                        Set<DataFlowState> states = usages.get(state);
-                        states.remove(mappings.get(result));
-                        if (states.isEmpty()) {
-                            usages.remove(state);
-                        }
-                        Objects.requireNonNullElseGet(result.state().getPredecessor(), result::state).prune();
-                        return true;
+        if (!(ControlFlowService.getInstance().hasSideEffect(block.getControlFlow(), instruction))) {
+            output.removeIf(result -> {
+                if (result instanceof Result.Success) {
+                    Set<DataFlowState> states = usages.get(state);
+                    states.remove(mappings.get(result));
+                    if (states.isEmpty()) {
+                        usages.remove(state);
                     }
-                    return false;
-                });
-                DataFlowState successorState = DataFlowState.createSuccessorState(state.getInstruction(), state);
-                output.add(new Result.Success(successorState, null));
-            }
+                    Objects.requireNonNullElseGet(result.state().getPredecessor(), result::state).prune();
+                    return true;
+                }
+                return false;
+            });
+            output.add(new Result.Success(callerState.createSuccessorState(), null));
         }
         return output;
     }
 
-
-    protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull CallInstruction instruction) {
-        Map<Argument, Expression> arguments = getArguments(getBlock(), instruction.getArguments());
-        return getOutput(result, state, instruction, arguments);
-    }
-
-    protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull CallInstruction instruction, @NotNull Map<Argument, Expression> arguments) {
+    protected @Nullable Result getOutput(@NotNull Result result, @NotNull DataFlowState state, @NotNull CallInstruction instruction, @NotNull Map<Argument, Expression> arguments, boolean isSatisfiable) {
         /*
          * Create an empty successor to the specified state.
          *
@@ -295,7 +286,7 @@ public class DataFlowFunction {
             if (expression instanceof ReferenceExpression variable) {
                 successorState.assign(variable, new SnapshotExpression(snapshot));
                 Snapshot root = successorState.getRoot(variable);
-                if(root != null) {
+                if (root != null) {
                     successorState.add(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(snapshot), FunctionCallExpression.present(root)));
                 }
             }
@@ -303,7 +294,7 @@ public class DataFlowFunction {
 
         // Check if the result is satisfiable.
         // If it is not satisfiable, this function will not be called.
-        if (!(successorState.isSatisfiable(targets))) {
+        if (!(isSatisfiable) && !(successorState.isSatisfiable(targets))) {
             state.prune();
             return null;
         }
