@@ -16,10 +16,6 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiManager;
-import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.LazyInitializer;
 import com.intellij.util.messages.Topic;
@@ -79,16 +75,10 @@ public final class ControlFlowService implements Disposable {
 
     private <T> @NotNull Set<T> getDataFlow(@NotNull Project project, @NotNull Function<PhysicalRoutine, T> consumer, @NotNull Supplier<Collection<T>> supplier) {
         Set<T> routines = new HashSet<>();
-        PsiManager manager = PsiManager.getInstance(project);
-        Collection<VirtualFile> virtualFiles = FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(project));
-        for (VirtualFile virtualFile : virtualFiles) {
-            PsiFile psiFile = manager.findFile(virtualFile);
-            if (psiFile instanceof RapidFile file) {
-                for (PhysicalModule module : file.getModules()) {
-                    for (PhysicalRoutine routine : module.getRoutines()) {
-                        routines.add(consumer.apply(routine));
-                    }
-                }
+        Collection<PhysicalModule> modules = RapidModuleIndex.getInstance().getAllElements(project, GlobalSearchScope.projectScope(project));
+        for (PhysicalModule module : modules) {
+            for (PhysicalRoutine routine : module.getRoutines()) {
+                routines.add(consumer.apply(routine));
             }
         }
         routines.addAll(supplier.get());

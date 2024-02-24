@@ -71,9 +71,9 @@ public class RapidFieldElementType extends RapidStubElementType<RapidFieldStub, 
     }
 
     @Override
-    public void indexStub(@NotNull com.bossymr.rapid.language.psi.stubs.RapidFieldStub stub, @NotNull IndexSink sink) {
+    public void indexStub(@NotNull RapidFieldStub stub, @NotNull IndexSink sink) {
         final String name = stub.getName();
-        if (name != null && stub.getVisibility() != Visibility.GLOBAL) {
+        if (name != null && stub.getVisibility() == Visibility.GLOBAL) {
             sink.occurrence(RapidSymbolIndex.KEY, StringUtil.toLowerCase(name));
             sink.occurrence(RapidFieldIndex.KEY, StringUtil.toLowerCase(name));
         }

@@ -11,7 +11,7 @@ import com.intellij.psi.tree.ILightStubFileElementType;
 import org.jetbrains.annotations.NotNull;
 
 public class RapidFileElementType extends ILightStubFileElementType<RapidFileStub> {
-    public static final int STUB_VERSION = 1;
+    public static final int STUB_VERSION = 2;
 
     public RapidFileElementType() {
         super("rapid.FILE", RapidLanguage.INSTANCE);

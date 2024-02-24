@@ -4,10 +4,7 @@ import com.bossymr.rapid.language.psi.*;
 import com.bossymr.rapid.language.psi.impl.RapidElementUtil;
 import com.bossymr.rapid.language.psi.impl.RapidStubElement;
 import com.bossymr.rapid.language.psi.stubs.RapidRoutineStub;
-import com.bossymr.rapid.language.symbol.RapidRoutine;
-import com.bossymr.rapid.language.symbol.RoutineType;
-import com.bossymr.rapid.language.symbol.SymbolUtil;
-import com.bossymr.rapid.language.symbol.Visibility;
+import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
@@ -21,12 +18,20 @@ import java.util.Objects;
 
 public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implements RapidRoutine, PhysicalSymbol, PhysicalVisibleSymbol {
 
+    private @Nullable List<RapidLabelStatement> labels;
+
     public PhysicalRoutine(@NotNull RapidRoutineStub stub) {
         super(stub, RapidStubElementTypes.ROUTINE);
     }
 
     public PhysicalRoutine(@NotNull ASTNode node) {
         super(node);
+    }
+
+    @Override
+    public void subtreeChanged() {
+        labels = null;
+        super.subtreeChanged();
     }
 
     /**
@@ -101,6 +106,13 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
     public @NotNull RapidStatementList getStatementList() {
         RapidStatementList statementList = getStatementList(BlockType.STATEMENT_LIST);
         return Objects.requireNonNull(statementList);
+    }
+
+    public @NotNull List<RapidLabelStatement> getLabels() {
+        if (labels == null) {
+            labels = findChildrenByType(RapidElementTypes.LABEL_STATEMENT);
+        }
+        return labels;
     }
 
     public @NotNull List<RapidStatementList> getStatementLists() {

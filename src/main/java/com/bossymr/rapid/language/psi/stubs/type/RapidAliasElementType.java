@@ -64,7 +64,7 @@ public class RapidAliasElementType extends RapidStubElementType<RapidAliasStub, 
     @Override
     public void indexStub(@NotNull RapidAliasStub stub, @NotNull IndexSink sink) {
         final String name = stub.getName();
-        if (name != null && stub.getVisibility() != Visibility.GLOBAL) {
+        if (name != null && stub.getVisibility() == Visibility.GLOBAL) {
             sink.occurrence(RapidSymbolIndex.KEY, StringUtil.toLowerCase(name));
             sink.occurrence(RapidAliasIndex.KEY, StringUtil.toLowerCase(name));
         }

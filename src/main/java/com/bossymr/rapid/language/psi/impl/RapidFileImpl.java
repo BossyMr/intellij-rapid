@@ -1,6 +1,5 @@
 package com.bossymr.rapid.language.psi.impl;
 
-import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.intellij.psi.FileViewProvider;
 import com.intellij.psi.PsiElement;
@@ -11,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.List;
 
-public class RapidFileImpl extends AbstractRapidFile implements RapidFile {
+public class RapidFileImpl extends AbstractRapidFile {
 
     public RapidFileImpl(@NotNull FileViewProvider viewProvider) {
         super(viewProvider);
@@ -29,11 +28,6 @@ public class RapidFileImpl extends AbstractRapidFile implements RapidFile {
             }
         }
         super.deleteChildRange(first, last);
-    }
-
-    @Override
-    public @NotNull List<PhysicalModule> getModules() {
-        return List.of(findChildrenByClass(PhysicalModule.class));
     }
 
     @Override

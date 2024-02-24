@@ -60,7 +60,7 @@ public class RapidRecordElementType extends RapidStubElementType<RapidRecordStub
     @Override
     public void indexStub(@NotNull RapidRecordStub stub, @NotNull IndexSink sink) {
         final String name = stub.getName();
-        if (name != null && stub.getVisibility() != Visibility.GLOBAL) {
+        if (name != null && stub.getVisibility() == Visibility.GLOBAL) {
             sink.occurrence(RapidSymbolIndex.KEY, StringUtil.toLowerCase(name));
             sink.occurrence(RapidRecordIndex.KEY, StringUtil.toLowerCase(name));
         }
