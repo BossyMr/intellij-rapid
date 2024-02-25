@@ -177,9 +177,9 @@ public interface Expression {
 
     default @NotNull Collection<Expression> getComponents() {
         Set<Expression> expressions = new HashSet<>();
-        replace(expression -> {
+        iterate(expression -> {
             expressions.add(expression);
-            return expression;
+            return false;
         });
         return expressions;
     }
