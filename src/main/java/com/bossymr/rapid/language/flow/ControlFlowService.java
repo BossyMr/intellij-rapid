@@ -12,20 +12,15 @@ import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.virtual.VirtualRoutine;
-import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.util.LazyInitializer;
 import com.intellij.util.messages.Topic;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Z3Exception;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -33,12 +28,10 @@ import java.util.function.Supplier;
  * A service used to retrieve the control flow graph for a program.
  */
 @Service(Service.Level.APP)
-public final class ControlFlowService implements Disposable {
+public final class ControlFlowService {
 
     @Topic.AppLevel
     public static final Topic<ControlFlowListener> TOPIC = Topic.create("Control Flow", ControlFlowListener.class);
-
-    private final @NotNull LazyInitializer.LazyValue<AtomicReference<Context>> context = LazyInitializer.create(() -> new AtomicReference<>(new Context()));
 
     private final @NotNull ControlFlowCache cache = new ControlFlowCache();
 
@@ -187,16 +180,5 @@ public final class ControlFlowService implements Disposable {
 
     public void reload() {
         cache.clear();
-    }
-
-    @Override
-    public void dispose() {
-        AtomicReference<Context> reference = context.get();
-        Context context = reference.get();
-        if (context != null) {
-            try {
-                context.close();
-            } catch (Z3Exception ignored) {}
-        }
     }
 }
