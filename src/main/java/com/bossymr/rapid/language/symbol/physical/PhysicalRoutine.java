@@ -110,7 +110,7 @@ public class PhysicalRoutine extends RapidStubElement<RapidRoutineStub> implemen
 
     public @NotNull List<RapidLabelStatement> getLabels() {
         if (labels == null) {
-            labels = findChildrenByType(RapidElementTypes.LABEL_STATEMENT);
+            labels = List.copyOf(PsiTreeUtil.findChildrenOfType(this, RapidLabelStatement.class));
         }
         return labels;
     }
