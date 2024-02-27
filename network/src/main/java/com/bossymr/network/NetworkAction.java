@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -55,6 +56,7 @@ public class NetworkAction implements NetworkManager {
      * @throws InterruptedException if the current thread is interrupted.
      */
     protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+        close();
         return true;
     }
 
@@ -94,13 +96,7 @@ public class NetworkAction implements NetworkManager {
                 }
                 return response;
             } catch (IOException | RuntimeException e) {
-                NetworkManager entity = this;
-                while (entity instanceof NetworkAction action) {
-                    if (!(onFailure(request, e))) {
-                        break;
-                    }
-                    entity = action.manager;
-                }
+                onException(request, e);
                 throw e;
             }
         };
@@ -112,25 +108,41 @@ public class NetworkAction implements NetworkManager {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
         return (priority, listener) -> {
-            SubscriptionEntity entity = getNetworkClient().subscribe(event, priority, new SubscriptionListener<>() {
-                @Override
-                public void onEvent(@NotNull SubscriptionEntity entity, @NotNull EntityModel response) {
-                    EntityConverter<T> converter = new EntityConverter<>(NetworkAction.this, GenericType.of(event.getEventType()));
-                    T result = converter.convert(response);
-                    if (result != null) {
-                        listener.onEvent(entity, result);
+            try {
+                SubscriptionEntity entity = getNetworkClient().subscribe(event, priority, new SubscriptionListener<>() {
+                    @Override
+                    public void onEvent(@NotNull SubscriptionEntity entity, @NotNull EntityModel response) {
+                        EntityConverter<T> converter = new EntityConverter<>(NetworkAction.this, GenericType.of(event.getEventType()));
+                        T result = converter.convert(response);
+                        if (result != null) {
+                            listener.onEvent(entity, result);
+                        }
                     }
-                }
 
-                @Override
-                public void onClose(@NotNull SubscriptionEntity entity) {
-                    listener.onClose(entity);
-                    entities.remove(entity);
-                }
-            });
-            entities.add(entity);
-            return entity;
+                    @Override
+                    public void onClose(@NotNull SubscriptionEntity entity) {
+                        listener.onClose(entity);
+                        entities.remove(entity);
+                    }
+                });
+                entities.add(entity);
+                return entity;
+            } catch (IOException | RuntimeException e) {
+                NetworkRequest<Void> request = new NetworkRequest<>(URI.create("/subscription"), GenericType.voidType());
+                onException(request, e);
+                throw e;
+            }
         };
+    }
+
+    private <T> void onException(@NotNull NetworkRequest<T> request, @NotNull Exception e) throws IOException, InterruptedException {
+        NetworkManager entity = this;
+        while (entity instanceof NetworkAction action) {
+            if (!(onFailure(request, e))) {
+                break;
+            }
+            entity = action.manager;
+        }
     }
 
     @Override

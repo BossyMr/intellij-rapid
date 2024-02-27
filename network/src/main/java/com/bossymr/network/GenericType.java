@@ -16,6 +16,10 @@ public abstract class GenericType<T> implements Comparable<T> {
         type = parameterizedType.getActualTypeArguments()[0];
     }
 
+    public static @NotNull GenericType<Void> voidType() {
+        return new GenericType<>() {};
+    }
+
     public static <T> @NotNull GenericType<T> of(@NotNull Type type) {
         return new GenericType<>() {
             @Override
