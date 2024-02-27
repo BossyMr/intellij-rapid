@@ -53,10 +53,10 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {
+    protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
         if (throwable instanceof ResponseStatusException exception) {
             if (exception.getResponse().code() == 400) {
-                return true;
+                return false;
             }
         }
         RobotService remoteService = RobotService.getInstance();
@@ -71,6 +71,7 @@ public class RobotNetworkAction extends NetworkAction {
         if (showNotifications) {
             showNotification(request, throwable);
         }
+        close();
         return true;
     }
 
@@ -86,13 +87,13 @@ public class RobotNetworkAction extends NetworkAction {
         showNotifications = false;
         URI path = getNetworkClient().getDefaultPath().resolve(request.getPath());
         NotificationGroupManager.getInstance()
-                .getNotificationGroup("Robot connection errors")
-                .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)
-                .setContent(throwable.getLocalizedMessage())
-                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
-                .addAction(new ConnectNotificationAction(path))
-                .whenExpired(() -> showNotifications = true)
-                .notify(null);
+                                .getNotificationGroup("Robot connection errors")
+                                .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)
+                                .setContent(throwable.getLocalizedMessage())
+                                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
+                                .addAction(new ConnectNotificationAction(path))
+                                .whenExpired(() -> showNotifications = true)
+                                .notify(null);
     }
 
     private static class ConnectNotificationAction extends NotificationAction {

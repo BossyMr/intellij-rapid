@@ -12,11 +12,6 @@ import com.bossymr.rapid.robot.network.EventLogMessage;
 import com.bossymr.rapid.robot.network.EventLogService;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.program.BuildLogError;
-import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
-import com.intellij.execution.ExecutionException;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.process.ProcessOutputType;
 import com.intellij.openapi.diagnostic.Logger;
@@ -67,31 +62,8 @@ public class RapidProcessHandler extends ProcessHandler {
         });
     }
 
-    public boolean check() throws IOException, InterruptedException, ExecutionException {
-        boolean hasError = false;
-        TaskService service = getNetworkManager().createService(TaskService.class);
-        for (TaskState taskState : tasks) {
-            if (taskState.getName() == null) {
-                continue;
-            }
-            if (!taskState.isEnabled()) {
-                continue;
-            }
-            Task task = service.getTask(taskState.getName()).get();
-            Program program = task.getProgram().get();
-            List<BuildLogError> events = program.getBuildErrors().get();
-            for (BuildLogError event : events) {
-                String message = event.getModuleName() + ":" + event.getRow() + ":" + event.getColumn() + ": " + event.getErrorMessage();
-                notifyTextAvailable(message, ProcessOutputType.STDERR);
-            }
-            hasError = hasError || !events.isEmpty();
-        }
-        return hasError;
-    }
-
     protected void handleException(@NotNull Throwable throwable) throws IOException, InterruptedException {
         notifyProcessTerminated(1);
-        getNetworkManager().close();
     }
 
     public @NotNull NetworkManager getNetworkManager() {
@@ -107,8 +79,15 @@ public class RapidProcessHandler extends ProcessHandler {
             return;
         }
         for (int i = 1; i < categories.size(); i++) {
-            try (NetworkManager action = new NetworkAction(getNetworkManager())) {
-                EventLogCategory category = action.move(categories.get(i));
+            NetworkManager action = new NetworkAction(getNetworkManager()) {
+                @Override
+                protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                    close();
+                    return false;
+                }
+            };
+            EventLogCategory category = action.move(categories.get(i));
+            try {
                 category.onMessage().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
                     logger.debug("Received event '" + event + "'");
                     EventLogMessage message;
@@ -137,7 +116,7 @@ public class RapidProcessHandler extends ProcessHandler {
                         case ERROR, WARNING -> ProcessOutputType.STDERR;
                     });
                 });
-            } catch (IOException | InterruptedException ignored) {}
+            } catch (IOException ignored) {}
         }
     }
 
@@ -192,6 +171,7 @@ public class RapidProcessHandler extends ProcessHandler {
     }
 
     @Override
+
     protected void detachProcessImpl() {
         notifyProcessDetached();
     }
@@ -199,9 +179,9 @@ public class RapidProcessHandler extends ProcessHandler {
     @Override
     protected void notifyProcessTerminated(int exitCode) {
         super.notifyProcessTerminated(exitCode);
-        executorService.shutdownNow();
         try {
             getNetworkManager().close();
+            executorService.shutdownNow();
         } catch (IOException ignored) {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

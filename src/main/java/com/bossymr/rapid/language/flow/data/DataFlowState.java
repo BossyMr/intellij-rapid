@@ -290,7 +290,7 @@ public class DataFlowState {
         Optionality optionality = getQuickOptionality(expression);
         SnapshotExpression snapshot = createSnapshot(variable, optionality);
         insert(new BinaryExpression(BinaryOperator.EQUAL_TO, snapshot, expression));
-        if(optionality == Optionality.UNKNOWN && expression instanceof SnapshotExpression snapshotExpression) {
+        if (optionality == Optionality.UNKNOWN && expression instanceof SnapshotExpression snapshotExpression) {
             insert(new BinaryExpression(BinaryOperator.EQUAL_TO, FunctionCallExpression.present(snapshot.getSnapshot()), FunctionCallExpression.present(snapshotExpression.getSnapshot())));
         }
     }
@@ -311,7 +311,7 @@ public class DataFlowState {
             throw new IllegalArgumentException("Cannot add expression: " + expression);
         }
         BinaryExpression aggregateAssignment = getAggregateAssignment(expression);
-        if(aggregateAssignment != null) {
+        if (aggregateAssignment != null) {
             performAggregateAssignment(aggregateAssignment);
             return;
         }
@@ -322,18 +322,18 @@ public class DataFlowState {
     }
 
     private @Nullable BinaryExpression getAggregateAssignment(@NotNull Expression expression) {
-        if(!(expression instanceof BinaryExpression binaryExpression)) {
+        if (!(expression instanceof BinaryExpression binaryExpression)) {
             return null;
         }
-        if(binaryExpression.getOperator() != BinaryOperator.EQUAL_TO) {
+        if (binaryExpression.getOperator() != BinaryOperator.EQUAL_TO) {
             return null;
         }
         Expression left = binaryExpression.getLeft();
         Expression right = binaryExpression.getRight();
-        if(left instanceof SnapshotExpression && right instanceof AggregateExpression) {
+        if (left instanceof SnapshotExpression && right instanceof AggregateExpression) {
             return binaryExpression;
         }
-        if(right instanceof SnapshotExpression && left instanceof AggregateExpression) {
+        if (right instanceof SnapshotExpression && left instanceof AggregateExpression) {
             return new BinaryExpression(BinaryOperator.EQUAL_TO, right, left);
         }
         return null;
@@ -484,7 +484,7 @@ public class DataFlowState {
                 if (roots.containsKey(field)) {
                     return roots.get(field);
                 }
-                if(predecessor != null) {
+                if (predecessor != null) {
                     return predecessor.getRoot(expression);
                 }
                 return null;
@@ -514,9 +514,9 @@ public class DataFlowState {
                 }
                 Snapshot snapshot = Snapshot.createSnapshot(expression.getType(), root);
                 Expression index = expression.getIndex();
-                if(expression.getIndex() instanceof ReferenceExpression referenceExpression) {
+                if (expression.getIndex() instanceof ReferenceExpression referenceExpression) {
                     Snapshot indexSnapshot = getRoot(referenceExpression);
-                    if(indexSnapshot == null) {
+                    if (indexSnapshot == null) {
                         return null;
                     }
                     index = new SnapshotExpression(indexSnapshot);
@@ -528,11 +528,11 @@ public class DataFlowState {
     }
 
     public @NotNull Expression getSnapshot(@NotNull Expression expression) {
-        if(expression instanceof ReferenceExpression referenceExpression) {
+        if (expression instanceof ReferenceExpression referenceExpression) {
             return getSnapshot(referenceExpression);
         }
         return expression.replace(component -> {
-            if(!(component instanceof ReferenceExpression referenceExpression)) {
+            if (!(component instanceof ReferenceExpression referenceExpression)) {
                 return component;
             }
             return getSnapshot(referenceExpression);
@@ -614,6 +614,7 @@ public class DataFlowState {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
+        if (predecessor != null) return false;
         if (o == null || getClass() != o.getClass()) return false;
         DataFlowState that = (DataFlowState) o;
         return Objects.equals(instruction, that.instruction) && Objects.equals(functionBlock, that.functionBlock) && Objects.equals(conditions, that.conditions) && Objects.equals(snapshots, that.snapshots) && Objects.equals(roots, that.roots) && Objects.equals(predecessor, that.predecessor);
@@ -621,7 +622,10 @@ public class DataFlowState {
 
     @Override
     public int hashCode() {
-        return Objects.hash(instruction, functionBlock, conditions, snapshots, roots, predecessor);
+        if (predecessor == null) {
+            return Objects.hash(instruction, functionBlock, conditions, snapshots, roots);
+        }
+        return super.hashCode();
     }
 
     @Override

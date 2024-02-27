@@ -37,4 +37,8 @@ public class RapidParserTest extends ParsingTestCase {
     public void testRoutines() {
         doTest(true);
     }
+
+    public void testIfStatements() {
+        doTest(true);
+    }
 }

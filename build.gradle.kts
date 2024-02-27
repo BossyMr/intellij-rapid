@@ -79,6 +79,21 @@ tasks {
         useJUnitPlatform()
     }
 
+    prepareSandbox {
+        from("/src/main/resources/lib/libz3.dll") {
+            into("${intellij.pluginName.get()}/lib/")
+        }
+        from("/src/main/resources/lib/libz3java.dll") {
+            into("${intellij.pluginName.get()}/lib/")
+        }
+        from("/src/main/resources/lib/libz3.so") {
+            into("${intellij.pluginName.get()}/lib/")
+        }
+        from("/src/main/resources/lib/libz3java.so") {
+            into("${intellij.pluginName.get()}/lib/")
+        }
+    }
+
     patchPluginXml {
         version = properties("pluginVersion")
         sinceBuild = properties("pluginSinceBuild")

@@ -53,7 +53,7 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
     }
 
     @Override
-    public @Nullable RapidExpression getInitializer() {
+    public @Nullable RapidExpression getDetachedInitializer() {
         RapidFieldStub stub = getGreenStub();
         if (stub != null) {
             String initializer = stub.getInitializer();
@@ -63,8 +63,13 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
             RapidElementFactory elementFactory = RapidElementFactory.getInstance(getProject());
             return elementFactory.createExpressionFromText(initializer);
         } else {
-            return findInitializer();
+            return getInitializer();
         }
+    }
+
+    @Override
+    public @Nullable RapidExpression getInitializer() {
+        return findChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override
@@ -86,10 +91,6 @@ public class PhysicalField extends RapidStubElement<RapidFieldStub> implements R
             assert findChildByType(RapidTokenTypes.CEQ) != null;
         }
         addAfter(expression, equals);
-    }
-
-    public @Nullable RapidExpression findInitializer() {
-        return findChildByType(RapidElementTypes.EXPRESSIONS);
     }
 
     @Override

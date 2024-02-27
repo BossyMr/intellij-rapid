@@ -148,10 +148,6 @@ public class RapidDebugProcess extends XDebugProcess {
         getSession().getConsoleView().attachToProcess(processHandler);
         getSession().getConsoleView().addMessageFilter(new RapidFileFilter(project));
         execute(() -> {
-            if (processHandler.check()) {
-                getSession().stop();
-                return;
-            }
             setup();
             ExecutionService executionService = getExecutionService();
             try {

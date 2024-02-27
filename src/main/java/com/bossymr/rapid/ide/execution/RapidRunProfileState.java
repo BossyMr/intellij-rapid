@@ -176,8 +176,8 @@ public class RapidRunProfileState implements RunProfileState {
             processHandler.execute(() -> {
                 processHandler.getNetworkManager();
                 try (CloseableMastership ignored = CloseableMastership.withMastership(processHandler.getNetworkManager(), MastershipType.RAPID)) {
-                    setupProject(processHandler.getNetworkManager());
                     processHandler.setupEventLog();
+                    setupProject(processHandler.getNetworkManager());
                     processHandler.setupExecutionState();
                     processHandler.start();
                 } catch (MastershipException e) {

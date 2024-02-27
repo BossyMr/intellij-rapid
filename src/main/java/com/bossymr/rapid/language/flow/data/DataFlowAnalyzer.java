@@ -20,6 +20,8 @@ public class DataFlowAnalyzer {
     private final @NotNull ControlFlowBlock block;
     private final @NotNull Deque<DataFlowState> workList;
 
+    private final @NotNull Set<Entry> entries = new HashSet<>();
+
     private DataFlowAnalyzer(@NotNull ControlFlowBlock block, @NotNull Deque<DataFlowState> workList) {
         this.block = block;
         this.workList = workList;
@@ -62,6 +64,22 @@ public class DataFlowAnalyzer {
         return count;
     }
 
+    private boolean isFiltered(@NotNull DataFlowState successor) {
+        for (Entry entry : entries) {
+            if (!(entry.instruction().equals(successor.getInstruction()))) {
+                continue;
+            }
+            DataFlowState predecessor = successor;
+            while (predecessor != null) {
+                if (predecessor.equals(entry.predecessor())) {
+                    return true;
+                }
+                predecessor = predecessor.getPredecessor();
+            }
+        }
+        return false;
+    }
+
     public void process(@NotNull Set<RapidRoutine> stack) {
         while (!(workList.isEmpty())) {
             ProgressManager.checkCanceled();
@@ -72,6 +90,10 @@ public class DataFlowAnalyzer {
                 List<DataFlowState> successors = process(stack, state);
                 ControlFlowListener.publish().onState(state);
                 for (DataFlowState successor : successors) {
+                    if (isFiltered(successor)) {
+                        successor.prune();
+                        continue;
+                    }
                     if (getPreviousCycles(successor) >= 2) {
                         continue;
                     }
@@ -106,8 +128,10 @@ public class DataFlowAnalyzer {
             successor.prune(workList::remove);
         }
         state.clear();
-        DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(stack, state, block);
+        DataFlowAnalyzerVisitor visitor = new DataFlowAnalyzerVisitor(entries, stack, state, block);
         Instruction instruction = state.getInstruction();
         return instruction.accept(visitor);
     }
+
+    public record Entry(@NotNull DataFlowState predecessor, @NotNull Instruction instruction) {}
 }

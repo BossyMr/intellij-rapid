@@ -219,17 +219,6 @@ public class ControlFlowFormatVisitor extends ControlFlowVisitor<String> {
     }
 
     @Override
-    public @NotNull String visitErrorInstruction(@NotNull ErrorInstruction instruction) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("error");
-        if (instruction.getSuccessor() != null) {
-            stringBuilder.append(" ").append(instruction.getSuccessor().getIndex());
-        }
-        stringBuilder.append(";");
-        return stringBuilder.toString();
-    }
-
-    @Override
     public @NotNull String visitCallInstruction(@NotNull CallInstruction instruction) {
         StringBuilder stringBuilder = new StringBuilder();
         if (instruction.getReturnValue() != null) {

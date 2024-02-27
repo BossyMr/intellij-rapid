@@ -98,7 +98,12 @@ public class NetworkClient {
             }
         };
         subscriptionGroup.getEntities().add(entity);
-        subscriptionGroup.update();
+        try {
+            subscriptionGroup.update();
+        } catch (IOException | InterruptedException | RuntimeException e) {
+            subscriptionGroup.getEntities().remove(entity);
+            throw e;
+        }
         logger.atDebug().log("Subscribed to '{}' with priority {}", event.getResource(), priority);
         return entity;
     }

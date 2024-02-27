@@ -64,7 +64,7 @@ public class RapidRoutineElementType extends RapidStubElementType<RapidRoutineSt
     @Override
     public void indexStub(@NotNull RapidRoutineStub stub, @NotNull IndexSink sink) {
         final String name = stub.getName();
-        if (name != null && stub.getVisibility() != Visibility.GLOBAL) {
+        if (name != null && stub.getVisibility() == Visibility.GLOBAL) {
             sink.occurrence(RapidSymbolIndex.KEY, StringUtil.toLowerCase(name));
             sink.occurrence(RapidRoutineIndex.KEY, StringUtil.toLowerCase(name));
             StubIndexKey<String, PhysicalRoutine> indexKey = switch (stub.getRoutineType()) {

@@ -1,7 +1,7 @@
 package com.bossymr.rapid.language.symbol.resolve;
 
-import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.psi.*;
+import com.bossymr.rapid.language.psi.stubs.index.RapidModuleIndex;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.physical.PhysicalParameterGroup;
@@ -10,11 +10,11 @@ import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.progress.ProgressManager;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiManager;
-import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
@@ -22,7 +22,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 
 public class ResolveScopeVisitor extends RapidElementVisitor {
@@ -50,8 +49,9 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     }
 
     private void process(@Nullable RapidSymbol symbol) {
+        ProgressManager.checkCanceled();
         if (symbol != null) {
-            halt = halt || (!(processor.process(symbol)) && processor.getName() != null);
+            halt = (!(processor.process(symbol)) && processor.getName() != null) || halt;
         }
     }
 
@@ -59,14 +59,18 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     public void visitFile(@NotNull PsiFile psiFile) {
         if (psiFile instanceof RapidFile file) {
             for (PhysicalModule module : file.getModules()) {
-                if (previous.equals(module)) continue;
-                process(module);
-                for (RapidVisibleSymbol symbol : module.getSymbols()) {
-                    process(symbol);
-                }
+                processModule(module);
             }
         }
         super.visitFile(psiFile);
+    }
+
+    private void processModule(@NotNull PhysicalModule module) {
+        if (previous.equals(module)) return;
+        process(module);
+        for (RapidVisibleSymbol symbol : module.getSymbols()) {
+            process(symbol);
+        }
     }
 
     @Override
@@ -79,8 +83,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
                 }
             }
         }
-        Collection<RapidLabelStatement> labelStatements = PsiTreeUtil.findChildrenOfType(routine, RapidLabelStatement.class);
-        for (RapidLabelStatement labelStatement : labelStatements) {
+        for (RapidLabelStatement labelStatement : routine.getLabels()) {
             process(labelStatement);
         }
         for (RapidField field : routine.getFields()) {
@@ -146,9 +149,10 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
         boolean isRemoteFile = isRemoteFile(context);
         RobotService service = RobotService.getInstance();
         RapidRobot robot = service.getRobot();
+        Project project = context.getProject();
         if (robot != null) {
             for (RapidTask task : robot.getTasks()) {
-                for (PhysicalModule module : task.getModules(context.getProject())) {
+                for (PhysicalModule module : task.getModules(project)) {
                     if (!(module.equals(physicalModule))) {
                         if (module.hasAttribute(ModuleType.SYSTEM_MODULE) || isRemoteFile) {
                             visitModule(module);
@@ -158,12 +162,9 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
             }
         }
         if (!(isRemoteFile)) {
-            PsiManager manager = PsiManager.getInstance(context.getProject());
-            for (VirtualFile virtualFile : FileTypeIndex.getFiles(RapidFileType.getInstance(), GlobalSearchScope.projectScope(context.getProject()))) {
-                PsiFile file = manager.findFile(virtualFile);
-                if (file != null) {
-                    visitFile(file);
-                }
+            GlobalSearchScope scope = GlobalSearchScope.projectScope(project);
+            for (PhysicalModule module : RapidModuleIndex.getInstance().getAllElements(project, scope)) {
+                processModule(module);
             }
         }
     }

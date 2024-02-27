@@ -98,7 +98,8 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
         return switch (constraint) {
             case ANY_VALUE -> Optionality.UNKNOWN;
             case ALWAYS_TRUE -> Optionality.PRESENT;
-            case ALWAYS_FALSE -> Optionality.MISSING;case NO_VALUE -> Optionality.NO_VALUE;
+            case ALWAYS_FALSE -> Optionality.MISSING;
+            case NO_VALUE -> Optionality.NO_VALUE;
         };
     }
 

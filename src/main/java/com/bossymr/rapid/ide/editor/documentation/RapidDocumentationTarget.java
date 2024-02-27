@@ -88,10 +88,17 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
         if (symbol instanceof RapidParameter parameter) {
             return getPresentableText(parameter);
         }
-        if (symbol instanceof RapidTargetVariable targetVariable) {
-            return getPresentableText(targetVariable);
+        if (symbol instanceof RapidTargetVariable variable) {
+            return getPresentableText(variable);
+        }
+        if (symbol instanceof RapidLabelStatement statement) {
+            return getPresentableText(statement);
         }
         throw new IllegalStateException("Unexpected symbol: " + symbol);
+    }
+
+    private @NotNull String getPresentableText(@NotNull RapidLabelStatement statement) {
+        return statement.getPresentableName() + ":";
     }
 
     private @NotNull String getPresentableText(@NotNull RapidModule module) {
@@ -172,14 +179,14 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
                 RapidArray array = physicalField.getArray();
                 List<RapidExpression> dimensions = array.getDimensions();
                 for (int i = 0; i < dimensions.size(); i++) {
-                    if(i > 0) {
+                    if (i > 0) {
                         appendText(stringBuilder, RapidColor.COMMA, ", ");
                     }
                     HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), dimensions.get(i).getText(), 1);
                 }
             } else {
                 for (int i = 0; i < type.getDimensions(); i++) {
-                    if(i > 0) {
+                    if (i > 0) {
                         appendText(stringBuilder, RapidColor.COMMA, ", ");
                     }
                     appendText(stringBuilder, RapidColor.OPERATOR_SIGN, "*");
@@ -187,10 +194,10 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
             }
             appendText(stringBuilder, RapidColor.BRACES, "}");
         }
-        RapidExpression initializer = field.getInitializer();
+        RapidExpression initializer = field.getDetachedInitializer();
         if (initializer != null) {
             appendText(stringBuilder, RapidColor.OPERATOR_SIGN, " := ");
-            HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), field.getInitializer().getText(), 1);
+            HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), initializer.getText(), 1);
         }
         appendText(stringBuilder, RapidColor.SEMICOLON, ";");
         return stringBuilder.toString();

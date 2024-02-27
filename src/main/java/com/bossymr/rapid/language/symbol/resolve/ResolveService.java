@@ -190,8 +190,8 @@ public final class ResolveService {
 
     private @Nullable RapidSymbol findSymbol(@NotNull RapidRobot robot, @NotNull String[] sections) {
         Optional<RapidTask> task = robot.getTasks().stream()
-                .filter(element -> element.getName().equalsIgnoreCase(sections[1]))
-                .findFirst();
+                                        .filter(element -> element.getName().equalsIgnoreCase(sections[1]))
+                                        .findFirst();
         if (task.isEmpty()) {
             return null;
         }
@@ -199,8 +199,8 @@ public final class ResolveService {
             return task.orElseThrow();
         }
         Optional<? extends RapidModule> module = task.orElseThrow().getModules(project).stream()
-                .filter(element -> sections[2].equalsIgnoreCase(element.getName()))
-                .findFirst();
+                                                     .filter(element -> sections[2].equalsIgnoreCase(element.getName()))
+                                                     .findFirst();
         if (module.isEmpty()) {
             return null;
         }
@@ -208,8 +208,8 @@ public final class ResolveService {
             return module.orElseThrow();
         }
         Optional<? extends RapidSymbol> symbol = module.orElseThrow().getSymbols().stream()
-                .filter(element -> sections[3].equalsIgnoreCase(element.getName()))
-                .findFirst();
+                                                       .filter(element -> sections[3].equalsIgnoreCase(element.getName()))
+                                                       .findFirst();
         if (symbol.isEmpty()) {
             return null;
         }

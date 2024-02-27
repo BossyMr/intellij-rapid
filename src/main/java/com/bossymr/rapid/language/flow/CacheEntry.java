@@ -42,11 +42,11 @@ public class CacheEntry {
     @RequiresReadLock
     public @NotNull ControlFlowBlock getDataFlow(@NotNull RapidRoutine routine, @NotNull Set<RapidRoutine> stack) {
         ControlFlowBlock block = getControlFlowBlock(routine);
-        if(workList == null) {
+        if (workList == null) {
             return block;
         }
         DataFlowAnalyzer analyzer = workList.get();
-        if(analyzer == null) {
+        if (analyzer == null) {
             analyzer = DataFlowAnalyzer.createDataFlowAnalyzer(block);
             workList = new SoftReference<>(analyzer);
         }
@@ -57,14 +57,14 @@ public class CacheEntry {
 
     @RequiresReadLock
     public @Nullable ControlFlowBlock getDataFlowIfAvailable() {
-        if(result == null) {
+        if (result == null) {
             return null;
         }
-        if(workList != null) {
+        if (workList != null) {
             return null;
         }
         ControlFlowBlock block = result.getBlock();
-        if(block == null) {
+        if (block == null) {
             clear();
             return null;
         }
@@ -89,9 +89,9 @@ public class CacheEntry {
 
 
     private @NotNull ControlFlowBlock getControlFlowBlock(@NotNull RapidRoutine routine) {
-        if(result != null) {
+        if (result != null) {
             ControlFlowBlock block = result.getBlock();
-            if(block != null) {
+            if (block != null) {
                 return block;
             }
             clear();

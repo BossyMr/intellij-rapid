@@ -29,6 +29,10 @@ public interface RapidField extends RapidVariable, RapidVisibleSymbol {
      */
     @Nullable RapidExpression getInitializer();
 
+    default @Nullable RapidExpression getDetachedInitializer() {
+        return getInitializer();
+    }
+
     /**
      * Sets the initializer to the specified expression, if the expression is {@code null}, the initializer is removed.
      *
