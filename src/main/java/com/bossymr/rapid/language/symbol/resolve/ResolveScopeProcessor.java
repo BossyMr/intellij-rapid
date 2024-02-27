@@ -15,7 +15,7 @@ import java.util.Objects;
 
 public class ResolveScopeProcessor implements Processor<RapidSymbol> {
 
-    private final @NotNull List<RapidSymbol> symbols;
+    protected final @NotNull List<RapidSymbol> symbols;
 
     private final @NotNull PsiElement context;
     private final @Nullable String name;
@@ -37,7 +37,7 @@ public class ResolveScopeProcessor implements Processor<RapidSymbol> {
     @Override
     public boolean process(@NotNull RapidSymbol symbol) {
         if (symbols.contains(symbol)) {
-            throw new IllegalArgumentException();
+            return false;
         }
         if (this.name != null && !(this.name.equalsIgnoreCase(symbol.getName()))) {
             return true;

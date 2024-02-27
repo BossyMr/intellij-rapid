@@ -51,7 +51,7 @@ public class ResolveScopeVisitor extends RapidElementVisitor {
     private void process(@Nullable RapidSymbol symbol) {
         ProgressManager.checkCanceled();
         if (symbol != null) {
-            halt = halt || (!(processor.process(symbol)) && processor.getName() != null);
+            halt = (!(processor.process(symbol)) && processor.getName() != null) || halt;
         }
     }
 
