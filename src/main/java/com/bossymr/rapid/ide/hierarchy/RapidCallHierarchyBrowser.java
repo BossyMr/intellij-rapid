@@ -14,7 +14,6 @@ import com.intellij.openapi.actionSystem.ActionPlaces;
 import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.ui.PopupHandler;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
@@ -59,7 +58,7 @@ public class RapidCallHierarchyBrowser extends CallHierarchyBrowserBase {
             return true;
         }
         if (element instanceof PhysicalField field) {
-            PhysicalRoutine routine = PsiTreeUtil.getParentOfType(field, PhysicalRoutine.class, true);
+            PhysicalRoutine routine = PhysicalRoutine.getRoutine(field);
             // Check if the field is a local field.
             return routine == null;
         }

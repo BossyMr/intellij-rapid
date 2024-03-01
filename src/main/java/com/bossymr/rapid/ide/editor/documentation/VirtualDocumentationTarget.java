@@ -16,19 +16,15 @@ public class VirtualDocumentationTarget extends RapidDocumentationTarget<Virtual
 
     @Override
     public @NotNull DocumentationResult computeDocumentation() {
+        RapidDocumentationService service = RapidDocumentationService.getInstance();
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(getSignature());
-        RapidDocumentationService service = RapidDocumentationService.getInstance();
-        RapidDocumentationService.Result documentation = service.getDocumentation(getSymbol());
-        DocumentationContent content;
+        stringBuilder.append(DocumentationMarkup.CONTENT_START);
+        String documentation = service.getDocumentation(getProject(), getName());
         if (documentation != null) {
-            stringBuilder.append(DocumentationMarkup.CONTENT_START);
-            stringBuilder.append(documentation.content());
-            stringBuilder.append(DocumentationMarkup.CONTENT_END);
-            content = DocumentationContent.content(stringBuilder.toString(), documentation.images());
-        } else {
-            content = DocumentationContent.content(stringBuilder.toString());
+            stringBuilder.append(documentation);
         }
-        return DocumentationResult.documentation(content);
+        stringBuilder.append(DocumentationMarkup.CONTENT_START);
+        return DocumentationResult.documentation(DocumentationContent.content(stringBuilder.toString(), service.getImages()));
     }
 }

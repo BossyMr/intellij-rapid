@@ -1,15 +1,20 @@
 package com.bossymr.rapid.ide.editor.documentation;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.psi.RapidTokenTypes;
-import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.codeInsight.documentation.DocumentationManagerProtocol;
+import com.intellij.notification.NotificationAction;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
-import com.intellij.openapi.components.Service;
+import com.intellij.openapi.components.PersistentStateComponent;
+import com.intellij.openapi.components.State;
+import com.intellij.openapi.components.Storage;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.Task;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.io.FileUtil;
-import com.intellij.psi.tree.IElementType;
 import com.intellij.util.download.DownloadableFileDescription;
 import com.intellij.util.download.DownloadableFileService;
 import com.intellij.util.ui.UIUtil;
@@ -20,6 +25,7 @@ import org.apache.tika.parser.microsoft.chm.ChmExtractor;
 import org.apache.tika.parser.microsoft.chm.DirectoryListingEntry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -37,90 +43,87 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-@Service
-public final class RapidDocumentationService {
+@State(name = "Rapid.Documentation", storages = @Storage(value = "RapidDocumentation.xml"))
+public class RapidDocumentationService implements PersistentStateComponent<RapidDocumentationState> {
 
-    private static final @NotNull String DOCUMENTATION_URL = "https://robotstudiocdn.azureedge.net/distributionpackages/RobotWare/ABB.RobotWareDoc.IRC5-6.15.rspak";
-    private static final @NotNull String DOCUMENTATION_FILE_NAME = "ABB.RobotWareDoc.IRC5-6.15.rspak";
-    private static final @NotNull String INTERNAL_PATH = "ABB.RobotWareDoc.IRC5-6.15/Documentation/en/";
-    private static final @NotNull String CONTENT_NAME = "3HAC050917_TRM_RAPID_RW_6-en.chm";
-    private static final @NotNull String INDEX_NAME = "3HAC050917_TRM_RAPID_RW_6-en.alias";
+    public static final @NotNull String DOWNLOAD_PATH = "https://robotstudiocdn.azureedge.net/distributionpackages/RobotWare/ABB.RobotWareDoc.IRC5-6.15.rspak";
+    private static final @NotNull String DOWNLOAD_FILE = "ABB.RobotWareDoc.IRC5-6.15.rspak";
+    private static final @NotNull Path INTERNAL_PATH = Path.of("ABB.RobotWareDoc.IRC5-6.15", "Documentation");
+    private static final @NotNull String FILE_PREFIX = "3HAC050917_TRM_RAPID_RW_6";
 
-    private @NotNull State state = State.UNINITIALIZED;
+    private RapidDocumentationState state = new RapidDocumentationState();
+    private volatile @NotNull RapidDocumentationService.State currentState = State.UNINITIALIZED;
     private @Nullable Map<String, Image> images;
 
     public static @NotNull RapidDocumentationService getInstance() {
         return ApplicationManager.getApplication().getService(RapidDocumentationService.class);
     }
 
-    public @Nullable Result getDocumentation(@NotNull RapidSymbol symbol) {
-        String name = symbol.getName();
-        if (name == null) {
-            return null;
-        }
-        return getDocumentation(name.toLowerCase());
+    @Override
+    public @NotNull RapidDocumentationState getState() {
+        return state;
     }
 
-    public @Nullable Result getDocumentation(@NotNull IElementType elementType) {
-        String text = elementType == RapidTokenTypes.CEQ ? "CEQ" : elementType.toString();
-        return getDocumentation(text.toUpperCase());
+    @Override
+    public void loadState(@NotNull RapidDocumentationState state) {
+        this.state = state;
     }
 
+    public @NotNull @Unmodifiable Map<String, Image> getImages() {
+        return Objects.requireNonNullElseGet(images, Map::of);
+    }
 
-    private @Nullable Result getDocumentation(@NotNull String name) {
-        if (state == State.DISABLED) {
+    /**
+     * Computes the external documentation for the symbol with the specified name. If external documentation has not
+     * been downloaded, or is being downloaded by another thread, a notification is displayed and this method returns
+     * {@code null} without blocking.
+     *
+     * @param project the current project.
+     * @param name the name of the symbol.
+     * @return the external documentation for the symbol, or {@code null} if documentation is not available.
+     * @see #getImages()
+     */
+    public synchronized @Nullable String getDocumentation(@NotNull Project project, @NotNull String name) {
+        if (currentState == State.DISABLED) {
+            // Documentation is not available
             return null;
         }
-        if (state == State.UNINITIALIZED) {
-            try {
-                computeDocumentation();
-                state = State.INITIALIZED;
-            } catch (IOException e) {
-                state = State.DISABLED;
+        if (currentState == State.INITIALIZING) {
+            // Documentation is being computed with a visible progress indicator, in the meantime,
+            // documentation is not available.
+            return null;
+        }
+        if (currentState == State.UNINITIALIZED) {
+            // Documentation has not been initialized.
+            currentState = State.INITIALIZING;
+            if (!(prepareDocumentation(project))) {
+                // Documentation is either being initialized or could not be initialized.
                 return null;
             }
         }
-        Objects.requireNonNull(images);
+        return getDocumentation(name);
+    }
+
+    /**
+     * Finds the external documentation for the symbol with the specified name.
+     *
+     * @param name the name of the symbol.
+     * @return the external documentation for the symbol, or {@code null} if documentation is not available.
+     */
+    private @Nullable String getDocumentation(@NotNull String name) {
         File file = getDocumentationPath().resolve(name + ".html").toFile();
         if (!(file.isFile())) {
             return null;
         }
         try {
-            String content = Files.readString(file.toPath());
-            return new Result(content, images);
+            return Files.readString(file.toPath());
         } catch (IOException e) {
             return null;
-        }
-    }
-
-    /**
-     * Download documentation for the specified RobotWare version.
-     */
-    public void computeDocumentation() throws IOException {
-        if (processDocumentation()) {
-            return;
-        }
-        Path documentationPath = getDocumentationPath();
-        if (documentationPath.toFile().exists()) {
-            FileUtil.delete(documentationPath);
-        }
-        File file = downloadDocumentation();
-        try (ZipFile zipFile = new ZipFile(file)) {
-            ZipEntry contentEntry = zipFile.getEntry(INTERNAL_PATH + CONTENT_NAME);
-            ZipEntry aliasEntry = zipFile.getEntry(INTERNAL_PATH + INDEX_NAME);
-            if (contentEntry == null || aliasEntry == null) {
-                throw new IOException("Unexpected file content");
-            }
-            Map<String, String> files = unpackIndex(zipFile.getInputStream(aliasEntry));
-            unpackDocumentation(zipFile.getInputStream(contentEntry), documentationPath, files);
-            this.images = processImages();
         }
     }
 
@@ -128,34 +131,37 @@ public final class RapidDocumentationService {
         return PathManager.getPluginsDir().resolve("Rapid").resolve("documentation");
     }
 
-    private @NotNull Map<String, Image> processImages() throws IOException {
-        Map<String, Image> images = new HashMap<>();
+    /**
+     * Finds the external documentation if already downloaded, or downloads and extracts it.
+     *
+     * @param project the current project.
+     * @return {@code true} if the external documentation can be found immediately.
+     */
+    public boolean prepareDocumentation(@NotNull Project project) {
+        if (retrieveExisting()) {
+            currentState = State.INITIALIZED;
+            return true;
+        }
         Path documentationPath = getDocumentationPath();
-        Files.walkFileTree(documentationPath, new SimpleFileVisitor<>() {
-            @Override
-            public @NotNull FileVisitResult visitFile(@NotNull Path path, @NotNull BasicFileAttributes attrs) throws IOException {
-                if (path.toString().endsWith(".png") || path.toString().endsWith(".gif")) {
-                    Image image = ImageIO.read(path.toFile());
-                    if (path.getParent().endsWith("Graphics")) {
-                        String name = path.toFile().getName();
-                        int width = image.getWidth(null) / 15;
-                        int height = image.getHeight(null) / 15;
-                        BufferedImage rescaled = UIUtil.createImage(null, width, height, BufferedImage.TYPE_INT_ARGB);
-                        Graphics2D graphics = rescaled.createGraphics();
-                        graphics.drawImage(image, 0, 0, width, height, null);
-                        ImageIO.write(rescaled, name.substring(name.lastIndexOf(".")), path.toFile());
-                        image = rescaled;
-                    }
-                    String filePath = documentationPath.relativize(path).toString();
-                    images.put("http://" + filePath, image);
-                }
-                return FileVisitResult.CONTINUE;
+        if (documentationPath.toFile().exists()) {
+            // If an error was encountered while retrieving the existing documentation, the directory might still exist
+            // but be corrupted. Just in case delete the directory and try downloading the documentation again.
+            try {
+                FileUtil.delete(documentationPath);
+            } catch (IOException e) {
+                currentState = State.DISABLED;
+                return false;
             }
-        });
-        return images;
+        }
+        switch (state.downloadOption) {
+            case ALWAYS -> retrieveDocumentation(project);
+            case ASK -> promptForDownload(project);
+            case NEVER -> currentState = State.DISABLED;
+        }
+        return false;
     }
 
-    private boolean processDocumentation() {
+    private boolean retrieveExisting() {
         Path documentationPath = getDocumentationPath();
         if (!(documentationPath.toFile().exists())) {
             return false;
@@ -168,19 +174,114 @@ public final class RapidDocumentationService {
         }
     }
 
-    private @NotNull File downloadDocumentation() throws IOException {
-        File tempDirectory = FileUtil.createTempDirectory("intellij-rapid", null, true);
-        DownloadableFileService service = DownloadableFileService.getInstance();
-        DownloadableFileDescription fileDescription = service.createFileDescription(DOCUMENTATION_URL, DOCUMENTATION_FILE_NAME);
-        List<Pair<File, DownloadableFileDescription>> result = service.createDownloader(List.of(fileDescription), RapidBundle.message("documentation.download.name"))
-                                                                      .download(tempDirectory);
-        if (result.size() != 1) {
-            throw new IOException("Unexpected state: " + result);
-        }
-        return result.get(0).getFirst();
+    private void promptForDownload(@NotNull Project project) {
+        NotificationGroupManager.getInstance()
+                                .getNotificationGroup("Documentation download")
+                                .createNotification(RapidBundle.message("documentation.message.title"), RapidBundle.message("documentation.message.text"), NotificationType.INFORMATION)
+                                .addAction(NotificationAction.createSimpleExpiring(RapidBundle.message("documentation.message.action.always"), () -> {
+                                    state.downloadOption = RapidDocumentationState.DownloadOption.ALWAYS;
+                                    retrieveDocumentation(project);
+                                })).addAction(NotificationAction.createSimpleExpiring(RapidBundle.message("documentation.message.action.once"), () -> {
+                                    state.downloadOption = RapidDocumentationState.DownloadOption.ASK;
+                                    retrieveDocumentation(project);
+                                })).addAction(NotificationAction.createSimpleExpiring(RapidBundle.message("documentation.message.action.never"), () ->
+                                        state.downloadOption = RapidDocumentationState.DownloadOption.NEVER))
+                                .notify(project);
     }
 
-    private void unpackDocumentation(@NotNull InputStream packageFile, @NotNull Path directory, @NotNull Map<String, String> files) throws IOException {
+    private void retrieveDocumentation(@NotNull Project project) {
+        new Task.Backgroundable(project, RapidBundle.message("documentation.task.title"), true) {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                try {
+                    Path documentationPath = getDocumentationPath();
+                    if (documentationPath.toFile().exists()) {
+                        FileUtil.delete(documentationPath);
+                    }
+                    File file = download();
+                    indicator.setText(RapidBundle.message("documentation.extract.zip"));
+                    indicator.setText2(null);
+                    try (ZipFile zipFile = new ZipFile(file)) {
+                        ZipEntry contentEntry = zipFile.getEntry(getInternalFilePath(".chm"));
+                        ZipEntry aliasEntry = zipFile.getEntry(getInternalFilePath(".alias"));
+                        if (contentEntry == null || aliasEntry == null) {
+                            throw new IOException();
+                        }
+                        Map<String, String> files = unpackIndex(zipFile.getInputStream(aliasEntry));
+                        unpackDocumentation(indicator, zipFile.getInputStream(contentEntry), documentationPath, files);
+                        indicator.setText(RapidBundle.message("documentation.extract.image"));
+                        images = processImages();
+                    }
+                    currentState = RapidDocumentationService.State.INITIALIZED;
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            }
+
+            @Override
+            public void onCancel() {
+                currentState = RapidDocumentationService.State.DISABLED;
+                deleteDirectory();
+            }
+
+            @Override
+            public void onThrowable(@NotNull Throwable error) {
+                NotificationGroupManager.getInstance()
+                                        .getNotificationGroup("Documentation download")
+                                        .createNotification(RapidBundle.message("documentation.error.title"), NotificationType.ERROR)
+                                        .addAction(NotificationAction.createSimpleExpiring(RapidBundle.message("documentation.action.retry"), () -> retrieveDocumentation(project)))
+                                        .notify(project);
+                currentState = RapidDocumentationService.State.DISABLED;
+                deleteDirectory();
+            }
+
+            private void deleteDirectory() {
+                if (getDocumentationPath().toFile().exists()) {
+                    try {
+                        FileUtil.delete(getDocumentationPath());
+                    } catch (IOException ignored) {}
+                }
+            }
+        }.queue();
+
+    }
+
+    private @NotNull Map<String, Image> processImages() throws IOException {
+        Map<String, Image> images = new HashMap<>();
+        Path documentationPath = getDocumentationPath();
+        Files.walkFileTree(documentationPath, new SimpleFileVisitor<>() {
+            @Override
+            public @NotNull FileVisitResult visitFile(@NotNull Path path, @NotNull BasicFileAttributes attrs) throws IOException {
+                if (path.toString().endsWith(".png") || path.toString().endsWith(".gif")) {
+                    Image image = ImageIO.read(path.toFile());
+                    String filePath = documentationPath.relativize(path).toString();
+                    images.put("http://" + filePath, image);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        return Collections.unmodifiableMap(images);
+    }
+
+    private @NotNull File download() throws IOException {
+        File tempDirectory = FileUtil.createTempDirectory("intellij-rapid", "documentation", true);
+        DownloadableFileService service = DownloadableFileService.getInstance();
+        DownloadableFileDescription fileDescription = service.createFileDescription(DOWNLOAD_PATH, DOWNLOAD_FILE);
+        List<Pair<File, DownloadableFileDescription>> download = service.createDownloader(List.of(fileDescription), RapidBundle.message("documentation.download.name")).download(tempDirectory);
+        List<File> files = download.stream().map(pair -> pair.getFirst()).toList();
+        if (files.size() != 1) {
+            throw new IOException("Expected file: " + DOWNLOAD_FILE + ", got: " + files);
+        }
+        return files.get(0);
+    }
+
+    private @NotNull String getInternalFilePath(@NotNull String fileExtension) {
+        String languageCode = state.preferredLanguage.getCode();
+        Path path = INTERNAL_PATH.resolve(languageCode).resolve(FILE_PREFIX + "-" + languageCode.toLowerCase() + "." + fileExtension);
+        return path.toString();
+    }
+
+    private void unpackDocumentation(@NotNull ProgressIndicator indicator, @NotNull InputStream packageFile, @NotNull Path directory, @NotNull Map<String, String> files) throws IOException {
         FileUtil.delete(directory);
         ChmExtractor extractor;
         try {
@@ -190,7 +291,9 @@ public final class RapidDocumentationService {
         }
         patchExtractor(extractor);
         List<DirectoryListingEntry> entries = extractor.getChmDirList().getDirectoryListingEntryList();
+        indicator.setIndeterminate(false);
         for (DirectoryListingEntry entry : entries) {
+            indicator.setFraction(((double) entries.indexOf(entry)) / ((double) entries.size()));
             String name = entry.getName().substring(1);
             if (!(entry.getName().startsWith("/")) || name.isEmpty() || name.startsWith("#") || name.startsWith("$") || name.endsWith(".hhk") || name.endsWith(".hhc") || name.endsWith(".css")) {
                 continue;
@@ -202,6 +305,9 @@ public final class RapidDocumentationService {
                 }
                 String newName = files.get(file.getName()) + ".html";
                 file = file.getParentFile().toPath().resolve(newName).toFile();
+            }
+            if (file.getName().endsWith(".png")) {
+                file = directory.resolve(name.replaceAll(" ", "%20")).toFile();
             }
             if (name.endsWith("/")) {
                 if (!(file.mkdirs())) {
@@ -222,7 +328,11 @@ public final class RapidDocumentationService {
                     throw new IOException(e);
                 }
                 if (file.getName().endsWith(".html")) {
-                    content = patchFile(content, files);
+                    content = patchHtmlFile(content, files);
+                }
+                if (file.getName().endsWith(".png") && parentFile.getName().equals("Graphics")) {
+                    writeImage(content, file);
+                    continue;
                 }
                 try (FileOutputStream outputStream = new FileOutputStream(file)) {
                     outputStream.write(content);
@@ -231,7 +341,18 @@ public final class RapidDocumentationService {
         }
     }
 
-    private byte @NotNull [] patchFile(byte @NotNull [] content, @NotNull Map<String, String> files) {
+    private void writeImage(byte @NotNull [] content, @NotNull File file) throws IOException {
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(content));
+        String name = file.getName();
+        int width = image.getWidth(null) / 15;
+        int height = image.getHeight(null) / 15;
+        BufferedImage rescaled = UIUtil.createImage(null, width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics = rescaled.createGraphics();
+        graphics.drawImage(image, 0, 0, width, height, null);
+        ImageIO.write(rescaled, name.substring(name.lastIndexOf(".") + 1), file);
+    }
+
+    private byte @NotNull [] patchHtmlFile(byte @NotNull [] content, @NotNull Map<String, String> files) {
         Document document = Jsoup.parse(new String(content, StandardCharsets.UTF_8));
         Elements links = document.select("a[href]");
         for (Element link : links) {
@@ -272,6 +393,7 @@ public final class RapidDocumentationService {
         return index;
     }
 
+    //region Temporary fix until Apache Tika is updated (https://issues.apache.org/jira/projects/TIKA/issues/TIKA-4204)
     private void patchExtractor(@NotNull ChmExtractor extractor) {
         ChmDirectoryListingSet chmDirList = extractor.getChmDirList();
         int indexOfContent = ChmCommons.indexOf(chmDirList.getDirectoryListingEntryList(), "::DataSpace/Storage/MSCompressed/Content");
@@ -290,12 +412,28 @@ public final class RapidDocumentationService {
             throw new RuntimeException(e);
         }
     }
+    //endregion
 
     private enum State {
+        /**
+         * Documentation has either not yet been processed - and might not be available.
+         */
         UNINITIALIZED,
+
+        /**
+         * Documentation is being processed in the background.
+         */
+        INITIALIZING,
+
+        /**
+         * Documentation is available.
+         */
         INITIALIZED,
+
+        /**
+         * Documentation is not available. An error was encountered while initializing or external documentation is
+         * disabled.
+         */
         DISABLED
     }
-
-    public record Result(@NotNull String content, @NotNull Map<String, Image> images) {}
 }

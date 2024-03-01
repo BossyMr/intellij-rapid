@@ -43,6 +43,10 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
         return symbol;
     }
 
+    public @NotNull String getName() {
+        return symbol.getPresentableName();
+    }
+
     @Override
     public @NotNull TargetPresentation computePresentation() {
         return getSymbol().getTargetPresentation();
@@ -314,6 +318,6 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
 
     @Override
     public @NotNull Pointer<? extends DocumentationTarget> createPointer() {
-        return Pointer.delegatingPointer(getSymbol().createPointer(), symbol -> symbol.getDocumentationTarget(getProject()));
+        return Pointer.delegatingPointer(getSymbol().createPointer(), symbol -> RapidDocumentationTargetProvider.createDocumentationTarget(project, symbol));
     }
 }

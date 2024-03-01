@@ -28,10 +28,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
 
-@State(name = "robot",
-        storages = {
-                @Storage("robot.xml")
-        })
+@State(name = "Rapid.Robot", storages = @Storage("RapidRobot.xml"))
 public class RobotServiceImpl implements RobotService {
 
     private @NotNull State state = new State();

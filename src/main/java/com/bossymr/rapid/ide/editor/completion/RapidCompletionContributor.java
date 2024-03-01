@@ -70,7 +70,7 @@ public class RapidCompletionContributor extends CompletionContributor {
     private @NotNull LookupElement createLookupElement(@NotNull RapidSymbol symbol) {
         String name = symbol.getPresentableName();
         TargetPresentation presentation = symbol.getTargetPresentation();
-        LookupElementBuilder lookupElementBuilder = LookupElementBuilder.create(symbol, name)
+        LookupElementBuilder lookupElementBuilder = LookupElementBuilder.create(symbol.createPointer(), name)
                 .withIcon(presentation.getIcon())
                 .withPresentableText(presentation.getPresentableText())
                 .withTailText(presentation.getLocationText());
@@ -93,7 +93,6 @@ public class RapidCompletionContributor extends CompletionContributor {
         }
         return lookupElementBuilder;
     }
-
 
     private @NotNull List<SymbolFilter> getIndexPredicate(@NotNull PsiElement element) {
         if (!(element instanceof RapidReferenceExpression referenceExpression)) {
