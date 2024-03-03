@@ -141,7 +141,7 @@
                                  instance="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationConfigurable"/>
 
         <notificationGroup displayType="STICKY_BALLOON" id="Documentation download" bundle="messages.RapidBundle"
-                           key="notification.group.documentation.download.error"/>
+                           key="notification.group.documentation"/>
 
         <platform.backend.documentation.linkHandler
                 implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>

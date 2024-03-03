@@ -30,6 +30,11 @@ public class RapidDocumentationConfigurable implements Configurable {
     }
 
     @Override
+    public void disposeUIResources() {
+        this.component = null;
+    }
+
+    @Override
     public boolean isModified() {
         RapidDocumentationState state = RapidDocumentationService.getInstance().getState();
         boolean modified = state.downloadOption != component.state.getItem();
@@ -39,9 +44,11 @@ public class RapidDocumentationConfigurable implements Configurable {
 
     @Override
     public void apply() throws ConfigurationException {
-        RapidDocumentationState state = RapidDocumentationService.getInstance().getState();
+        RapidDocumentationService service = RapidDocumentationService.getInstance();
+        RapidDocumentationState state = service.getState();
         state.downloadOption = component.state.getItem();
         state.preferredLanguage = component.language.getItem();
+        service.prepareDocumentation(null);
     }
 
     @Override
@@ -61,12 +68,13 @@ public class RapidDocumentationConfigurable implements Configurable {
         public Component() {
             initializeComboBox(state, RapidDocumentationState.DownloadOption.values(), RapidDocumentationState.DownloadOption::getMessage);
             initializeComboBox(language, RapidDocumentationState.Language.values(), RapidDocumentationState.Language::getMessage);
-            downloadPath.setComponentStyle(UIUtil.ComponentStyle.SMALL);
+            downloadPath.setComponentStyle(UIUtil.ComponentStyle.MINI);
             downloadPath.setText(RapidDocumentationService.DOWNLOAD_PATH);
             this.panel = FormBuilder.createFormBuilder()
                                     .addLabeledComponent(new JBLabel(RapidBundle.message("documentation.download.state")), state)
                                     .addLabeledComponent(new JBLabel(RapidBundle.message("documentation.language.state")), language)
                                     .addComponentToRightColumn(downloadPath)
+                                    .addComponentFillVertically(new JBLabel(), 0)
                                     .getPanel();
         }
 

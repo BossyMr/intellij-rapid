@@ -1,18 +1,22 @@
 package com.bossymr.rapid.ide.editor.documentation;
 
 import com.bossymr.rapid.RapidBundle;
+import com.bossymr.rapid.language.RapidLanguage;
 import com.intellij.codeInsight.documentation.DocumentationManagerProtocol;
 import com.intellij.notification.NotificationAction;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
+import com.intellij.openapi.editor.richcopy.HtmlSyntaxInfoUtil;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.util.download.DownloadableFileDescription;
@@ -45,6 +49,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -53,7 +58,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
 
     public static final @NotNull String DOWNLOAD_PATH = "https://robotstudiocdn.azureedge.net/distributionpackages/RobotWare/ABB.RobotWareDoc.IRC5-6.15.rspak";
     private static final @NotNull String DOWNLOAD_FILE = "ABB.RobotWareDoc.IRC5-6.15.rspak";
-    private static final @NotNull Path INTERNAL_PATH = Path.of("ABB.RobotWareDoc.IRC5-6.15", "Documentation");
+    private static final @NotNull String INTERNAL_PATH = "ABB.RobotWareDoc.IRC5-6.15/Documentation";
     private static final @NotNull String FILE_PREFIX = "3HAC050917_TRM_RAPID_RW_6";
 
     private RapidDocumentationState state = new RapidDocumentationState();
@@ -137,7 +142,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
      * @param project the current project.
      * @return {@code true} if the external documentation can be found immediately.
      */
-    public boolean prepareDocumentation(@NotNull Project project) {
+    public boolean prepareDocumentation(@Nullable Project project) {
         if (retrieveExisting()) {
             currentState = State.INITIALIZED;
             return true;
@@ -174,7 +179,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         }
     }
 
-    private void promptForDownload(@NotNull Project project) {
+    private void promptForDownload(@Nullable Project project) {
         NotificationGroupManager.getInstance()
                                 .getNotificationGroup("Documentation download")
                                 .createNotification(RapidBundle.message("documentation.message.title"), RapidBundle.message("documentation.message.text"), NotificationType.INFORMATION)
@@ -189,7 +194,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
                                 .notify(project);
     }
 
-    private void retrieveDocumentation(@NotNull Project project) {
+    private void retrieveDocumentation(@Nullable Project project) {
         new Task.Backgroundable(project, RapidBundle.message("documentation.task.title"), true) {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
@@ -202,8 +207,8 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
                     indicator.setText(RapidBundle.message("documentation.extract.zip"));
                     indicator.setText2(null);
                     try (ZipFile zipFile = new ZipFile(file)) {
-                        ZipEntry contentEntry = zipFile.getEntry(getInternalFilePath(".chm"));
-                        ZipEntry aliasEntry = zipFile.getEntry(getInternalFilePath(".alias"));
+                        ZipEntry contentEntry = zipFile.getEntry(getInternalFilePath("chm"));
+                        ZipEntry aliasEntry = zipFile.getEntry(getInternalFilePath("alias"));
                         if (contentEntry == null || aliasEntry == null) {
                             throw new IOException();
                         }
@@ -233,6 +238,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
                                         .notify(project);
                 currentState = RapidDocumentationService.State.DISABLED;
                 deleteDirectory();
+                throw new RuntimeException(error);
             }
 
             private void deleteDirectory() {
@@ -277,8 +283,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
 
     private @NotNull String getInternalFilePath(@NotNull String fileExtension) {
         String languageCode = state.preferredLanguage.getCode();
-        Path path = INTERNAL_PATH.resolve(languageCode).resolve(FILE_PREFIX + "-" + languageCode.toLowerCase() + "." + fileExtension);
-        return path.toString();
+        return INTERNAL_PATH + "/" + languageCode + "/" + FILE_PREFIX + "-" + languageCode.toLowerCase() + "." + fileExtension;
     }
 
     private void unpackDocumentation(@NotNull ProgressIndicator indicator, @NotNull InputStream packageFile, @NotNull Path directory, @NotNull Map<String, String> files) throws IOException {
@@ -314,6 +319,9 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
                     throw new IOException("Could not create directory: " + directory);
                 }
             } else {
+                if (file.exists()) {
+                    continue;
+                }
                 File parentFile = file.getParentFile();
                 if (!(parentFile.exists() || parentFile.mkdirs())) {
                     throw new IOException("Could not create parent directory to file: " + file);
@@ -354,6 +362,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
 
     private byte @NotNull [] patchHtmlFile(byte @NotNull [] content, @NotNull Map<String, String> files) {
         Document document = Jsoup.parse(new String(content, StandardCharsets.UTF_8));
+        // Fix references to point to the correct file
         Elements links = document.select("a[href]");
         for (Element link : links) {
             String currentLink = link.attr("href");
@@ -361,6 +370,8 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
                 link.attr("href", DocumentationManagerProtocol.PSI_ELEMENT_PROTOCOL + files.get(currentLink));
             }
         }
+        // Fix images to start with a scheme, otherwise images are not resolved.
+        // Images are resolved from the map provided by #getImages().
         Elements images = document.select("img[src]");
         for (Element image : images) {
             String currentLink = Path.of(image.attr("src")).toString();
@@ -369,7 +380,43 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
                 image.removeAttr("style");
             }
         }
+        // Remove the file header, which repeats the symbol name.
+        document.select(".map-header").remove();
+        document.select(".StatusSecrecy").remove();
+        String codeBlock = "div[class='computerscripts']:not([xmlns:xlink])";
+        List<Element> elements = document.select(codeBlock).stream()
+                                         .filter(element -> element.parent() == null || !element.parent().is(codeBlock))
+                                         .toList();
+        Project project = ProjectManager.getInstance().getDefaultProject();
+        for (Element element : elements) {
+            patchCodeBlock(element, true);
+            StringBuilder stringBuilder = new StringBuilder();
+            ReadAction.run(() -> HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), element.text(), 1));
+            element.html(stringBuilder.toString());
+        }
         return document.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private void patchCodeBlock(@NotNull Element element, boolean firstElement) {
+        if (firstElement) {
+            element.wrap("<pre>");
+        }
+        List<Element> elements = element.select("div").stream()
+                                        .filter(block -> block.parent() != null && block.parent().equals(element))
+                                        .toList();
+        for (Element block : elements) {
+            if (block.equals(element)) {
+                continue;
+            }
+            patchCodeBlock(block, false);
+        }
+        element.select("span").prepend("\n");
+        if (!firstElement) {
+            String text = element.text().lines()
+                                 .map(line -> "\t" + line)
+                                 .collect(Collectors.joining("\n", "\n", ""));
+            element.text(text);
+        }
     }
 
     private @NotNull Map<String, String> unpackIndex(@NotNull InputStream inputStream) throws IOException {
