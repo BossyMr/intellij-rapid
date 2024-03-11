@@ -73,6 +73,10 @@ sentry {
     }
 }
 
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+}
+
 tasks {
     wrapper {
         gradleVersion = properties("gradleVersion").get()
