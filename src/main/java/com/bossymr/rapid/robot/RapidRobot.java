@@ -301,18 +301,16 @@ public class RapidRobot implements Disposable {
         if (manager == null) {
             throw new IllegalStateException("Robot is not connected");
         }
-        File finalDirectory;
         Set<RapidTask> updated = new HashSet<>();
         try (CloseableDirectory directory = new CloseableDirectory("download")) {
-            File file = Path.of(PathManager.getSystemPath(), "robot").toFile();
+            File file = getDefaultPath().toFile();
             if (file.exists()) {
                 FileUtil.delete(file);
             }
-            finalDirectory = PathManager.getSystemDir().toFile();
             List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
             for (Task task : tasks) {
                 File temporaryTask = directory.getDirectory().toPath().resolve(task.getName()).toFile();
-                File finalTask = Path.of(finalDirectory.getPath(), "robot").resolve(task.getName()).toFile();
+                File finalTask = file.toPath().resolve(task.getName()).toFile();
                 if (!(WriteAction.computeAndWait(() -> FileUtil.createDirectory(temporaryTask)))) {
                     throw new IllegalStateException();
                 }
@@ -329,16 +327,15 @@ public class RapidRobot implements Disposable {
                 updated.add(local);
             }
             WriteAction.runAndWait(() -> {
-                File directoryChild = Path.of(finalDirectory.getPath(), "robot").toFile();
-                if (directoryChild.exists()) {
-                    FileUtil.delete(directoryChild);
+                if (file.exists()) {
+                    FileUtil.delete(file);
                 }
-                FileUtil.copyDirContent(directory.getDirectory(), Path.of(finalDirectory.getPath(), "robot").toFile());
+                FileUtil.copyDirContent(directory.getDirectory(), file);
                 for (RapidTask task : updated) {
                     for (File taskFile : task.getFiles()) {
                         VirtualFile virtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(taskFile.toPath());
                         if (virtualFile == null) {
-                            throw new IllegalStateException("File '" + file + "' not found");
+                            throw new IllegalStateException("File '" + taskFile + "' not found");
                         }
                     }
                 }
@@ -463,7 +460,7 @@ public class RapidRobot implements Disposable {
     }
 
     private @NotNull Path getDefaultPath() {
-        return Path.of(PathManager.getSystemPath(), "robot");
+        return PathManager.getPluginsDir().resolve("Rapid").resolve("robot");
     }
 
     private @NotNull Set<RapidTask> getPersistedTasks() {

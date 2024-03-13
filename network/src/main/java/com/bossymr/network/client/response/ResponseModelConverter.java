@@ -7,6 +7,7 @@ import com.bossymr.network.ResponseConverterFactory;
 import com.bossymr.network.client.EntityModel;
 import com.bossymr.network.client.ResponseModel;
 import okhttp3.Response;
+import org.apache.tika.utils.XMLReaderUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Document;
@@ -45,7 +46,7 @@ public class ResponseModelConverter implements ResponseConverter<ResponseModel> 
     private final DocumentBuilder builder;
 
     public ResponseModelConverter() {
-        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newDefaultInstance();
+        DocumentBuilderFactory builderFactory = XMLReaderUtils.getDocumentBuilderFactory();
         try {
             this.builder = builderFactory.newDocumentBuilder();
         } catch (ParserConfigurationException e) {

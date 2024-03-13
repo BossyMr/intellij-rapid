@@ -1,6 +1,5 @@
 package com.bossymr.rapid.language.symbol.physical;
 
-import com.bossymr.rapid.ide.editor.documentation.PhysicalDocumentationTarget;
 import com.bossymr.rapid.ide.editor.refactoring.RapidSymbolRenameTarget;
 import com.bossymr.rapid.language.psi.RapidElement;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
@@ -11,7 +10,6 @@ import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.NlsSafe;
 import com.intellij.openapi.util.TextRange;
-import com.intellij.platform.backend.documentation.DocumentationTarget;
 import com.intellij.platform.backend.presentation.TargetPresentation;
 import com.intellij.psi.NavigatablePsiElement;
 import com.intellij.psi.PsiElement;
@@ -112,11 +110,5 @@ public interface PhysicalSymbol extends RapidElement, RapidSymbol, PsiNameIdenti
     @Override
     default @NotNull RenameTarget getRenameTarget() {
         return new RapidSymbolRenameTarget(this);
-    }
-
-    @Override
-    @NotNull
-    default DocumentationTarget getDocumentationTarget(@NotNull Project project) {
-        return new PhysicalDocumentationTarget(project, this);
     }
 }

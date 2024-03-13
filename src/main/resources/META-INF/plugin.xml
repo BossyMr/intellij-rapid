@@ -133,10 +133,21 @@
 
         <!-- Documentation -->
 
+        <applicationService
+                serviceImplementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationService"/>
+
+        <applicationConfigurable id="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationConfigurable"
+                                 parentId="tools" bundle="messages.RapidBundle" key="documentation.settings.name"
+                                 instance="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationConfigurable"/>
+
+        <notificationGroup displayType="STICKY_BALLOON" id="Documentation download" bundle="messages.RapidBundle"
+                           key="notification.group.documentation"/>
+
         <platform.backend.documentation.linkHandler
                 implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
 
-        <platform.backend.documentation.targetProvider
+        <!--suppress PluginXmlValidity -->
+        <platform.backend.documentation.symbolTargetProvider
                 implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
 
         <!-- Search -->
@@ -177,10 +188,12 @@
         <notificationGroup displayType="STICKY_BALLOON" id="Robot connection errors" bundle="messages.RapidBundle"
                            key="notification.group.robot.connect.error"/>
 
+        <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
+
+        <!-- Code Analysis -->
+
         <notificationGroup displayType="BALLOON" id="Data flow diagrams" bundle="messages.RapidBundle"
                            key="notification.group.data.flow.export"/>
-
-        <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
 
         <!-- Inspections -->
 

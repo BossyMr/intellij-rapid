@@ -203,8 +203,8 @@ public class DataFlowFunction {
             if (actual != null) {
                 output.add(actual);
                 mappings.put(actual, entry.getKey());
-                usages.computeIfAbsent(state, key -> new HashSet<>());
-                usages.get(state).add(entry.getKey());
+                Set<DataFlowState> collection = Objects.requireNonNullElseGet(usages.get(state), HashSet::new);
+                collection.add(entry.getKey());
             }
         }
         if (!(ControlFlowService.getInstance().hasSideEffect(block.getControlFlow(), instruction))) {

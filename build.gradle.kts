@@ -53,6 +53,9 @@ dependencies {
     implementation(project(mapOf("path" to ":network")))
     implementation("org.slf4j:slf4j-jdk14:2.0.12")
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
+    implementation("org.apache.tika:tika-core:2.9.1")
+    implementation("org.apache.tika:tika-parser-microsoft-module:2.9.1")
+    implementation("org.jsoup:jsoup:1.17.2")
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("junit:junit:4.13.2")
@@ -68,6 +71,10 @@ sentry {
     autoInstallation {
         enabled.set(true)
     }
+}
+
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
 }
 
 tasks {

@@ -10,8 +10,6 @@ import com.intellij.find.usages.symbol.SearchTargetSymbol;
 import com.intellij.model.Pointer;
 import com.intellij.model.Symbol;
 import com.intellij.navigation.NavigatableSymbol;
-import com.intellij.openapi.project.Project;
-import com.intellij.platform.backend.documentation.DocumentationTarget;
 import com.intellij.platform.backend.presentation.TargetPresentation;
 import com.intellij.util.concurrency.annotations.RequiresBackgroundThread;
 import com.intellij.util.concurrency.annotations.RequiresReadLock;
@@ -82,8 +80,6 @@ public interface RapidSymbol extends Symbol, NavigatableSymbol, SearchTargetSymb
     @RequiresReadLock
     @RequiresBackgroundThread
     @NotNull TargetPresentation getTargetPresentation();
-
-    @NotNull DocumentationTarget getDocumentationTarget(@NotNull Project project);
 
     @Override
     default @NotNull SearchTarget getSearchTarget() {

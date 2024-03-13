@@ -1,9 +1,7 @@
 package com.bossymr.rapid.language.symbol.virtual;
 
-import com.bossymr.rapid.ide.editor.documentation.VirtualDocumentationTarget;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.openapi.project.Project;
-import com.intellij.platform.backend.documentation.DocumentationTarget;
 import com.intellij.platform.backend.navigation.NavigationTarget;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -39,9 +37,4 @@ public interface VirtualSymbol extends RapidSymbol {
 
     @Override
     @NotNull VirtualPointer<? extends VirtualSymbol> createPointer();
-
-    @Override
-    default @NotNull DocumentationTarget getDocumentationTarget(@NotNull Project project) {
-        return new VirtualDocumentationTarget(project, this);
-    }
 }
