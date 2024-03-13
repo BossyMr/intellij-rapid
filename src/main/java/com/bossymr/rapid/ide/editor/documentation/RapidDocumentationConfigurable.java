@@ -2,7 +2,6 @@ package com.bossymr.rapid.ide.editor.documentation;
 
 import com.bossymr.rapid.RapidBundle;
 import com.intellij.openapi.options.Configurable;
-import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.util.NlsContexts;
 import com.intellij.ui.SimpleListCellRenderer;
@@ -43,12 +42,16 @@ public class RapidDocumentationConfigurable implements Configurable {
     }
 
     @Override
-    public void apply() throws ConfigurationException {
+    public void apply() {
         RapidDocumentationService service = RapidDocumentationService.getInstance();
         RapidDocumentationState state = service.getState();
         state.downloadOption = component.state.getItem();
-        state.preferredLanguage = component.language.getItem();
-        service.prepareDocumentation(null);
+        RapidDocumentationState.Language newLanguage = component.language.getItem();
+        boolean isLanguageModified = state.preferredLanguage != newLanguage;
+        state.preferredLanguage = newLanguage;
+        if (isLanguageModified) {
+            service.prepareDocumentation(null, true);
+        }
     }
 
     @Override

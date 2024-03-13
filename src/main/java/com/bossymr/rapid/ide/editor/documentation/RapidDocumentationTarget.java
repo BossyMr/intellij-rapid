@@ -7,6 +7,8 @@ import com.bossymr.rapid.language.psi.RapidExpression;
 import com.bossymr.rapid.language.psi.RapidTargetVariable;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.physical.PhysicalField;
+import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
+import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.codeInsight.daemon.impl.HighlightInfoType;
 import com.intellij.codeInsight.documentation.DocumentationManagerUtil;
@@ -30,13 +32,30 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
     private final @NotNull Project project;
     private final @NotNull T symbol;
 
-    protected RapidDocumentationTarget(@NotNull Project project, @NotNull T symbol) {
+    private final @Nullable String anchor;
+
+    protected RapidDocumentationTarget(@NotNull Project project, @NotNull T symbol, @Nullable String anchor) {
         this.project = project;
         this.symbol = symbol;
+        this.anchor = anchor;
+    }
+
+    public static @NotNull RapidDocumentationTarget<? extends RapidSymbol> create(@NotNull Project project, @NotNull RapidSymbol symbol, @Nullable String anchor) {
+        if (symbol instanceof PhysicalSymbol physicalSymbol) {
+            return new PhysicalDocumentationTarget(project, physicalSymbol, anchor);
+        }
+        if (symbol instanceof VirtualSymbol virtualSymbol) {
+            return new VirtualDocumentationTarget(project, virtualSymbol, anchor);
+        }
+        throw new IllegalArgumentException("Could not create documentation target for symbol: " + symbol);
     }
 
     public @NotNull Project getProject() {
         return project;
+    }
+
+    public @Nullable String getAnchor() {
+        return anchor;
     }
 
     public @NotNull T getSymbol() {
@@ -318,6 +337,6 @@ public abstract class RapidDocumentationTarget<T extends RapidSymbol> implements
 
     @Override
     public @NotNull Pointer<? extends DocumentationTarget> createPointer() {
-        return Pointer.delegatingPointer(getSymbol().createPointer(), symbol -> RapidDocumentationTargetProvider.createDocumentationTarget(project, symbol));
+        return Pointer.delegatingPointer(getSymbol().createPointer(), symbol -> create(project, symbol, anchor));
     }
 }

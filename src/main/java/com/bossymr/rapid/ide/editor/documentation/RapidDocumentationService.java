@@ -1,24 +1,20 @@
 package com.bossymr.rapid.ide.editor.documentation;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.language.RapidLanguage;
-import com.intellij.codeInsight.documentation.DocumentationManagerProtocol;
 import com.intellij.notification.NotificationAction;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
-import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
-import com.intellij.openapi.editor.richcopy.HtmlSyntaxInfoUtil;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.util.download.DownloadableFileDescription;
 import com.intellij.util.download.DownloadableFileService;
 import com.intellij.util.ui.UIUtil;
@@ -30,10 +26,6 @@ import org.apache.tika.parser.microsoft.chm.DirectoryListingEntry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -49,7 +41,6 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -72,6 +63,10 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
     @Override
     public @NotNull RapidDocumentationState getState() {
         return state;
+    }
+
+    public void setState(@NotNull State state) {
+        this.currentState = state;
     }
 
     @Override
@@ -106,7 +101,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         if (currentState == State.UNINITIALIZED) {
             // Documentation has not been initialized.
             currentState = State.INITIALIZING;
-            if (!(prepareDocumentation(project))) {
+            if (!(prepareDocumentation(project, false))) {
                 // Documentation is either being initialized or could not be initialized.
                 return null;
             }
@@ -140,10 +135,11 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
      * Finds the external documentation if already downloaded, or downloads and extracts it.
      *
      * @param project the current project.
+     * @param reinitialize download external documentation even if documentation has already been downloaded.
      * @return {@code true} if the external documentation can be found immediately.
      */
-    public boolean prepareDocumentation(@Nullable Project project) {
-        if (retrieveExisting()) {
+    public boolean prepareDocumentation(@Nullable Project project, boolean reinitialize) {
+        if (!reinitialize && retrieveExisting()) {
             currentState = State.INITIALIZED;
             return true;
         }
@@ -199,6 +195,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
                 try {
+                    long startTime = System.currentTimeMillis();
                     Path documentationPath = getDocumentationPath();
                     if (documentationPath.toFile().exists()) {
                         FileUtil.delete(documentationPath);
@@ -218,6 +215,14 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
                         images = processImages();
                     }
                     currentState = RapidDocumentationService.State.INITIALIZED;
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    long seconds = elapsed / 1000;
+                    long milliseconds = elapsed % 1000;
+                    String fileSize = StringUtil.formatFileSize(file.length());
+                    NotificationGroupManager.getInstance()
+                                            .getNotificationGroup("Documentation download")
+                                            .createNotification(RapidBundle.message("documentation.download.success", seconds, milliseconds, fileSize), NotificationType.INFORMATION)
+                                            .notify(project);
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
@@ -286,7 +291,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         return INTERNAL_PATH + "/" + languageCode + "/" + FILE_PREFIX + "-" + languageCode.toLowerCase() + "." + fileExtension;
     }
 
-    private void unpackDocumentation(@NotNull ProgressIndicator indicator, @NotNull InputStream packageFile, @NotNull Path directory, @NotNull Map<String, String> files) throws IOException {
+    private void unpackDocumentation(@NotNull ProgressIndicator indicator, @NotNull InputStream packageFile, @NotNull Path directory, @NotNull Map<String, String> index) throws IOException {
         FileUtil.delete(directory);
         ChmExtractor extractor;
         try {
@@ -297,59 +302,89 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         patchExtractor(extractor);
         List<DirectoryListingEntry> entries = extractor.getChmDirList().getDirectoryListingEntryList();
         indicator.setIndeterminate(false);
+        DocumentationNodeVisitor visitor = new DocumentationNodeVisitor(index);
         for (DirectoryListingEntry entry : entries) {
             indicator.setFraction(((double) entries.indexOf(entry)) / ((double) entries.size()));
-            String name = entry.getName().substring(1);
-            if (!(entry.getName().startsWith("/")) || name.isEmpty() || name.startsWith("#") || name.startsWith("$") || name.endsWith(".hhk") || name.endsWith(".hhc") || name.endsWith(".css")) {
+            if (entry.getName().isEmpty()) {
                 continue;
             }
-            File file = directory.resolve(name).toFile();
-            if (file.getName().endsWith(".html")) {
-                if (!(files.containsKey(file.getName()))) {
-                    continue;
-                }
-                String newName = files.get(file.getName()) + ".html";
-                file = file.getParentFile().toPath().resolve(newName).toFile();
+            String filePath = entry.getName().substring(1);
+            if (!(entry.getName().startsWith("/")) || filePath.isEmpty() || filePath.startsWith("#") || filePath.startsWith("$") || filePath.endsWith(".hhk") || filePath.endsWith(".hhc")) {
+                continue;
             }
-            if (file.getName().endsWith(".png")) {
-                file = directory.resolve(name.replaceAll(" ", "%20")).toFile();
+            File file = getFile(directory, filePath, index);
+            if (file == null) {
+                continue;
             }
-            if (name.endsWith("/")) {
-                if (!(file.mkdirs())) {
-                    throw new IOException("Could not create directory: " + directory);
-                }
-            } else {
-                if (file.exists()) {
-                    continue;
-                }
-                File parentFile = file.getParentFile();
-                if (!(parentFile.exists() || parentFile.mkdirs())) {
-                    throw new IOException("Could not create parent directory to file: " + file);
-                }
-                if (!(file.createNewFile())) {
-                    throw new IOException("Could not create file: " + file);
-                }
-                byte[] content;
-                try {
-                    content = extractor.extractChmEntry(entry);
-                } catch (TikaException e) {
-                    throw new IOException(e);
-                }
-                if (file.getName().endsWith(".html")) {
-                    content = patchHtmlFile(content, files);
-                }
-                if (file.getName().endsWith(".png") && parentFile.getName().equals("Graphics")) {
-                    writeImage(content, file);
-                    continue;
-                }
-                try (FileOutputStream outputStream = new FileOutputStream(file)) {
-                    outputStream.write(content);
-                }
+            if (filePath.endsWith("/")) {
+                continue;
+            }
+            try {
+                byte[] content = extractor.extractChmEntry(entry);
+                writeFile(visitor, file, content);
+            } catch (TikaException e) {
+                throw new IOException(e);
             }
         }
     }
 
-    private void writeImage(byte @NotNull [] content, @NotNull File file) throws IOException {
+    private @Nullable File getFile(@NotNull Path directory, @NotNull String filePath, @NotNull Map<String, String> index) {
+        File file = directory.resolve(filePath).toFile();
+        if (!(filePath.endsWith("/"))) {
+            String fileName = file.getName();
+            if (fileName.endsWith("html")) {
+                if (!(index.containsKey(fileName))) {
+                    return null;
+                }
+                String name = index.get(fileName) + ".html";
+                return file.getParentFile().toPath().resolve(name).toFile();
+            }
+            if (fileName.endsWith(".png")) {
+                return directory.resolve(filePath.replaceAll(" ", "%20")).toFile();
+            }
+        }
+        return file;
+    }
+
+    public void writeFile(@NotNull DocumentationNodeVisitor visitor, @NotNull File file, byte @NotNull [] content) throws IOException {
+        createFile(file);
+        String name = file.getName();
+        String fileExtension = name.substring(name.lastIndexOf('.') + 1);
+        switch (fileExtension) {
+            case "html" -> {
+                String text = visitor.visit(file, content);
+                byte[] data = text.getBytes(StandardCharsets.UTF_8);
+                writeContent(file, data);
+            }
+            case "png" -> {
+                File parentFile = file.getParentFile();
+                if (parentFile.getName().equals("Graphics")) {
+                    writeImage(file, content);
+                } else {
+                    writeContent(file, content);
+                }
+            }
+            default -> writeContent(file, content);
+        }
+    }
+
+    public void createFile(@NotNull File file) throws IOException {
+        if (file.exists()) {
+            FileUtil.delete(file);
+        }
+        File parentFile = file.getParentFile();
+        if (parentFile.isFile()) {
+            throw new IOException("Could not create parent file: " + parentFile + " since file already exists");
+        }
+        if (!(parentFile.exists() || parentFile.mkdirs())) {
+            throw new IOException("Could not create parent file: " + parentFile);
+        }
+        if (!file.createNewFile()) {
+            throw new IOException("Could not create file: " + file);
+        }
+    }
+
+    private void writeImage(@NotNull File file, byte @NotNull [] content) throws IOException {
         BufferedImage image = ImageIO.read(new ByteArrayInputStream(content));
         String name = file.getName();
         int width = image.getWidth(null) / 15;
@@ -360,62 +395,9 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         ImageIO.write(rescaled, name.substring(name.lastIndexOf(".") + 1), file);
     }
 
-    private byte @NotNull [] patchHtmlFile(byte @NotNull [] content, @NotNull Map<String, String> files) {
-        Document document = Jsoup.parse(new String(content, StandardCharsets.UTF_8));
-        // Fix references to point to the correct file
-        Elements links = document.select("a[href]");
-        for (Element link : links) {
-            String currentLink = link.attr("href");
-            if (files.containsKey(currentLink)) {
-                link.attr("href", DocumentationManagerProtocol.PSI_ELEMENT_PROTOCOL + files.get(currentLink));
-            }
-        }
-        // Fix images to start with a scheme, otherwise images are not resolved.
-        // Images are resolved from the map provided by #getImages().
-        Elements images = document.select("img[src]");
-        for (Element image : images) {
-            String currentLink = Path.of(image.attr("src")).toString();
-            image.attr("src", "http://" + currentLink);
-            if (image.hasAttr("style")) {
-                image.removeAttr("style");
-            }
-        }
-        // Remove the file header, which repeats the symbol name.
-        document.select(".map-header").remove();
-        document.select(".StatusSecrecy").remove();
-        String codeBlock = "div[class='computerscripts']:not([xmlns:xlink])";
-        List<Element> elements = document.select(codeBlock).stream()
-                                         .filter(element -> element.parent() == null || !element.parent().is(codeBlock))
-                                         .toList();
-        Project project = ProjectManager.getInstance().getDefaultProject();
-        for (Element element : elements) {
-            patchCodeBlock(element, true);
-            StringBuilder stringBuilder = new StringBuilder();
-            ReadAction.run(() -> HtmlSyntaxInfoUtil.appendHighlightedByLexerAndEncodedAsHtmlCodeSnippet(stringBuilder, project, RapidLanguage.getInstance(), element.text(), 1));
-            element.html(stringBuilder.toString());
-        }
-        return document.toString().getBytes(StandardCharsets.UTF_8);
-    }
-
-    private void patchCodeBlock(@NotNull Element element, boolean firstElement) {
-        if (firstElement) {
-            element.wrap("<pre>");
-        }
-        List<Element> elements = element.select("div").stream()
-                                        .filter(block -> block.parent() != null && block.parent().equals(element))
-                                        .toList();
-        for (Element block : elements) {
-            if (block.equals(element)) {
-                continue;
-            }
-            patchCodeBlock(block, false);
-        }
-        element.select("span").prepend("\n");
-        if (!firstElement) {
-            String text = element.text().lines()
-                                 .map(line -> "\t" + line)
-                                 .collect(Collectors.joining("\n", "\n", ""));
-            element.text(text);
+    private void writeContent(@NotNull File file, byte @NotNull [] content) throws IOException {
+        try (FileOutputStream outputStream = new FileOutputStream(file)) {
+            outputStream.write(content);
         }
     }
 
@@ -429,7 +411,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
                     sections[0] = "CEQ";
                 }
                 if (sections[0].equals("Compact IF")) {
-                    sections[1] = "CIF";
+                    continue;
                 }
                 if (!(sections[0].toUpperCase().equals(sections[0]))) {
                     sections[0] = sections[0].toLowerCase();
@@ -461,7 +443,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
     }
     //endregion
 
-    private enum State {
+    public enum State {
         /**
          * Documentation has either not yet been processed - and might not be available.
          */
