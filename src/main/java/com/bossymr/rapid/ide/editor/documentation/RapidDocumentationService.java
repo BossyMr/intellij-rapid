@@ -65,10 +65,6 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         return state;
     }
 
-    public void setState(@NotNull State state) {
-        this.currentState = state;
-    }
-
     @Override
     public void loadState(@NotNull RapidDocumentationState state) {
         this.state = state;
@@ -215,14 +211,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
                         images = processImages();
                     }
                     currentState = RapidDocumentationService.State.INITIALIZED;
-                    long elapsed = System.currentTimeMillis() - startTime;
-                    long seconds = elapsed / 1000;
-                    long milliseconds = elapsed % 1000;
-                    String fileSize = StringUtil.formatFileSize(file.length());
-                    NotificationGroupManager.getInstance()
-                                            .getNotificationGroup("Documentation download")
-                                            .createNotification(RapidBundle.message("documentation.download.success", seconds, milliseconds, fileSize), NotificationType.INFORMATION)
-                                            .notify(project);
+                    showSuccessNotification(project, file, startTime);
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
@@ -255,6 +244,15 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
             }
         }.queue();
 
+    }
+
+    private void showSuccessNotification(@Nullable Project project, @NotNull File file, long startTime) {
+        long elapsed = System.currentTimeMillis() - startTime;
+        String fileSize = StringUtil.formatFileSize(file.length());
+        NotificationGroupManager.getInstance()
+                                .getNotificationGroup("Documentation download")
+                                .createNotification(RapidBundle.message("documentation.download.success", elapsed / 1000, elapsed % 1000, fileSize), NotificationType.INFORMATION)
+                                .notify(project);
     }
 
     private @NotNull Map<String, Image> processImages() throws IOException {
