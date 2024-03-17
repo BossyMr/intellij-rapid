@@ -1,7 +1,9 @@
 package com.bossymr.rapid.robot.impl;
 
+import com.bossymr.rapid.language.flow.data.HardcodedContract;
 import com.bossymr.rapid.language.symbol.*;
 import com.bossymr.rapid.language.symbol.virtual.*;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.type.RapidUnknownType;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.*;
@@ -13,12 +15,12 @@ import java.util.*;
 /**
  * A converter for converting {@link SymbolModel} objects into {@link RapidSymbol} objects.
  */
-public final class SymbolConverter {
+public final class VirtualSymbolFactory {
 
     private final Map<String, Map<String, SymbolModel>> states;
     private final Map<String, VirtualSymbol> symbols;
 
-    private SymbolConverter(@NotNull Collection<SymbolModel> symbolModels) {
+    private VirtualSymbolFactory(@NotNull Collection<SymbolModel> symbolModels) {
         this.states = new HashMap<>();
         for (SymbolModel symbolModel : symbolModels) {
             String address = symbolModel.getTitle().substring(0, symbolModel.getTitle().lastIndexOf('/'));
@@ -26,17 +28,27 @@ public final class SymbolConverter {
             states.get(address).put(getName(symbolModel), symbolModel);
         }
         this.symbols = new HashMap<>();
+        for (RapidPrimitiveType value : RapidPrimitiveType.values()) {
+            VirtualStructure structure = value.getStructure();
+            symbols.put(structure.getName(), structure);
+        }
+        for (HardcodedContract value : HardcodedContract.values()) {
+            VirtualRoutine routine = value.getRoutine();
+            symbols.put(routine.getName(), routine);
+        }
     }
 
     public static @NotNull Map<String, VirtualSymbol> getSymbols(@NotNull Collection<SymbolModel> symbolModels) {
-        return new SymbolConverter(symbolModels).getSymbols();
+        return new VirtualSymbolFactory(symbolModels).getSymbols();
     }
 
     public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolModel model) {
-        Map<String, VirtualSymbol> symbols = new SymbolConverter(List.of(model)).getSymbols();
-        Collection<VirtualSymbol> values = symbols.values();
-        Optional<VirtualSymbol> symbol = values.stream().findFirst();
-        return symbol.orElseThrow(() -> new IllegalArgumentException("Could not convert model: " + model + " into a symbol"));
+        Map<String, VirtualSymbol> symbols = new VirtualSymbolFactory(List.of(model)).getSymbols();
+        VirtualSymbol symbol = symbols.get(model.getName());
+        if (symbol == null) {
+            throw new IllegalArgumentException("Could not convert model: " + model + " into a symbol");
+        }
+        return symbol;
     }
 
     private @NotNull String getName(@NotNull SymbolModel symbolModel) {

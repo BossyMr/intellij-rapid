@@ -51,10 +51,10 @@ public class RapidDocumentationTargetProvider implements SymbolDocumentationTarg
             }
             ResolveService service = ResolveService.getInstance(project);
             if (symbol instanceof PhysicalSymbol physicalSymbol) {
-                List<RapidSymbol> symbols = service.findSymbols(physicalSymbol, url);
+                List<RapidSymbol> symbols = service.getSymbols(physicalSymbol, url);
                 return symbols.isEmpty() ? null : symbols.get(0);
             } else {
-                return service.findSymbol(url);
+                return service.getRemoteSymbol("RAPID" + "/" + url);
             }
         }
         return null;

@@ -21,11 +21,13 @@ import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 public class RapidCompletionContributor extends CompletionContributor {
@@ -47,9 +49,9 @@ public class RapidCompletionContributor extends CompletionContributor {
             return;
         }
         List<RapidSymbol> variants = new ArrayList<>();
-        service.findSymbols(element).stream()
-                .filter(symbol -> filters.stream().anyMatch(filter -> filter.matches(symbol)))
-                .forEach(variants::add);
+        service.getAllSymbols(element).stream()
+               .filter(symbol -> filters.stream().anyMatch(filter -> filter.matches(symbol)))
+               .forEach(variants::add);
         for (SymbolFilter filter : filters) {
             for (RapidIndex<? extends PhysicalSymbol> index : filter.getIndexes()) {
                 for (String key : index.getAllKeys(project)) {
@@ -61,14 +63,17 @@ public class RapidCompletionContributor extends CompletionContributor {
         // TODO: 2023-05-17 Add support for inserting new parameters by their parameter name - this might need an option on whether to keep parameter name for required parameters
         variants.stream()
                 .distinct()
-                .filter(symbol -> symbol.getName() != null)
                 .map(this::createLookupElement)
+                .filter(Objects::nonNull)
                 .forEach(lookupElement -> result.caseInsensitive().addElement(lookupElement));
     }
 
     @SuppressWarnings("UnstableApiUsage")
-    private @NotNull LookupElement createLookupElement(@NotNull RapidSymbol symbol) {
-        String name = symbol.getPresentableName();
+    private @Nullable LookupElement createLookupElement(@NotNull RapidSymbol symbol) {
+        String name = symbol.getName();
+        if (name == null) {
+            return null;
+        }
         TargetPresentation presentation = symbol.getTargetPresentation();
         LookupElementBuilder lookupElementBuilder = LookupElementBuilder.create(symbol.createPointer(), name)
                 .withIcon(presentation.getIcon())

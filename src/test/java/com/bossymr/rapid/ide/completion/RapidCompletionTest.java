@@ -33,7 +33,7 @@ public class RapidCompletionTest extends BasePlatformTestCase {
                     ALIAS type1 name1;
                     ALIAS type2 name2;
                     ALIAS <caret>
-                ENDMODULE""", "record1", "record2");
+                ENDMODULE""", "ANYTYPE#", "bool", "dnum", "num", "orient", "pos", "pose", "record1", "record2", "string");
     }
 
     public void testComponentType() {
@@ -45,7 +45,7 @@ public class RapidCompletionTest extends BasePlatformTestCase {
                     RECORD record2 ENDRECORD
                     ALIAS type1 name1;
                     ALIAS type2 name2;
-                ENDMODULE""", "record1", "record2", "name1", "name2");
+                ENDMODULE""", "ANYTYPE#", "bool", "dnum", "num", "orient", "pos", "pose", "record1", "record2", "name1", "name2", "string");
     }
 
     public void testRoutineType() {
@@ -56,7 +56,7 @@ public class RapidCompletionTest extends BasePlatformTestCase {
                     ALIAS type1 name1;
                     ALIAS type2 name2;
                     FUNC <caret>
-                ENDMODULE""", "record1", "record2", "name1", "name2");
+                ENDMODULE""", "ANYTYPE#", "bool", "dnum", "num", "orient", "pos", "pose", "record1", "record2", "name1", "name2", "string");
     }
 
     public void testName() {
@@ -110,7 +110,7 @@ public class RapidCompletionTest extends BasePlatformTestCase {
                     ALIAS type1 name1;
                     PROC name(<caret>
                 ENDMODULE
-                """, "name1", "VAR", "PERS", "INOUT");
+                """, "ANYTYPE#", "bool", "dnum", "num", "orient", "pos", "pose", "name1", "VAR", "PERS", "INOUT", "string");
     }
 
     public void testStatement() {
@@ -120,6 +120,6 @@ public class RapidCompletionTest extends BasePlatformTestCase {
                         <caret>
                     ENDPROC
                 ENDMODULE
-                """, "name", "name1", "RETURN", "BACKWARD", "CONNECT", "CONST", "ERROR", "EXIT", "FOR", "GOTO", "IF", "PERS", "RAISE", "TEST", "UNDO", "VAR", "WHILE");
+                """, "BACKWARD", "CONNECT", "CONST", "Cos", "Dim", "ERROR", "EXIT", "FOR", "GOTO", "IF", "name", "name1", "PERS", "Present", "RAISE", "RETURN", "TEST", "UNDO", "VAR", "WHILE");
     }
 }

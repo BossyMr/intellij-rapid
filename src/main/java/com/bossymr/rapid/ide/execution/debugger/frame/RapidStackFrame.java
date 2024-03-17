@@ -100,7 +100,7 @@ public class RapidStackFrame extends XStackFrame {
     public void computeChildren(@NotNull XCompositeNode node) {
         if (node.isObsolete()) return;
         process.execute(() -> ReadAction.run(() -> {
-            RapidSymbol symbol = ResolveService.getInstance(project).findSymbol(stackFrame.getRoutine());
+            RapidSymbol symbol = ResolveService.getInstance(project).getRemoteSymbol(stackFrame.getRoutine());
             XValueChildrenList childrenList = new XValueChildrenList();
             NetworkAction manager = new NetworkAction(process.getManager()) {
                 @Override

@@ -852,7 +852,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
             return;
         }
         ResolveService service = ResolveService.getInstance(symbol.getProject());
-        List<RapidSymbol> symbols = service.findSymbols(symbol, name);
+        List<RapidSymbol> symbols = service.getSymbols(symbol, name);
         if (symbols.isEmpty() || symbols.size() == 1) {
             return;
         }

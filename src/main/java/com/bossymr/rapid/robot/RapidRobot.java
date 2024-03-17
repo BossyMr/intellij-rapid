@@ -7,11 +7,12 @@ import com.bossymr.network.client.HeavyNetworkManager;
 import com.bossymr.network.client.proxy.EntityProxy;
 import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.impl.SymbolConverter;
+import com.bossymr.rapid.robot.impl.VirtualSymbolFactory;
 import com.bossymr.rapid.robot.network.ControllerService;
 import com.bossymr.rapid.robot.network.Identity;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
@@ -69,10 +70,10 @@ public class RapidRobot implements Disposable {
             throw new IllegalArgumentException("State '" + state + " is invalid");
         }
         setState(state);
-        this.symbols = SymbolConverter.getSymbols(state.symbols.stream()
-                                                               .map(symbol -> symbol.convert(SymbolModel.class, null))
-                                                               .filter(Objects::nonNull)
-                                                               .toList());
+        this.symbols = VirtualSymbolFactory.getSymbols(state.symbols.stream()
+                                                                    .map(symbol -> symbol.convert(SymbolModel.class, null))
+                                                                    .filter(Objects::nonNull)
+                                                                    .toList());
         this.tasks = getPersistedTasks();
     }
 
@@ -254,35 +255,54 @@ public class RapidRobot implements Disposable {
      * @return the symbol, or {@code null} if a symbol was not found with the specified name.
      */
     public @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException {
-        if (symbols.containsKey(name.toLowerCase())) {
-            return symbols.get(name.toLowerCase());
+        int index = name.indexOf("/");
+        String parentName = name;
+        String childName = null;
+        if (index >= 0) {
+            if (index != name.lastIndexOf("/")) {
+                throw new IllegalArgumentException("Could not retrieve symbol: " + name);
+            }
+            parentName = name.substring(0, index);
+            childName = name.substring(index + 1);
+        }
+        if (symbols.containsKey(parentName.toLowerCase())) {
+            // The symbol already exists.
+            VirtualSymbol symbol = symbols.get(parentName.toLowerCase());
+            if (childName != null) {
+                List<RapidSymbol> results = ResolveService.getChildSymbol(symbol, childName);
+                return results.isEmpty() ? null : (VirtualSymbol) results.get(0);
+            }
+            return symbol;
         }
         if (state.cache != null && state.cache.contains(name.toLowerCase())) {
+            // The symbol does not exist. Due to all symbols not being provided by the robot
+            // all unresolved symbols need to be requested individually. If they do not exist,
+            // they are added to a cache, so they aren't requested again.
             return null;
         }
         if (manager == null) {
+            // The robot is not connected.
             return null;
         }
-        SymbolModel model = getSymbol(manager, "RAPID" + "/" + (name.contains("/") ? name.substring(0, name.indexOf('/')) : name));
+        SymbolModel model = getSymbol(manager, "RAPID" + "/" + parentName);
         if (model == null) {
+            // The symbol does not exist.
             if (state.cache == null) {
                 state.cache = new HashSet<>();
             }
             state.cache.add(name.toLowerCase());
             return null;
         }
-        VirtualSymbol symbol = SymbolConverter.getSymbol(model);
-        symbols.put(symbol.getName().toLowerCase(), symbol);
+        VirtualSymbol symbol = VirtualSymbolFactory.getSymbol(model);
+        symbols.put(parentName.toLowerCase(), symbol);
         if (state.symbols == null) {
             state.symbols = new HashSet<>();
         }
         state.symbols.add(Entity.convert(model));
         RobotEventListener.publish().onSymbol(this, symbol);
-        if (name.contains("/")) {
-            if (name.indexOf("/") != name.lastIndexOf("/")) {
-                throw new IllegalArgumentException("Cannot retrieve symbol: " + name);
-            }
-            return (VirtualSymbol) ResolveService.findChild(symbol, name.substring(name.indexOf("/") + 1));
+        if (childName != null) {
+            List<RapidSymbol> results = ResolveService.getChildSymbol(symbol, childName);
+            return results.isEmpty() ? null : (VirtualSymbol) results.get(0);
         }
         return symbol;
     }
@@ -420,7 +440,7 @@ public class RapidRobot implements Disposable {
         List<SymbolModel> models = state.symbols.stream()
                                                 .map(symbol -> symbol.convert(SymbolModel.class, manager))
                                                 .toList();
-        this.symbols = SymbolConverter.getSymbols(models);
+        this.symbols = VirtualSymbolFactory.getSymbols(models);
         setState(state);
         this.tasks = getPersistedTasks();
         RobotEventListener.publish().onRefresh(this, networkAction);
