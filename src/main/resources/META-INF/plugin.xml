@@ -154,8 +154,6 @@
 
         <searcher forClass="com.intellij.find.usages.api.UsageSearchParameters"
                   implementationClass="com.bossymr.rapid.ide.search.RapidSymbolUsageSearcher"/>
-        <searcher forClass="com.intellij.refactoring.rename.api.RenameUsageSearchParameters"
-                  implementationClass="com.bossymr.rapid.ide.editor.refactoring.RapidRenameUsageSearcher"/>
 
         <!-- PsiElement  -->
 
