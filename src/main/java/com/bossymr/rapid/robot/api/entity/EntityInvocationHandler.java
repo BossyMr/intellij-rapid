@@ -226,6 +226,6 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
 
     @Override
     public String toString(@NotNull Object proxy) {
-        return type.getName() + ":" + model;
+        return type.getSimpleName() + ":" + model;
     }
 }

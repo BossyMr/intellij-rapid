@@ -23,7 +23,7 @@ public final class VirtualSymbolFactory {
     private VirtualSymbolFactory(@NotNull Collection<SymbolModel> symbolModels) {
         this.states = new HashMap<>();
         for (SymbolModel symbolModel : symbolModels) {
-            String address = symbolModel.getTitle().substring(0, symbolModel.getTitle().lastIndexOf('/'));
+            String address = symbolModel.getTitle().substring(0, symbolModel.getTitle().lastIndexOf('/')).toLowerCase();
             states.computeIfAbsent(address, (value) -> new HashMap<>());
             states.get(address).put(getName(symbolModel), symbolModel);
         }
@@ -44,20 +44,20 @@ public final class VirtualSymbolFactory {
 
     public static @NotNull VirtualSymbol getSymbol(@NotNull SymbolModel model) {
         Map<String, VirtualSymbol> symbols = new VirtualSymbolFactory(List.of(model)).getSymbols();
-        VirtualSymbol symbol = symbols.get(model.getName());
+        VirtualSymbol symbol = symbols.get(getName(model));
         if (symbol == null) {
             throw new IllegalArgumentException("Could not convert model: " + model + " into a symbol");
         }
         return symbol;
     }
 
-    private @NotNull String getName(@NotNull SymbolModel symbolModel) {
-        return symbolModel.getTitle().substring(symbolModel.getTitle().lastIndexOf('/') + 1);
+    private static @NotNull String getName(@NotNull SymbolModel symbolModel) {
+        return symbolModel.getTitle().substring(symbolModel.getTitle().lastIndexOf('/') + 1).toLowerCase();
     }
 
     private @NotNull Map<String, VirtualSymbol> getSymbols() {
         if (states.isEmpty()) return new HashMap<>();
-        Map<String, SymbolModel> objects = states.get("RAPID");
+        Map<String, SymbolModel> objects = states.get("rapid");
         if(objects != null) {
             for (String name : objects.keySet()) {
                 getSymbol(name);
@@ -68,7 +68,7 @@ public final class VirtualSymbolFactory {
 
     private @Nullable RapidSymbol getSymbol(@NotNull String name) {
         if (symbols.containsKey(name)) return symbols.get(name);
-        SymbolModel state = states.get("RAPID").get(name);
+        SymbolModel state = states.get("rapid").get(name);
         if (state == null) {
             return null;
         }
@@ -108,7 +108,7 @@ public final class VirtualSymbolFactory {
     }
 
     private @NotNull RapidRecord getRecord(@NotNull RecordModel symbol) {
-        Map<String, SymbolModel> map = this.states.get(symbol.getTitle());
+        Map<String, SymbolModel> map = this.states.get(symbol.getTitle().toLowerCase());
         Collection<SymbolModel> states = map.values();
         List<VirtualComponent> components = new ArrayList<>();
         assert states.size() == symbol.getComponentCount();
@@ -166,7 +166,7 @@ public final class VirtualSymbolFactory {
 
     private @NotNull RapidRoutine getRoutine(@NotNull RoutineModel state, @NotNull RoutineType routineType) {
         List<VirtualParameterGroup> groups = new ArrayList<>();
-        Map<String, SymbolModel> parameters = this.states.get(state.getTitle());
+        Map<String, SymbolModel> parameters = this.states.get(state.getTitle().toLowerCase());
         Collection<SymbolModel> states = parameters != null ? parameters.values() : List.of();
         if(states.size() != state.getParameterCount()) {
             throw new IllegalStateException("Expected: " + state.getParameterCount() + " elements (" + state + "), got: " + states);
