@@ -193,7 +193,10 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
         Map<String, RapidParameter> parametersByName = new HashMap<>();
         for (RapidParameterGroup parameterGroup : parameterGroups) {
             for (RapidParameter parameter : parameterGroup.getParameters()) {
-                parametersByName.put(parameter.getName(), parameter);
+                String parameterName = parameter.getName();
+                if (parameterName != null) {
+                    parametersByName.put(parameterName.toLowerCase(), parameter);
+                }
             }
         }
         Map<RapidArgument, RapidParameter> parameters = getParameters(routine.getPresentableName(), parameterGroups, argumentList);
@@ -226,9 +229,9 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
             if (argument instanceof RapidRequiredArgument) {
                 if (parameter != null && parameter.getName() != null && argument.getParameter() != null) {
                     String parameterName = argument.getParameter().getText();
-                    if (!parameterName.equals(parameter.getName())) {
-                        if (parametersByName.containsKey(parameterName)) {
-                            if (!parametersByName.get(parameterName).getParameterGroup().isOptional()) {
+                    if (!parameterName.equalsIgnoreCase(parameter.getName())) {
+                        if (parametersByName.containsKey(parameterName.toLowerCase())) {
+                            if (!parametersByName.get(parameterName.toLowerCase()).getParameterGroup().isOptional()) {
                                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.order"))
                                                 .range(argument)
                                                 .create();
@@ -277,7 +280,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                 if (name == null) {
                     continue;
                 }
-                parameters.put(name, parameter);
+                parameters.put(name.toLowerCase(), parameter);
             }
         }
         if (requiredParameters.size() != requiredArguments.size()) {
@@ -295,7 +298,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                     result.put(argument, requiredParameters.get(index));
                 }
             } else if (argument instanceof RapidOptionalArgument || argument instanceof RapidConditionalArgument) {
-                String parameterName = argument.getParameter().getText();
+                String parameterName = argument.getParameter().getText().toLowerCase();
                 result.put(argument, parameters.get(parameterName));
             }
         }
