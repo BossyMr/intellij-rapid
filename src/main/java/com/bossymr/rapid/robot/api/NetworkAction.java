@@ -14,7 +14,7 @@ public class NetworkAction implements NetworkManager {
 
     private final @NotNull Set<SubscriptionEntity> entities = ConcurrentHashMap.newKeySet();
     private final @NotNull NetworkManager manager;
-    private final @NotNull Set<NetworkAction> delegates = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<NetworkManagerListener> listeners = ConcurrentHashMap.newKeySet();
 
     private volatile boolean closed;
 
@@ -28,7 +28,7 @@ public class NetworkAction implements NetworkManager {
      */
     public NetworkAction(@NotNull NetworkManager manager) {
         this.manager = manager;
-        manager.track(this);
+        manager.subscribe(this::close);
     }
 
 
@@ -71,11 +71,11 @@ public class NetworkAction implements NetworkManager {
     }
 
     @Override
-    public void track(@NotNull NetworkAction action) {
+    public void subscribe(@NotNull NetworkManagerListener listener) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
-        delegates.add(action);
+        listeners.add(listener);
     }
 
     @Override
@@ -166,10 +166,10 @@ public class NetworkAction implements NetworkManager {
         if (closed) {
             return;
         }
-        closed = true;
-        for (NetworkAction manager : delegates) {
-            manager.close();
+        for (NetworkManagerListener listener : listeners) {
+            listener.onClose();
         }
+        closed = true;
         SubscriptionEntity.unsubscribe(entities);
     }
 }

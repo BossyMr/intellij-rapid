@@ -31,7 +31,7 @@ public class HeavyNetworkManager implements NetworkManager {
 
     private static final @NotNull Logger logger = Logger.getInstance(HeavyNetworkManager.class);
     private final @NotNull NetworkClient networkClient;
-    private final @NotNull Set<NetworkAction> delegates = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<NetworkManagerListener> listeners = ConcurrentHashMap.newKeySet();
     private volatile boolean closed;
 
     public HeavyNetworkManager(@NotNull URI defaultPath, @Nullable Credentials credentials) {
@@ -132,11 +132,11 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @Override
-    public void track(@NotNull NetworkAction action) {
+    public void subscribe(@NotNull NetworkManagerListener listener) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
-        delegates.add(action);
+        listeners.add(listener);
     }
 
     @Override
@@ -203,10 +203,10 @@ public class HeavyNetworkManager implements NetworkManager {
         if (closed) {
             return;
         }
-        closed = true;
-        for (NetworkAction manager : delegates) {
-            manager.close();
+        for (NetworkManagerListener listener : listeners) {
+            listener.onClose();
         }
+        closed = true;
         networkClient.close();
     }
 }

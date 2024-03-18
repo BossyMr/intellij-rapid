@@ -1,9 +1,14 @@
 package com.bossymr.rapid.robot.api.client;
 
+import com.bossymr.rapid.robot.MastershipException;
 import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.annotations.*;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipDomain;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipService;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipStatus;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -71,7 +76,34 @@ public class RequestFactory {
         NetworkRequest<?> request = new NetworkRequest<>(command, URI.create(interpolate(path, proxy, method, args)), GenericType.of(returnType));
         request.putArguments(collected);
         request.getFields().putAll(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null));
-        return manager.createQuery(request);
+        NetworkQuery<?> query = manager.createQuery(request);
+        if(!method.isAnnotationPresent(RequiresMastership.class)) {
+            return query;
+        }
+        MastershipType mastershipType = method.getAnnotation(RequiresMastership.class).value();
+        return () -> {
+            MastershipService mastershipService = manager.createService(MastershipService.class);
+            MastershipDomain mastershipDomain = mastershipService.getDomain(mastershipType).get();
+            Boolean isHolding = mastershipDomain.isHolding();
+            if(isHolding != null && isHolding) {
+                return query.get();
+            }
+            MastershipStatus status = mastershipDomain.getStatus();
+            if(status != MastershipStatus.NO_MASTER) {
+                throw new MastershipException(mastershipType, mastershipDomain.getApplication());
+            }
+            mastershipDomain.request().get();
+            manager.subscribe(() -> {
+                MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
+                Boolean holding = domain.isHolding();
+                if(holding != null && holding) {
+                    domain.release().get();
+                }
+            });
+            Object result = query.get();
+            mastershipDomain.release().get();
+            return result;
+        };
     }
 
     private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkQuery(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {

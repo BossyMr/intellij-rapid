@@ -114,7 +114,6 @@ public class NetworkClient {
         subscriptionGroup.update();
     }
 
-
     public void unsubscribe(@NotNull Collection<SubscriptionEntity> entities) throws IOException, InterruptedException {
         for (SubscriptionEntity entity : entities) {
             if (!(subscriptionGroup.getEntities().remove(entity))) {

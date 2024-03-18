@@ -8,11 +8,9 @@ import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.filter.RapidFileFilter;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidTask;
-import com.bossymr.rapid.robot.CloseableMastership;
 import com.bossymr.rapid.robot.MastershipException;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
 import com.intellij.execution.DefaultExecutionResult;
@@ -175,7 +173,7 @@ public class RapidRunProfileState implements RunProfileState {
             consoleView.attachToProcess(processHandler);
             processHandler.execute(() -> {
                 processHandler.getNetworkManager();
-                try (CloseableMastership ignored = CloseableMastership.withMastership(processHandler.getNetworkManager(), MastershipType.RAPID)) {
+                try {
                     processHandler.setupEventLog();
                     setupProject(processHandler.getNetworkManager());
                     processHandler.setupExecutionState();

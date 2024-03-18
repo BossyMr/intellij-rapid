@@ -1,22 +1,21 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.ResponseStatusException;
-import com.bossymr.rapid.robot.api.client.EntityModel;
-import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
-import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
-import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.client.EntityModel;
+import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
+import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.impl.VirtualSymbolFactory;
 import com.bossymr.rapid.robot.network.ControllerService;
 import com.bossymr.rapid.robot.network.Identity;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
@@ -338,9 +337,7 @@ public class RapidRobot implements Disposable {
             List<ModuleInfo> modules = task.getModules().get();
             for (ModuleInfo moduleInfo : modules) {
                 ModuleEntity module = moduleInfo.getModule().get();
-                try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-                    module.save(module.getName(), temporaryTask.toPath().toString()).get();
-                }
+                module.save(module.getName(), temporaryTask.toPath().toString()).get();
                 File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
                 local.getFiles().add(result);
             }
@@ -393,9 +390,7 @@ public class RapidRobot implements Disposable {
                 writer.write("</Program>");
             }
         });
-        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-            program.load(file.getPath(), LoadProgramMode.REPLACE).get();
-        }
+        program.load(file.getPath(), LoadProgramMode.REPLACE).get();
         RobotEventListener.publish().onUpload(this);
     }
 

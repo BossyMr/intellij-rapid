@@ -1,11 +1,13 @@
 package com.bossymr.rapid.robot.api;
 
+import com.bossymr.rapid.robot.MastershipException;
 import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Service;
 import com.bossymr.rapid.robot.api.client.*;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -96,6 +98,14 @@ public interface NetworkManager extends AutoCloseable {
     <T> @NotNull T createEntity(@NotNull Class<T> entityType, @NotNull EntityModel model) throws IllegalArgumentException;
 
     /**
+     * Subscribes to this {@code NetworkManager}. The specified callback is called when this {@code NetworkManager} is
+     * closed.
+     *
+     * @param runnable the callback.
+     */
+    void subscribe(@NotNull NetworkManagerListener listener);
+
+    /**
      * Close this {@code NetworkManager} and any ongoing subscriptions.
      *
      * @throws IOException if an I/O error occurs.
@@ -103,11 +113,4 @@ public interface NetworkManager extends AutoCloseable {
      */
     @Override
     void close() throws IOException, InterruptedException;
-
-    /**
-     * Register the specified {@code NetworkAction} as a dependent of this {@code NetworkManager}.
-     *
-     * @param action the {@code NetworkAction}.
-     */
-    void track(@NotNull NetworkAction action);
 }
