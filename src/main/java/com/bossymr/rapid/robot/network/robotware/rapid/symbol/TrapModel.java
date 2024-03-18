@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
-import com.bossymr.network.annotations.Entity;
+import com.bossymr.rapid.robot.api.annotations.Entity;
 
 /**
  * A {@code TrapSymbol} represents a {@code TRAP} routine.

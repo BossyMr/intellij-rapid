@@ -1,6 +1,6 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
-import com.bossymr.network.NetworkManager;
+import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess.BreakpointEntity;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.client.security.Credentials;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;

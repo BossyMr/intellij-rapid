@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
-import com.bossymr.network.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Deserializable;
 
 /**
  * A {@code TaskExecutionMode} is used to determine static or semi-static tasks should be affected.

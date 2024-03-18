@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.annotations.Entity;
-import com.bossymr.network.annotations.Property;
+import com.bossymr.rapid.robot.api.annotations.Entity;
+import com.bossymr.rapid.robot.api.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
 @Entity("ctrl-identity-info")

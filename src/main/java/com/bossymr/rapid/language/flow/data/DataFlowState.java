@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.flow.data;
 
-import com.bossymr.network.MultiMap;
+import com.bossymr.rapid.robot.api.MultiMap;
 import com.bossymr.rapid.language.flow.*;
 import com.bossymr.rapid.language.flow.data.snapshots.ArraySnapshot;
 import com.bossymr.rapid.language.flow.data.snapshots.RecordSnapshot;

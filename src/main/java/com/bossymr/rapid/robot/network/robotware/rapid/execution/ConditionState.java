@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
-import com.bossymr.network.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Deserializable;
 
 /**
  * A {@code ConditionState} is used to determine what conditions must be fulfilled prior to starting execution.

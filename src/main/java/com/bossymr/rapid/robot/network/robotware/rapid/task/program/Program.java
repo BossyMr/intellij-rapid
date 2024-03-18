@@ -1,11 +1,11 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task.program;
 
-import com.bossymr.network.NetworkQuery;
-import com.bossymr.network.annotations.Entity;
-import com.bossymr.network.annotations.Fetch;
-import com.bossymr.network.annotations.Field;
-import com.bossymr.network.annotations.Property;
-import com.bossymr.network.client.FetchMethod;
+import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.annotations.Entity;
+import com.bossymr.rapid.robot.api.annotations.Fetch;
+import com.bossymr.rapid.robot.api.annotations.Field;
+import com.bossymr.rapid.robot.api.annotations.Property;
+import com.bossymr.rapid.robot.api.client.FetchMethod;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.actions;
 
-import com.bossymr.network.NetworkManager;
+import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.language.symbol.RapidModule;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;

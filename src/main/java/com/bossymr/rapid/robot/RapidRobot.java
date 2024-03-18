@@ -1,11 +1,11 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.NetworkManager;
-import com.bossymr.network.ResponseStatusException;
-import com.bossymr.network.client.EntityModel;
-import com.bossymr.network.client.HeavyNetworkManager;
-import com.bossymr.network.client.proxy.EntityProxy;
-import com.bossymr.network.client.security.Credentials;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.client.EntityModel;
+import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
+import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
@@ -322,7 +322,7 @@ public class RapidRobot implements Disposable {
             throw new IllegalStateException("Robot is not connected");
         }
         Set<RapidTask> updated = new HashSet<>();
-        File directory = FileUtil.createTempFile("intellij-rapid", "download", true);
+        File directory = FileUtil.createTempDirectory("intellij-rapid", "download", true);
         File file = getDefaultPath().toFile();
         if (file.exists()) {
             FileUtil.delete(file);

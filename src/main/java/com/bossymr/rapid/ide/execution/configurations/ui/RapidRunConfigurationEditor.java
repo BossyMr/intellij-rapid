@@ -1,6 +1,6 @@
 package com.bossymr.rapid.ide.execution.configurations.ui;
 
-import com.bossymr.network.NetworkManager;
+import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.RapidIcons;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;

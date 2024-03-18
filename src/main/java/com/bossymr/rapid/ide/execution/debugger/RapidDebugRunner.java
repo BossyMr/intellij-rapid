@@ -1,7 +1,7 @@
 package com.bossymr.rapid.ide.execution.debugger;
 
-import com.bossymr.network.NetworkAction;
-import com.bossymr.network.NetworkManager;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.RapidRunProfileState;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;

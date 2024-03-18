@@ -50,7 +50,7 @@ configurations {
 }
 
 dependencies {
-    implementation(project(mapOf("path" to ":network")))
+    implementation("org.slf4j:slf4j-api:2.0.12")
     implementation("org.slf4j:slf4j-jdk14:2.0.12")
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
     implementation("org.apache.tika:tika-core:2.9.1")
@@ -61,6 +61,12 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.2")
     testImplementation("org.junit.platform:junit-platform-launcher:1.10.2")
+    api("com.squareup.okhttp3:okhttp:5.0.0-alpha.12")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.11")
+    testImplementation("org.wiremock:wiremock:3.3.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.2")
+    implementation("org.apache.tika:tika-core:2.9.1")
 }
 
 sentry {

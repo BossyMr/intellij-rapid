@@ -1,8 +1,8 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
-import com.bossymr.network.NetworkAction;
-import com.bossymr.network.NetworkManager;
-import com.bossymr.network.client.NetworkRequest;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;

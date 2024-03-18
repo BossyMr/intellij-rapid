@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
-import com.bossymr.network.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Deserializable;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 

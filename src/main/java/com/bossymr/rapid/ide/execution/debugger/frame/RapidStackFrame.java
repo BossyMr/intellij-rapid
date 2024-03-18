@@ -1,8 +1,8 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
-import com.bossymr.network.NetworkAction;
-import com.bossymr.network.ResponseStatusException;
-import com.bossymr.network.client.NetworkRequest;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.RapidField;

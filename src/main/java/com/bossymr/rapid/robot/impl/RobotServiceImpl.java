@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.impl;
 
-import com.bossymr.network.NetworkManager;
-import com.bossymr.network.client.security.Credentials;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotEventListener;

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.language.flow;
 
-import com.bossymr.network.MultiMap;
+import com.bossymr.rapid.robot.api.MultiMap;
 import com.bossymr.rapid.language.flow.data.DataFlowFunction;
 import com.bossymr.rapid.language.flow.data.DataFlowState;
 import com.bossymr.rapid.language.flow.instruction.Instruction;

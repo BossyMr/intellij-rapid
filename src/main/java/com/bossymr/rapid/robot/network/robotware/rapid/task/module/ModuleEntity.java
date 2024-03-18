@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task.module;
 
-import com.bossymr.network.NetworkQuery;
-import com.bossymr.network.annotations.*;
-import com.bossymr.network.client.FetchMethod;
+import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.annotations.*;
+import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"rap-module"})

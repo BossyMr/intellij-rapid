@@ -1,10 +1,10 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.network.NetworkQuery;
-import com.bossymr.network.annotations.Argument;
-import com.bossymr.network.annotations.Fetch;
-import com.bossymr.network.annotations.Service;
-import com.bossymr.network.client.FetchMethod;
+import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.annotations.Argument;
+import com.bossymr.rapid.robot.api.annotations.Fetch;
+import com.bossymr.rapid.robot.api.annotations.Service;
+import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

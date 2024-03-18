@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.network;
 
 
-import com.bossymr.network.NetworkQuery;
-import com.bossymr.network.annotations.Fetch;
-import com.bossymr.network.annotations.Service;
+import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.annotations.Fetch;
+import com.bossymr.rapid.robot.api.annotations.Service;
 import org.jetbrains.annotations.NotNull;
 
 @Service("/ctrl")

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.ui;
 
-import com.bossymr.network.client.security.Credentials;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.openapi.progress.ProgressIndicator;

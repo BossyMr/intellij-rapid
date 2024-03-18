@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
-import com.bossymr.network.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Deserializable;
 
 /**
  * {@code SymbolType} represents a type of symbol.
