@@ -322,45 +322,44 @@ public class RapidRobot implements Disposable {
             throw new IllegalStateException("Robot is not connected");
         }
         Set<RapidTask> updated = new HashSet<>();
-        try (CloseableDirectory directory = new CloseableDirectory("download")) {
-            File file = getDefaultPath().toFile();
+        File directory = FileUtil.createTempFile("intellij-rapid", "download", true);
+        File file = getDefaultPath().toFile();
+        if (file.exists()) {
+            FileUtil.delete(file);
+        }
+        List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
+        for (Task task : tasks) {
+            File temporaryTask = directory.toPath().resolve(task.getName()).toFile();
+            File finalTask = file.toPath().resolve(task.getName()).toFile();
+            if (!(WriteAction.computeAndWait(() -> FileUtil.createDirectory(temporaryTask)))) {
+                throw new IllegalStateException();
+            }
+            RapidTask local = new RapidTask(task.getName(), finalTask, new HashSet<>());
+            List<ModuleInfo> modules = task.getModules().get();
+            for (ModuleInfo moduleInfo : modules) {
+                ModuleEntity module = moduleInfo.getModule().get();
+                try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+                    module.save(module.getName(), temporaryTask.toPath().toString()).get();
+                }
+                File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
+                local.getFiles().add(result);
+            }
+            updated.add(local);
+        }
+        WriteAction.runAndWait(() -> {
             if (file.exists()) {
                 FileUtil.delete(file);
             }
-            List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
-            for (Task task : tasks) {
-                File temporaryTask = directory.getDirectory().toPath().resolve(task.getName()).toFile();
-                File finalTask = file.toPath().resolve(task.getName()).toFile();
-                if (!(WriteAction.computeAndWait(() -> FileUtil.createDirectory(temporaryTask)))) {
-                    throw new IllegalStateException();
-                }
-                RapidTask local = new RapidTask(task.getName(), finalTask, new HashSet<>());
-                List<ModuleInfo> modules = task.getModules().get();
-                for (ModuleInfo moduleInfo : modules) {
-                    ModuleEntity module = moduleInfo.getModule().get();
-                    try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-                        module.save(module.getName(), temporaryTask.toPath().toString()).get();
+            FileUtil.copyDirContent(directory, file);
+            for (RapidTask task : updated) {
+                for (File taskFile : task.getFiles()) {
+                    VirtualFile virtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(taskFile.toPath());
+                    if (virtualFile == null) {
+                        throw new IllegalStateException("File '" + taskFile + "' not found");
                     }
-                    File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
-                    local.getFiles().add(result);
                 }
-                updated.add(local);
             }
-            WriteAction.runAndWait(() -> {
-                if (file.exists()) {
-                    FileUtil.delete(file);
-                }
-                FileUtil.copyDirContent(directory.getDirectory(), file);
-                for (RapidTask task : updated) {
-                    for (File taskFile : task.getFiles()) {
-                        VirtualFile virtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(taskFile.toPath());
-                        if (virtualFile == null) {
-                            throw new IllegalStateException("File '" + taskFile + "' not found");
-                        }
-                    }
-                }
-            });
-        }
+        });
         RobotEventListener.publish().onDownload(this);
         this.tasks = updated;
     }
@@ -379,26 +378,25 @@ public class RapidRobot implements Disposable {
         if (manager == null) {
             throw new IllegalStateException("Robot is not connected");
         }
-        try (CloseableDirectory temporaryDirectory = new CloseableDirectory("upload")) {
-            Task remote = manager.createService(TaskService.class).getTask(task.getName()).get();
-            Program program = remote.getProgram().get();
-            File file = temporaryDirectory.getDirectory().toPath().resolve(program.getName() + ".pgf").toFile();
-            WriteAction.runAndWait(() -> {
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-                    writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
-                    writer.write("<Program>\r\n");
-                    for (File module : modules) {
-                        writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
-                        FileUtil.copy(module, temporaryDirectory.getDirectory().toPath().resolve(module.getName()).toFile());
-                    }
-                    writer.write("</Program>");
+        File directory = FileUtil.createTempDirectory("intellij-rapid", "upload", true);
+        Task remote = manager.createService(TaskService.class).getTask(task.getName()).get();
+        Program program = remote.getProgram().get();
+        File file = directory.toPath().resolve(program.getName() + ".pgf").toFile();
+        WriteAction.runAndWait(() -> {
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+                writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
+                writer.write("<Program>\r\n");
+                for (File module : modules) {
+                    writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
+                    FileUtil.copy(module, directory.toPath().resolve(module.getName()).toFile());
                 }
-            });
-            try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-                program.load(file.getPath(), LoadProgramMode.REPLACE).get();
+                writer.write("</Program>");
             }
-            RobotEventListener.publish().onUpload(this);
+        });
+        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
+            program.load(file.getPath(), LoadProgramMode.REPLACE).get();
         }
+        RobotEventListener.publish().onUpload(this);
     }
 
     /**
