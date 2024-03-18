@@ -50,8 +50,6 @@ configurations {
 }
 
 dependencies {
-    implementation("org.slf4j:slf4j-api:2.0.12")
-    implementation("org.slf4j:slf4j-jdk14:2.0.12")
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
     implementation("org.apache.tika:tika-core:2.9.1")
     implementation("org.apache.tika:tika-parser-microsoft-module:2.9.1")

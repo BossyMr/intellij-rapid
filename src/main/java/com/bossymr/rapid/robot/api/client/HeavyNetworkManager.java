@@ -11,11 +11,10 @@ import com.bossymr.rapid.robot.api.client.response.StringConverter;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.api.entity.EntityInvocationHandler;
 import com.bossymr.rapid.robot.api.entity.ServiceInvocationHandler;
+import com.intellij.openapi.diagnostic.Logger;
 import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
@@ -30,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class HeavyNetworkManager implements NetworkManager {
 
-    private static final @NotNull Logger logger = LoggerFactory.getLogger(NetworkAction.class);
+    private static final @NotNull Logger logger = Logger.getInstance(HeavyNetworkManager.class);
     private final @NotNull NetworkClient networkClient;
     private final @NotNull Set<NetworkAction> delegates = ConcurrentHashMap.newKeySet();
     private volatile boolean closed;
@@ -65,7 +64,7 @@ public class HeavyNetworkManager implements NetworkManager {
                         return converter.convert(response);
                     }
                 }
-                logger.atWarn().log("Could not convert " + response + " into " + type);
+                logger.warn("Could not convert " + response + " into " + type);
                 return null;
             }
         };

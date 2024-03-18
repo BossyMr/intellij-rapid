@@ -6,11 +6,10 @@ import com.bossymr.rapid.robot.api.SubscriptionListener;
 import com.bossymr.rapid.robot.api.SubscriptionPriority;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.api.client.security.impl.DigestAuthenticator;
+import com.intellij.openapi.diagnostic.Logger;
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -22,7 +21,7 @@ import java.util.List;
 
 public class NetworkClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(NetworkClient.class);
+    private static final Logger logger = Logger.getInstance(NetworkClient.class);
 
     private final @NotNull SubscriptionGroup subscriptionGroup;
     private final @NotNull OkHttpClient httpClient;
@@ -55,7 +54,7 @@ public class NetworkClient {
                 .readTimeout(Duration.ofSeconds(30))
                 .addInterceptor(chain -> {
                     Response response = chain.proceed(chain.request());
-                    logger.atDebug().log("Request {} -> {}", chain.request(), response);
+                    logger.debug("Request {} -> {}", chain.request(), response);
                     if(response.code() >= 300) {
                         throw new ResponseStatusException(response, response.body().string());
                     }
@@ -83,7 +82,7 @@ public class NetworkClient {
     }
 
     public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
-        logger.atDebug().log("Subscribing to '{}' with priority {}", event.getResource(), priority);
+        logger.debug("Subscribing to '{}' with priority {}", event.getResource(), priority);
         SubscriptionEntity entity = new SubscriptionEntity(this, event, priority) {
 
             @Override
@@ -104,7 +103,7 @@ public class NetworkClient {
             subscriptionGroup.getEntities().remove(entity);
             throw e;
         }
-        logger.atDebug().log("Subscribed to '{}' with priority {}", event.getResource(), priority);
+        logger.debug("Subscribed to '{}' with priority {}", event.getResource(), priority);
         return entity;
     }
 
@@ -126,7 +125,7 @@ public class NetworkClient {
     }
 
     public void close() throws IOException, InterruptedException {
-        logger.atDebug().log("Closing NetworkClient");
+        logger.debug("Closing NetworkClient");
         subscriptionGroup.getEntities().clear();
         subscriptionGroup.update();
     }

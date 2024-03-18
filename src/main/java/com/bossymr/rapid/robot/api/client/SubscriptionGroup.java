@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.api.client;
 import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.MultiMap;
 import com.bossymr.rapid.robot.api.SubscriptionEntity;
+import com.intellij.openapi.diagnostic.Logger;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.WebSocket;
@@ -11,8 +12,6 @@ import okio.ByteString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -20,7 +19,7 @@ import java.util.*;
 import java.util.concurrent.Semaphore;
 
 public class SubscriptionGroup {
-    private static final Logger logger = LoggerFactory.getLogger(SubscriptionGroup.class);
+    private static final Logger logger = Logger.getInstance(SubscriptionGroup.class);
 
     private final @NotNull NetworkClient networkClient;
     private final @NotNull List<SubscriptionEntity> entities;
@@ -81,7 +80,7 @@ public class SubscriptionGroup {
             } else if (path == null || webSocket == null) {
                 start();
             } else {
-                logger.atDebug().log("Updating SubscriptionGroup '{}'", getEntities());
+                logger.debug("Updating SubscriptionGroup '{}'", getEntities());
                 NetworkRequest<Void> request = new NetworkRequest<>(FetchMethod.PUT, path, GenericType.of(Void.class));
                 request.getFields().putAll(getBody(getEntities()));
                 networkClient.send(request).close();
@@ -92,7 +91,7 @@ public class SubscriptionGroup {
     }
 
     private void start() throws IOException, InterruptedException {
-        logger.atDebug().log("Starting SubscriptionGroup '{}'", getEntities());
+        logger.debug("Starting SubscriptionGroup '{}'", getEntities());
         NetworkRequest<Void> request = new NetworkRequest<>(FetchMethod.POST, URI.create("/subscription"), GenericType.of(Void.class));
         request.getFields().putAll(getBody(entities));
         ResponseModel model;
@@ -121,17 +120,17 @@ public class SubscriptionGroup {
 
                 @Override
                 public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
-                    logger.atDebug().log("WebSocket started");
+                    logger.debug("WebSocket started");
                 }
 
                 @Override
                 public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-                    logger.atDebug().log("WebSocket closed");
+                    logger.debug("WebSocket closed");
                 }
 
                 @Override
                 public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-                    logger.atDebug().log("WebSocket closing");
+                    logger.debug("WebSocket closing");
                 }
             });
             this.path = model.model().reference("group");
@@ -140,7 +139,7 @@ public class SubscriptionGroup {
     }
 
     private void close() throws IOException, InterruptedException {
-        logger.atDebug().log("Closing SubscriptionGroup");
+        logger.debug("Closing SubscriptionGroup");
         if (path == null || webSocket == null) {
             return;
         }
