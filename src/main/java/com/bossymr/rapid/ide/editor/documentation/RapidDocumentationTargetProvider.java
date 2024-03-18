@@ -45,6 +45,7 @@ public class RapidDocumentationTargetProvider implements SymbolDocumentationTarg
 
     private @Nullable RapidSymbol getSymbol(@NotNull Project project, @NotNull RapidSymbol symbol, @NotNull String url) {
         if (url.startsWith(DocumentationManagerProtocol.PSI_ELEMENT_PROTOCOL)) {
+            url = url.substring(DocumentationManagerProtocol.PSI_ELEMENT_PROTOCOL.length());
             int index = url.indexOf(DocumentationManagerProtocol.PSI_ELEMENT_PROTOCOL_REF_SEPARATOR);
             if (index >= 0) {
                 url = url.substring(0, index);
