@@ -50,21 +50,23 @@ configurations {
 }
 
 dependencies {
+    // z3 is used for data flow analysis
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
+    // Apache Tika is used to extract external documentation
     implementation("org.apache.tika:tika-core:2.9.1")
     implementation("org.apache.tika:tika-parser-microsoft-module:2.9.1")
+    // Jsoup is used to reformat external documentation
     implementation("org.jsoup:jsoup:1.17.2")
-    testImplementation(platform("org.junit:junit-bom:5.10.2"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.2")
-    testImplementation("org.junit.platform:junit-platform-launcher:1.10.2")
+    // OkHttp is used to communicate with a remote robot
     api("com.squareup.okhttp3:okhttp:5.0.0-alpha.12")
-    implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.11")
-    testImplementation("org.wiremock:wiremock:3.3.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.2")
-    implementation("org.apache.tika:tika-core:2.9.1")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.12")
+    // Junit is used for testing
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
+    //  Wiremock is used to test network API
+    testImplementation("org.wiremock:wiremock:3.4.2")
 }
 
 sentry {
