@@ -558,9 +558,11 @@ public class RapidRobot implements Disposable {
         public @Nullable Set<Entity> symbols;
 
         /**
-         * Due to a potential bug on the remote robot, all symbols are not returned when querying for all symbols. As
-         * such, all symbols which are not resolved are queried individually, which appears to be working accurately. To
-         * avoid repeatedly querying the same symbol, a symbols name is added to this list if it was not found.
+         * Due to an issue on the robot. All symbols are not returned when asking for a list of all symbols. However,
+         * when asking the robot for a symbol with a specific name, it appears to always return the correct result. As
+         * a result, if a symbol hasn't been resolved to any existing symbol, a request is sent to the robot, asking for
+         * a specific symbol with that name. If a symbol with that name wasn't found, it is added to this cache, so
+         * that the request won't be retried.
          */
         public @Nullable Set<String> cache;
 

@@ -1,11 +1,11 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkAction;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.ResponseStatusException;
 import com.bossymr.rapid.robot.api.client.NetworkRequest;
-import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;

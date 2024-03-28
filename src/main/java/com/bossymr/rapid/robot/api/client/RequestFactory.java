@@ -80,20 +80,41 @@ public class RequestFactory {
         if(!method.isAnnotationPresent(RequiresMastership.class)) {
             return query;
         }
+        /*
+         * If the method is annotated as @RequiresMastership, mastership must be retrieved prior to the actual request
+         * being called. In addition, mastership must be released after the request has been called, even if the request
+         * fails.
+         */
         MastershipType mastershipType = method.getAnnotation(RequiresMastership.class).value();
         return () -> {
             MastershipService mastershipService = manager.createService(MastershipService.class);
             MastershipDomain mastershipDomain = mastershipService.getDomain(mastershipType).get();
             Boolean isHolding = mastershipDomain.isHolding();
             if(isHolding != null && isHolding) {
+                /*
+                 * Mastership is already being held. Mastership should not be released after the request is called,
+                 * because some other code - the code that requested mastership - might still require mastership.
+                 */
                 return query.get();
             }
             MastershipStatus status = mastershipDomain.getStatus();
             if(status != MastershipStatus.NO_MASTER) {
+                /*
+                 * Mastership is not held by this client, but it is currently being held by some other client. As such,
+                 * the request cannot be completed.
+                 */
                 throw new MastershipException(mastershipType, mastershipDomain.getApplication());
             }
             mastershipDomain.request().get();
+            /*
+             * Tell the network client that, if it closes before mastership is released, it needs to release mastership.
+             * The network client might close if the request fails and the network client is configured to close on
+             * failure.
+             */
             manager.subscribe(() -> {
+                /*
+                 * Check that mastership is still being held.
+                 */
                 MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
                 Boolean holding = domain.isHolding();
                 if(holding != null && holding) {
@@ -101,7 +122,14 @@ public class RequestFactory {
                 }
             });
             Object result = query.get();
-            mastershipDomain.release().get();
+            /*
+             * Check that mastership is still being held.
+             */
+            MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
+            Boolean holding = domain.isHolding();
+            if(holding != null && holding) {
+                domain.release().get();
+            }
             return result;
         };
     }

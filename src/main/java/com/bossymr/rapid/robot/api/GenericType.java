@@ -17,7 +17,7 @@ public abstract class GenericType<T> implements Comparable<T> {
     }
 
     public static @NotNull GenericType<Void> voidType() {
-        return new GenericType<>() {};
+        return of(Void.class);
     }
 
     public static <T> @NotNull GenericType<T> of(@NotNull Type type) {

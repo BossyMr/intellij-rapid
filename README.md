@@ -15,10 +15,3 @@ This plugin adds language support for the RAPID programming language to IntelliJ
 * **Robot Integration:** Integrates with a local or remote robot. Automatically fetches builtin elements from the remote
   robot as well as existing modules on the robot. Supports uploading and running a local program on the robot from
   IntelliJ. Also supports debugging programs using breakpoints and variable values.
-
-# Roadmap
-
-* **Support RobotWare 7:** Add support for RobotWare 7 which uses Robot Web Services 2. A prerequisite for this feature
-  is to add support for multiple versions in the Network API code.
-* **Improved Data Flow Analysis:** Support assignments inside a loop. Currently, assignments made inside a loop
-  are not assigned to any specific value. 

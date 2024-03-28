@@ -1,13 +1,11 @@
 package com.bossymr.rapid.robot.api;
 
-import com.bossymr.rapid.robot.MastershipException;
 import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Service;
 import com.bossymr.rapid.robot.api.client.*;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -101,7 +99,7 @@ public interface NetworkManager extends AutoCloseable {
      * Subscribes to this {@code NetworkManager}. The specified callback is called when this {@code NetworkManager} is
      * closed.
      *
-     * @param runnable the callback.
+     * @param listener the event listener.
      */
     void subscribe(@NotNull NetworkManagerListener listener);
 
