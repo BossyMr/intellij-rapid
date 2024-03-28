@@ -1,3 +1,5 @@
+import org.jetbrains.changelog.Changelog
+
 fun properties(key: String) = providers.gradleProperty(key)
 fun environment(key: String) = providers.environmentVariable(key)
 
@@ -12,6 +14,8 @@ plugins {
     id("org.jetbrains.intellij") version "1.17.1"
     // Gradle Sentry Plugin
     id("io.sentry.jvm.gradle") version "4.2.0"
+    // Gradle Changelog Plugin
+    id("org.jetbrains.changelog") version "2.2.0"
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
@@ -22,6 +26,12 @@ version = properties("pluginVersion").get()
 // Configure project's dependencies
 repositories {
     mavenCentral()
+}
+
+// Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
+changelog {
+    groups.empty()
+    repositoryUrl = properties("pluginRepositoryUrl")
 }
 
 // Set the JVM language level used to build the project. Use Java 11 for 2020.3+, and Java 17 for 2022.2+.
@@ -110,6 +120,19 @@ tasks {
         version = properties("pluginVersion")
         sinceBuild = properties("pluginSinceBuild")
         untilBuild = properties("pluginUntilBuild")
+
+        val changelog = project.changelog // local variable for configuration cache compatibility
+        // Get the latest available change notes from the changelog file
+        changeNotes = properties("pluginVersion").map { pluginVersion ->
+            with(changelog) {
+                renderItem(
+                    (getOrNull(pluginVersion) ?: getUnreleased())
+                        .withHeader(false)
+                        .withEmptySections(false),
+                    Changelog.OutputType.HTML,
+                )
+            }
+        }
     }
 
     // Configure UI tests plugin
