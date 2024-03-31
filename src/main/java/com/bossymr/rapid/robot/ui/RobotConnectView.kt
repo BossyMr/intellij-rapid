@@ -24,6 +24,7 @@ import com.intellij.ui.layout.selectedValueMatches
 import java.io.IOException
 import java.net.NetworkInterface
 import java.net.URI
+ import java.net.URISyntaxException
 import javax.jmdns.JmDNS
 import javax.jmdns.ServiceEvent
 import javax.jmdns.ServiceListener
@@ -38,6 +39,8 @@ private const val PREFIX = "RobotWebServices_"
  */
 class RobotConnectView @JvmOverloads constructor(val project: Project, val path: URI? = null) :
     DialogWrapper(project, false) {
+
+    private var disposed = false
 
     private val scanners: MutableList<JmDNS> = arrayListOf()
 
@@ -79,10 +82,17 @@ class RobotConnectView @JvmOverloads constructor(val project: Project, val path:
                 if (inetAddress.isLoopbackAddress) {
                     continue
                 }
+                if(disposed) {
+                    break
+                }
                 val jmDNS = try {
                     JmDNS.create(inetAddress)
                 } catch (e: IOException) {
                     continue
+                }
+                if(disposed) {
+                    jmDNS.close()
+                    break
                 }
                 scanners.add(jmDNS)
                 jmDNS.addServiceListener("_http._tcp.local.", object : ServiceListener {
@@ -125,6 +135,7 @@ class RobotConnectView @JvmOverloads constructor(val project: Project, val path:
 
     private fun disposeDiscovery() {
         ApplicationManager.getApplication().executeOnPooledThread {
+            disposed = true
             for (jmDNS in scanners) {
                 jmDNS.close()
             }
@@ -142,11 +153,14 @@ class RobotConnectView @JvmOverloads constructor(val project: Project, val path:
                 textField()
                     .bindText(model::host)
                     .validationOnApply { textField ->
+                        if(textField.text.isNullOrBlank()) {
+                            return@validationOnApply ValidationInfo(RapidBundle.message("robot.connect.host.invalid"))
+                        }
                         try {
-                            URI.create(textField.text)
+                            URI("http", null, textField.text.trim(), 80, null, null, null)
                             null
-                        } catch (e: IllegalArgumentException) {
-                            ValidationInfo(RapidBundle.message("robot.connect.host.invalid"))
+                        } catch (e: URISyntaxException) {
+                            return@validationOnApply ValidationInfo(RapidBundle.message("robot.connect.host.invalid"))
                         }
                     }
             }.visibleIf(comboBox.selectedValueMatches { it is RobotConnectNode })
@@ -178,10 +192,14 @@ class RobotConnectView @JvmOverloads constructor(val project: Project, val path:
         /*
          * Calculate the actual host path.
          */
-        val path: URI = if (node is RobotStateNode) {
-            URI.create(node.path)
-        } else {
-            URI("http", null, model.host, model.port, null, null, null)
+        val path: URI = try {
+            if (node is RobotStateNode) {
+                URI(node.path)
+            } else {
+                URI("http", null, model.host.trim(), model.port, null, null, null)
+            }
+        } catch (e: URISyntaxException) {
+            return
         }
         /*
          * Calculate the actual credentials.
@@ -195,6 +213,8 @@ class RobotConnectView @JvmOverloads constructor(val project: Project, val path:
             override fun run(indicator: ProgressIndicator) {
                 RobotService.getInstance().connect(path, credentials)
             }
+
+            override fun onThrowable(error: Throwable) = Unit
         }.queue()
     }
 
