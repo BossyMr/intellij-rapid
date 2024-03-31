@@ -13,6 +13,8 @@
   selected, the plugin automatically connects to the robot. A manual connection can also be established, if a robot is
   not automatically detected.
 
+* Highlight syntax during indexing.
+
 ### Fixed
 
 * Fix error when trying to rename a symbol.
