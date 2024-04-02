@@ -2,7 +2,6 @@ package com.bossymr.rapid.ide.editor.insight.inspection;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.editor.insight.fix.SafeDeleteFix;
-import com.bossymr.rapid.ide.search.RapidSymbolUsageSearcher;
 import com.bossymr.rapid.language.psi.RapidElementVisitor;
 import com.bossymr.rapid.language.symbol.RoutineType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
@@ -13,7 +12,8 @@ import com.bossymr.rapid.robot.RobotService;
 import com.intellij.codeInspection.LocalInspectionTool;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
-import com.intellij.find.usages.api.PsiUsage;
+import com.intellij.model.psi.PsiSymbolReference;
+import com.intellij.model.search.SearchService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
@@ -38,11 +38,14 @@ public class UnusedDeclarationInspection extends LocalInspectionTool {
                 }
                 String name = symbol.getName();
                 PsiElement nameIdentifier = symbol.getNameIdentifier();
-                if (nameIdentifier == null || name == null) return;
+                if (nameIdentifier == null || name == null) {
+                    return;
+                }
                 SearchScope searchScope = getSearchScope(symbol, symbol.getProject(), symbol.getUseScope());
-                Query<? extends PsiUsage> query = RapidSymbolUsageSearcher.collectSearchRequests(symbol, name, symbol.getProject(), searchScope)
-                                                                          .filtering(usage -> !(usage.getDeclaration()));
-                if (query.findFirst() != null) return;
+                Query<PsiSymbolReference> query = SearchService.getInstance().searchPsiSymbolReferences(symbol.getProject(), symbol, searchScope);
+                if (query.findFirst() != null) {
+                    return;
+                }
                 holder.registerProblem(symbol, RapidBundle.message("inspection.message.unused.declaration", name), ProblemHighlightType.LIKE_UNUSED_SYMBOL, nameIdentifier.getTextRangeInParent(), new SafeDeleteFix(symbol));
             }
         };
@@ -60,7 +63,7 @@ public class UnusedDeclarationInspection extends LocalInspectionTool {
         return searchScope;
     }
 
-    private boolean isEntryPoint(@NotNull PhysicalSymbol symbol) {
+    public static boolean isEntryPoint(@NotNull PhysicalSymbol symbol) {
         if (!(symbol instanceof PhysicalRoutine routine)) {
             return false;
         }

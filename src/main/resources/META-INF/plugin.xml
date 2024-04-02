@@ -119,6 +119,9 @@
                                               bundle="messages.RapidBundle" nameKey="inlay.parameter.provider.name"
                                               group="PARAMETERS_GROUP" isEnabledByDefault="true"/>
 
+        <codeInsight.daemonBoundCodeVisionProvider
+                implementation="com.bossymr.rapid.ide.editor.inlay.RapidUsagesCodeVisionProvider"/>
+
         <!-- Execution -->
 
         <configurationType implementation="com.bossymr.rapid.ide.execution.configurations.RapidConfigurationType"/>
