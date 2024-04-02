@@ -114,6 +114,11 @@
 
         <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.RapidQuoteHandler"/>
 
+        <codeInsight.declarativeInlayProvider language="RAPID" providerId="rapid.parameter.hints"
+                                              implementationClass="com.bossymr.rapid.ide.editor.inlay.RapidInlayParameterProvider"
+                                              bundle="messages.RapidBundle" nameKey="inlay.parameter.provider.name"
+                                              group="PARAMETERS_GROUP" isEnabledByDefault="true"/>
+
         <!-- Execution -->
 
         <configurationType implementation="com.bossymr.rapid.ide.execution.configurations.RapidConfigurationType"/>
