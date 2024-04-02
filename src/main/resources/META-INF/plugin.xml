@@ -155,6 +155,8 @@
         <searcher forClass="com.intellij.find.usages.api.UsageSearchParameters"
                   implementationClass="com.bossymr.rapid.ide.search.RapidSymbolUsageSearcher"/>
 
+        <lang.codeReferenceSearcher implementation="com.bossymr.rapid.ide.search.RapidCodeReferenceSearcher"/>
+
         <!-- PsiElement  -->
 
         <stubElementTypeHolder externalIdPrefix="rapid." class="com.bossymr.rapid.language.psi.RapidStubElementTypes"/>
