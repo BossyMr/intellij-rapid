@@ -122,6 +122,9 @@
         <codeInsight.daemonBoundCodeVisionProvider
                 implementation="com.bossymr.rapid.ide.editor.inlay.RapidUsagesCodeVisionProvider"/>
 
+        <codeInsight.parameterInfo language="RAPID"
+                                   implementationClass="com.bossymr.rapid.ide.editor.parameterInfo.RapidParameterInfoHandler"/>
+
         <vcs.codeVisionLanguageContext language="RAPID"
                                        implementationClass="com.bossymr.rapid.ide.editor.inlay.RapidVcsCodeVisionContext"/>
 
