@@ -15,8 +15,11 @@ public class RapidConditionalArgumentImpl extends PhysicalElement implements Rap
     }
 
     @Override
-    public @NotNull RapidReferenceExpression getParameter() {
+    public @Nullable RapidReferenceExpression getParameter() {
         List<PsiElement> expressions = findChildrenByType(RapidElementTypes.EXPRESSIONS);
+        if(expressions.isEmpty()) {
+            return null;
+        }
         return (RapidReferenceExpression) expressions.get(0);
     }
 

@@ -5,6 +5,7 @@ import com.bossymr.rapid.language.symbol.RapidParameterGroup;
 import com.bossymr.rapid.language.symbol.RapidRoutine;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -105,6 +106,6 @@ public interface RapidArgument extends RapidElement {
     }
 
     default @Nullable RapidParameter getSymbol() {
-        return getSymbol(this);
+        return CachedValuesManager.getProjectPsiDependentCache(this, symbol -> getSymbol(symbol));
     }
 }

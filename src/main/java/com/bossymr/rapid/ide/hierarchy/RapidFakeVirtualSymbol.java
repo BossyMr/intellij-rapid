@@ -14,8 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-@SuppressWarnings("UnstableApiUsage")
-public class RapidFakeVirtualSymbol extends FakePsiElement implements PhysicalSymbol {
+public class RapidFakeVirtualSymbol extends FakePsiElement {
 
     private final @NotNull PsiManager manager;
     private final @NotNull DummyHolder dummyHolder;
@@ -27,14 +26,8 @@ public class RapidFakeVirtualSymbol extends FakePsiElement implements PhysicalSy
         this.dummyHolder = DummyHolderFactory.createHolder(manager, null);
     }
 
-    @Override
     public @NotNull RapidSymbol getSymbol() {
         return symbol;
-    }
-
-    @Override
-    public @NotNull Pointer<RapidFakeVirtualSymbol> createPointer() {
-        return Pointer.delegatingPointer(symbol.createPointer(), target -> new RapidFakeVirtualSymbol(getManager(), target));
     }
 
     @Override
@@ -45,16 +38,6 @@ public class RapidFakeVirtualSymbol extends FakePsiElement implements PhysicalSy
     @Override
     public @Nullable PsiElement getParent() {
         return dummyHolder;
-    }
-
-    @Override
-    public @NotNull TargetPresentation getTargetPresentation() {
-        return symbol.getTargetPresentation();
-    }
-
-    @Override
-    public @Nullable PsiElement getNameIdentifier() {
-        return null;
     }
 
     @Override

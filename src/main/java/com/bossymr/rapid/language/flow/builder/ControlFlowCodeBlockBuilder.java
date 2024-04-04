@@ -490,18 +490,30 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                 if (argument instanceof RapidRequiredArgument requiredArgument) {
                     RapidExpression value = requiredArgument.getArgument();
                     builder.withRequiredArgument(expression(value));
-                } else if (argument instanceof RapidConditionalArgument conditionalArgument) {
-                    RapidSymbol parameter = conditionalArgument.getParameter().getSymbol();
-                    if (!(parameter instanceof RapidParameter parameterSymbol)) {
+                    continue;
+                }
+                RapidReferenceExpression expression = argument.getParameter();
+                if(expression == null) {
+                    continue;
+                }
+                RapidSymbol parameter = expression.getSymbol();
+                if (!(parameter instanceof RapidParameter parameterSymbol)) {
+                    continue;
+                }
+                RapidExpression value = argument.getArgument();
+                String parameterName = parameterSymbol.getName();
+                if (parameterName == null) {
+                    continue;
+                }
+                if (argument instanceof RapidConditionalArgument) {
+                    if (!(value instanceof RapidReferenceExpression referenceExpression)) {
                         continue;
                     }
-                    RapidExpression value = conditionalArgument.getArgument();
-                    if (!(value instanceof RapidReferenceExpression referenceExpression) || !(referenceExpression.getSymbol() instanceof RapidParameter argumentSymbol)) {
+                    if (!(referenceExpression.getSymbol() instanceof RapidParameter argumentSymbol)) {
                         continue;
                     }
-                    String parameterName = parameterSymbol.getName();
                     String argumentName = argumentSymbol.getName();
-                    if (parameterName == null || argumentName == null) {
+                    if (argumentName == null) {
                         continue;
                     }
                     Argument argumentValue = getArgument(argumentSymbol.getName());
@@ -509,20 +521,11 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
                         continue;
                     }
                     builder.withConditionalArgument(parameterName, argumentValue);
-                } else if (argument instanceof RapidOptionalArgument optionalArgument) {
-                    RapidSymbol parameter = optionalArgument.getParameter().getSymbol();
-                    if (!(parameter instanceof RapidParameter parameterSymbol)) {
-                        continue;
-                    }
-                    RapidExpression value = optionalArgument.getArgument();
+                } else if (argument instanceof RapidOptionalArgument) {
                     if (value == null) {
                         continue;
                     }
-                    String name = parameterSymbol.getName();
-                    if (name == null) {
-                        continue;
-                    }
-                    builder.withOptionalArgument(name, expression(value));
+                    builder.withOptionalArgument(parameterName, expression(value));
                 }
             }
         };
@@ -588,7 +591,7 @@ public class ControlFlowCodeBlockBuilder implements RapidCodeBlockBuilder {
     }
 
     @Override
-    public @NotNull Expression expression(@NotNull RapidExpression expression) {
+    public @NotNull Expression expression(@Nullable RapidExpression expression) {
         if (expression instanceof RapidReferenceExpression referenceExpression) {
             return getReference(referenceExpression);
         }

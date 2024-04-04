@@ -203,11 +203,12 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
         List<RapidArgument> arguments = argumentList.getArguments();
         for (RapidArgument argument : parameters.keySet()) {
             RapidParameter parameter = parameters.get(argument);
-            if (argument instanceof RapidConditionalArgument || argument instanceof RapidOptionalArgument) {
-                String text = argument.getParameter().getText();
+            RapidReferenceExpression argumentParameter = argument.getParameter();
+            if (argumentParameter != null && (argument instanceof RapidConditionalArgument || argument instanceof RapidOptionalArgument)) {
+                String text = argumentParameter.getText();
                 if (parameter == null) {
                     annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.routine.parameter.not.found", text))
-                                    .range(argument.getParameter())
+                                    .range(argumentParameter)
                                     .create();
                 } else {
                     if (!parameter.getParameterGroup().isOptional()) {
@@ -227,8 +228,8 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                 }
             }
             if (argument instanceof RapidRequiredArgument) {
-                if (parameter != null && parameter.getName() != null && argument.getParameter() != null) {
-                    String parameterName = argument.getParameter().getText();
+                if (parameter != null && parameter.getName() != null && argumentParameter != null) {
+                    String parameterName = argumentParameter.getText();
                     if (!parameterName.equalsIgnoreCase(parameter.getName())) {
                         if (parametersByName.containsKey(parameterName.toLowerCase())) {
                             if (!parametersByName.get(parameterName.toLowerCase()).getParameterGroup().isOptional()) {
@@ -298,8 +299,11 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                     result.put(argument, requiredParameters.get(index));
                 }
             } else if (argument instanceof RapidOptionalArgument || argument instanceof RapidConditionalArgument) {
-                String parameterName = argument.getParameter().getText().toLowerCase();
-                result.put(argument, parameters.get(parameterName));
+                RapidReferenceExpression parameter = argument.getParameter();
+                if(parameter != null) {
+                    String parameterName = parameter.getText().toLowerCase();
+                    result.put(argument, parameters.get(parameterName));
+                }
             }
         }
         return result;

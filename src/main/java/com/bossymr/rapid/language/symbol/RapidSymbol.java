@@ -69,7 +69,7 @@ public interface RapidSymbol extends Symbol, NavigatableSymbol, SearchTargetSymb
      */
     @NotNull
     default String getPresentableName() {
-        return Objects.requireNonNullElse(getName(), "<ID>");
+        return Objects.requireNonNullElseGet(getName(), RapidSymbol::getDefaultText);
     }
 
     /**
