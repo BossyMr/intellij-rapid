@@ -1,8 +1,9 @@
 package com.bossymr.rapid.language.symbol.virtual;
 
 import com.bossymr.rapid.language.symbol.RapidAtomic;
-import com.bossymr.rapid.language.type.RapidType;
 import com.bossymr.rapid.language.symbol.Visibility;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
+import com.bossymr.rapid.language.type.RapidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,6 +21,18 @@ public class VirtualAtomic implements RapidAtomic, VirtualStructure {
 
     public VirtualAtomic(@NotNull String name) {
         this(name, null);
+    }
+
+    @Override
+    public @NotNull RapidType createType() {
+        return switch (name.toLowerCase()) {
+            case "num" -> RapidPrimitiveType.NUMBER;
+            case "dnum" -> RapidPrimitiveType.DOUBLE;
+            case "bool" -> RapidPrimitiveType.BOOLEAN;
+            case "string" -> RapidPrimitiveType.STRING;
+            case "anytype#" -> RapidPrimitiveType.ANYTYPE;
+            default -> RapidAtomic.super.createType();
+        };
     }
 
     @Override
