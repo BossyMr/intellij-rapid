@@ -35,7 +35,6 @@ public class SurroundWithIfStatementFix extends PsiUpdateModCommandQuickFix {
         if(elements == null || elements.length == 0) {
             return;
         }
-        PsiElement parent = elements[0].getParent();
-        new RapidWithIfSurrounder().surroundElements(project, parent, elements, text);
+        new RapidWithIfSurrounder().surroundElements(project, elements, text);
     }
 }
