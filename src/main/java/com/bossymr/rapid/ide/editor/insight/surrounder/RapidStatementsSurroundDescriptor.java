@@ -16,7 +16,10 @@ import java.util.List;
 public class RapidStatementsSurroundDescriptor implements SurroundDescriptor {
 
     private static final Surrounder[] SURROUNDERS = {
-            new RapidWithIfSurrounder()
+            new RapidWithIfSurrounder(),
+            new RapidWithIfElseSurrounder(),
+            new RapidWithForSurrounder(),
+            new RapidWithWhileSurrounder()
     };
 
     @Override
