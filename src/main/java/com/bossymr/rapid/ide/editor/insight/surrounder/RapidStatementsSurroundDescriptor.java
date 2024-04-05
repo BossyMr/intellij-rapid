@@ -32,31 +32,47 @@ public class RapidStatementsSurroundDescriptor implements SurroundDescriptor {
     public static @NotNull PsiElement[] getStatementsInOffset(@NotNull PsiFile file, int startOffset, int endOffset) {
         PsiElement startElement = file.findElementAt(startOffset);
         if (startElement instanceof PsiWhiteSpace) {
+            // The selection begins with whitespace, select the first non-whitespace element.
             startElement = file.findElementAt(startElement.getTextRange().getEndOffset());
         }
         PsiElement endElement = file.findElementAt(endOffset - 1);
         if (endElement instanceof PsiWhiteSpace) {
+            // The selection ends with whitespace, select the last non-whitespace element.
             endElement = file.findElementAt(endElement.getTextRange().getStartOffset() - 1);
         }
         if (startElement == null || endElement == null) {
+            // The selection is invalid
             return PsiElement.EMPTY_ARRAY;
         }
+        /*
+         * If the selection spans multiple elements, select their common parent.
+         * We can't surround elements at different levels.
+         */
         PsiElement parent = PsiTreeUtil.findCommonParent(startElement, endElement);
         if (parent == null) {
             return PsiElement.EMPTY_ARRAY;
         }
         RapidStatementList statementList = PsiTreeUtil.getParentOfType(parent, RapidStatementList.class, false);
         if (statementList == null) {
+            // The selection isn't inside a code block.
             return PsiElement.EMPTY_ARRAY;
         }
+        // Find the child to the code block which is the parent of the starting element.
+        // Code Block -> Statement -> [Identifier] => Code Block -> [Statement]
+        // We always want to select an entire statement
         PsiElement startChild = getParentInside(startElement, statementList);
-        if (startElement.getTextRange().getStartOffset() != startChild.getTextRange().getStartOffset()) {
-            return PsiElement.EMPTY_ARRAY;
-        }
         PsiElement stopChild = getParentInside(endElement, statementList);
-        if (endElement.getTextRange().getEndOffset() != stopChild.getTextRange().getEndOffset()) {
-            return PsiElement.EMPTY_ARRAY;
+        if(startOffset != endOffset) {
+            // This is a selection. We want to only provide this surrounder if the
+            // selection already contains the entire element.
+            if (startElement.getTextRange().getStartOffset() != startChild.getTextRange().getStartOffset()) {
+                return PsiElement.EMPTY_ARRAY;
+            }
+            if (endElement.getTextRange().getEndOffset() != stopChild.getTextRange().getEndOffset()) {
+                return PsiElement.EMPTY_ARRAY;
+            }
         }
+        // Find all elements between the starting and stopping element.
         List<PsiElement> elements = new ArrayList<>();
         PsiElement element = startChild;
         while (element != null) {
