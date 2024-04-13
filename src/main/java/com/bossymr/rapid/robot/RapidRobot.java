@@ -160,17 +160,17 @@ public class RapidRobot implements Disposable {
         }
     }
 
-    private static @NotNull CredentialAttributes createCredentialsAttributes(@NotNull URI path) {
-        return new CredentialAttributes(CredentialAttributesKt.generateServiceName("intellij-rapid", path.toString()));
+    private static @NotNull CredentialAttributes createCredentialsAttributes(@NotNull URI path, @Nullable String username) {
+        return new CredentialAttributes(CredentialAttributesKt.generateServiceName("intellij-rapid", path.toString()), username);
     }
 
-    private static @Nullable Credentials getCredentials(@NotNull URI path) {
-        CredentialAttributes credentialsAttributes = createCredentialsAttributes(path);
-        com.intellij.credentialStore.Credentials credentials = PasswordSafe.getInstance().get(credentialsAttributes);
+    public static @Nullable Credentials getCredentials(@NotNull URI path, @Nullable String username) {
+        CredentialAttributes credentialsAttributes = createCredentialsAttributes(path, username);
+        var credentials = PasswordSafe.getInstance().get(credentialsAttributes);
         if (credentials == null) {
             return null;
         }
-        String username = credentials.getUserName();
+        username = credentials.getUserName();
         OneTimeString password = credentials.getPassword();
         if (username == null || password == null) {
             return null;
@@ -178,9 +178,14 @@ public class RapidRobot implements Disposable {
         return new Credentials(username, password.toCharArray());
     }
 
-    private static void setCredentials(@NotNull URI path, @NotNull Credentials credentials) {
-        CredentialAttributes credentialsAttributes = createCredentialsAttributes(path);
-        PasswordSafe.getInstance().set(credentialsAttributes, new com.intellij.credentialStore.Credentials(credentials.username(), credentials.password()));
+    public static void setCredentials(@NotNull URI path, @NotNull Credentials credentials) {
+        CredentialAttributes credentialsAttributes = createCredentialsAttributes(path, credentials.username());
+        PasswordSafe.getInstance().setPassword(credentialsAttributes, new String(credentials.password()));
+    }
+
+    public @Nullable String getUsername() {
+        Credentials credentials = getCredentials(getPath(), null);
+        return credentials != null ? credentials.username() : null;
     }
 
     public @NotNull State getState() {
@@ -404,7 +409,7 @@ public class RapidRobot implements Disposable {
      */
     public @NotNull NetworkManager reconnect() throws IllegalStateException, IOException, InterruptedException {
         URI path = getPath();
-        Credentials credentials = getCredentials(path);
+        Credentials credentials = getCredentials(path, null);
         if (credentials == null) {
             throw new IllegalStateException("Credentials for '" + path + "' are not persisted");
         }
