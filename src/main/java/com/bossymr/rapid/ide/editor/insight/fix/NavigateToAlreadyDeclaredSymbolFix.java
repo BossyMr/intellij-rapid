@@ -14,7 +14,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-@SuppressWarnings("UnstableApiUsage")
 public class NavigateToAlreadyDeclaredSymbolFix extends PsiBasedModCommandAction<PhysicalSymbol> {
 
     public NavigateToAlreadyDeclaredSymbolFix(@NotNull PhysicalSymbol element) {

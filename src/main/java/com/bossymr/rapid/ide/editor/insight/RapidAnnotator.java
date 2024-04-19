@@ -863,7 +863,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
         if (symbols.isEmpty() || symbols.size() == 1) {
             return;
         }
-        RapidSymbol duplicateSymbol = symbols.get(0);
+        RapidSymbol duplicateSymbol = symbols.indexOf(symbol) == 0 ? symbols.get(1) : symbols.get(0);
         AnnotationBuilder annotationBuilder = annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.declaration.duplicate.symbol", name))
                                                               .range(identifier);
         if (duplicateSymbol instanceof PhysicalSymbol physicalSymbol) {

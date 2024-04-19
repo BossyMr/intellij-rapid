@@ -49,7 +49,7 @@ public final class MoveModuleToSeparateFileFix extends PsiUpdateModCommandAction
         PsiFile file = directory.createFile(name + RapidFileType.DEFAULT_DOT_EXTENSION);
         file.add(element);
         element.delete();
-        updater.moveTo(file);
+        updater.moveCaretTo(file);
     }
 
     @Override

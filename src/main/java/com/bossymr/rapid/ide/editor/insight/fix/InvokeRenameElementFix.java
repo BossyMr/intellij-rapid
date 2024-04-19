@@ -12,7 +12,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Objects;
 
-@SuppressWarnings("UnstableApiUsage")
 public class InvokeRenameElementFix extends PsiBasedModCommandAction<PhysicalSymbol> {
 
     public InvokeRenameElementFix(@NotNull PhysicalSymbol element) {
@@ -32,8 +31,8 @@ public class InvokeRenameElementFix extends PsiBasedModCommandAction<PhysicalSym
     protected @NotNull ModCommand perform(@NotNull ActionContext context, @NotNull PhysicalSymbol element) {
         VirtualFile file = element.getContainingFile().getViewProvider().getVirtualFile();
         PsiElement identifier = Objects.requireNonNull(element.getNameIdentifier());
-        ModRenameSymbol.RenameSymbolRange range = new ModRenameSymbol.RenameSymbolRange(element.getTextRange(), identifier.getTextRange());
-        return new ModRenameSymbol(file, range, List.of());
+        ModStartRename.RenameSymbolRange range = new ModStartRename.RenameSymbolRange(element.getTextRange(), identifier.getTextRange());
+        return new ModStartRename(file, range, List.of());
     }
 
     @Override
