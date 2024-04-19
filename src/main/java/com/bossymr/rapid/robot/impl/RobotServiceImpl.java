@@ -35,6 +35,14 @@ public class RobotServiceImpl implements RobotService {
     private @Nullable RapidRobot robot;
 
     @Override
+    public boolean isConnected() {
+        if (robot != null) {
+            return robot.isConnected();
+        }
+        return false;
+    }
+
+    @Override
     public @Nullable RapidRobot getRobot() {
         if (robot != null) {
             return robot;
@@ -42,6 +50,9 @@ public class RobotServiceImpl implements RobotService {
         RapidRobot.State state = getRobotState();
         if (state != null) {
             RapidRobot value = RapidRobot.create(state);
+            if(value == null) {
+                return null;
+            }
             registerRobot(value);
             this.robot = value;
             reload();

@@ -90,9 +90,7 @@ public class RapidTask implements RapidSymbol {
         return files.stream().allMatch(File::isFile);
     }
 
-    public @NotNull Set<PhysicalModule> getModules(@NotNull Project project) {
-        PsiManager psiManager = PsiManager.getInstance(project);
-        Set<PhysicalModule> modules = new HashSet<>();
+    public @NotNull Set<VirtualFile> getVirtualFiles(@NotNull Project project) {
         Set<VirtualFile> virtualFiles = new HashSet<>();
         for (File file : files) {
             if (!(file.exists())) {
@@ -104,6 +102,13 @@ public class RapidTask implements RapidSymbol {
             }
             virtualFiles.add(virtualFile);
         }
+        return virtualFiles;
+    }
+
+    public @NotNull Set<PhysicalModule> getModules(@NotNull Project project) {
+        PsiManager psiManager = PsiManager.getInstance(project);
+        Set<PhysicalModule> modules = new HashSet<>();
+        Set<VirtualFile> virtualFiles = getVirtualFiles(project);
         NonProjectFileWritingAccessProvider.allowWriting(virtualFiles);
         for (VirtualFile file : virtualFiles) {
             PsiFile psiFile = psiManager.findFile(file);

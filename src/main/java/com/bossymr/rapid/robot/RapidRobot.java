@@ -59,15 +59,17 @@ public class RapidRobot implements Disposable {
     @Topic.AppLevel
     public static final Topic<StateListener> STATE_TOPIC = Topic.create("Robot State", StateListener.class);
 
+    private final @NotNull Credentials credentials;
     private @NotNull State state = new State();
     private @Nullable NetworkManager manager;
     private @NotNull Set<RapidTask> tasks;
     private @NotNull Map<String, VirtualSymbol> symbols;
 
-    private RapidRobot(@NotNull State state) {
+    private RapidRobot(@NotNull Credentials credentials, @NotNull State state) {
         if (state.name == null || state.path == null || state.symbols == null || state.cache == null) {
             throw new IllegalArgumentException("State '" + state + " is invalid");
         }
+        this.credentials = credentials;
         setState(state);
         this.symbols = VirtualSymbolFactory.getSymbols(state.symbols.stream()
                                                                     .map(symbol -> symbol.convert(SymbolModel.class, null))
@@ -80,10 +82,17 @@ public class RapidRobot implements Disposable {
      * Create a new robot with the specified state.
      *
      * @return the robot.
-     * @throws IllegalArgumentException if the specified state is invalid.
      */
-    public static @NotNull RapidRobot create(@NotNull State state) throws IllegalArgumentException {
-        return new RapidRobot(state);
+    public static @Nullable RapidRobot create(@NotNull State state) throws IllegalArgumentException {
+        if (state.name == null || state.path == null || state.symbols == null || state.cache == null) {
+            return null;
+        }
+        Credentials credentials = getCredentials(URI.create(state.path), null);
+        if(credentials == null) {
+            // This will most likely lead to an authentication error.
+            credentials = new Credentials("", "");
+        }
+        return new RapidRobot(credentials, state);
     }
 
     /**
@@ -96,11 +105,10 @@ public class RapidRobot implements Disposable {
      * @throws InterruptedException if the current thread is interrupted.
      */
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
-        setCredentials(path, credentials);
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
         RobotNetworkAction action = new RobotNetworkAction(manager);
         State state = getState(path, action);
-        RapidRobot robot = new RapidRobot(state);
+        RapidRobot robot = new RapidRobot(credentials, state);
         RobotEventListener.publish().onRefresh(robot, manager);
         robot.setManager(action);
         robot.download();
@@ -160,12 +168,9 @@ public class RapidRobot implements Disposable {
         }
     }
 
-    private static @NotNull CredentialAttributes createCredentialsAttributes(@NotNull URI path, @Nullable String username) {
-        return new CredentialAttributes(CredentialAttributesKt.generateServiceName("intellij-rapid", path.toString()), username);
-    }
-
     public static @Nullable Credentials getCredentials(@NotNull URI path, @Nullable String username) {
-        CredentialAttributes credentialsAttributes = createCredentialsAttributes(path, username);
+        String serviceName = CredentialAttributesKt.generateServiceName("intellij-rapid", path.normalize().toString());
+        CredentialAttributes credentialsAttributes = new CredentialAttributes(serviceName, username);
         var credentials = PasswordSafe.getInstance().get(credentialsAttributes);
         if (credentials == null) {
             return null;
@@ -179,7 +184,8 @@ public class RapidRobot implements Disposable {
     }
 
     public static void setCredentials(@NotNull URI path, @NotNull Credentials credentials) {
-        CredentialAttributes credentialsAttributes = createCredentialsAttributes(path, credentials.username());
+        String serviceName = CredentialAttributesKt.generateServiceName("intellij-rapid", path.normalize().toString());
+        CredentialAttributes credentialsAttributes = new CredentialAttributes(serviceName, credentials.username());
         PasswordSafe.getInstance().setPassword(credentialsAttributes, new String(credentials.password()));
     }
 
@@ -403,37 +409,14 @@ public class RapidRobot implements Disposable {
      * Reconnect to this robot with persisted credentials.
      *
      * @return the connection to the robot.
-     * @throws IllegalStateException if no credentials are persisted for this robot.
      * @throws IOException if an I/O error occurs.
      * @throws InterruptedException if the current thread is interrupted.
      */
-    public @NotNull NetworkManager reconnect() throws IllegalStateException, IOException, InterruptedException {
+    public @NotNull NetworkManager reconnect() throws IOException, InterruptedException {
         URI path = getPath();
-        Credentials credentials = getCredentials(path, null);
-        if (credentials == null) {
-            throw new IllegalStateException("Credentials for '" + path + "' are not persisted");
-        }
-        return reconnect(path, credentials);
-    }
-
-    /**
-     * Reconnect to this robot with the specified credentials.
-     *
-     * @param credentials the new credentials.
-     * @return the connection to the robot.
-     * @throws IOException if an I/O error occurs.
-     * @throws InterruptedException if the current thread is interrupted.
-     */
-    public @NotNull NetworkManager reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException {
-        URI path = getPath();
-        setCredentials(path, credentials);
-        return reconnect(path, credentials);
-    }
-
-    private @NotNull NetworkManager reconnect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
-        RobotNetworkAction networkAction = new RobotNetworkAction(manager);
-        State state = getState(path, networkAction);
+        RobotNetworkAction action = new RobotNetworkAction(manager);
+        State state = getState(path, action);
         Objects.requireNonNull(state.symbols);
         List<SymbolModel> models = state.symbols.stream()
                                                 .map(symbol -> symbol.convert(SymbolModel.class, manager))
@@ -441,12 +424,12 @@ public class RapidRobot implements Disposable {
         this.symbols = VirtualSymbolFactory.getSymbols(models);
         setState(state);
         this.tasks = getPersistedTasks();
-        RobotEventListener.publish().onRefresh(this, networkAction);
-        setManager(networkAction);
-        if (!(getLocalModules(tasks).equals(getRemoteModules(networkAction)))) {
+        RobotEventListener.publish().onRefresh(this, action);
+        setManager(action);
+        if (!(getLocalModules(tasks).equals(getRemoteModules(action)))) {
             download();
         }
-        return networkAction;
+        return action;
     }
 
     private @NotNull List<String> getLocalModules(@NotNull Set<RapidTask> tasks) {

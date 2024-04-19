@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot;
 
 import com.bossymr.rapid.robot.api.client.security.Credentials;
+import com.bossymr.rapid.robot.impl.RobotServiceImpl;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
@@ -38,14 +39,7 @@ public interface RobotService extends PersistentStateComponent<RobotService.Stat
      *
      * @return if this plugin is currently connected to a robot.
      */
-    static boolean isConnected() {
-        RobotService service = RobotService.getInstance();
-        RapidRobot robot = service.getRobot();
-        if (robot != null) {
-            return robot.isConnected();
-        }
-        return false;
-    }
+    boolean isConnected();
 
     /**
      * Returns the robot which is currently persisted, or connected.

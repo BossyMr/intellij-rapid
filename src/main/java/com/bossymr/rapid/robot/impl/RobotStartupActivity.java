@@ -2,7 +2,7 @@ package com.bossymr.rapid.robot.impl;
 
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
-import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.ProjectActivity;
 import kotlin.Unit;
@@ -17,8 +17,6 @@ import java.io.IOException;
  */
 public class RobotStartupActivity implements ProjectActivity {
 
-    private static final Logger logger = Logger.getInstance(RobotStartupActivity.class);
-
     @SuppressWarnings("resource")
     @Override
     public @Nullable Object execute(@NotNull Project project, @NotNull Continuation<? super Unit> continuation) {
@@ -32,7 +30,7 @@ public class RobotStartupActivity implements ProjectActivity {
                 robot.reconnect();
             } catch (IOException ignored) {
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                throw new ProcessCanceledException();
             }
         }
         return null;

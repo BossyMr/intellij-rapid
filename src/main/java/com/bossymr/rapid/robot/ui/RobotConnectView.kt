@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.ui
 
 import com.bossymr.rapid.RapidBundle
+import com.bossymr.rapid.robot.RapidRobot
 import com.bossymr.rapid.robot.RobotService
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task.Backgroundable
@@ -19,8 +20,8 @@ class RobotConnectView @JvmOverloads constructor(val project: Project, val path:
     private val panel = RobotConnectPanel()
 
     init {
-        val entry = RobotConnectPanel.Entry(path, RobotService.DEFAULT_CREDENTIALS)
-        panel.reset(entry)
+        val model = RobotConnectPanel.Model(path, RobotService.DEFAULT_CREDENTIALS)
+        panel.reset(model)
         title = RapidBundle.message("robot.connect.dialog.title")
         init()
     }
@@ -36,11 +37,12 @@ class RobotConnectView @JvmOverloads constructor(val project: Project, val path:
     override fun doOKAction() {
         super.doOKAction()
         val (path, credentials) = panel.apply()
-        if (path == null) {
+        if (path == null || credentials == null) {
             return
         }
         object : Backgroundable(project, RapidBundle.message("robot.connect.progress.indicator.title", path)) {
             override fun run(indicator: ProgressIndicator) {
+                RapidRobot.setCredentials(path, credentials);
                 RobotService.getInstance().connect(path, credentials)
             }
 
