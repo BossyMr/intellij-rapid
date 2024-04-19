@@ -12,8 +12,6 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.9.22"
     // Gradle IntelliJ Plugin
     id("org.jetbrains.intellij") version "1.17.1"
-    // Gradle Sentry Plugin
-    id("io.sentry.jvm.gradle") version "4.2.0"
     // Gradle Changelog Plugin
     id("org.jetbrains.changelog") version "2.2.0"
 }
@@ -79,16 +77,9 @@ dependencies {
     testImplementation("org.wiremock:wiremock:3.4.2")
     // JmDNS is used to discover robots on the local network
     implementation("org.jmdns:jmdns:3.5.9")
-}
-
-sentry {
-    org = "sentry"
-    projectName = "intellij-rapid"
-
-    // Automatically adds Sentry dependencies to your project.
-    autoInstallation {
-        enabled.set(true)
-    }
+    // Sentry is used to report errors
+    implementation(platform("io.sentry:sentry-bom:7.8.0"))
+    implementation("io.sentry:sentry")
 }
 
 tasks.withType<JavaCompile> {
