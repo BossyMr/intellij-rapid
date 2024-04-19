@@ -115,6 +115,7 @@ public class RapidRobotFragment extends SettingsEditorFragment<RapidRunConfigura
             panel.reset(new RobotConnectPanel.Model(host, RobotService.DEFAULT_CREDENTIALS));
             return;
         }
+        model.setItems(createCopy(configuration.getOptions().getTasks()));
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
             String password = configuration.getOptions().getPassword();
             Credentials credentials = password != null ? new Credentials(username, password) : null;
@@ -152,10 +153,14 @@ public class RapidRobotFragment extends SettingsEditorFragment<RapidRunConfigura
         configuration.getOptions().setPath(host.toString());
         // A copy needs to be made of all states, otherwise, if a task is modified the task state is automatically
         // modified, even if you didn't press apply.
-        List<TaskState> taskStates = this.model.getItems().stream()
-                .map(taskState -> new TaskState(taskState.getName(), taskState.isEnabled(), taskState.getModuleName()))
-                .toList();
+        List<TaskState> taskStates = createCopy(this.model.getItems());
         configuration.getOptions().setTasks(taskStates);
+    }
+
+    private @NotNull List<TaskState> createCopy(@NotNull List<TaskState> states) {
+        return states.stream()
+                     .map(state -> new TaskState(state.getName(), state.isEnabled(), state.getModuleName()))
+                .toList();
     }
 
     @Override
