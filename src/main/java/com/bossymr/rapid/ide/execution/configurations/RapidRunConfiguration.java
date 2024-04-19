@@ -1,7 +1,7 @@
 package com.bossymr.rapid.ide.execution.configurations;
 
 import com.bossymr.rapid.ide.execution.RapidRunProfileState;
-import com.bossymr.rapid.ide.execution.configurations.ui.RapidRunConfigurationEditor;
+import com.bossymr.rapid.ide.execution.configurations.ui.RapidRunConfigurationSettingsEditor;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.Executor;
 import com.intellij.execution.configurations.ConfigurationFactory;
@@ -27,7 +27,7 @@ public class RapidRunConfiguration extends LocatableConfigurationBase<Element> {
 
     @Override
     public @NotNull SettingsEditor<? extends RunConfiguration> getConfigurationEditor() {
-        return new RapidRunConfigurationEditor(getProject());
+        return new RapidRunConfigurationSettingsEditor(this);
     }
 
     @Override

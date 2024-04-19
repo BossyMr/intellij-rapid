@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.execution.debugger;
 
+import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.api.NetworkAction;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
@@ -36,10 +37,7 @@ import org.jetbrains.concurrency.Promises;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 /**
  * A {@code ProgramRunner} for starting a debugging session.
@@ -71,15 +69,16 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
         XDebuggerManager debuggerManager = XDebuggerManager.getInstance(project);
         executorService.submit(() -> {
             try {
-                CompletableFuture<NetworkManager> future = CompletableFuture.completedFuture(state.getNetworkManager());
+                CompletableFuture<NetworkManager> completableFuture = state.getNetworkManager();
+                RapidRobot robot = state.getRobot().join();
                 ApplicationManager.getApplication().invokeLater(() -> {
                     try {
                         XDebugSession session = debuggerManager.startSession(environment, new XDebugProcessStarter() {
                             @Override
                             public @NotNull XDebugProcess start(@NotNull XDebugSession session) {
-                                RapidDebugProcess process = new RapidDebugProcess(project, session, executorService, state.getTasks(), future);
+                                RapidDebugProcess process = new RapidDebugProcess(project, session, executorService, state.getTasks(), completableFuture);
                                 process.execute(() -> {
-                                    state.setupProject(process.getManager());
+                                    state.setupProject(robot, process.getManager());
                                     setupExecution(process.getManager());
                                 });
                                 return process;
@@ -90,7 +89,7 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
                         promise.setError(e);
                     }
                 });
-            } catch (IOException e) {
+            } catch (CompletionException e) {
                 throw new ExecutionException(RapidBundle.message("run.execution.exception"));
             }
             return null;

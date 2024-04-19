@@ -46,7 +46,7 @@ public class PhysicalModule extends RapidStubElement<RapidModuleStub> implements
         if (element instanceof PhysicalModule module) {
             return module;
         }
-        return PsiTreeUtil.getParentOfType(element, PhysicalModule.class);
+        return PsiTreeUtil.getParentOfType(element, PhysicalModule.class, false);
     }
 
     @Override

@@ -26,6 +26,12 @@
 
     <depends>com.intellij.modules.platform</depends>
 
+    <extensionPoints>
+        <extensionPoint qualifiedName="com.bossymr.rapid.runConfigurationExtension"
+                        interface="com.intellij.execution.configuration.RunConfigurationExtensionBase"
+                        dynamic="true"/>
+    </extensionPoints>
+
     <extensions defaultExtensionNs="com.intellij">
 
         <!-- Icons -->
@@ -131,6 +137,12 @@
         <!-- Execution -->
 
         <configurationType implementation="com.bossymr.rapid.ide.execution.configurations.RapidConfigurationType"/>
+
+        <runLineMarkerContributor language="RAPID"
+                                  implementationClass="com.bossymr.rapid.ide.execution.RapidRunLineMarkerContributor"/>
+
+        <runConfigurationProducer
+                implementation="com.bossymr.rapid.ide.execution.configurations.RapidRunConfigurationProducer"/>
 
         <!-- Debugging -->
 
