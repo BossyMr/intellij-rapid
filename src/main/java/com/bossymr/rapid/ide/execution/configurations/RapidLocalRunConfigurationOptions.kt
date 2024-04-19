@@ -30,7 +30,7 @@ class RapidRunConfigurationOptions : ModuleBasedConfigurationOptions() {
     var path by string("")
 
     // If the username is null, the authentication type is equal to RobotService#DEFAULT_CREDENTIALS
-    var username by string("")
+    var username by string(null)
 
     @Transient
     private var password: String? = null
