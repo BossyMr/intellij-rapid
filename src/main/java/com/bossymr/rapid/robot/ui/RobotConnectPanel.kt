@@ -53,7 +53,7 @@ class RobotConnectPanel : Closeable {
                 host = textField()
                     .onChanged { onModified() }
                     .validationOnInput {
-                        if(it.text.isNullOrBlank()) {
+                        if (it.text.isNullOrBlank()) {
                             ValidationInfo(RapidBundle.message("robot.connect.host.empty"), it)
                         } else {
                             try {
@@ -74,7 +74,9 @@ class RobotConnectPanel : Closeable {
             }
         }.visibleIf(robotComboBox.selectedValueMatches { it is Action })
         row(RapidBundle.message("robot.connect.authentication.type")) {
-            authenticationComboBox = comboBox(CollectionComboBoxModel(AuthenticationType.entries), SimpleListCellRenderer.create("") { it.displayName })
+            authenticationComboBox = comboBox(
+                CollectionComboBoxModel(AuthenticationType.entries),
+                SimpleListCellRenderer.create("") { it.displayName })
                 .onChanged { onModified() }
                 .align(AlignX.FILL)
                 .component
@@ -118,7 +120,7 @@ class RobotConnectPanel : Closeable {
     }
 
     fun apply(): Model {
-        if(authenticationComboBox.selectedItem === AuthenticationType.PASSWORD) {
+        if (authenticationComboBox.selectedItem === AuthenticationType.PASSWORD) {
             PasswordSafe.instance.isRememberPasswordByDefault = rememberPassword.isSelected
         }
         return applyToSnapshot()
@@ -149,12 +151,16 @@ class RobotConnectPanel : Closeable {
         panel.reset()
         robotComboBox.selectedItem = robotComboBox.getItemAt(0)
         host.text = model.host?.host
-        port.text = if(model.host != null) { model.host.port.toString() } else { "80" }
+        if (model.host != null && model.host.port >= 0) {
+            port.text = model.host.port.toString()
+        } else {
+            port.text = null
+        }
         if (model.credentials === RobotService.DEFAULT_CREDENTIALS) {
             authenticationComboBox.selectedItem = AuthenticationType.DEFAULT
         } else {
             authenticationComboBox.selectedItem = AuthenticationType.PASSWORD
-            if(model.credentials != null) {
+            if (model.credentials != null) {
                 username.text = model.credentials.username
                 password.text = String(model.credentials.password)
             } else {
