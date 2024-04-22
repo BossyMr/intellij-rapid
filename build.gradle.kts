@@ -74,7 +74,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
     //  Wiremock is used to test network API
-    testImplementation("org.wiremock:wiremock:3.4.2")
+    testImplementation("org.wiremock:wiremock:3.5.3")
     // JmDNS is used to discover robots on the local network
     implementation("org.jmdns:jmdns:3.5.9")
     // Sentry is used to report errors
