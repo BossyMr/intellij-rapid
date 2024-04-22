@@ -40,6 +40,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.search.LocalSearchScope;
 import com.intellij.psi.search.SearchScope;
+import com.intellij.util.concurrency.annotations.RequiresBackgroundThread;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -59,17 +60,15 @@ public class RapidRobot implements Disposable {
     @Topic.AppLevel
     public static final Topic<StateListener> STATE_TOPIC = Topic.create("Robot State", StateListener.class);
 
-    private final @NotNull Credentials credentials;
     private @NotNull State state = new State();
     private @Nullable NetworkManager manager;
     private @NotNull Set<RapidTask> tasks;
     private @NotNull Map<String, VirtualSymbol> symbols;
 
-    private RapidRobot(@NotNull Credentials credentials, @NotNull State state) {
+    private RapidRobot(@NotNull State state) {
         if (state.name == null || state.path == null || state.symbols == null || state.cache == null) {
             throw new IllegalArgumentException("State '" + state + " is invalid");
         }
-        this.credentials = credentials;
         setState(state);
         this.symbols = VirtualSymbolFactory.getSymbols(state.symbols.stream()
                                                                     .map(symbol -> symbol.convert(SymbolModel.class, null))
@@ -87,12 +86,7 @@ public class RapidRobot implements Disposable {
         if (state.name == null || state.path == null || state.symbols == null || state.cache == null) {
             return null;
         }
-        Credentials credentials = getCredentials(URI.create(state.path), null);
-        if(credentials == null) {
-            // This will most likely lead to an authentication error.
-            credentials = new Credentials("", "");
-        }
-        return new RapidRobot(credentials, state);
+        return new RapidRobot(state);
     }
 
     /**
@@ -104,11 +98,13 @@ public class RapidRobot implements Disposable {
      * @throws IOException if an I/O error occurs.
      * @throws InterruptedException if the current thread is interrupted.
      */
+    @RequiresBackgroundThread
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
+        setCredentials(path, credentials);
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
         RobotNetworkAction action = new RobotNetworkAction(manager);
         State state = getState(path, action);
-        RapidRobot robot = new RapidRobot(credentials, state);
+        RapidRobot robot = new RapidRobot(state);
         RobotEventListener.publish().onRefresh(robot, manager);
         robot.setManager(action);
         robot.download();
@@ -189,6 +185,7 @@ public class RapidRobot implements Disposable {
         PasswordSafe.getInstance().setPassword(credentialsAttributes, new String(credentials.password()));
     }
 
+    @RequiresBackgroundThread
     public @Nullable String getUsername() {
         Credentials credentials = getCredentials(getPath(), null);
         return credentials != null ? credentials.username() : null;
@@ -414,6 +411,7 @@ public class RapidRobot implements Disposable {
      */
     public @NotNull NetworkManager reconnect() throws IOException, InterruptedException {
         URI path = getPath();
+        Credentials credentials = getCredentials(path, null);
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
         RobotNetworkAction action = new RobotNetworkAction(manager);
         State state = getState(path, action);
@@ -547,10 +545,10 @@ public class RapidRobot implements Disposable {
 
         /**
          * Due to an issue on the robot. All symbols are not returned when asking for a list of all symbols. However,
-         * when asking the robot for a symbol with a specific name, it appears to always return the correct result. As
-         * a result, if a symbol hasn't been resolved to any existing symbol, a request is sent to the robot, asking for
-         * a specific symbol with that name. If a symbol with that name wasn't found, it is added to this cache, so
-         * that the request won't be retried.
+         * when asking the robot for a symbol with a specific name, it appears to always return the correct result. As a
+         * result, if a symbol hasn't been resolved to any existing symbol, a request is sent to the robot, asking for a
+         * specific symbol with that name. If a symbol with that name wasn't found, it is added to this cache, so that
+         * the request won't be retried.
          */
         public @Nullable Set<String> cache;
 
@@ -570,9 +568,9 @@ public class RapidRobot implements Disposable {
         @Override
         public String toString() {
             return "State{" +
-                    "name='" + name + '\'' +
-                    ", path='" + path + '\'' +
-                    '}';
+                   "name='" + name + '\'' +
+                   ", path='" + path + '\'' +
+                   '}';
         }
     }
 
@@ -676,11 +674,11 @@ public class RapidRobot implements Disposable {
         @Override
         public String toString() {
             return "Entity{" +
-                    "title='" + title + '\'' +
-                    ", type='" + type + '\'' +
-                    ", fields=" + fields +
-                    ", links=" + links +
-                    '}';
+                   "title='" + title + '\'' +
+                   ", type='" + type + '\'' +
+                   ", fields=" + fields +
+                   ", links=" + links +
+                   '}';
         }
 
         @Override
