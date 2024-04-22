@@ -87,6 +87,10 @@ tasks.withType<JavaCompile> {
 }
 
 tasks {
+    runIde {
+        autoReloadPlugins = false
+    }
+
     wrapper {
         gradleVersion = properties("gradleVersion").get()
     }
