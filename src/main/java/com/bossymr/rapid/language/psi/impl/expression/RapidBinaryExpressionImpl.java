@@ -57,11 +57,11 @@ public class RapidBinaryExpressionImpl extends RapidExpressionImpl implements Ra
         if (sign == EQ || sign == LTGT) {
             return RapidPrimitiveType.BOOLEAN;
         }
+        if (left.equals(RapidPrimitiveType.NUMBER) && right.equals(RapidPrimitiveType.NUMBER)) {
+            return RapidPrimitiveType.NUMBER;
+        }
         if (left.isAssignable(RapidPrimitiveType.DOUBLE) && right.isAssignable(RapidPrimitiveType.DOUBLE)) {
             return RapidPrimitiveType.DOUBLE;
-        }
-        if (left.isAssignable(RapidPrimitiveType.NUMBER) && right.isAssignable(RapidPrimitiveType.NUMBER)) {
-            return RapidPrimitiveType.NUMBER;
         }
         if (sign == ASTERISK) {
             if ((left.isAssignable(RapidPrimitiveType.NUMBER) && right.isAssignable(RapidPrimitiveType.POSITION))) {

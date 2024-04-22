@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
-import com.bossymr.network.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Deserializable;
 
 /**
  * A {@code SymbolSearchMethod} determines the method with which a symbol search is performed.

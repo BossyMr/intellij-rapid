@@ -14,8 +14,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class PhysicalDocumentationTarget extends RapidDocumentationTarget<PhysicalSymbol> {
 
-    public PhysicalDocumentationTarget(@NotNull Project project, @NotNull PhysicalSymbol symbol) {
-        super(project, symbol);
+    public PhysicalDocumentationTarget(@NotNull Project project, @NotNull PhysicalSymbol symbol, @Nullable String anchor) {
+        super(project, symbol, anchor);
     }
 
     @Override

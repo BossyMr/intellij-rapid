@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.impl;
 
-import com.bossymr.network.NetworkManager;
-import com.bossymr.network.client.security.Credentials;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotEventListener;
@@ -28,14 +28,19 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
 
-@State(name = "robot",
-        storages = {
-                @Storage("robot.xml")
-        })
+@State(name = "Rapid.Robot", storages = @Storage("RapidRobot.xml"))
 public class RobotServiceImpl implements RobotService {
 
     private @NotNull State state = new State();
     private @Nullable RapidRobot robot;
+
+    @Override
+    public boolean isConnected() {
+        if (robot != null) {
+            return robot.isConnected();
+        }
+        return false;
+    }
 
     @Override
     public @Nullable RapidRobot getRobot() {
@@ -45,6 +50,9 @@ public class RobotServiceImpl implements RobotService {
         RapidRobot.State state = getRobotState();
         if (state != null) {
             RapidRobot value = RapidRobot.create(state);
+            if(value == null) {
+                return null;
+            }
             registerRobot(value);
             this.robot = value;
             reload();

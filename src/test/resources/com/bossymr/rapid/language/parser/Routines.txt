@@ -15,9 +15,9 @@ RapidFile:Routines.mod
             PsiElement(Rapid:IDENTIFIER)('name')
           PsiWhiteSpace(' ')
           RapidArgumentList:
-            <empty list>
-          PsiErrorElement:<empty expression>, Rapid::=, Rapid:;, Rapid:<ARG> or Rapid:\ expected, got 'ENDPROC'
-            <empty list>
+            RapidRequiredArgument:null
+              PsiErrorElement:<empty expression>, Rapid::=, Rapid:<ARG> or Rapid:\ expected, got 'ENDPROC'
+                <empty list>
       PsiElement(Rapid:ENDPROC)('ENDPROC')
     PsiWhiteSpace('\n\n    ')
     PhysicalRoutine{name='null'}
@@ -52,7 +52,7 @@ RapidFile:Routines.mod
             PsiElement(Rapid:IDENTIFIER)('name')
           RapidArgumentList:
             <empty list>
-          PsiErrorElement:<empty expression>, Rapid:;, Rapid:<ARG> or Rapid:\ expected, got ')'
+          PsiErrorElement:Rapid:;, Rapid:<ARG> or Rapid:\ expected, got ')'
             <empty list>
         PsiElement(Rapid:))(')')
     PsiWhiteSpace(' ')

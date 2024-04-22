@@ -62,7 +62,7 @@ public class RapidCallHierarchyNodeDescriptor extends HierarchyNodeDescriptor im
             textAttributes = new TextAttributes(myColor, null, null, null, Font.PLAIN);
         }
         String name = element instanceof RapidRoutine routine ?
-                FormatUtil.format(routine, EnumSet.of(Option.SHOW_MODE, Option.SHOW_NAME, Option.SHOW_PARAMETERS), EnumSet.of(Option.SHOW_TYPE))
+                FormatUtil.format(routine, EnumSet.of(Option.SHOW_NAME, Option.SHOW_PARAMETERS), EnumSet.of(Option.SHOW_TYPE))
                 : element.getPresentableName();
         myHighlightedText.getEnding().addText(name, textAttributes);
         if (element instanceof PhysicalSymbol physicalSymbol) {
@@ -109,5 +109,11 @@ public class RapidCallHierarchyNodeDescriptor extends HierarchyNodeDescriptor im
     @Override
     public boolean canNavigateToSource() {
         return canNavigate();
+    }
+
+    @Override
+    public String toString() {
+        RapidSymbol contextElement = getContextElement();
+        return "RapidCallHierarchyNodeDescriptor" + (contextElement != null ? ":" + contextElement.getPresentableName() : "");
     }
 }

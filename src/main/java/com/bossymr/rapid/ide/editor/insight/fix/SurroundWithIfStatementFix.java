@@ -3,11 +3,13 @@ package com.bossymr.rapid.ide.editor.insight.fix;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.editor.insight.surrounder.RapidStatementsSurroundDescriptor;
 import com.bossymr.rapid.ide.editor.insight.surrounder.RapidWithIfSurrounder;
+import com.bossymr.rapid.language.psi.RapidStatement;
 import com.intellij.codeInspection.util.IntentionFamilyName;
 import com.intellij.modcommand.ModPsiUpdater;
 import com.intellij.modcommand.PsiUpdateModCommandQuickFix;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -31,11 +33,14 @@ public class SurroundWithIfStatementFix extends PsiUpdateModCommandQuickFix {
 
     @Override
     protected void applyFix(@NotNull Project project, @NotNull PsiElement element, @NotNull ModPsiUpdater updater) {
-        PsiElement[] elements = RapidStatementsSurroundDescriptor.getStatementsInOffset(element);
+        RapidStatement statement = PsiTreeUtil.getParentOfType(element, RapidStatement.class);
+        if(statement == null) {
+            return;
+        }
+        PsiElement[] elements = RapidStatementsSurroundDescriptor.getStatementsInOffset(statement);
         if(elements == null || elements.length == 0) {
             return;
         }
-        PsiElement parent = elements[0].getParent();
-        new RapidWithIfSurrounder().surroundElements(project, parent, elements, text);
+        new RapidWithIfSurrounder().surroundElements(project, elements, text);
     }
 }

@@ -1,16 +1,14 @@
 package com.bossymr.rapid.ide.execution;
 
-import com.bossymr.network.NetworkAction;
-import com.bossymr.network.NetworkManager;
-import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.client.NetworkRequest;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
-import com.bossymr.rapid.robot.CloseableMastership;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.SubscriptionPriority;
+import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.robot.network.EventLogCategory;
 import com.bossymr.rapid.robot.network.EventLogMessage;
 import com.bossymr.rapid.robot.network.EventLogService;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.process.ProcessOutputType;
@@ -159,9 +157,7 @@ public class RapidProcessHandler extends ProcessHandler {
                     notifyProcessTerminated(0);
                 }
             });
-            try (CloseableMastership ignored = CloseableMastership.withMastership(getNetworkManager(), MastershipType.RAPID)) {
-                executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
-            }
+            executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
             Thread.sleep(100);
             ExecutionStatus laterExecutionStatus = executionService.getState().get();
             if (laterExecutionStatus.getState() == ExecutionState.STOPPED) {

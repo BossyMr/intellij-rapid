@@ -1,15 +1,18 @@
 package com.bossymr.rapid.robot.actions;
 
-import com.bossymr.network.NetworkManager;
+import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.symbol.RapidModule;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
+import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys;
+import com.intellij.openapi.application.WriteAction;
+import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,6 +21,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
+import static com.intellij.openapi.progress.Task.Backgroundable;
 
 public class DeleteModuleAction extends RobotContextAction {
 
@@ -38,27 +43,40 @@ public class DeleteModuleAction extends RobotContextAction {
         }
         TaskService taskService = manager.createService(TaskService.class);
         List<PhysicalModule> modules = getModules(e);
-        for (PhysicalModule module : modules) {
-            String name = module.getName();
-            if (name == null) {
-                continue;
+        WriteAction.runAndWait(() -> {
+            for (PhysicalModule module : modules) {
+                String name = module.getName();
+                if (name == null) {
+                    continue;
+                }
+                RapidTask task = getTask(project, robot, module);
+                if (task == null) {
+                    continue;
+                }
+                try {
+                    Task remoteTask = taskService.getTask(task.getName()).get();
+                    remoteTask.unloadModule(name).get();
+                    module.delete();
+                } catch (IOException ex) {
+                    return;
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
             }
-            RapidTask task = getTask(project, robot, module);
-            if (task == null) {
-                continue;
+        });
+        new Backgroundable(project, RapidBundle.message("robot.download.action")) {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                RobotService service = RobotService.getInstance();
+                RapidRobot robot = service.getRobot();
+                if (robot != null) {
+                    try {
+                        robot.download();
+                    } catch (IOException | InterruptedException ignored) {}
+                }
             }
-            try {
-                Task remoteTask = taskService.getTask(task.getName()).get();
-                remoteTask.unloadModule(name).get();
-                module.delete();
-            } catch (IOException ex) {
-                return;
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-        }
-
+        }.queue();
     }
 
     private @Nullable RapidTask getTask(@NotNull Project project, @NotNull RapidRobot robot, @NotNull PhysicalModule module) {

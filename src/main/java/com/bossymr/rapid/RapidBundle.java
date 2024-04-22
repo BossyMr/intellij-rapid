@@ -22,7 +22,7 @@ public class RapidBundle extends DynamicBundle {
     /**
      * Returns the message associated with the specified key and parameters.
      *
-     * @param key        the message key.
+     * @param key the message key.
      * @param parameters the message parameters.
      * @return the message.
      */
@@ -34,7 +34,7 @@ public class RapidBundle extends DynamicBundle {
      * Returns a lazy message, which can be used to retrieve the message associated with the specified key and
      * parameters.
      *
-     * @param key        the message key.
+     * @param key the message key.
      * @param parameters the message parameters.
      * @return the lazy message.
      */

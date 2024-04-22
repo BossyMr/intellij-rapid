@@ -1,18 +1,17 @@
 package com.bossymr.rapid.ide.execution;
 
-import com.bossymr.network.NetworkAction;
-import com.bossymr.network.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfigurationOptions;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.filter.RapidFileFilter;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidTask;
-import com.bossymr.rapid.robot.CloseableMastership;
 import com.bossymr.rapid.robot.MastershipException;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
 import com.intellij.execution.DefaultExecutionResult;
@@ -30,6 +29,7 @@ import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
+import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.search.FileTypeIndex;
@@ -46,11 +46,13 @@ import java.util.stream.Collectors;
 public class RapidRunProfileState implements RunProfileState {
 
     private final @NotNull Project project;
-    private final @NotNull RapidRobot robot;
+    private final @NotNull ExecutorService executorService;
+    private final @NotNull CompletableFuture<RapidRobot> robot;
     private final @NotNull List<TaskState> states;
 
-    private RapidRunProfileState(@NotNull Project project, @NotNull RapidRobot robot, @NotNull List<TaskState> states) {
+    private RapidRunProfileState(@NotNull Project project, @NotNull ExecutorService executorService, @NotNull CompletableFuture<RapidRobot> robot, @NotNull List<TaskState> states) {
         this.project = project;
+        this.executorService = executorService;
         this.robot = robot;
         this.states = states;
     }
@@ -65,20 +67,36 @@ public class RapidRunProfileState implements RunProfileState {
      * @see RunConfiguration#getState(Executor, ExecutionEnvironment)
      */
     public static @Nullable RapidRunProfileState create(@NotNull Project project, @NotNull RapidRunConfigurationOptions options) throws ExecutionException {
+        if (options.getPath() == null) {
+            return null;
+        }
+        URI path = URI.create(options.getPath());
         RobotService service = RobotService.getInstance();
         RapidRobot robot = service.getRobot();
-        if (robot == null) {
-            return null;
-        }
-        if (options.getRobotPath() == null) {
-            return null;
-        }
-        try {
-            URI path = URI.create(options.getRobotPath());
-            if (robot.getPath().equals(path)) {
-                return new RapidRunProfileState(project, robot, options.getRobotTasks());
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        CompletableFuture<RapidRobot> completableFuture = new CompletableFuture<>();
+        executorService.submit(() -> {
+            Credentials credentials;
+            if (options.getUsername() != null) {
+                credentials = RobotService.DEFAULT_CREDENTIALS;
+            } else {
+                credentials = RapidRobot.getCredentials(path, options.getUsername());
+                if(credentials == null) {
+                    credentials = RobotService.DEFAULT_CREDENTIALS;
+                }
             }
-            throw new ExecutionException(RapidBundle.message("run.execution.robot.not.connected", path));
+            if (robot == null || !(path.equals(robot.getPath())) || !(credentials.username().equals(robot.getUsername()))) {
+                try {
+                    completableFuture.complete(service.connect(path, credentials));
+                } catch (Throwable e) {
+                    completableFuture.completeExceptionally(e);
+                }
+            } else {
+                completableFuture.complete(robot);
+            }
+        });
+        try {
+            return new RapidRunProfileState(project, executorService, completableFuture, options.getTasks());
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -88,7 +106,7 @@ public class RapidRunProfileState implements RunProfileState {
         return project;
     }
 
-    public @NotNull RapidRobot getRobot() {
+    public @NotNull CompletableFuture<RapidRobot> getRobot() {
         return robot;
     }
 
@@ -102,19 +120,22 @@ public class RapidRunProfileState implements RunProfileState {
      *
      * @return the {@code NetworkManager}.
      */
-    public @NotNull NetworkManager getNetworkManager() throws IOException, InterruptedException {
-        NetworkManager manager = robot.getNetworkManager();
-        if (manager == null) {
-            return robot.reconnect();
-        }
-        return manager;
+    public @NotNull CompletableFuture<NetworkManager> getNetworkManager() {
+        return getRobot().thenComposeAsync(robot -> {
+            try {
+                NetworkManager manager = robot.getNetworkManager() != null ? robot.getNetworkManager() : robot.reconnect();
+                return CompletableFuture.completedFuture(manager);
+            } catch (Throwable e) {
+                return CompletableFuture.failedFuture(new ExecutionException(e));
+            }
+        });
     }
 
-    public void setupProject(@NotNull NetworkManager manager) throws IOException, InterruptedException {
+    public void setupProject(@NotNull RapidRobot robot, @NotNull NetworkManager manager) throws IOException, InterruptedException {
         for (TaskState state : states) {
             if (state.getName() == null) continue;
             if (state.getModuleName() != null) {
-                upload(state.getName(), state.getModuleName());
+                upload(robot, state.getName(), state.getModuleName());
             } else {
                 RapidTask task = robot.getTask(state.getName());
                 if (task != null) {
@@ -126,13 +147,13 @@ public class RapidRunProfileState implements RunProfileState {
         robot.download();
     }
 
-    private void upload(@NotNull String taskName, @NotNull String moduleName) throws IOException, InterruptedException {
+    private void upload(@NotNull RapidRobot robot, @NotNull String taskName, @NotNull String moduleName) throws IOException, InterruptedException {
         RapidTask task = robot.getTask(taskName);
         if (task != null) {
             Module module = ModuleManager.getInstance(getProject()).findModuleByName(moduleName);
             if (module != null) {
                 Collection<VirtualFile> modules = ReadAction.compute(() -> FileTypeIndex.getFiles(RapidFileType.getInstance(), module.getModuleContentScope()));
-                getRobot().upload(task, modules.stream().map(file -> file.toNioPath().toFile()).collect(Collectors.toSet()));
+                robot.upload(task, modules.stream().map(file -> file.toNioPath().toFile()).collect(Collectors.toSet()));
             }
         }
     }
@@ -157,36 +178,33 @@ public class RapidRunProfileState implements RunProfileState {
 
     @Override
     public @Nullable ExecutionResult execute(@NotNull Executor executor, @NotNull ProgramRunner<?> runner) throws ExecutionException {
-        try {
-            FileDocumentManager.getInstance().saveAllDocuments();
-            ExecutorService executorService = Executors.newSingleThreadExecutor();
-            CompletableFuture<NetworkManager> future = CompletableFuture.supplyAsync(() -> {
-                try {
-                    return getNetworkManager();
-                } catch (IOException | InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }, executorService);
-            RapidProcessHandler processHandler = new RapidProcessHandler(future, getTasks(), executorService);
-            ConsoleView consoleView = TextConsoleBuilderFactory.getInstance()
-                                                               .createBuilder(getProject())
-                                                               .filters(new RapidFileFilter(project))
-                                                               .getConsole();
-            consoleView.attachToProcess(processHandler);
-            processHandler.execute(() -> {
+        FileDocumentManager.getInstance().saveAllDocuments();
+        RapidProcessHandler processHandler = new RapidProcessHandler(getNetworkManager(), getTasks(), executorService);
+        ConsoleView consoleView = TextConsoleBuilderFactory.getInstance()
+                .createBuilder(getProject())
+                .filters(new RapidFileFilter(project))
+                .getConsole();
+        consoleView.attachToProcess(processHandler);
+        processHandler.execute(() -> {
+            try {
                 processHandler.getNetworkManager();
-                try (CloseableMastership ignored = CloseableMastership.withMastership(processHandler.getNetworkManager(), MastershipType.RAPID)) {
+                RapidRobot robot = getRobot().join();
+                try {
                     processHandler.setupEventLog();
-                    setupProject(processHandler.getNetworkManager());
+                    setupProject(robot, processHandler.getNetworkManager());
                     processHandler.setupExecutionState();
                     processHandler.start();
                 } catch (MastershipException e) {
                     processHandler.notifyTextAvailable(e.getLocalizedMessage(), ProcessOutputType.STDERR);
+                    processHandler.notifyProcessTerminated(1);
                 }
-            });
-            return new DefaultExecutionResult(consoleView, processHandler);
-        } catch (CompletionException | CancellationException e) {
-            throw new ExecutionException(RapidBundle.message("run.execution.exception"));
-        }
+            } catch (CancellationException e) {
+                throw new ProcessCanceledException();
+            } catch (CompletionException e) {
+                processHandler.notifyTextAvailable(RapidBundle.message("run.execution.exception"), ProcessOutputType.STDERR);
+                processHandler.notifyProcessTerminated(1);
+            }
+        });
+        return new DefaultExecutionResult(consoleView, processHandler);
     }
 }

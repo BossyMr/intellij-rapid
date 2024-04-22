@@ -1,7 +1,6 @@
 package com.bossymr.rapid.ide.editor.formatting;
 
 import com.bossymr.rapid.language.RapidLanguage;
-import com.bossymr.rapid.language.psi.RapidTokenSets;
 import com.intellij.formatting.*;
 import com.intellij.psi.codeStyle.CodeStyleSettings;
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings;
@@ -9,6 +8,8 @@ import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
 
 import static com.bossymr.rapid.language.psi.RapidElementTypes.*;
+import static com.bossymr.rapid.language.psi.RapidTokenSets.EXPRESSIONS;
+import static com.bossymr.rapid.language.psi.RapidTokenSets.STATEMENTS;
 import static com.bossymr.rapid.language.psi.RapidTokenSets.*;
 import static com.bossymr.rapid.language.psi.RapidTokenTypes.*;
 
@@ -41,9 +42,12 @@ public class RapidFormattingModelBuilder implements FormattingModelBuilder {
                 .before(SEMICOLON).none()
                 .before(COLON).none()
 
-                .after(RapidTokenSets.STATEMENTS).lineBreakInCode()
+                .after(STATEMENTS).lineBreakInCode()
                 .before(CASE_KEYWORD).lineBreakInCode()
                 .before(DEFAULT_KEYWORD).lineBreakInCode()
+                .after(TokenSet.create(THEN_KEYWORD, DO_KEYWORD, ENDIF_KEYWORD, ENDFOR_KEYWORD, ENDWHILE_KEYWORD, ENDTEST_KEYWORD)).lineBreakInCode()
+                .around(ELSE_KEYWORD).lineBreakInCode()
+                .afterInside(EXPRESSIONS, TEST_STATEMENT).lineBreakInCode()
 
                 .withinPairInside(LPARENTH, RPARENTH, PARENTHESISED_EXPRESSION).spaceIf(common.SPACE_WITHIN_PARENTHESES)
                 .withinPairInside(LPARENTH, RPARENTH, ARGUMENT_LIST).spaceIf(common.SPACE_WITHIN_METHOD_CALL_PARENTHESES)

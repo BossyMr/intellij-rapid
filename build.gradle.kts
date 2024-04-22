@@ -1,3 +1,5 @@
+import org.jetbrains.changelog.Changelog
+
 fun properties(key: String) = providers.gradleProperty(key)
 fun environment(key: String) = providers.environmentVariable(key)
 
@@ -10,8 +12,8 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.9.22"
     // Gradle IntelliJ Plugin
     id("org.jetbrains.intellij") version "1.17.1"
-    // Gradle Sentry Plugin
-    id("io.sentry.jvm.gradle") version "4.2.0"
+    // Gradle Changelog Plugin
+    id("org.jetbrains.changelog") version "2.2.0"
 }
 
 sourceSets["main"].java.srcDirs("src/main/gen")
@@ -22,6 +24,12 @@ version = properties("pluginVersion").get()
 // Configure project's dependencies
 repositories {
     mavenCentral()
+}
+
+// Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
+changelog {
+    groups.empty()
+    repositoryUrl = properties("pluginRepositoryUrl")
 }
 
 // Set the JVM language level used to build the project. Use Java 11 for 2020.3+, and Java 17 for 2022.2+.
@@ -50,27 +58,39 @@ configurations {
 }
 
 dependencies {
-    implementation(project(mapOf("path" to ":network")))
-    implementation("org.slf4j:slf4j-jdk14:2.0.12")
+    // z3 is used for data flow analysis
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
+    // Apache Tika is used to extract external documentation
+    implementation("org.apache.tika:tika-core:2.9.2")
+    implementation("org.apache.tika:tika-parser-microsoft-module:2.9.2")
+    // Jsoup is used to reformat external documentation
+    implementation("org.jsoup:jsoup:1.17.2")
+    // OkHttp is used to communicate with a remote robot
+    api("com.squareup.okhttp3:okhttp:5.0.0-alpha.12")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.12")
+    // Junit is used for testing
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.2")
-    testImplementation("org.junit.platform:junit-platform-launcher:1.10.2")
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
+    //  Wiremock is used to test network API
+    testImplementation("org.wiremock:wiremock:3.5.3")
+    // JmDNS is used to discover robots on the local network
+    implementation("org.jmdns:jmdns:3.5.9")
+    // Sentry is used to report errors
+    implementation(platform("io.sentry:sentry-bom:7.8.0"))
+    implementation("io.sentry:sentry")
 }
 
-sentry {
-    org = "sentry"
-    projectName = "intellij-rapid"
-
-    // Automatically adds Sentry dependencies to your project.
-    autoInstallation {
-        enabled.set(true)
-    }
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
 }
 
 tasks {
+    runIde {
+        autoReloadPlugins = false
+    }
+
     wrapper {
         gradleVersion = properties("gradleVersion").get()
     }
@@ -98,6 +118,19 @@ tasks {
         version = properties("pluginVersion")
         sinceBuild = properties("pluginSinceBuild")
         untilBuild = properties("pluginUntilBuild")
+
+        val changelog = project.changelog // local variable for configuration cache compatibility
+        // Get the latest available change notes from the changelog file
+        changeNotes = properties("pluginVersion").map { pluginVersion ->
+            with(changelog) {
+                renderItem(
+                    (getOrNull(pluginVersion) ?: getUnreleased())
+                        .withHeader(false)
+                        .withEmptySections(false),
+                    Changelog.OutputType.HTML,
+                )
+            }
+        }
     }
 
     // Configure UI tests plugin

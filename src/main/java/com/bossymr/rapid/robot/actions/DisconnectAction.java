@@ -41,6 +41,6 @@ public class DisconnectAction extends AnAction {
 
     @Override
     public void update(@NotNull AnActionEvent e) {
-        e.getPresentation().setEnabled(e.getProject() != null && RobotService.isConnected());
+        e.getPresentation().setEnabled(e.getProject() != null && RobotService.getInstance().isConnected());
     }
 }

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.network.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Deserializable;
 
 public enum InputOutputPhysicalState {
     @Deserializable("halted") HALTED,

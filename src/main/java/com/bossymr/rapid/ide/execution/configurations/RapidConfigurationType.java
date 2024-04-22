@@ -2,47 +2,35 @@ package com.bossymr.rapid.ide.execution.configurations;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.RapidIcons;
-import com.intellij.execution.configurations.ConfigurationFactory;
-import com.intellij.execution.configurations.ConfigurationType;
-import org.jetbrains.annotations.Nls;
-import org.jetbrains.annotations.NonNls;
+import com.intellij.execution.configurations.*;
+import com.intellij.openapi.components.BaseState;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.NotNullLazyValue;
 import org.jetbrains.annotations.NotNull;
-
-import javax.swing.*;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A {@code ConfigurationType} for the {@code Rapid} custom language.
  * <p>
  * This {@code ConfigurationType} adds support for executing both local and remote projects.
  */
-public class RapidConfigurationType implements ConfigurationType {
+public class RapidConfigurationType extends SimpleConfigurationType {
 
-    private final ConfigurationFactory[] CONFIGURATION_FACTORIES = {
-            new RapidConfigurationFactory(this)
-    };
+    public static @NotNull RapidConfigurationType getInstance() {
+        return ConfigurationTypeUtil.findConfigurationType(RapidConfigurationType.class);
+    }
 
-    @Override
-    public @NotNull @Nls(capitalization = Nls.Capitalization.Title) String getDisplayName() {
-        return RapidBundle.message("run.configuration.type.display.name");
+    public RapidConfigurationType() {
+        super("RapidConfigurationType", RapidBundle.message("run.configuration.type.display.name"), null, NotNullLazyValue.createConstantValue(RapidIcons.ROBOT));
     }
 
     @Override
-    public @Nls(capitalization = Nls.Capitalization.Sentence) String getConfigurationTypeDescription() {
-        return getDisplayName();
+    public @Nullable Class<? extends BaseState> getOptionsClass() {
+        return RapidRunConfigurationOptions.class;
     }
 
     @Override
-    public @NotNull Icon getIcon() {
-        return RapidIcons.ROBOT;
-    }
-
-    @Override
-    public @NotNull @NonNls String getId() {
-        return "RapidRunConfigurationType";
-    }
-
-    @Override
-    public ConfigurationFactory[] getConfigurationFactories() {
-        return CONFIGURATION_FACTORIES;
+    public @NotNull RunConfiguration createTemplateConfiguration(@NotNull Project project) {
+        return new RapidRunConfiguration("", project, this);
     }
 }

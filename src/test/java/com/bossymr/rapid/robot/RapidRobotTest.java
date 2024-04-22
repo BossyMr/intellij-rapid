@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.client.security.Credentials;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
 import java.io.IOException;
@@ -13,11 +13,11 @@ public class RapidRobotTest extends BasePlatformTestCase {
         service.disconnect();
         assertNull(service.getRobotState());
         assertNull(service.getRobot());
-        assertFalse(RobotService.isConnected());
+        assertFalse(RobotService.getInstance().isConnected());
         RapidRobot robot = service.connect(URI.create("http://localhost"), RobotService.DEFAULT_CREDENTIALS);
         assertEquals(robot, service.getRobot());
         assertNotNull(service.getRobotState());
-        assertTrue(RobotService.isConnected());
+        assertTrue(RobotService.getInstance().isConnected());
         assertFalse(robot.getTasks().isEmpty());
     }
 }

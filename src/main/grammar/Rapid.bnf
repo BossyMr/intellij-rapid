@@ -430,12 +430,20 @@ fake argument_list ::= argument_list_body
 
 private argument_list_body ::= [first_argument (next_argument)*]
 
-private first_argument ::= '<ARG>' | conditional_argument | optional_argument | required_argument
+ private first_argument ::= '<ARG>' | conditional_or_optional_argument | required_first_argument
 
-private next_argument ::= (conditional_argument | optional_argument) | (',' ('<ARG>' | conditional_argument | optional_argument | required_argument))
+private next_argument ::= conditional_or_optional_argument | comma_argument
 
-required_argument ::= [unqualified_reference_expression ':='] empty_expression
+private comma_argument ::= ',' ('<ARG>' | conditional_or_optional_argument | required_argument) {pin=1}
 
-optional_argument ::= '\' unqualified_reference_expression [':=' empty_expression]
+private required_first_argument ::= !(';' | ')') required_argument {pin=1}
 
-conditional_argument ::= '\' unqualified_reference_expression '?' ('<VAR>' | empty_expression)
+required_argument ::= !('\') [unqualified_reference_expression ':='] empty_expression {pin=1}
+
+conditional_or_optional_argument ::= '\' (conditional_argument | optional_argument) {pin=1 elementType=optional_argument}
+
+upper optional_argument ::= unqualified_reference_expression [optional_argument_value]
+
+private optional_argument_value ::= ':=' empty_expression {pin=1}
+
+upper conditional_argument ::= unqualified_reference_expression '?' ('<VAR>' | empty_expression) {pin=2}

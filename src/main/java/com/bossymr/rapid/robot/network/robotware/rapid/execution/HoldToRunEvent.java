@@ -1,7 +1,7 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
-import com.bossymr.network.annotations.Entity;
-import com.bossymr.network.annotations.Property;
+import com.bossymr.rapid.robot.api.annotations.Entity;
+import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.network.HoldToRunState;
 import org.jetbrains.annotations.NotNull;
 

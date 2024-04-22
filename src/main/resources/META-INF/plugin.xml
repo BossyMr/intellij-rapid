@@ -26,6 +26,12 @@
 
     <depends>com.intellij.modules.platform</depends>
 
+    <extensionPoints>
+        <extensionPoint qualifiedName="com.bossymr.rapid.runConfigurationExtension"
+                        interface="com.intellij.execution.configuration.RunConfigurationExtensionBase"
+                        dynamic="true"/>
+    </extensionPoints>
+
     <extensions defaultExtensionNs="com.intellij">
 
         <!-- Icons -->
@@ -114,9 +120,29 @@
 
         <lang.quoteHandler language="RAPID" implementationClass="com.bossymr.rapid.ide.editor.RapidQuoteHandler"/>
 
+        <codeInsight.declarativeInlayProvider language="RAPID" providerId="rapid.parameter.hints"
+                                              implementationClass="com.bossymr.rapid.ide.editor.inlay.RapidInlayParameterProvider"
+                                              bundle="messages.RapidBundle" nameKey="inlay.parameter.provider.name"
+                                              group="PARAMETERS_GROUP" isEnabledByDefault="true"/>
+
+        <codeInsight.daemonBoundCodeVisionProvider
+                implementation="com.bossymr.rapid.ide.editor.inlay.RapidUsagesCodeVisionProvider"/>
+
+        <codeInsight.parameterInfo language="RAPID"
+                                   implementationClass="com.bossymr.rapid.ide.editor.parameterInfo.RapidParameterInfoHandler"/>
+
+        <vcs.codeVisionLanguageContext language="RAPID"
+                                       implementationClass="com.bossymr.rapid.ide.editor.inlay.RapidVcsCodeVisionContext"/>
+
         <!-- Execution -->
 
         <configurationType implementation="com.bossymr.rapid.ide.execution.configurations.RapidConfigurationType"/>
+
+        <runLineMarkerContributor language="RAPID"
+                                  implementationClass="com.bossymr.rapid.ide.execution.RapidRunLineMarkerContributor"/>
+
+        <runConfigurationProducer
+                implementation="com.bossymr.rapid.ide.execution.configurations.RapidRunConfigurationProducer"/>
 
         <!-- Debugging -->
 
@@ -133,18 +159,29 @@
 
         <!-- Documentation -->
 
+        <applicationService
+                serviceImplementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationService"/>
+
+        <applicationConfigurable id="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationConfigurable"
+                                 parentId="tools" bundle="messages.RapidBundle" key="documentation.settings.name"
+                                 instance="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationConfigurable"/>
+
+        <notificationGroup displayType="STICKY_BALLOON" id="Documentation download" bundle="messages.RapidBundle"
+                           key="notification.group.documentation"/>
+
         <platform.backend.documentation.linkHandler
                 implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
 
-        <platform.backend.documentation.targetProvider
+        <!--suppress PluginXmlValidity -->
+        <platform.backend.documentation.symbolTargetProvider
                 implementation="com.bossymr.rapid.ide.editor.documentation.RapidDocumentationTargetProvider"/>
 
         <!-- Search -->
 
         <searcher forClass="com.intellij.find.usages.api.UsageSearchParameters"
                   implementationClass="com.bossymr.rapid.ide.search.RapidSymbolUsageSearcher"/>
-        <searcher forClass="com.intellij.refactoring.rename.api.RenameUsageSearchParameters"
-                  implementationClass="com.bossymr.rapid.ide.editor.refactoring.RapidRenameUsageSearcher"/>
+
+        <lang.codeReferenceSearcher implementation="com.bossymr.rapid.ide.search.RapidCodeReferenceSearcher"/>
 
         <!-- PsiElement  -->
 
@@ -177,10 +214,12 @@
         <notificationGroup displayType="STICKY_BALLOON" id="Robot connection errors" bundle="messages.RapidBundle"
                            key="notification.group.robot.connect.error"/>
 
+        <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
+
+        <!-- Code Analysis -->
+
         <notificationGroup displayType="BALLOON" id="Data flow diagrams" bundle="messages.RapidBundle"
                            key="notification.group.data.flow.export"/>
-
-        <postStartupActivity implementation="com.bossymr.rapid.robot.impl.RobotStartupActivity"/>
 
         <!-- Inspections -->
 

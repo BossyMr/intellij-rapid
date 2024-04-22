@@ -1,21 +1,21 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.NetworkManager;
-import com.bossymr.network.ResponseStatusException;
-import com.bossymr.network.client.EntityModel;
-import com.bossymr.network.client.HeavyNetworkManager;
-import com.bossymr.network.client.proxy.EntityProxy;
-import com.bossymr.network.client.security.Credentials;
 import com.bossymr.rapid.language.RapidFileType;
+import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.impl.SymbolConverter;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.client.EntityModel;
+import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
+import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
+import com.bossymr.rapid.robot.impl.VirtualSymbolFactory;
 import com.bossymr.rapid.robot.network.ControllerService;
 import com.bossymr.rapid.robot.network.Identity;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
@@ -40,6 +40,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.search.LocalSearchScope;
 import com.intellij.psi.search.SearchScope;
+import com.intellij.util.concurrency.annotations.RequiresBackgroundThread;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -69,10 +70,10 @@ public class RapidRobot implements Disposable {
             throw new IllegalArgumentException("State '" + state + " is invalid");
         }
         setState(state);
-        this.symbols = SymbolConverter.getSymbols(state.symbols.stream()
-                                                               .map(symbol -> symbol.convert(SymbolModel.class, null))
-                                                               .filter(Objects::nonNull)
-                                                               .toList());
+        this.symbols = VirtualSymbolFactory.getSymbols(state.symbols.stream()
+                                                                    .map(symbol -> symbol.convert(SymbolModel.class, null))
+                                                                    .filter(Objects::nonNull)
+                                                                    .toList());
         this.tasks = getPersistedTasks();
     }
 
@@ -80,9 +81,11 @@ public class RapidRobot implements Disposable {
      * Create a new robot with the specified state.
      *
      * @return the robot.
-     * @throws IllegalArgumentException if the specified state is invalid.
      */
-    public static @NotNull RapidRobot create(@NotNull State state) throws IllegalArgumentException {
+    public static @Nullable RapidRobot create(@NotNull State state) throws IllegalArgumentException {
+        if (state.name == null || state.path == null || state.symbols == null || state.cache == null) {
+            return null;
+        }
         return new RapidRobot(state);
     }
 
@@ -95,6 +98,7 @@ public class RapidRobot implements Disposable {
      * @throws IOException if an I/O error occurs.
      * @throws InterruptedException if the current thread is interrupted.
      */
+    @RequiresBackgroundThread
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         setCredentials(path, credentials);
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
@@ -160,17 +164,14 @@ public class RapidRobot implements Disposable {
         }
     }
 
-    private static @NotNull CredentialAttributes createCredentialsAttributes(@NotNull URI path) {
-        return new CredentialAttributes(CredentialAttributesKt.generateServiceName("intellij-rapid", path.toString()));
-    }
-
-    private static @Nullable Credentials getCredentials(@NotNull URI path) {
-        CredentialAttributes credentialsAttributes = createCredentialsAttributes(path);
-        com.intellij.credentialStore.Credentials credentials = PasswordSafe.getInstance().get(credentialsAttributes);
+    public static @Nullable Credentials getCredentials(@NotNull URI path, @Nullable String username) {
+        String serviceName = CredentialAttributesKt.generateServiceName("intellij-rapid", path.normalize().toString());
+        CredentialAttributes credentialsAttributes = new CredentialAttributes(serviceName, username);
+        var credentials = PasswordSafe.getInstance().get(credentialsAttributes);
         if (credentials == null) {
             return null;
         }
-        String username = credentials.getUserName();
+        username = credentials.getUserName();
         OneTimeString password = credentials.getPassword();
         if (username == null || password == null) {
             return null;
@@ -178,9 +179,16 @@ public class RapidRobot implements Disposable {
         return new Credentials(username, password.toCharArray());
     }
 
-    private static void setCredentials(@NotNull URI path, @NotNull Credentials credentials) {
-        CredentialAttributes credentialsAttributes = createCredentialsAttributes(path);
-        PasswordSafe.getInstance().set(credentialsAttributes, new com.intellij.credentialStore.Credentials(credentials.username(), credentials.password()));
+    public static void setCredentials(@NotNull URI path, @NotNull Credentials credentials) {
+        String serviceName = CredentialAttributesKt.generateServiceName("intellij-rapid", path.normalize().toString());
+        CredentialAttributes credentialsAttributes = new CredentialAttributes(serviceName, credentials.username());
+        PasswordSafe.getInstance().setPassword(credentialsAttributes, new String(credentials.password()));
+    }
+
+    @RequiresBackgroundThread
+    public @Nullable String getUsername() {
+        Credentials credentials = getCredentials(getPath(), null);
+        return credentials != null ? credentials.username() : null;
     }
 
     public @NotNull State getState() {
@@ -254,35 +262,54 @@ public class RapidRobot implements Disposable {
      * @return the symbol, or {@code null} if a symbol was not found with the specified name.
      */
     public @Nullable VirtualSymbol getSymbol(@NotNull String name) throws IOException, InterruptedException {
-        if (symbols.containsKey(name.toLowerCase())) {
-            return symbols.get(name.toLowerCase());
+        int index = name.indexOf("/");
+        String parentName = name;
+        String childName = null;
+        if (index >= 0) {
+            if (index != name.lastIndexOf("/")) {
+                throw new IllegalArgumentException("Could not retrieve symbol: " + name);
+            }
+            parentName = name.substring(0, index);
+            childName = name.substring(index + 1);
+        }
+        if (symbols.containsKey(parentName.toLowerCase())) {
+            // The symbol already exists.
+            VirtualSymbol symbol = symbols.get(parentName.toLowerCase());
+            if (childName != null) {
+                List<RapidSymbol> results = ResolveService.getChildSymbol(symbol, childName);
+                return results.isEmpty() ? null : (VirtualSymbol) results.get(0);
+            }
+            return symbol;
         }
         if (state.cache != null && state.cache.contains(name.toLowerCase())) {
+            // The symbol does not exist. Due to all symbols not being provided by the robot
+            // all unresolved symbols need to be requested individually. If they do not exist,
+            // they are added to a cache, so they aren't requested again.
             return null;
         }
         if (manager == null) {
+            // The robot is not connected.
             return null;
         }
-        SymbolModel model = getSymbol(manager, "RAPID" + "/" + (name.contains("/") ? name.substring(0, name.indexOf('/')) : name));
+        SymbolModel model = getSymbol(manager, "RAPID" + "/" + parentName);
         if (model == null) {
+            // The symbol does not exist.
             if (state.cache == null) {
                 state.cache = new HashSet<>();
             }
             state.cache.add(name.toLowerCase());
             return null;
         }
-        VirtualSymbol symbol = SymbolConverter.getSymbol(model);
-        symbols.put(symbol.getName().toLowerCase(), symbol);
+        VirtualSymbol symbol = VirtualSymbolFactory.getSymbol(model);
+        symbols.put(parentName.toLowerCase(), symbol);
         if (state.symbols == null) {
             state.symbols = new HashSet<>();
         }
         state.symbols.add(Entity.convert(model));
         RobotEventListener.publish().onSymbol(this, symbol);
-        if (name.contains("/")) {
-            if (name.indexOf("/") != name.lastIndexOf("/")) {
-                throw new IllegalArgumentException("Cannot retrieve symbol: " + name);
-            }
-            return (VirtualSymbol) ResolveService.findChild(symbol, name.substring(name.indexOf("/") + 1));
+        if (childName != null) {
+            List<RapidSymbol> results = ResolveService.getChildSymbol(symbol, childName);
+            return results.isEmpty() ? null : (VirtualSymbol) results.get(0);
         }
         return symbol;
     }
@@ -301,49 +328,43 @@ public class RapidRobot implements Disposable {
         if (manager == null) {
             throw new IllegalStateException("Robot is not connected");
         }
-        File finalDirectory;
         Set<RapidTask> updated = new HashSet<>();
-        try (CloseableDirectory directory = new CloseableDirectory("download")) {
-            File file = Path.of(PathManager.getSystemPath(), "robot").toFile();
+        File directory = FileUtil.createTempDirectory("intellij-rapid", "download", true);
+        File file = getDefaultPath().toFile();
+        if (file.exists()) {
+            FileUtil.delete(file);
+        }
+        List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
+        for (Task task : tasks) {
+            File temporaryTask = directory.toPath().resolve(task.getName()).toFile();
+            File finalTask = file.toPath().resolve(task.getName()).toFile();
+            if (!(WriteAction.computeAndWait(() -> FileUtil.createDirectory(temporaryTask)))) {
+                throw new IllegalStateException();
+            }
+            RapidTask local = new RapidTask(task.getName(), finalTask, new HashSet<>());
+            List<ModuleInfo> modules = task.getModules().get();
+            for (ModuleInfo moduleInfo : modules) {
+                ModuleEntity module = moduleInfo.getModule().get();
+                module.save(module.getName(), temporaryTask.toPath().toString()).get();
+                File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
+                local.getFiles().add(result);
+            }
+            updated.add(local);
+        }
+        WriteAction.runAndWait(() -> {
             if (file.exists()) {
                 FileUtil.delete(file);
             }
-            finalDirectory = PathManager.getSystemDir().toFile();
-            List<Task> tasks = manager.createService(TaskService.class).getTasks().get();
-            for (Task task : tasks) {
-                File temporaryTask = directory.getDirectory().toPath().resolve(task.getName()).toFile();
-                File finalTask = Path.of(finalDirectory.getPath(), "robot").resolve(task.getName()).toFile();
-                if (!(WriteAction.computeAndWait(() -> FileUtil.createDirectory(temporaryTask)))) {
-                    throw new IllegalStateException();
-                }
-                RapidTask local = new RapidTask(task.getName(), finalTask, new HashSet<>());
-                List<ModuleInfo> modules = task.getModules().get();
-                for (ModuleInfo moduleInfo : modules) {
-                    ModuleEntity module = moduleInfo.getModule().get();
-                    try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-                        module.save(module.getName(), temporaryTask.toPath().toString()).get();
+            FileUtil.copyDirContent(directory, file);
+            for (RapidTask task : updated) {
+                for (File taskFile : task.getFiles()) {
+                    VirtualFile virtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(taskFile.toPath());
+                    if (virtualFile == null) {
+                        throw new IllegalStateException("File '" + taskFile + "' not found");
                     }
-                    File result = finalTask.toPath().resolve(module.getName() + RapidFileType.DEFAULT_DOT_EXTENSION).toFile();
-                    local.getFiles().add(result);
                 }
-                updated.add(local);
             }
-            WriteAction.runAndWait(() -> {
-                File directoryChild = Path.of(finalDirectory.getPath(), "robot").toFile();
-                if (directoryChild.exists()) {
-                    FileUtil.delete(directoryChild);
-                }
-                FileUtil.copyDirContent(directory.getDirectory(), Path.of(finalDirectory.getPath(), "robot").toFile());
-                for (RapidTask task : updated) {
-                    for (File taskFile : task.getFiles()) {
-                        VirtualFile virtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(taskFile.toPath());
-                        if (virtualFile == null) {
-                            throw new IllegalStateException("File '" + file + "' not found");
-                        }
-                    }
-                }
-            });
-        }
+        });
         RobotEventListener.publish().onDownload(this);
         this.tasks = updated;
     }
@@ -362,76 +383,51 @@ public class RapidRobot implements Disposable {
         if (manager == null) {
             throw new IllegalStateException("Robot is not connected");
         }
-        try (CloseableDirectory temporaryDirectory = new CloseableDirectory("upload")) {
-            Task remote = manager.createService(TaskService.class).getTask(task.getName()).get();
-            Program program = remote.getProgram().get();
-            File file = temporaryDirectory.getDirectory().toPath().resolve(program.getName() + ".pgf").toFile();
-            WriteAction.runAndWait(() -> {
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-                    writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
-                    writer.write("<Program>\r\n");
-                    for (File module : modules) {
-                        writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
-                        FileUtil.copy(module, temporaryDirectory.getDirectory().toPath().resolve(module.getName()).toFile());
-                    }
-                    writer.write("</Program>");
+        File directory = FileUtil.createTempDirectory("intellij-rapid", "upload", true);
+        Task remote = manager.createService(TaskService.class).getTask(task.getName()).get();
+        Program program = remote.getProgram().get();
+        File file = directory.toPath().resolve(program.getName() + ".pgf").toFile();
+        WriteAction.runAndWait(() -> {
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+                writer.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\r\n");
+                writer.write("<Program>\r\n");
+                for (File module : modules) {
+                    writer.write("\t<Module>" + module.getName() + "</Module>\r\n");
+                    FileUtil.copy(module, directory.toPath().resolve(module.getName()).toFile());
                 }
-            });
-            try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-                program.load(file.getPath(), LoadProgramMode.REPLACE).get();
+                writer.write("</Program>");
             }
-            RobotEventListener.publish().onUpload(this);
-        }
+        });
+        program.load(file.getPath(), LoadProgramMode.REPLACE).get();
+        RobotEventListener.publish().onUpload(this);
     }
 
     /**
      * Reconnect to this robot with persisted credentials.
      *
      * @return the connection to the robot.
-     * @throws IllegalStateException if no credentials are persisted for this robot.
      * @throws IOException if an I/O error occurs.
      * @throws InterruptedException if the current thread is interrupted.
      */
-    public @NotNull NetworkManager reconnect() throws IllegalStateException, IOException, InterruptedException {
+    public @NotNull NetworkManager reconnect() throws IOException, InterruptedException {
         URI path = getPath();
-        Credentials credentials = getCredentials(path);
-        if (credentials == null) {
-            throw new IllegalStateException("Credentials for '" + path + "' are not persisted");
-        }
-        return reconnect(path, credentials);
-    }
-
-    /**
-     * Reconnect to this robot with the specified credentials.
-     *
-     * @param credentials the new credentials.
-     * @return the connection to the robot.
-     * @throws IOException if an I/O error occurs.
-     * @throws InterruptedException if the current thread is interrupted.
-     */
-    public @NotNull NetworkManager reconnect(@NotNull Credentials credentials) throws IOException, InterruptedException {
-        URI path = getPath();
-        setCredentials(path, credentials);
-        return reconnect(path, credentials);
-    }
-
-    private @NotNull NetworkManager reconnect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
+        Credentials credentials = getCredentials(path, null);
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
-        RobotNetworkAction networkAction = new RobotNetworkAction(manager);
-        State state = getState(path, networkAction);
+        RobotNetworkAction action = new RobotNetworkAction(manager);
+        State state = getState(path, action);
         Objects.requireNonNull(state.symbols);
         List<SymbolModel> models = state.symbols.stream()
                                                 .map(symbol -> symbol.convert(SymbolModel.class, manager))
                                                 .toList();
-        this.symbols = SymbolConverter.getSymbols(models);
+        this.symbols = VirtualSymbolFactory.getSymbols(models);
         setState(state);
         this.tasks = getPersistedTasks();
-        RobotEventListener.publish().onRefresh(this, networkAction);
-        setManager(networkAction);
-        if (!(getLocalModules(tasks).equals(getRemoteModules(networkAction)))) {
+        RobotEventListener.publish().onRefresh(this, action);
+        setManager(action);
+        if (!(getLocalModules(tasks).equals(getRemoteModules(action)))) {
             download();
         }
-        return networkAction;
+        return action;
     }
 
     private @NotNull List<String> getLocalModules(@NotNull Set<RapidTask> tasks) {
@@ -463,7 +459,7 @@ public class RapidRobot implements Disposable {
     }
 
     private @NotNull Path getDefaultPath() {
-        return Path.of(PathManager.getSystemPath(), "robot");
+        return PathManager.getPluginsDir().resolve("Rapid").resolve("robot");
     }
 
     private @NotNull Set<RapidTask> getPersistedTasks() {
@@ -548,9 +544,11 @@ public class RapidRobot implements Disposable {
         public @Nullable Set<Entity> symbols;
 
         /**
-         * Due to a potential bug on the remote robot, all symbols are not returned when querying for all symbols. As
-         * such, all symbols which are not resolved are queried individually, which appears to be working accurately. To
-         * avoid repeatedly querying the same symbol, a symbols name is added to this list if it was not found.
+         * Due to an issue on the robot. All symbols are not returned when asking for a list of all symbols. However,
+         * when asking the robot for a symbol with a specific name, it appears to always return the correct result. As a
+         * result, if a symbol hasn't been resolved to any existing symbol, a request is sent to the robot, asking for a
+         * specific symbol with that name. If a symbol with that name wasn't found, it is added to this cache, so that
+         * the request won't be retried.
          */
         public @Nullable Set<String> cache;
 
@@ -570,9 +568,9 @@ public class RapidRobot implements Disposable {
         @Override
         public String toString() {
             return "State{" +
-                    "name='" + name + '\'' +
-                    ", path='" + path + '\'' +
-                    '}';
+                   "name='" + name + '\'' +
+                   ", path='" + path + '\'' +
+                   '}';
         }
     }
 
@@ -676,11 +674,11 @@ public class RapidRobot implements Disposable {
         @Override
         public String toString() {
             return "Entity{" +
-                    "title='" + title + '\'' +
-                    ", type='" + type + '\'' +
-                    ", fields=" + fields +
-                    ", links=" + links +
-                    '}';
+                   "title='" + title + '\'' +
+                   ", type='" + type + '\'' +
+                   ", fields=" + fields +
+                   ", links=" + links +
+                   '}';
         }
 
         @Override

@@ -54,8 +54,8 @@ public class RapidLiteralExpressionImpl extends RapidExpressionImpl implements R
         if (elementType.equals(RapidTokenTypes.STRING_LITERAL)) {
             String text = getText();
             text = text.substring(1, text.length() - 1);
-            text = text.replaceAll("\"\"", "\"");
-            text = text.replaceAll("\\\\", "\\");
+            text = text.replace("\"\"", "\"");
+            text = text.replace("\\\\", "\\");
             return text;
         }
         if (elementType.equals(RapidTokenTypes.INTEGER_LITERAL)) {

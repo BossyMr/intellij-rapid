@@ -18,13 +18,14 @@ public class RapidIfUnwrapper extends RapidUnwrapper {
         if (!(e instanceof RapidIfStatement)) {
             return false;
         }
+        // If the parent is also an if-statement, the current if-statement is an else block.
+        // This if-statement can't be an in the then block, because then it's parent would be a statement list.
         PsiElement parent = e.getParent();
         return !(parent instanceof RapidIfStatement);
     }
 
     @Override
     protected void doUnwrap(@NotNull PsiElement element, @NotNull Context context) throws IncorrectOperationException {
-        // FIXME:
         RapidIfStatement statement = (RapidIfStatement) element;
         RapidStatementList thenBranch = statement.getThenBranch();
         context.extractStatementList(thenBranch, element);

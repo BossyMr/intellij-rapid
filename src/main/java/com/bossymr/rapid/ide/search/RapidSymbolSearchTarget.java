@@ -8,17 +8,7 @@ import com.intellij.platform.backend.presentation.TargetPresentation;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("UnstableApiUsage")
-public class RapidSymbolSearchTarget implements SearchTarget {
-
-    private final @NotNull RapidSymbol symbol;
-
-    public RapidSymbolSearchTarget(@NotNull RapidSymbol symbol) {
-        this.symbol = symbol;
-    }
-
-    public @NotNull RapidSymbol getSymbol() {
-        return symbol;
-    }
+public record RapidSymbolSearchTarget(@NotNull RapidSymbol symbol) implements SearchTarget {
 
     @Override
     public @NotNull UsageHandler getUsageHandler() {

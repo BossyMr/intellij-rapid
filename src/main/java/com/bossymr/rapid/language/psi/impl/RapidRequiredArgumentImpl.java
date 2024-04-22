@@ -20,9 +20,15 @@ public class RapidRequiredArgumentImpl extends PhysicalElement implements RapidR
     }
 
     @Override
-    public @NotNull RapidExpression getArgument() {
+    public @Nullable RapidExpression getArgument() {
         List<RapidExpression> elements = findChildrenByType(RapidElementTypes.EXPRESSIONS);
-        return elements.size() == 2 ? elements.get(1) : elements.get(0);
+        if(elements.size() == 2) {
+            return elements.get(1);
+        }
+        if(elements.size() == 1) {
+            return elements.get(0);
+        }
+        return null;
     }
 
     @Override

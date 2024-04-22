@@ -2,6 +2,7 @@ package com.bossymr.rapid.language.symbol.virtual;
 
 import com.bossymr.rapid.language.symbol.RapidRecord;
 import com.bossymr.rapid.language.symbol.Visibility;
+import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
 import com.intellij.openapi.util.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -23,6 +24,16 @@ public class VirtualRecord implements RapidRecord, VirtualStructure {
     @Override
     public @NotNull Visibility getVisibility() {
         return Visibility.GLOBAL;
+    }
+
+    @Override
+    public @NotNull RapidType createType() {
+        return switch (name.toLowerCase()) {
+            case "pos" -> RapidPrimitiveType.POSITION;
+            case "orient" -> RapidPrimitiveType.ORIENTATION;
+            case "pose" -> RapidPrimitiveType.POSE;
+            default -> RapidRecord.super.createType();
+        };
     }
 
     @Override

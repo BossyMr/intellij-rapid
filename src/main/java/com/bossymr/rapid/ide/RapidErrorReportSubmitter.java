@@ -41,18 +41,6 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
 
     private static final @NotNull String SENTRY_URL = "https://770a26d5df85543f57313f65d4474df5@sentry.bossymr.com/2";
 
-    static {
-        Sentry.init(options -> {
-            options.setDsn(SENTRY_URL);
-            options.setEnableUserInteractionTracing(false);
-            options.setEnableUserInteractionBreadcrumbs(false);
-            options.setEnableUncaughtExceptionHandler(false);
-            boolean isInternal = ApplicationManager.getApplication().isInternal();
-            options.setEnvironment(isInternal ? "development" : "production");
-        });
-        Sentry.setUser(null);
-    }
-
     @Override
     public @NlsActions.ActionText @NotNull String getReportActionText() {
         return RapidBundle.message("error.report.author");
@@ -78,12 +66,14 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
                     }
                     AbstractMessage message = reportingEvent.getData();
                     Throwable throwable = message.getThrowable();
+
                     List<Attachment> attachments = message.getIncludedAttachments().stream()
                             .map(attachment -> new Attachment(attachment.getBytes(), attachment.getName()))
                             .toList();
 
                     SentryEvent sentryEvent = new SentryEvent(throwable);
                     sentryEvent.setLevel(SentryLevel.ERROR);
+                    sentryEvent.setUser(null);
 
                     IdeaPluginDescriptor descriptor = reportingEvent.getPlugin();
                     if (descriptor != null) {
@@ -92,15 +82,23 @@ public class RapidErrorReportSubmitter extends ErrorReportSubmitter {
 
                     sentryEvent.setTag("IDE", ApplicationInfo.getInstance().getBuild().asString());
                     sentryEvent.setTag("OS", SystemInfo.getOsNameAndVersion());
+                    sentryEvent.setEnvironment(ApplicationManager.getApplication().isInternal() ? "development" : "production");
 
-                    SentryId sentryId = Sentry.captureEvent(sentryEvent, Hint.withAttachments(attachments));
+                    SentryOptions options = new SentryOptions();
+                    options.setDsn(SENTRY_URL);
+                    Hub hub = new Hub(options);
 
-                    if (!(sentryId.equals(SentryId.EMPTY_ID)))
+                    SentryId sentryId = hub.captureEvent(sentryEvent, Hint.withAttachments(attachments));
+
+                    if (!(sentryId.equals(SentryId.EMPTY_ID))) {
                         if (additionalInfo != null && !(additionalInfo.isEmpty())) {
                             UserFeedback userFeedback = new UserFeedback(sentryId);
                             userFeedback.setComments(additionalInfo);
-                            Sentry.captureUserFeedback(userFeedback);
+                            hub.captureUserFeedback(userFeedback);
                         }
+                    }
+
+                    hub.close();
 
                     ApplicationManager.getApplication().invokeLater(() -> {
                         if (sentryId.equals(SentryId.EMPTY_ID)) {

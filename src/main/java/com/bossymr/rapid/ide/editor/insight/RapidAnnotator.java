@@ -193,18 +193,22 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
         Map<String, RapidParameter> parametersByName = new HashMap<>();
         for (RapidParameterGroup parameterGroup : parameterGroups) {
             for (RapidParameter parameter : parameterGroup.getParameters()) {
-                parametersByName.put(parameter.getName(), parameter);
+                String parameterName = parameter.getName();
+                if (parameterName != null) {
+                    parametersByName.put(parameterName.toLowerCase(), parameter);
+                }
             }
         }
         Map<RapidArgument, RapidParameter> parameters = getParameters(routine.getPresentableName(), parameterGroups, argumentList);
         List<RapidArgument> arguments = argumentList.getArguments();
         for (RapidArgument argument : parameters.keySet()) {
             RapidParameter parameter = parameters.get(argument);
-            if (argument instanceof RapidConditionalArgument || argument instanceof RapidOptionalArgument) {
-                String text = argument.getParameter().getText();
+            RapidReferenceExpression argumentParameter = argument.getParameter();
+            if (argumentParameter != null && (argument instanceof RapidConditionalArgument || argument instanceof RapidOptionalArgument)) {
+                String text = argumentParameter.getText();
                 if (parameter == null) {
                     annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.routine.parameter.not.found", text))
-                                    .range(argument.getParameter())
+                                    .range(argumentParameter)
                                     .create();
                 } else {
                     if (!parameter.getParameterGroup().isOptional()) {
@@ -224,11 +228,11 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                 }
             }
             if (argument instanceof RapidRequiredArgument) {
-                if (parameter != null && parameter.getName() != null && argument.getParameter() != null) {
-                    String parameterName = argument.getParameter().getText();
-                    if (!parameterName.equals(parameter.getName())) {
-                        if (parametersByName.containsKey(parameterName)) {
-                            if (!parametersByName.get(parameterName).getParameterGroup().isOptional()) {
+                if (parameter != null && parameter.getName() != null && argumentParameter != null) {
+                    String parameterName = argumentParameter.getText();
+                    if (!parameterName.equalsIgnoreCase(parameter.getName())) {
+                        if (parametersByName.containsKey(parameterName.toLowerCase())) {
+                            if (!parametersByName.get(parameterName.toLowerCase()).getParameterGroup().isOptional()) {
                                 annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.parameter.order"))
                                                 .range(argument)
                                                 .create();
@@ -277,7 +281,7 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                 if (name == null) {
                     continue;
                 }
-                parameters.put(name, parameter);
+                parameters.put(name.toLowerCase(), parameter);
             }
         }
         if (requiredParameters.size() != requiredArguments.size()) {
@@ -295,8 +299,11 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
                     result.put(argument, requiredParameters.get(index));
                 }
             } else if (argument instanceof RapidOptionalArgument || argument instanceof RapidConditionalArgument) {
-                String parameterName = argument.getParameter().getText();
-                result.put(argument, parameters.get(parameterName));
+                RapidReferenceExpression parameter = argument.getParameter();
+                if(parameter != null) {
+                    String parameterName = parameter.getText().toLowerCase();
+                    result.put(argument, parameters.get(parameterName));
+                }
             }
         }
         return result;
@@ -852,11 +859,11 @@ public class RapidAnnotator extends RapidElementVisitor implements Annotator {
             return;
         }
         ResolveService service = ResolveService.getInstance(symbol.getProject());
-        List<RapidSymbol> symbols = service.findSymbols(symbol, name);
+        List<RapidSymbol> symbols = service.getSymbols(symbol, name);
         if (symbols.isEmpty() || symbols.size() == 1) {
             return;
         }
-        RapidSymbol duplicateSymbol = symbols.get(0);
+        RapidSymbol duplicateSymbol = symbols.indexOf(symbol) == 0 ? symbols.get(1) : symbols.get(0);
         AnnotationBuilder annotationBuilder = annotationHolder.newAnnotation(HighlightSeverity.ERROR, RapidBundle.message("annotation.declaration.duplicate.symbol", name))
                                                               .range(identifier);
         if (duplicateSymbol instanceof PhysicalSymbol physicalSymbol) {

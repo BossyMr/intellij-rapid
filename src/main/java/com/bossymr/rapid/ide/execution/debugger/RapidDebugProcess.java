@@ -1,10 +1,5 @@
 package com.bossymr.rapid.ide.execution.debugger;
 
-import com.bossymr.network.NetworkAction;
-import com.bossymr.network.NetworkManager;
-import com.bossymr.network.ResponseStatusException;
-import com.bossymr.network.SubscriptionPriority;
-import com.bossymr.network.client.NetworkRequest;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.RapidProcessHandler;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
@@ -12,10 +7,13 @@ import com.bossymr.rapid.ide.execution.debugger.breakpoints.RapidLineBreakpointH
 import com.bossymr.rapid.ide.execution.debugger.frame.RapidSuspendContext;
 import com.bossymr.rapid.ide.execution.filter.RapidFileFilter;
 import com.bossymr.rapid.language.symbol.RapidTask;
-import com.bossymr.rapid.robot.CloseableMastership;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.SubscriptionPriority;
+import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleEntity;
@@ -96,6 +94,11 @@ public class RapidDebugProcess extends XDebugProcess {
         this.manager = processHandler.getNetworkManager();
     }
 
+    public static void unregisterBreakpoint(@NotNull NetworkManager manager, @NotNull ModuleEntity module, @NotNull Task task, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
+        ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
+        module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.FORCE, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
+    }
+
     public void execute(@NotNull NetworkRunnable callable) {
         executorService.submit(() -> {
             try {
@@ -126,8 +129,7 @@ public class RapidDebugProcess extends XDebugProcess {
                 if (task.getExecutionState() != TaskExecutionState.STOPPED) {
                     continue;
                 }
-                StackFrame stackFrame = task.getStackFrame(1).get();
-                onProgramStop(task, stackFrame);
+                onProgramStop(task);
             }
         } finally {
             phaser.arriveAndDeregister();
@@ -152,6 +154,23 @@ public class RapidDebugProcess extends XDebugProcess {
             ExecutionService executionService = getExecutionService();
             try {
                 executionService.resetProgramPointer().get();
+                TaskService taskService = manager.createService(TaskService.class);
+                List<Task> tasks = taskService.getTasks().get();
+                for (Task task : tasks) {
+                    StackFrame stackFrame = task.getStackFrame(1).get();
+                    RapidSuspendContext suspendContext = new RapidSuspendContext(project, breakpoints, this, task, stackFrame);
+                    for (XBreakpoint<?> breakpoint : breakpoints) {
+                        if(isAtBreakpoint(stackFrame, breakpoint)) {
+                            logger.debug("Breakpoint '" + breakpoint + "' reached");
+                            boolean shouldSuspend = getSession().breakpointReached(breakpoint, null, suspendContext);
+                            if(shouldSuspend) {
+                                logger.debug("Process paused");
+                                getSession().positionReached(suspendContext);
+                                return;
+                            }
+                        }
+                    }
+                }
                 start(ExecutionMode.CONTINUE);
             } catch (IOException | InterruptedException ignored) {}
         });
@@ -160,9 +179,7 @@ public class RapidDebugProcess extends XDebugProcess {
     public void setup() throws IOException, InterruptedException {
         processHandler.setupEventLog();
         ExecutionService executionService = getExecutionService();
-        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-            executionService.resetProgramPointer().get();
-        }
+        executionService.resetProgramPointer().get();
         executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
             switch (event.getState()) {
                 case RUNNING -> getSession().sessionResumed();
@@ -175,7 +192,8 @@ public class RapidDebugProcess extends XDebugProcess {
         });
     }
 
-    private void onProgramStop(@NotNull Task task, @NotNull StackFrame stackFrame) {
+    private void onProgramStop(@NotNull Task task) throws IOException, InterruptedException {
+        StackFrame stackFrame = task.getStackFrame(1).get();
         logger.debug("Process paused at '" + stackFrame + "'");
         if (isStopped(stackFrame)) {
             logger.debug("Process stopped");
@@ -214,9 +232,7 @@ public class RapidDebugProcess extends XDebugProcess {
         phaser.register();
         phaser.awaitAdvance(phaser.arriveAndDeregister());
         ExecutionService executionService = getExecutionService();
-        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-            executionService.start(RegainMode.REGAIN, executionMode, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.ENABLED, TaskExecutionMode.NORMAL).get();
-        }
+        executionService.start(RegainMode.REGAIN, executionMode, ExecutionCycle.ONCE, ConditionState.CALLCHAIN, BreakpointMode.ENABLED, TaskExecutionMode.NORMAL).get();
         Thread.sleep(100);
         ExecutionStatus executionStatus = executionService.getState().get();
         if (executionStatus.getState() == ExecutionState.STOPPED) {
@@ -337,13 +353,6 @@ public class RapidDebugProcess extends XDebugProcess {
             phaser.arriveAndDeregister();
         }
         return false;
-    }
-
-    public static void unregisterBreakpoint(@NotNull NetworkManager manager, @NotNull ModuleEntity module, @NotNull Task task, @NotNull Breakpoint breakpoint) throws IOException, InterruptedException {
-        ModuleText moduleText = module.getText(breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn()).get();
-        try (CloseableMastership ignored = CloseableMastership.withMastership(manager, MastershipType.RAPID)) {
-            module.setText(task.getName(), ReplaceMode.REPLACE, QueryMode.FORCE, breakpoint.getStartRow(), breakpoint.getStartColumn(), breakpoint.getEndRow(), breakpoint.getEndColumn(), moduleText.getText()).get();
-        }
     }
 
     /**

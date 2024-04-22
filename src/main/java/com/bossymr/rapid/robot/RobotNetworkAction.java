@@ -1,11 +1,11 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.GenericType;
-import com.bossymr.network.NetworkAction;
-import com.bossymr.network.NetworkManager;
-import com.bossymr.network.ResponseStatusException;
-import com.bossymr.network.client.NetworkRequest;
 import com.bossymr.rapid.RapidBundle;
+import com.bossymr.rapid.robot.api.GenericType;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
@@ -86,14 +86,18 @@ public class RobotNetworkAction extends NetworkAction {
     private void showNotification(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {
         showNotifications = false;
         URI path = getNetworkClient().getDefaultPath().resolve(request.getPath());
+        String presentablePath = getPresentablePath(path);
         NotificationGroupManager.getInstance()
                                 .getNotificationGroup("Robot connection errors")
-                                .createNotification(RapidBundle.message("notification.title.robot.connect.error", path), NotificationType.ERROR)
-                                .setContent(throwable.getLocalizedMessage())
+                                .createNotification(RapidBundle.message("notification.title.robot.connect.error", presentablePath), NotificationType.ERROR)
                                 .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
                                 .addAction(new ConnectNotificationAction(path))
                                 .whenExpired(() -> showNotifications = true)
                                 .notify(null);
+    }
+
+    private @NotNull String getPresentablePath(@NotNull URI path) {
+        return path.getHost() + (path.getPort() != 80 ? ":" + path.getPort() : "");
     }
 
     private static class ConnectNotificationAction extends NotificationAction {

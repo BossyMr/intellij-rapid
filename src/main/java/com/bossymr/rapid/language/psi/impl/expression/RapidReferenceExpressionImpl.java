@@ -159,7 +159,7 @@ public class RapidReferenceExpressionImpl extends RapidExpressionImpl implements
 
     @Override
     public @NotNull List<RapidSymbol> getSymbols() {
-        return CachedValuesManager.getProjectPsiDependentCache(this, (context) -> ResolveService.getInstance(context.getProject()).findSymbols(context));
+        return CachedValuesManager.getProjectPsiDependentCache(this, (context) -> ResolveService.getInstance(context.getProject()).getSymbols(context));
     }
 
     @Override

@@ -1,8 +1,9 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task.module;
 
-import com.bossymr.network.NetworkQuery;
-import com.bossymr.network.annotations.*;
-import com.bossymr.network.client.FetchMethod;
+import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.annotations.*;
+import com.bossymr.rapid.robot.api.client.FetchMethod;
+import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import org.jetbrains.annotations.NotNull;
 
 @Entity({"rap-module"})
@@ -14,6 +15,7 @@ public interface ModuleEntity {
     @Property("filename")
     @NotNull String getFileName();
 
+    @RequiresMastership(MastershipType.RAPID)
     @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=save")
     @NotNull NetworkQuery<Void> save(@NotNull @Field("name") String name,
                                      @NotNull @Field("path") String path);
@@ -24,6 +26,7 @@ public interface ModuleEntity {
                                               @Argument("endrow") int endRow,
                                               @Argument("endcol") int endColumn);
 
+    @RequiresMastership(MastershipType.RAPID)
     @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=set-text-range")
     @NotNull NetworkQuery<Void> setText(@NotNull @Field("task") String task,
                                         @NotNull @Field("replace-mode") ReplaceMode replaceMode,

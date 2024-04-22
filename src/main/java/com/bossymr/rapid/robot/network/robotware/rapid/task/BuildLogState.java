@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
-import com.bossymr.network.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Deserializable;
 
 /**
  * A {@code BuildLogState} represents the result of applying changes to the program.

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware;
 
-import com.bossymr.network.annotations.Service;
+import com.bossymr.rapid.robot.api.annotations.Service;
 import com.bossymr.rapid.robot.network.EventLogService;
 import com.bossymr.rapid.robot.network.robotware.io.InputOutputService;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipService;

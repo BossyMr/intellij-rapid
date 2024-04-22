@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
-import com.bossymr.network.annotations.Property;
+import com.bossymr.rapid.robot.api.annotations.Property;
 import org.jetbrains.annotations.NotNull;
 
 public interface TypeSymbol extends SymbolModel {

@@ -5,12 +5,10 @@ import com.bossymr.rapid.language.psi.RapidFile;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
-import com.intellij.model.Pointer;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
-import com.intellij.platform.backend.documentation.DocumentationTarget;
 import com.intellij.platform.backend.navigation.NavigationTarget;
 import com.intellij.platform.backend.presentation.TargetPresentation;
 import com.intellij.psi.PsiFile;
@@ -70,21 +68,6 @@ public class RapidTask implements RapidSymbol {
                 .presentation();
     }
 
-    @Override
-    public @NotNull DocumentationTarget getDocumentationTarget(@NotNull Project project) {
-        return new DocumentationTarget() {
-            @Override
-            public @NotNull Pointer<DocumentationTarget> createPointer() {
-                return () -> null;
-            }
-
-            @Override
-            public @NotNull TargetPresentation computePresentation() {
-                return getTargetPresentation();
-            }
-        };
-    }
-
     public @NotNull Icon getIcon() {
         return RapidIcons.TASK;
     }
@@ -107,9 +90,7 @@ public class RapidTask implements RapidSymbol {
         return files.stream().allMatch(File::isFile);
     }
 
-    public @NotNull Set<PhysicalModule> getModules(@NotNull Project project) {
-        PsiManager psiManager = PsiManager.getInstance(project);
-        Set<PhysicalModule> modules = new HashSet<>();
+    public @NotNull Set<VirtualFile> getVirtualFiles(@NotNull Project project) {
         Set<VirtualFile> virtualFiles = new HashSet<>();
         for (File file : files) {
             if (!(file.exists())) {
@@ -121,6 +102,13 @@ public class RapidTask implements RapidSymbol {
             }
             virtualFiles.add(virtualFile);
         }
+        return virtualFiles;
+    }
+
+    public @NotNull Set<PhysicalModule> getModules(@NotNull Project project) {
+        PsiManager psiManager = PsiManager.getInstance(project);
+        Set<PhysicalModule> modules = new HashSet<>();
+        Set<VirtualFile> virtualFiles = getVirtualFiles(project);
         NonProjectFileWritingAccessProvider.allowWriting(virtualFiles);
         for (VirtualFile file : virtualFiles) {
             PsiFile psiFile = psiManager.findFile(file);

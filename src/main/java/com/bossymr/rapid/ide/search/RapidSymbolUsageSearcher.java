@@ -42,8 +42,7 @@ public class RapidSymbolUsageSearcher implements UsageSearcher {
         PsiSymbolReferenceService service = PsiSymbolReferenceService.getService();
         PsiTreeUtil.treeWalkUp(occurrence.getStart(), occurrence.getScope(), (element, previous) -> {
             for (PsiSymbolReference reference : service.getReferences(element)) {
-                Collection<? extends Symbol> symbols = reference.resolveReference();
-                if (symbols.contains(symbol)) {
+                if (reference.resolvesTo(symbol)) {
                     usages.add(new RapidUsage(reference));
                 }
             }
@@ -60,7 +59,7 @@ public class RapidSymbolUsageSearcher implements UsageSearcher {
         if (!(parameters.getTarget() instanceof RapidSymbolSearchTarget target)) {
             return List.of();
         }
-        RapidSymbol symbol = target.getSymbol();
+        RapidSymbol symbol = target.symbol();
         String name = symbol.getName();
         if (name == null) {
             return List.of();

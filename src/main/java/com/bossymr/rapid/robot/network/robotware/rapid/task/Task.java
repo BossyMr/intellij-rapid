@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
-import com.bossymr.network.NetworkQuery;
-import com.bossymr.network.SubscribableNetworkQuery;
-import com.bossymr.network.annotations.*;
-import com.bossymr.network.client.FetchMethod;
+import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.SubscribableNetworkQuery;
+import com.bossymr.rapid.robot.api.annotations.*;
+import com.bossymr.rapid.robot.api.client.FetchMethod;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleEntity;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;

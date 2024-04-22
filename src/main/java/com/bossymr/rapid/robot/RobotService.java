@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.network.client.security.Credentials;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
+import com.bossymr.rapid.robot.impl.RobotServiceImpl;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
@@ -12,10 +13,14 @@ import java.io.IOException;
 import java.net.URI;
 
 /**
- * A {@code RobotService} is a responsible for communicating with a remote robot. If a robot is currently connected,
- * requests and commands can be transferred and all methods are available. If a robot is persisted, but not connected,
- * only persisted state (modules, routines and symbols) can be retrieved. If a robot is not persisted, no state is
- * available.
+ * A {@code RobotService} is a responsible for communicating with a remote {@link RapidRobot robot}.
+ * <p>
+ * This service persists the state of a robot. As such, symbols and modules found on the robot can still be retrieved
+ * after the robot has been disconnected. If a robot is currently persisted, it can be retrieved using
+ * {@link #getRobot()}. However, this does not mean that this plugin is connected to the robot.
+ * <p>
+ * In order to disconnect from a robot but keep it persisted, {@link RapidRobot#disconnect()} should be called. In
+ * order to disconnect from a robot and delete all persisted state, {@link #disconnect()} should be called.
  */
 public interface RobotService extends PersistentStateComponent<RobotService.State>, Disposable {
 
@@ -28,14 +33,13 @@ public interface RobotService extends PersistentStateComponent<RobotService.Stat
         return ApplicationManager.getApplication().getService(RobotService.class);
     }
 
-    static boolean isConnected() {
-        RobotService service = RobotService.getInstance();
-        RapidRobot robot = service.getRobot();
-        if (robot != null) {
-            return robot.isConnected();
-        }
-        return false;
-    }
+    /**
+     * Checks if this plugin is currently connected to a robot. This asserts that a robot is currently both persisted and
+     * connected to.
+     *
+     * @return if this plugin is currently connected to a robot.
+     */
+    boolean isConnected();
 
     /**
      * Returns the robot which is currently persisted, or connected.
@@ -47,7 +51,7 @@ public interface RobotService extends PersistentStateComponent<RobotService.Stat
     /**
      * Connects to the specified path with the specified credentials.
      *
-     * @param path the path to connect to.
+     * @param path        the path to connect to.
      * @param credentials the credentials to authenticate with.
      * @return the connected robot.
      */

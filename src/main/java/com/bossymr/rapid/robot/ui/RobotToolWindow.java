@@ -1,10 +1,10 @@
 package com.bossymr.rapid.robot.ui;
 
-import com.bossymr.network.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotEventListener;
+import com.bossymr.rapid.robot.api.NetworkManager;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.ide.util.treeView.NodeDescriptor;
@@ -13,7 +13,6 @@ import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.actionSystem.ex.ActionUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
-import com.intellij.psi.PsiElement;
 import com.intellij.ui.PopupHandler;
 import com.intellij.ui.ScrollPaneFactory;
 import com.intellij.ui.SimpleTextAttributes;
@@ -22,6 +21,7 @@ import com.intellij.ui.tree.AsyncTreeModel;
 import com.intellij.ui.tree.StructureTreeModel;
 import com.intellij.util.EditSourceOnDoubleClickHandler;
 import com.intellij.util.EditSourceOnEnterKeyHandler;
+import com.microsoft.z3.Symbol;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -140,13 +140,10 @@ public class RobotToolWindow implements Disposable {
             return null;
         }
 
+        @SuppressWarnings("UnstableApiUsage")
         private @Nullable Object getSlowData(@NotNull @NonNls String dataId) {
-            if (CommonDataKeys.PSI_ELEMENT.is(dataId)) {
-                PsiElement element = getSelectedElement();
-                return element != null && element.isValid() ? element : null;
-            }
-            if (PlatformCoreDataKeys.PSI_ELEMENT_ARRAY.is(dataId)) {
-                return getSelectedElements();
+            if (PlatformCoreDataKeys.SYMBOLS.is(dataId)) {
+                return getSelectedSymbols();
             }
             if (PlatformCoreDataKeys.SELECTED_ITEM.is(dataId)) {
                 AbstractTreeNode<?> selectedNode = getSelectedNode();
@@ -156,28 +153,23 @@ public class RobotToolWindow implements Disposable {
                 List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
                 if (selectedNodes == null) return null;
                 return selectedNodes.stream()
-                                    .map(AbstractTreeNode::getValue)
-                                    .filter(Objects::nonNull)
-                                    .toArray(Object[]::new);
+                        .map(AbstractTreeNode::getValue)
+                        .filter(Objects::nonNull)
+                        .toArray(Object[]::new);
             }
             return null;
         }
 
-        private @Nullable PsiElement getSelectedElement() {
-            AbstractTreeNode<?> selectedNode = getSelectedNode();
-            Object value = selectedNode != null ? selectedNode.getValue() : null;
-            return value instanceof PsiElement element ? element : null;
-        }
-
-        private @Nullable PsiElement[] getSelectedElements() {
+        private @NotNull List<Symbol> getSelectedSymbols() {
             List<AbstractTreeNode<?>> selectedNodes = getSelectedNodes();
-            if (selectedNodes == null) return null;
+            if (selectedNodes == null) {
+                return List.of();
+            }
             return selectedNodes.stream()
-                                .map(AbstractTreeNode::getValue)
-                                .filter(element -> element instanceof PsiElement)
-                                .map(element -> ((PsiElement) element))
-                                .filter(PsiElement::isValid)
-                                .toArray(PsiElement[]::new);
+                    .map(AbstractTreeNode::getValue)
+                    .filter(element -> element instanceof Symbol)
+                    .map(element -> ((Symbol) element))
+                    .toList();
         }
 
 

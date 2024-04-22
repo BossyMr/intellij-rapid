@@ -1,8 +1,8 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
-import com.bossymr.network.NetworkAction;
-import com.bossymr.network.ResponseStatusException;
-import com.bossymr.network.client.NetworkRequest;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.RapidField;
@@ -16,7 +16,6 @@ import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolValue;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.intellij.openapi.application.ReadAction;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.project.Project;
@@ -38,8 +37,6 @@ import java.util.Objects;
 
 public class RapidStackFrame extends XStackFrame {
 
-    private static final @NotNull Logger logger = Logger.getInstance(RapidStackFrame.class);
-
     private final @NotNull Project project;
     private final @NotNull StackFrame stackFrame;
     private final @Nullable String equalityObject;
@@ -53,7 +50,6 @@ public class RapidStackFrame extends XStackFrame {
         this.sourcePosition = findSourcePosition(stackFrame);
         this.stackFrame = stackFrame;
     }
-
 
     private @Nullable RapidSourcePosition findSourcePosition(@NotNull StackFrame stackFrame) {
         String[] sections = stackFrame.getRoutine().split("/");
@@ -100,7 +96,7 @@ public class RapidStackFrame extends XStackFrame {
     public void computeChildren(@NotNull XCompositeNode node) {
         if (node.isObsolete()) return;
         process.execute(() -> ReadAction.run(() -> {
-            RapidSymbol symbol = ResolveService.getInstance(project).findSymbol(stackFrame.getRoutine());
+            RapidSymbol symbol = ResolveService.getInstance(project).getRemoteSymbol(stackFrame.getRoutine());
             XValueChildrenList childrenList = new XValueChildrenList();
             NetworkAction manager = new NetworkAction(process.getManager()) {
                 @Override

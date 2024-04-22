@@ -8,6 +8,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.codeInsight.TailType;
 import com.intellij.codeInsight.TailTypes;
 import com.intellij.codeInsight.completion.*;
+import com.intellij.openapi.project.DumbAware;
 import com.intellij.patterns.ElementPattern;
 import com.intellij.patterns.PsiElementPattern;
 import com.intellij.psi.PsiElement;
@@ -19,7 +20,7 @@ import static com.intellij.patterns.PlatformPatterns.psiElement;
 import static com.intellij.patterns.StandardPatterns.or;
 import static com.intellij.patterns.StandardPatterns.string;
 
-public class RapidKeywordCompletionContributor extends CompletionContributor {
+public class RapidKeywordCompletionContributor extends CompletionContributor implements DumbAware {
 
     public static final ElementPattern<PsiElement> BEFORE_MODULE = psiElement().andNot(psiElement().afterLeaf(psiElement()));
 
