@@ -61,8 +61,8 @@ dependencies {
     // z3 is used for data flow analysis
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
     // Apache Tika is used to extract external documentation
-    implementation("org.apache.tika:tika-core:2.9.1")
-    implementation("org.apache.tika:tika-parser-microsoft-module:2.9.1")
+    implementation("org.apache.tika:tika-core:2.9.2")
+    implementation("org.apache.tika:tika-parser-microsoft-module:2.9.2")
     // Jsoup is used to reformat external documentation
     implementation("org.jsoup:jsoup:1.17.2")
     // OkHttp is used to communicate with a remote robot

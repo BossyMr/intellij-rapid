@@ -18,8 +18,6 @@ import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.util.download.DownloadableFileDescription;
 import com.intellij.util.download.DownloadableFileService;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.parser.microsoft.chm.ChmCommons;
-import org.apache.tika.parser.microsoft.chm.ChmDirectoryListingSet;
 import org.apache.tika.parser.microsoft.chm.ChmExtractor;
 import org.apache.tika.parser.microsoft.chm.DirectoryListingEntry;
 import org.jetbrains.annotations.NotNull;
@@ -29,8 +27,6 @@ import org.jetbrains.annotations.Unmodifiable;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -295,7 +291,6 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         } catch (TikaException e) {
             throw new IOException(e);
         }
-        patchExtractor(extractor);
         List<DirectoryListingEntry> entries = extractor.getChmDirList().getDirectoryListingEntryList();
         indicator.setIndeterminate(false);
         DocumentationNodeVisitor visitor = new DocumentationNodeVisitor(index);
@@ -397,27 +392,6 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         }
         return index;
     }
-
-    //region Temporary fix until Apache Tika is updated (https://issues.apache.org/jira/projects/TIKA/issues/TIKA-4204)
-    private void patchExtractor(@NotNull ChmExtractor extractor) {
-        ChmDirectoryListingSet chmDirList = extractor.getChmDirList();
-        int indexOfContent = ChmCommons.indexOf(chmDirList.getDirectoryListingEntryList(), "::DataSpace/Storage/MSCompressed/Content");
-        callSetter(extractor, "setIndexOfContent", indexOfContent, int.class);
-        DirectoryListingEntry contentEntity = chmDirList.getDirectoryListingEntryList().get(indexOfContent);
-        callSetter(extractor, "setLzxBlockOffset", contentEntity.getOffset() + chmDirList.getDataOffset(), long.class);
-        callSetter(extractor, "setLzxBlockLength", contentEntity.getLength(), long.class);
-    }
-
-    private void callSetter(@NotNull ChmExtractor extractor, @NotNull String name, @NotNull Object value, @NotNull Class<?> clazz) {
-        try {
-            Method method = extractor.getClass().getDeclaredMethod(name, clazz);
-            method.setAccessible(true);
-            method.invoke(extractor, value);
-        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    //endregion
 
     public enum State {
         /**
