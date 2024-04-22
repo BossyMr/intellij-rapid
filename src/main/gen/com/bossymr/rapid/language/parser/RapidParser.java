@@ -1,15 +1,16 @@
 // This is a generated file. Not intended for manual editing.
 package com.bossymr.rapid.language.parser;
 
+import com.intellij.lang.ASTNode;
+import com.intellij.lang.LightPsiParser;
 import com.intellij.lang.PsiBuilder;
 import com.intellij.lang.PsiBuilder.Marker;
-import static com.bossymr.rapid.language.psi.RapidElementTypes.*;
-import static com.bossymr.rapid.language.parser.RapidParserUtil.*;
-import com.intellij.psi.tree.IElementType;
-import com.intellij.lang.ASTNode;
-import com.intellij.psi.tree.TokenSet;
 import com.intellij.lang.PsiParser;
-import com.intellij.lang.LightPsiParser;
+import com.intellij.psi.tree.IElementType;
+import com.intellij.psi.tree.TokenSet;
+
+import static com.bossymr.rapid.language.parser.RapidParserUtil.*;
+import static com.bossymr.rapid.language.psi.RapidElementTypes.*;
 import static com.bossymr.rapid.language.psi.RapidTokenTypes.*;
 
 @SuppressWarnings({"SimplifiableIfStatement", "UnusedAssignment"})
@@ -547,7 +548,7 @@ public class RapidParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // '\' (optional_argument | conditional_argument)
+  // '\' (conditional_argument | optional_argument)
   public static boolean conditional_or_optional_argument(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "conditional_or_optional_argument")) return false;
     if (!nextTokenIs(b, BACKSLASH)) return false;
@@ -560,12 +561,12 @@ public class RapidParser implements PsiParser, LightPsiParser {
     return r || p;
   }
 
-  // optional_argument | conditional_argument
+  // conditional_argument | optional_argument
   private static boolean conditional_or_optional_argument_1(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "conditional_or_optional_argument_1")) return false;
     boolean r;
-    r = optional_argument(b, l + 1);
-    if (!r) r = conditional_argument(b, l + 1);
+    r = conditional_argument(b, l + 1);
+    if (!r) r = optional_argument(b, l + 1);
     return r;
   }
 

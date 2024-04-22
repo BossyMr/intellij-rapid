@@ -33,7 +33,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
-                	
+                                
                 	STATEMENT_LIST:
                 	0: _0 := 2.0 * 3.0;
                 	1: return _0;
@@ -294,7 +294,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                     FUNC num bar()
                         return Abs(-1);
                     ENDFUNC
-                    
+                                
                     FUNC num Abs(num value)
                         IF value >= 0 THEN
                             return value;
@@ -332,7 +332,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                     PROC bar(\\num a)
                         conditional \\a?a;
                     ENDPROC
-                    
+                                
                     PROC conditional(\\num a) ENDPROC
                 ENDMODULE
                 """, """
@@ -363,7 +363,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                     PROC bar(\\num a, \\num b)
                         conditional \\a?a, \\b?b;
                     ENDPROC
-                    
+                                
                     PROC conditional(\\num a, \\num b) ENDPROC
                 ENDMODULE
                 """, """

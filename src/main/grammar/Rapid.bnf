@@ -440,7 +440,7 @@ private required_first_argument ::= !(';' | ')') required_argument {pin=1}
 
 required_argument ::= !('\') [unqualified_reference_expression ':='] empty_expression {pin=1}
 
-conditional_or_optional_argument ::= '\' (optional_argument | conditional_argument) {pin=1 elementType=optional_argument}
+conditional_or_optional_argument ::= '\' (conditional_argument | optional_argument) {pin=1 elementType=optional_argument}
 
 upper optional_argument ::= unqualified_reference_expression [optional_argument_value]
 
