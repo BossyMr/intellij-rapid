@@ -17,7 +17,6 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.util.download.DownloadableFileDescription;
 import com.intellij.util.download.DownloadableFileService;
-import com.intellij.util.ui.UIUtil;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.parser.microsoft.chm.ChmCommons;
 import org.apache.tika.parser.microsoft.chm.ChmDirectoryListingSet;
@@ -29,7 +28,6 @@ import org.jetbrains.annotations.Unmodifiable;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -348,21 +346,12 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         createFile(file);
         String name = file.getName();
         String fileExtension = name.substring(name.lastIndexOf('.') + 1);
-        switch (fileExtension) {
-            case "html" -> {
-                String text = visitor.visit(file, content);
-                byte[] data = text.getBytes(StandardCharsets.UTF_8);
-                writeContent(file, data);
-            }
-            case "png" -> {
-                File parentFile = file.getParentFile();
-                if (parentFile.getName().equals("Graphics")) {
-                    writeImage(file, content);
-                } else {
-                    writeContent(file, content);
-                }
-            }
-            default -> writeContent(file, content);
+        if (fileExtension.equals("html")) {
+            String text = visitor.visit(file, content);
+            byte[] data = text.getBytes(StandardCharsets.UTF_8);
+            writeContent(file, data);
+        } else {
+            writeContent(file, content);
         }
     }
 
@@ -380,17 +369,6 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
         if (!file.createNewFile()) {
             throw new IOException("Could not create file: " + file);
         }
-    }
-
-    private void writeImage(@NotNull File file, byte @NotNull [] content) throws IOException {
-        BufferedImage image = ImageIO.read(new ByteArrayInputStream(content));
-        String name = file.getName();
-        int width = image.getWidth(null) / 15;
-        int height = image.getHeight(null) / 15;
-        BufferedImage rescaled = UIUtil.createImage(null, width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D graphics = rescaled.createGraphics();
-        graphics.drawImage(image, 0, 0, width, height, null);
-        ImageIO.write(rescaled, name.substring(name.lastIndexOf(".") + 1), file);
     }
 
     private void writeContent(@NotNull File file, byte @NotNull [] content) throws IOException {
