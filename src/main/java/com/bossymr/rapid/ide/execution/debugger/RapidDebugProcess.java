@@ -129,8 +129,7 @@ public class RapidDebugProcess extends XDebugProcess {
                 if (task.getExecutionState() != TaskExecutionState.STOPPED) {
                     continue;
                 }
-                StackFrame stackFrame = task.getStackFrame(1).get();
-                onProgramStop(task, stackFrame);
+                onProgramStop(task);
             }
         } finally {
             phaser.arriveAndDeregister();
@@ -155,6 +154,23 @@ public class RapidDebugProcess extends XDebugProcess {
             ExecutionService executionService = getExecutionService();
             try {
                 executionService.resetProgramPointer().get();
+                TaskService taskService = manager.createService(TaskService.class);
+                List<Task> tasks = taskService.getTasks().get();
+                for (Task task : tasks) {
+                    StackFrame stackFrame = task.getStackFrame(1).get();
+                    RapidSuspendContext suspendContext = new RapidSuspendContext(project, breakpoints, this, task, stackFrame);
+                    for (XBreakpoint<?> breakpoint : breakpoints) {
+                        if(isAtBreakpoint(stackFrame, breakpoint)) {
+                            logger.debug("Breakpoint '" + breakpoint + "' reached");
+                            boolean shouldSuspend = getSession().breakpointReached(breakpoint, null, suspendContext);
+                            if(shouldSuspend) {
+                                logger.debug("Process paused");
+                                getSession().positionReached(suspendContext);
+                                return;
+                            }
+                        }
+                    }
+                }
                 start(ExecutionMode.CONTINUE);
             } catch (IOException | InterruptedException ignored) {}
         });
@@ -176,7 +192,8 @@ public class RapidDebugProcess extends XDebugProcess {
         });
     }
 
-    private void onProgramStop(@NotNull Task task, @NotNull StackFrame stackFrame) {
+    private void onProgramStop(@NotNull Task task) throws IOException, InterruptedException {
+        StackFrame stackFrame = task.getStackFrame(1).get();
         logger.debug("Process paused at '" + stackFrame + "'");
         if (isStopped(stackFrame)) {
             logger.debug("Process stopped");
