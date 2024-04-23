@@ -17,6 +17,7 @@ public class RobotLogToolWindowFactory implements ToolWindowFactory, DumbAware {
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
         ContentManager contentManager = toolWindow.getContentManager();
         toolWindow.setTitle(RapidBundle.message("robot.tool.window.title"));
+        toolWindow.setStripeTitle(RapidBundle.message("robot.tool.window.title"));
         toolWindow.setIcon(RapidIcons.ROBOT_TOOL_WINDOW);
         RobotLogPanelView logView = new RobotLogPanelView(project, toolWindow);
         Content content = contentManager.getFactory().createContent(logView.getPanel(), RapidBundle.message("robot.tool.window.tab.log"), true);
