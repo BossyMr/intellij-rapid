@@ -201,6 +201,8 @@
 
         <!-- Robot -->
 
+        <toolWindow id="RobotLog" anchor="bottom" factoryClass="com.bossymr.rapid.robot.ui.RobotLogToolWindowFactory"/>
+
         <applicationService serviceInterface="com.bossymr.rapid.robot.RobotService"
                             serviceImplementation="com.bossymr.rapid.robot.impl.RobotServiceImpl"/>
 
