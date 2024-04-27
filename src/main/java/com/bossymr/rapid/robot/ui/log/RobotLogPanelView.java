@@ -35,11 +35,7 @@ public class RobotLogPanelView {
 
     private final ConsoleView consoleView;
 
-    private final RobotLogModel model;
-
     public RobotLogPanelView(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        model = new RobotLogModel();
-
         consoleView = createConsoleView(project, toolWindow);
 
         list = new RobotLogListPanel();
@@ -53,7 +49,7 @@ public class RobotLogPanelView {
         field.addDocumentListener(new DocumentAdapter() {
             @Override
             protected void textChanged(@NotNull DocumentEvent e) {
-                List<EventLogMessage> messages = model.getMessages().stream()
+                List<EventLogMessage> messages = RobotLogModel.getInstance().getMessages().stream()
                         .filter(event -> {
                             String messageTitle = event.getMessageTitle();
                             return messageTitle != null && messageTitle.contains(field.getText());
@@ -85,23 +81,23 @@ public class RobotLogPanelView {
         });
 
         // Add a new event to the list
-        model.onMessage(event -> ApplicationManager.getApplication().invokeLater(() -> {
+        RobotLogModel.getInstance().onMessage(event -> ApplicationManager.getApplication().invokeLater(() -> {
             String messageTitle = event.getMessageTitle();
             if (messageTitle == null || !(messageTitle.contains(field.getText()))) {
                 return;
             }
             list.getModel().addElement(event);
-            if (model.isAutoScroll()) {
+            if (RobotLogModel.getInstance().isAutoScroll()) {
                 list.setSelectedIndex(list.getModel().getSize() - 1);
             }
         }, ModalityState.any()));
 
-        model.onRefresh(reload -> {
+        RobotLogModel.getInstance().onRefresh(reload -> {
             if (reload) {
                 list.getModel().clear();
-                list.getModel().addAll(model.getMessages());
+                list.getModel().addAll(RobotLogModel.getInstance().getMessages());
             }
-            if (model.isAutoScroll()) {
+            if (RobotLogModel.getInstance().isAutoScroll()) {
                 if (!(list.getModel().isEmpty())) {
                     list.setSelectedIndex(list.getModel().getSize() - 1);
                 }
@@ -141,6 +137,7 @@ public class RobotLogPanelView {
     }
 
     private @NotNull ActionGroup createActionGroup() {
+        RobotLogModel model = RobotLogModel.getInstance();
         DefaultActionGroup actionGroup = new DefaultActionGroup();
         actionGroup.add(model.new FilterTypeAction(RobotLogModel.EventType.ERROR));
         actionGroup.add(model.new FilterTypeAction(RobotLogModel.EventType.WARNING));

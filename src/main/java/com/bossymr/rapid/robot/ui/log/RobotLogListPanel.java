@@ -10,7 +10,6 @@ import com.intellij.openapi.actionSystem.DataProvider;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.ide.CopyPasteManager;
 import com.intellij.ui.ColoredListCellRenderer;
-import com.intellij.ui.ListSpeedSearch;
 import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.ui.components.JBList;
 import com.intellij.util.ui.JBInsets;
@@ -30,7 +29,6 @@ public class RobotLogListPanel extends JBList<EventLogMessage> implements DataPr
         setCellRenderer(new RobotLogListCellRenderer());
         setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         setEmptyText(RapidBundle.message("robot.tool.window.tab.log.empty.text"));
-        ListSpeedSearch.installOn(this);
     }
 
     @Override
