@@ -4,6 +4,7 @@ import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.network.EventLogMessage;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.CopyProvider;
+import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.actionSystem.DataProvider;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
@@ -12,6 +13,7 @@ import com.intellij.ui.ColoredListCellRenderer;
 import com.intellij.ui.ListSpeedSearch;
 import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.ui.components.JBList;
+import com.intellij.util.ui.JBInsets;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +31,11 @@ public class RobotLogListPanel extends JBList<EventLogMessage> implements DataPr
         setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         setEmptyText(RapidBundle.message("robot.tool.window.tab.log.empty.text"));
         ListSpeedSearch.installOn(this);
+    }
+
+    @Override
+    public @NotNull ActionUpdateThread getActionUpdateThread() {
+        return ActionUpdateThread.BGT;
     }
 
     @Override
@@ -80,6 +87,7 @@ public class RobotLogListPanel extends JBList<EventLogMessage> implements DataPr
             if (messageTitle != null) {
                 append(messageTitle, SimpleTextAttributes.REGULAR_ATTRIBUTES);
             }
+            setBorderInsets(JBInsets.create(5, 5));
         }
 
         private @NotNull Icon getIcon(@NotNull EventLogMessage message) {
