@@ -6,55 +6,79 @@ import org.jetbrains.annotations.Nullable;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
-public record EntityModel(@NotNull String title,
-                          @NotNull String type,
-                          @NotNull Map<String, URI> links,
-                          @NotNull Map<String, String> properties) {
+public class EntityModel {
 
-    public static @NotNull Builder<EntityModel> newBuilder(@NotNull String title, @NotNull String type) {
-        return new Builder<>(title, type) {
-            @Override
-            public @NotNull EntityModel build() {
-                return entityModel;
-            }
-        };
+    private final String type, title;
+
+    private final Map<String, URI> links;
+    private final Map<String, String> properties;
+
+    public EntityModel(@NotNull String type, @NotNull String title) {
+        this.type = type;
+        this.title = title;
+        this.links = new HashMap<>();
+        this.properties = new HashMap<>();
     }
 
-    public @Nullable URI link(@NotNull String type) {
+    public @NotNull String getType() {
+        return type;
+    }
+
+    public @NotNull String getTitle() {
+        return title;
+    }
+
+    public @NotNull Map<String, URI> getLinks() {
+        return links;
+    }
+
+    public @Nullable URI getLink(@NotNull String type) {
         return links.get(type);
     }
 
-    public @Nullable String property(@NotNull String type) {
+    public @NotNull Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public @Nullable String getProperty(@NotNull String type) {
         return properties.get(type);
     }
 
-    public abstract static class Builder<T> {
-
-        protected final EntityModel entityModel;
-        private final URI basePath;
-
-        public Builder(@NotNull String title, @NotNull String type) {
-            this(URI.create(""), title, type);
-        }
-
-        public Builder(@NotNull URI basePath, @NotNull String title, @NotNull String type) {
-            this.basePath = basePath;
-            this.entityModel = new EntityModel(title, type, new HashMap<>(), new HashMap<>());
-        }
-
-        public @NotNull Builder<T> link(@NotNull String type, @NotNull URI link) {
-            entityModel.links().put(type, basePath.resolve(link));
-            return this;
-        }
-
-        public @NotNull Builder<T> property(@NotNull String type, @NotNull String value) {
-            entityModel.properties().put(type, value);
-            return this;
-        }
-
-        public abstract @NotNull T build();
-
+    public @NotNull String toXML() {
+        StringBuilder buffer = new StringBuilder();
+        buffer.append("<li class=\"").append(type).append("\" title=\"").append(title).append("\">");
+        writeXML(buffer);
+        buffer.append("</li>");
+        return buffer.toString();
     }
 
+    protected void writeXML(@NotNull StringBuilder buffer) {
+        getLinks().forEach((type, value) -> buffer.append("<a href=\"").append(value).append("\" rel=\"").append(value).append("\"></a>"));
+        getProperties().forEach((type, value) -> buffer.append("<span class=\"").append(type).append("\">").append(value).append("</span>"));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        EntityModel that = (EntityModel) o;
+        return Objects.equals(type, that.type) && Objects.equals(title, that.title) && Objects.equals(links, that.links) && Objects.equals(properties, that.properties);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, title, links, properties);
+    }
+
+    @Override
+    public String toString() {
+        return "EntityModel{" +
+                "type='" + getType() + '\'' +
+                ", title='" + getTitle() + '\'' +
+                ", links=" + getLinks() +
+                ", properties=" + getProperties() +
+                '}';
+    }
 }
