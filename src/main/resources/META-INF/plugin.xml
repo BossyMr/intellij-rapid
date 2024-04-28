@@ -201,12 +201,15 @@
 
         <!-- Robot -->
 
+        <toolWindow id="Robot" icon="com.bossymr.rapid.RapidIcons.ROBOT_TOOL_WINDOW" anchor="bottom"
+                    factoryClass="com.bossymr.rapid.robot.ui.RobotLogToolWindowFactory"/>
+
         <applicationService serviceInterface="com.bossymr.rapid.robot.RobotService"
                             serviceImplementation="com.bossymr.rapid.robot.impl.RobotServiceImpl"/>
 
         <projectService serviceImplementation="com.bossymr.rapid.robot.ui.RobotToolWindowService"/>
 
-        <toolWindow id="Robot" anchor="right" icon="com.bossymr.rapid.RapidIcons.ROBOT_TOOL_WINDOW"
+        <toolWindow id="RobotOld" anchor="right" icon="com.bossymr.rapid.RapidIcons.ROBOT_TOOL_WINDOW"
                     factoryClass="com.bossymr.rapid.robot.ui.RobotToolWindowFactory"/>
 
         <editorNotificationProvider implementation="com.bossymr.rapid.robot.ui.RobotNotificationProvider"/>
