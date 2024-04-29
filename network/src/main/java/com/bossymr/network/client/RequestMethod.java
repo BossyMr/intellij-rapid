@@ -3,7 +3,7 @@ package com.bossymr.network.client;
 /**
  * The {@code RequestType} represents the different request methods.
  */
-public enum RequestType {
+public enum RequestMethod {
 
     /**
      * Sends a request to retrieve a resource.

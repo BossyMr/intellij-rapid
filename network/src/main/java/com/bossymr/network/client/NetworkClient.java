@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.net.CookieManager;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -16,13 +17,19 @@ public class NetworkClient {
     private final Authenticator authenticator;
 
     private final HttpClient client;
+    private final URI basePath;
 
-    public NetworkClient(@NotNull Credentials credentials) {
+    public NetworkClient(@NotNull URI basePath, @NotNull Credentials credentials) {
+        this.basePath = basePath;
         this.client = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .cookieHandler(new CookieManager())
                 .build();
         this.authenticator = new DigestAuthenticator(credentials);
+    }
+
+    public @NotNull URI getBasePath() {
+        return basePath;
     }
 
     public @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
