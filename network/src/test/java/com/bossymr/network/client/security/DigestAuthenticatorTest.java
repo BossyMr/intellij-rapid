@@ -12,16 +12,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DigestAuthenticatorTest {
 
+    private static final String USERNAME = "username";
+    private static final String PASSWORD = "password";
+
     @Test
     void authenticate() throws IOException, InterruptedException {
-        final String username = "username";
-        final String password = "password";
+        URI path = URI.create("http://httpbin.org/digest-auth/auth/" + USERNAME + "/" + PASSWORD);
         HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder(URI.create("http://httpbin.org/digest-auth/auth/" + username + "/" + password))
-                                         .build();
+        DigestAuthenticator authenticator = new DigestAuthenticator(new Credentials(USERNAME, PASSWORD));
+        HttpRequest request = HttpRequest.newBuilder(path).build();
+        // Try to send the request without authentication
         HttpResponse<Void> unauthenticated = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
         assertEquals(401, unauthenticated.statusCode());
-        DigestAuthenticator authenticator = new DigestAuthenticator(new Credentials(username, password));
+        // Try to send the request with authentication
         HttpResponse<Void> authenticated = httpClient.send(authenticator.authenticate(unauthenticated), HttpResponse.BodyHandlers.discarding());
         assertEquals(200, authenticated.statusCode());
     }
