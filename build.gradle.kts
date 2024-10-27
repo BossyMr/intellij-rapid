@@ -1,5 +1,6 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 
 plugins {
     // Java support
@@ -68,10 +69,12 @@ dependencies {
     api("com.squareup.okhttp3:okhttp:5.0.0-alpha.12")
     implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.12")
     // Junit is used for testing
-    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation(platform("org.junit:junit-bom:5.11.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     //  Wiremock is used to test network API
     testImplementation("org.wiremock:wiremock:3.5.3")
     // JmDNS is used to discover robots on the local network
@@ -143,20 +146,23 @@ tasks {
         gradleVersion = providers.gradleProperty("gradleVersion").get()
     }
 
-    prepareSandbox {
-        from("/src/main/resources/lib/libz3.dll") {
-            into("${intellijPlatform.pluginConfiguration.name}/lib/")
+    val action: PrepareSandboxTask.() -> Unit = {
+        from(layout.projectDirectory.file("src/main/resources/lib/libz3.dll")) {
+            into(pluginName.map { "$it/lib" })
         }
-        from("/src/main/resources/lib/libz3java.dll") {
-            into("${intellijPlatform.pluginConfiguration.name}/lib/")
+        from(layout.projectDirectory.file("src/main/resources/lib/libz3java.dll")) {
+            into(pluginName.map { "$it/lib" })
         }
-        from("/src/main/resources/lib/libz3.so") {
-            into("${intellijPlatform.pluginConfiguration.name}/lib/")
+        from(layout.projectDirectory.file("src/main/resources/lib/libz3.so")) {
+            into(pluginName.map { "$it/lib" })
         }
-        from("/src/main/resources/lib/libz3java.so") {
-            into("${intellijPlatform.pluginConfiguration.name}/lib/")
+        from(layout.projectDirectory.file("src/main/resources/lib/libz3java.so")) {
+            into(pluginName.map { "$it/lib" })
         }
     }
+
+    prepareSandbox(action)
+    prepareTestSandbox(action)
 
     publishPlugin {
         dependsOn(patchChangelog)
