@@ -55,12 +55,6 @@ public class RapidRunLineMarkerContributor extends RunLineMarkerContributor {
             return null;
         }
         AnAction[] actions = ExecutorAction.getActions();
-        return new Info(AllIcons.RunConfigurations.TestState.Run, actions, caller -> {
-            AnActionEvent event = createActionEvent(caller);
-            return Arrays.stream(actions)
-                    .map(action -> getText(action, event))
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.joining("\n"));
-        });
+        return new Info(AllIcons.RunConfigurations.TestState.Run, actions);
     }
 }
