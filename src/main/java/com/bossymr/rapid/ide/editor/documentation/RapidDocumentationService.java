@@ -118,7 +118,7 @@ public class RapidDocumentationService implements PersistentStateComponent<Rapid
     }
 
     private @NotNull Path getDocumentationPath() {
-        return PathManager.getPluginsDir().resolve("Rapid").resolve("documentation");
+        return PathManager.getPluginsDir().resolve("intellij-rapid").resolve("documentation");
     }
 
     /**

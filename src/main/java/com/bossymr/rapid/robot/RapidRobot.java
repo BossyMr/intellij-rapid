@@ -459,7 +459,7 @@ public class RapidRobot implements Disposable {
     }
 
     private @NotNull Path getDefaultPath() {
-        return PathManager.getPluginsDir().resolve("Rapid").resolve("robot");
+        return PathManager.getPluginsDir().resolve("intellij-rapid").resolve("robot");
     }
 
     private @NotNull Set<RapidTask> getPersistedTasks() {

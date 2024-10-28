@@ -73,8 +73,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     //  Wiremock is used to test network API
     testImplementation("org.wiremock:wiremock:3.5.3")
     // JmDNS is used to discover robots on the local network

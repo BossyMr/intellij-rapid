@@ -10,10 +10,14 @@ import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidVariable;
 import com.bossymr.rapid.language.type.RapidPrimitiveType;
 import com.bossymr.rapid.language.type.RapidType;
+import com.intellij.ide.plugins.PluginManager;
+import com.intellij.ide.plugins.PluginUtil;
+import com.intellij.openapi.application.PathManager;
 import com.microsoft.z3.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,13 +35,14 @@ public class ConditionAnalyzer extends ControlFlowVisitor<Expr<?>> {
 
     static {
         System.setProperty("z3.skipLibraryLoad", "true");
+        Path libraryDirectory = PathManager.getPluginsDir().resolve("intellij-rapid").resolve("lib");
         try {
-            System.loadLibrary("z3");
-            System.loadLibrary("z3java");
+            System.load(libraryDirectory.resolve("libz3.dll").toString());
+            System.load(libraryDirectory.resolve("libz3java.dll").toString());
         } catch (UnsatisfiedLinkError e) {
             try {
-                System.loadLibrary("libz3");
-                System.loadLibrary("libz3java");
+                System.load(libraryDirectory.resolve("libz3.so").toString());
+                System.load(libraryDirectory.resolve("libz3java.so").toString());
             } catch (UnsatisfiedLinkError ex) {
                 e.addSuppressed(ex);
                 throw e;
