@@ -20,39 +20,11 @@ public class MultiMap<K, V> extends AbstractMap<K, V> {
     private final Supplier<? extends Collection<Entry<K, V>>> supplier;
 
     /**
-     * Creates a new {@code MultiMap} which stores mappings in instances of {@link ArrayList}. This means that multiple
-     * identical mappings are allowed.
+     * Creates a new {@code MultiMap} which stores mappings in instances of {@link ArrayList}. Multiple identical
+     * mappings are supported.
      */
     public MultiMap() {
         this(ArrayList::new);
-    }
-
-    @Override
-    public V put(K key, V value) {
-        delegate.computeIfAbsent(key, k -> supplier.get()).add(new Node<>(key, value));
-        return null;
-    }
-
-    public void putAll(K key, Collection<V> values) {
-        Collection<Entry<K, V>> entries = delegate.computeIfAbsent(key, k -> supplier.get());
-        for (V value : values) {
-            entries.add(new Node<>(key, value));
-        }
-    }
-
-    public void set(K key, V value) {
-        Collection<Entry<K, V>> entries = delegate.computeIfAbsent(key, unused -> supplier.get());
-        entries.clear();
-        entries.add(new Node<>(key, value));
-    }
-
-    public @NotNull Collection<V> getAll(@NotNull K key) {
-        return new ValueList(key);
-    }
-
-    @Override
-    public @NotNull Set<Entry<K, V>> entrySet() {
-        return new EntrySet();
     }
 
     /**
@@ -64,6 +36,63 @@ public class MultiMap<K, V> extends AbstractMap<K, V> {
     public MultiMap(@NotNull Supplier<? extends Collection<Entry<K, V>>> supplier) {
         this.delegate = new HashMap<>();
         this.supplier = supplier;
+    }
+
+    /**
+     * Associates the specified value with the specified key in this map. If a value is already associated with the
+     * specified key, both mappings are stored.
+     *
+     * @param key key with which the specified value is to be associated
+     * @param value value to be associated with the specified key
+     * @return {@code null}.
+     * @see #set(Object, Object)
+     */
+    @Override
+    public V put(K key, V value) {
+        delegate.computeIfAbsent(key, k -> supplier.get()).add(new Node<>(key, value));
+        return null;
+    }
+
+    /**
+     * Associates the specified values with the specified key in this map. All values are stored as separate mappings.
+     *
+     * @param key key with which the specified values are to be associated.
+     * @param values values to be associated with the specified key.
+     */
+    public void putAll(K key, Collection<V> values) {
+        Collection<Entry<K, V>> entries = delegate.computeIfAbsent(key, k -> supplier.get());
+        for (V value : values) {
+            entries.add(new Node<>(key, value));
+        }
+    }
+
+    /**
+     * Associates the specified value with the specified key in this map. If a value is already associated with the
+     * specified key, the old value is replaced by the specified value.
+     *
+     * @param key key with which the specified value is to be associated.
+     * @param value value to be associated with the specified key.
+     * @see #put(Object, Object)
+     */
+    public void set(K key, V value) {
+        Collection<Entry<K, V>> entries = delegate.computeIfAbsent(key, unused -> supplier.get());
+        entries.clear();
+        entries.add(new Node<>(key, value));
+    }
+
+    /**
+     * Returns all values associated with the specified key.
+     *
+     * @param key the key whose associated values are to be returned.
+     * @return the values associated with the specified key.
+     */
+    public @NotNull Collection<V> getAll(@NotNull K key) {
+        return new ValueList(key);
+    }
+
+    @Override
+    public @NotNull Set<Entry<K, V>> entrySet() {
+        return new EntrySet();
     }
 
     private static final class Node<K, V> implements Map.Entry<K, V> {

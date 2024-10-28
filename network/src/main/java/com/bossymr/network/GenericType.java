@@ -17,6 +17,9 @@ public abstract class GenericType<T> {
 
     private final Type type;
 
+    /**
+     * Creates a new {@code GenericType}.
+     */
     public GenericType() {
         Type superclass = getClass().getGenericSuperclass();
         if (!(superclass instanceof ParameterizedType parameterizedType)) {
@@ -29,10 +32,23 @@ public abstract class GenericType<T> {
         this.type = type;
     }
 
+    /**
+     * Creates a new {@code GenericType} representing the specified type.
+     *
+     * @param type the type.
+     * @return a {@code GenericType} representing the specified type.
+     */
     public static @NotNull GenericType<?> of(@NotNull Type type) {
         return new NonGenericType(type);
     }
 
+    /**
+     * Creates a new {@code GenericType} representing the specified type.
+     *
+     * @param type the type.
+     * @param <T> the type.
+     * @return a {@code GenericType} representing the specified type.
+     */
     @SuppressWarnings("unchecked")
     public static <T> @NotNull GenericType<T> of(@NotNull Class<T> type) {
         return (GenericType<T>) new NonGenericType(type);
@@ -69,10 +85,23 @@ public abstract class GenericType<T> {
         throw new IllegalArgumentException();
     }
 
+    /**
+     * Returns the type of this {@code GenericType}.
+     *
+     * @return the type of this {@code GenericType}.
+     */
     public @NotNull Type getType() {
         return type;
     }
 
+    /**
+     * Returns the outermost type of this {@code GenericType}.
+     * <p>
+     * The outermost type is the least specific type. For example, the outermost type of {@code List<String>} is
+     * {@code List}. Likewise, the outermost type of {@code String[]} is {@code String}.
+     *
+     * @return the outermost type of this {@code GenericType}.
+     */
     public @NotNull Class<?> getRawType() {
         return getRawType(getType());
     }
