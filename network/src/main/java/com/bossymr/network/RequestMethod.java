@@ -1,4 +1,4 @@
-package com.bossymr.network.client;
+package com.bossymr.network;
 
 /**
  * The {@code RequestType} represents the different request methods.

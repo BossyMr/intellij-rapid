@@ -1,6 +1,6 @@
 package com.bossymr.network.client;
 
-import com.bossymr.network.GenericType;
+import com.bossymr.network.RequestMethod;
 import com.bossymr.network.client.security.Credentials;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.http.Body;
@@ -14,8 +14,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpResponse;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.ok;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @WireMockTest
 class NetworkClientTest {
@@ -25,7 +27,7 @@ class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(ok("Hello, World!")));
         NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
-        RawNetworkQuery<String> query = new RawNetworkQuery<>(client, RequestMethod.GET, URI.create("/"), GenericType.of(String.class));
+        RawNetworkQuery<String> query = new RawNetworkQuery<>(client, RequestMethod.GET, URI.create("/"));
         HttpResponse<byte[]> response = query.get();
         assertEquals("Hello, World!", new String(response.body()));
     }
@@ -35,7 +37,7 @@ class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(WireMock.status(321).withResponseBody(Body.ofBinaryOrText("Hello, World!".getBytes(), ContentTypeHeader.absent()))));
         NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
-        RawNetworkQuery<String> query = new RawNetworkQuery<>(client, RequestMethod.GET, URI.create("/"), GenericType.of(String.class));
+        RawNetworkQuery<String> query = new RawNetworkQuery<>(client, RequestMethod.GET, URI.create("/"));
         try {
             query.get();
             fail();

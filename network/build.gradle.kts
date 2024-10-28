@@ -10,6 +10,7 @@ repositories {
 }
 
 dependencies {
+    implementation("net.bytebuddy:byte-buddy:1.15.7")
     implementation("org.slf4j:slf4j-api:2.0.16")
     implementation("org.jsoup:jsoup:1.18.1")
     implementation("org.jetbrains:annotations:26.0.1")

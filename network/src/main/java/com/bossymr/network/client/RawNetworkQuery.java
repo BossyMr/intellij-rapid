@@ -1,7 +1,8 @@
 package com.bossymr.network.client;
 
-import com.bossymr.network.GenericType;
 import com.bossymr.network.MultiMap;
+import com.bossymr.network.NetworkQuery;
+import com.bossymr.network.RequestMethod;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,25 +19,19 @@ public class RawNetworkQuery<T> implements NetworkQuery<HttpResponse<byte[]>> {
     private final RequestMethod method;
     private final NetworkPath path;
     private final MultiMap<String, String> properties = new MultiMap<>();
-    private final GenericType<T> type;
 
-    public RawNetworkQuery(@NotNull NetworkClient client, @NotNull URI path, @NotNull GenericType<T> type) {
-        this(client, RequestMethod.GET, path, type);
+    public RawNetworkQuery(@NotNull NetworkClient client, @NotNull URI path) {
+        this(client, RequestMethod.GET, path);
     }
 
-    public RawNetworkQuery(@NotNull NetworkClient client, @NotNull RequestMethod method, @NotNull URI path, @NotNull GenericType<T> type) {
+    public RawNetworkQuery(@NotNull NetworkClient client, @NotNull RequestMethod method, @NotNull URI path) {
         this.client = client;
         this.method = method;
-        this.type = type;
         this.path = new NetworkPath(path);
     }
 
     public @NotNull URI getPath() {
         return path.getPath();
-    }
-
-    public @NotNull GenericType<T> getType() {
-        return type;
     }
 
     public @NotNull MultiMap<String, String> getProperties() {
