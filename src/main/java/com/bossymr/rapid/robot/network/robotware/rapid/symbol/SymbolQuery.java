@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 
@@ -137,11 +137,11 @@ public class SymbolQuery extends HashMap<String, String> {
     private <E extends Enum<E>> @NotNull String getValue(@NotNull E constant) {
         try {
             Field field = constant.getDeclaringClass().getField(constant.name());
-            Deserializable deserializable = field.getAnnotation(Deserializable.class);
-            if (deserializable == null) {
+            Alias alias = field.getAnnotation(Alias.class);
+            if (alias == null) {
                 throw new IllegalStateException("Field '" + constant.name() + "' of '" + constant.getClass().getName() + "' is not deserializable");
             }
-            return deserializable.value()[0];
+            return alias.value()[0];
         } catch (NoSuchFieldException e) {
             throw new IllegalStateException(e);
         }

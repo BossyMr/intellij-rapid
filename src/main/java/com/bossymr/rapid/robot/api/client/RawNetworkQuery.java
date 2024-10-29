@@ -1,8 +1,9 @@
-package com.bossymr.network.client;
+package com.bossymr.rapid.robot.api.client;
 
-import com.bossymr.network.MultiMap;
-import com.bossymr.network.NetworkQuery;
-import com.bossymr.network.RequestMethod;
+import com.bossymr.rapid.robot.api.GenericType;
+import com.bossymr.rapid.robot.api.MultiMap;
+import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,19 +20,25 @@ public class RawNetworkQuery<T> implements NetworkQuery<HttpResponse<byte[]>> {
     private final RequestMethod method;
     private final NetworkPath path;
     private final MultiMap<String, String> properties = new MultiMap<>();
+    private final GenericType<T> type;
 
-    public RawNetworkQuery(@NotNull NetworkClient client, @NotNull URI path) {
-        this(client, RequestMethod.GET, path);
+    public RawNetworkQuery(@NotNull NetworkClient client, @NotNull URI path, GenericType<T> type) {
+        this(client, RequestMethod.GET, path, type);
     }
 
-    public RawNetworkQuery(@NotNull NetworkClient client, @NotNull RequestMethod method, @NotNull URI path) {
+    public RawNetworkQuery(@NotNull NetworkClient client, @NotNull RequestMethod method, @NotNull URI path, GenericType<T> type) {
         this.client = client;
         this.method = method;
         this.path = new NetworkPath(path);
+        this.type = type;
     }
 
     public @NotNull URI getPath() {
         return path.getPath();
+    }
+
+    public RequestMethod getMethod() {
+        return method;
     }
 
     public @NotNull MultiMap<String, String> getProperties() {
@@ -40,6 +47,10 @@ public class RawNetworkQuery<T> implements NetworkQuery<HttpResponse<byte[]>> {
 
     public @NotNull MultiMap<String, String> getArguments() {
         return path.getArguments();
+    }
+
+    public @NotNull GenericType<T> getType() {
+        return type;
     }
 
     private @Nullable String getBody() {

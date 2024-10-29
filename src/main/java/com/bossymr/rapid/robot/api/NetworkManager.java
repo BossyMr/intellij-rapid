@@ -4,7 +4,11 @@ import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Service;
-import com.bossymr.rapid.robot.api.client.*;
+import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
+import com.bossymr.rapid.robot.api.client.NetworkClient;
+import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
+import com.bossymr.rapid.robot.api.client.SubscribableEvent;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
 
@@ -62,7 +66,7 @@ public interface NetworkManager extends AutoCloseable {
      * @param <T> the response type.
      * @return the query.
      */
-    <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkRequest<T> request);
+    <T> @NotNull NetworkQuery<T> createQuery(@NotNull RawNetworkQuery<T> request);
 
     /**
      * Creates a new {@code SubscribableNetworkQuery} which will subscribe to the specified event.
@@ -101,7 +105,7 @@ public interface NetworkManager extends AutoCloseable {
      *
      * @param listener the event listener.
      */
-    void subscribe(@NotNull NetworkManagerListener listener);
+    void subscribe(@NotNull Listener listener);
 
     /**
      * Close this {@code NetworkManager} and any ongoing subscriptions.
@@ -111,4 +115,17 @@ public interface NetworkManager extends AutoCloseable {
      */
     @Override
     void close() throws IOException, InterruptedException;
+
+    /**
+     * A listener that listens to the state of a {@code NetworkManager}.
+     */
+    interface Listener {
+        /**
+         * Called when a {@code NetworkManager} is closed.
+         *
+         * @throws IOException if an I/O error occurs.
+         * @throws InterruptedException if the current thread is interrupted.
+         */
+        default void onClose() throws IOException, InterruptedException {}
+    }
 }

@@ -5,17 +5,18 @@ import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.ResponseConverter;
 import com.bossymr.rapid.robot.api.ResponseConverterFactory;
 import com.bossymr.rapid.robot.api.annotations.Entity;
-import com.bossymr.rapid.robot.api.client.EntityModel;
-import com.bossymr.rapid.robot.api.client.ResponseModel;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
+import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -48,7 +49,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
     }
 
     @Override
-    public @Nullable T convert(@NotNull Response response) throws IOException, InterruptedException {
+    public @Nullable T convert(@NotNull HttpResponse<byte[]> response) throws IOException, InterruptedException {
         return convert(response, type.getType());
     }
 
@@ -56,7 +57,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
         return convert(List.of(model), type.getType());
     }
 
-    private @Nullable T convert(@NotNull Response response, @NotNull Type returnType) throws IOException, InterruptedException {
+    private @Nullable T convert(@NotNull HttpResponse<byte[]> response, @NotNull Type returnType) throws IOException, InterruptedException {
         List<EntityModel> models = get(response);
         if (models == null) return null;
         return convert(models, returnType);
@@ -87,7 +88,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
             if (entities.size() != 1) {
                 throw new ProxyException("Could not convert '" + models + "' into a single entity of '" + classType.getName() + "'");
             }
-            return (T) entities.get(0);
+            return (T) entities.getFirst();
         }
         throw new ProxyException("Could not convert '" + models + "' into '" + returnType + "'");
     }
@@ -113,31 +114,28 @@ public class EntityConverter<T> implements ResponseConverter<T> {
         throw new ProxyException("'" + returnType + "' is not supported");
     }
 
-    private @Nullable List<EntityModel> get(@NotNull Response response) throws IOException, InterruptedException {
-        byte[] body = response.body().bytes();
-        response.close();
+    private @Nullable List<EntityModel> get(@NotNull HttpResponse<byte[]> response) throws IOException, InterruptedException {
+        byte[] body = response.body();
         if (body.length == 0) return null;
-        ResponseModel collectionModel = ResponseModel.convert(body);
-        List<EntityModel> models = new ArrayList<>(collectionModel.entities());
+        ResponseModel collectionModel = ResponseModel.fromXML(new String(body, StandardCharsets.UTF_8));
+        List<EntityModel> models = new ArrayList<>(collectionModel.getEntities());
         onSingleEntity(models, collectionModel);
-        while (collectionModel.model().reference("next") != null) {
-            Request next = new Request.Builder(response.request())
-                    .url(Objects.requireNonNull(collectionModel.model().reference("next")).toURL())
+        while (collectionModel.getLink("next") != null) {
+            HttpRequest next = HttpRequest.newBuilder(response.request(), (name, value) -> true)
+                    .uri(collectionModel.getLink("next"))
                     .build();
-            try (@NotNull Response closeable = manager.getNetworkClient().send(next)) {
-                response = closeable;
-                collectionModel = ResponseModel.convert(response.body().bytes());
-            }
-            models.addAll(collectionModel.entities());
+            response = manager.getNetworkClient().send(next);
+            collectionModel = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
+            models.addAll(collectionModel.getEntities());
         }
         return models;
     }
 
     private void onSingleEntity(@NotNull List<EntityModel> models, @NotNull ResponseModel collectionModel) {
-        if (collectionModel.model().reference("self") != null) {
+        if (collectionModel.getLink("self") != null) {
             for (EntityModel model : models) {
-                if (model.type().endsWith("-li")) continue;
-                model.references().putIfAbsent("self", collectionModel.model().reference("self"));
+                if (model.getType().endsWith("-li")) continue;
+                model.getLinks().putIfAbsent("self", collectionModel.getLink("self"));
             }
         }
     }

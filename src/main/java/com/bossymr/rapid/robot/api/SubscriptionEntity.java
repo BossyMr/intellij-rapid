@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.api;
 
-import com.bossymr.rapid.robot.api.client.EntityModel;
 import com.bossymr.rapid.robot.api.client.NetworkClient;
 import com.bossymr.rapid.robot.api.client.SubscribableEvent;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -17,6 +17,13 @@ public abstract class SubscriptionEntity {
     private final @NotNull SubscriptionPriority priority;
     private final @NotNull NetworkClient client;
 
+    /**
+     * Creates a new {@code SubscriptionEntity}.
+     *
+     * @param client the client managing the subscription.
+     * @param event the event which is subscribed to.
+     * @param priority the subscription priority.
+     */
     public SubscriptionEntity(@NotNull NetworkClient client, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority) {
         this.client = client;
         this.event = event;
@@ -31,13 +38,12 @@ public abstract class SubscriptionEntity {
      * @throws InterruptedException if the current thread is interrupted.
      */
     public static void unsubscribe(@NotNull Collection<SubscriptionEntity> entities) throws IOException, InterruptedException {
-        Map<NetworkClient, List<SubscriptionEntity>> sorted = new HashMap<>();
+        MultiMap<NetworkClient, SubscriptionEntity> clients = new MultiMap<>();
         for (SubscriptionEntity entity : entities) {
-            sorted.putIfAbsent(entity.client, new ArrayList<>());
-            sorted.get(entity.client).add(entity);
+            clients.put(entity.client, entity);
         }
-        for (NetworkClient client : sorted.keySet()) {
-            client.unsubscribe(sorted.get(client));
+        for (NetworkClient client : clients.keySet()) {
+            client.unsubscribe(clients.getAll(client));
         }
     }
 
@@ -72,9 +78,9 @@ public abstract class SubscriptionEntity {
     @Override
     public String toString() {
         return "SubscriptionEntity{" +
-                "identity=" + Integer.toHexString(hashCode()) +
-                ", event=" + event +
-                ", priority=" + priority +
-                '}';
+               "identity=" + Integer.toHexString(hashCode()) +
+               ", event=" + event +
+               ", priority=" + priority +
+               '}';
     }
 }

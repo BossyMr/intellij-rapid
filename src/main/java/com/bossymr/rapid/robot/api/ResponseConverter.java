@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.net.http.HttpResponse;
 
 public interface ResponseConverter<T> {
 
@@ -16,6 +17,6 @@ public interface ResponseConverter<T> {
      * @throws IOException if an I/O error occurs.
      * @throws InterruptedException if the current thread is interrupted.
      */
-    @Nullable T convert(@NotNull Response response) throws IOException, InterruptedException;
+    @Nullable T convert(@NotNull HttpResponse<byte[]> response) throws IOException, InterruptedException;
 
 }

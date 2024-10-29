@@ -2,6 +2,7 @@ package com.bossymr.rapid.robot.api.client;
 
 import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.annotations.Entity;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ListProxy;
 import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
@@ -12,7 +13,6 @@ import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.api.entity.EntityInvocationHandler;
 import com.bossymr.rapid.robot.api.entity.ServiceInvocationHandler;
 import com.intellij.openapi.diagnostic.Logger;
-import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,6 +21,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +30,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class HeavyNetworkManager implements NetworkManager {
 
-    private static final @NotNull Logger logger = Logger.getInstance(HeavyNetworkManager.class);
-    private final @NotNull NetworkClient networkClient;
-    private final @NotNull Set<NetworkManagerListener> listeners = ConcurrentHashMap.newKeySet();
+    private static final Logger logger = Logger.getInstance(HeavyNetworkManager.class);
+
+    private final NetworkClient networkClient;
     private volatile boolean closed;
+
+    private final @NotNull Set<NetworkManager.Listener> listeners = ConcurrentHashMap.newKeySet();
 
     public HeavyNetworkManager(@NotNull URI defaultPath, @Nullable Credentials credentials) {
         this.networkClient = new NetworkClient(defaultPath, credentials);
@@ -43,7 +46,7 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull NetworkRequest<T> request) {
+    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull RawNetworkQuery<T> request) {
         return () -> {
             GenericType<T> type = request.getType();
             if (type.getRawType().equals(List.class)) {
@@ -54,19 +57,18 @@ public class HeavyNetworkManager implements NetworkManager {
                 }
                 return (T) new ListProxy<>(manager, classArgument, request);
             }
-            try (Response response = manager.getNetworkClient().send(request)) {
-                if (type.getType().equals(Void.class)) {
-                    return null;
-                }
-                for (ResponseConverterFactory factory : Set.of(StringConverter.FACTORY, ResponseModelConverter.FACTORY, EntityConverter.FACTORY)) {
-                    ResponseConverter<T> converter = factory.create(manager, type);
-                    if (converter != null) {
-                        return converter.convert(response);
-                    }
-                }
-                logger.warn("Could not convert " + response + " into " + type);
+            HttpResponse<byte[]> response = request.get();
+            if (type.getType().equals(Void.class)) {
                 return null;
             }
+            for (ResponseConverterFactory factory : Set.of(StringConverter.FACTORY, ResponseModelConverter.FACTORY, EntityConverter.FACTORY)) {
+                ResponseConverter<T> converter = factory.create(manager, type);
+                if (converter != null) {
+                    return converter.convert(response);
+                }
+            }
+            logger.warn("Could not convert " + response + " into " + type);
+            return null;
         };
     }
 
@@ -79,7 +81,7 @@ public class HeavyNetworkManager implements NetworkManager {
                     new Class[]{actualType, EntityProxy.class},
                     new EntityInvocationHandler(manager, actualType, model));
         }
-        throw new IllegalArgumentException(model.type() + " could not be converted into " + entityType.getName());
+        throw new IllegalArgumentException(model.getType() + " could not be converted into " + entityType.getName());
     }
 
     @SuppressWarnings("unchecked")
@@ -92,7 +94,7 @@ public class HeavyNetworkManager implements NetworkManager {
 
     private static <T> @Nullable Class<? extends T> getEntityType(@NotNull Class<T> entityType, @NotNull EntityModel model) {
         Map<String, Class<? extends T>> entities = getEntityGraph(entityType);
-        String type = model.type();
+        String type = model.getType();
         if (type.endsWith("-li")) {
             return entities.get(type.substring(0, type.length() - "-li".length()));
         } else {
@@ -126,24 +128,6 @@ public class HeavyNetworkManager implements NetworkManager {
         return entities;
     }
 
-    @Override
-    public @NotNull NetworkClient getNetworkClient() {
-        return networkClient;
-    }
-
-    @Override
-    public void subscribe(@NotNull NetworkManagerListener listener) {
-        if (closed) {
-            throw new IllegalArgumentException("NetworkManager is closed");
-        }
-        listeners.add(listener);
-    }
-
-    @Override
-    public <T> @NotNull T move(@NotNull T entity) {
-        return HeavyNetworkManager.move(entity, this);
-    }
-
     @SuppressWarnings("unchecked")
     public static <T> @NotNull T move(@NotNull T entity, @NotNull NetworkManager manager) {
         if (!(entity instanceof NetworkProxy proxy)) {
@@ -153,7 +137,17 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @Override
-    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull NetworkRequest<T> request) {
+    public @NotNull NetworkClient getNetworkClient() {
+        return networkClient;
+    }
+
+    @Override
+    public <T> @NotNull T move(@NotNull T entity) {
+        return HeavyNetworkManager.move(entity, this);
+    }
+
+    @Override
+    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull RawNetworkQuery<T> request) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
@@ -199,11 +193,16 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @Override
+    public void subscribe(@NotNull Listener listener) {
+        listeners.add(listener);
+    }
+
+    @Override
     public void close() throws IOException, InterruptedException {
         if (closed) {
             return;
         }
-        for (NetworkManagerListener listener : listeners) {
+        for (NetworkManager.Listener listener : listeners) {
             listener.onClose();
         }
         closed = true;

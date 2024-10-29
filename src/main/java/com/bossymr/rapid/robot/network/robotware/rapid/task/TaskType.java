@@ -1,16 +1,16 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum TaskType {
 
-    @Deserializable("Normal")
+    @Alias("Normal")
     NORMAL,
 
-    @Deserializable("Static")
+    @Alias("Static")
     STATIC,
 
-    @Deserializable("SemiStatic")
+    @Alias("SemiStatic")
     SEMI_STATIC
 
 }

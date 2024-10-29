@@ -1,11 +1,13 @@
-package com.bossymr.network.client.security;
+package com.bossymr.rapid.robot.api.client.security;
 
+import com.intellij.testFramework.junit5.RunInEdt;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
+@RunInEdt
 class ChallengeParserTest {
 
     private void assertEquals(List<Challenge> expected, String input) {

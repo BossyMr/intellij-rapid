@@ -1,4 +1,4 @@
-package com.bossymr.network.client.parse;
+package com.bossymr.rapid.robot.api.client.entity;
 
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -115,8 +116,20 @@ public class ResponseModel extends EntityModel {
         }
 
         @Override
+        public @NotNull Builder properties(@NotNull Map<String, String> properties) {
+            super.properties(properties);
+            return this;
+        }
+
+        @Override
         public @NotNull Builder link(@NotNull String key, @NotNull URI value) {
             super.link(key, value);
+            return this;
+        }
+
+        @Override
+        public @NotNull Builder links(@NotNull Map<String, URI> links) {
+            super.links(links);
             return this;
         }
 
@@ -130,6 +143,11 @@ public class ResponseModel extends EntityModel {
             consumer.accept(builder);
             EntityModel entity = builder.build();
             model.getEntities().add(entity);
+            return this;
+        }
+
+        public @NotNull Builder entities(@NotNull List<EntityModel> entities) {
+            model.getEntities().addAll(entities);
             return this;
         }
 

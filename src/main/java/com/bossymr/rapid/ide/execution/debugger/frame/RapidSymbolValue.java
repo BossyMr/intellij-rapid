@@ -2,7 +2,6 @@ package com.bossymr.rapid.ide.execution.debugger.frame;
 
 import com.bossymr.rapid.robot.api.NetworkAction;
 import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.*;
@@ -11,6 +10,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.language.type.RapidType;
+import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
@@ -103,7 +103,7 @@ public class RapidSymbolValue extends XNamedValue {
     protected @NotNull String getValue() throws IOException, InterruptedException {
         NetworkManager manager = new NetworkAction(process.getManager()) {
             @Override
-            protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+            protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                 close();
                 return false;
             }

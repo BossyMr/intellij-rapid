@@ -1,6 +1,6 @@
-package com.bossymr.network.client;
+package com.bossymr.rapid.robot.api.client;
 
-import com.bossymr.network.MultiMap;
+import com.bossymr.rapid.robot.api.MultiMap;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;

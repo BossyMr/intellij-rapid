@@ -26,30 +26,30 @@ class NetworkActionTest {
         wireMock.register(get("/success").willReturn(okForContentType("text/plain", "Hello, World!")));
         wireMock.register(get("/failure").willReturn(badRequest()));
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
-            record SuccessEntity<T>(@NotNull NetworkRequest<T> request, @Nullable T entity) {}
-            record FailureEntity(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {}
+            record SuccessEntity<T>(@NotNull RawNetworkQuery<T> request, @Nullable T entity) {}
+            record FailureEntity(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) {}
 
             AtomicReference<SuccessEntity<?>> success = new AtomicReference<>();
             AtomicReference<FailureEntity> failure = new AtomicReference<>();
             NetworkAction action = new NetworkAction(manager) {
                 @Override
-                protected <T> boolean onSuccess(@NotNull NetworkRequest<T> request, @Nullable T entity) {
+                protected <T> boolean onSuccess(@NotNull RawNetworkQuery<T> request, @Nullable T entity) {
                     success.set(new SuccessEntity<>(request, entity));
                     return false;
                 }
 
                 @Override
-                protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {
+                protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) {
                     failure.set(new FailureEntity(request, throwable));
                     return false;
                 }
             };
-            NetworkRequest<String> successRequest = new NetworkRequest<>(URI.create("/success"), GenericType.of(String.class));
+            RawNetworkQuery<String> successRequest = new RawNetworkQuery<>(action.getNetworkClient(), URI.create("/success"), GenericType.of(String.class));
             String entity = action.createQuery(successRequest).get();
             assertNotNull(success.get());
             assertEquals(successRequest, success.get().request());
             assertEquals(entity, success.get().entity());
-            NetworkRequest<String> failureRequest = new NetworkRequest<>(URI.create("/failure"), GenericType.of(String.class));
+            RawNetworkQuery<String> failureRequest = new RawNetworkQuery<>(action.getNetworkClient(), URI.create("/failure"), GenericType.of(String.class));
             try {
                 action.createQuery(failureRequest).get();
                 fail();
@@ -69,23 +69,23 @@ class NetworkActionTest {
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             NetworkAction action = new NetworkAction(manager) {
                 @Override
-                protected <T> boolean onSuccess(@NotNull NetworkRequest<T> request, @Nullable T entity) {
+                protected <T> boolean onSuccess(@NotNull RawNetworkQuery<T> request, @Nullable T entity) {
                     throw new IllegalArgumentException();
                 }
 
                 @Override
-                protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {
+                protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) {
                     throw new IllegalStateException(throwable);
                 }
             };
-            NetworkRequest<String> successRequest = new NetworkRequest<>(URI.create("/success"), GenericType.of(String.class));
+            RawNetworkQuery<String> successRequest = new RawNetworkQuery<>(action.getNetworkClient(), URI.create("/success"), GenericType.of(String.class));
             try {
                 action.createQuery(successRequest).get();
             } catch (IllegalStateException e) {
                 // As the request will throw an exception if successful, the onFailure handler will also be called.
                 assertInstanceOf(IllegalArgumentException.class, e.getCause());
             }
-            NetworkRequest<String> failureRequest = new NetworkRequest<>(URI.create("/failure"), GenericType.of(String.class));
+            RawNetworkQuery<String> failureRequest = new RawNetworkQuery<>(action.getNetworkClient(), URI.create("/failure"), GenericType.of(String.class));
             assertThrows(IllegalStateException.class, () -> action.createQuery(failureRequest).get());
         }
     }

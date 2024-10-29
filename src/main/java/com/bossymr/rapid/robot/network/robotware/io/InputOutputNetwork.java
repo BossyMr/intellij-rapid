@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.SubscribableNetworkQuery;
 import com.bossymr.rapid.robot.api.annotations.*;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -23,7 +23,7 @@ public interface InputOutputNetwork {
         @Fetch("{@devices}")
   @NotNull NetworkQuery<List<InputOutputDevice>> getDevices();
 
-    @Fetch(method = FetchMethod.POST, value = "{@self}?action=set")
+    @Fetch(method = RequestMethod.POST, value = "{@self}?action=set")
   @NotNull NetworkQuery<Void> setState(@NotNull InputOutputLogicalState logicalState);
 
     @Subscribable("{@self};state")
@@ -35,7 +35,7 @@ public interface InputOutputNetwork {
         @Fetch("{@self}?resource=config")
   @NotNull NetworkQuery<InputOutputNetworkConfiguration> getConfigurationType(@NotNull @Field("configtype") InputOutputNetworkConfigurationRealm configurationType);
 
-    @Fetch(method = FetchMethod.POST, value = "{@self}?action=config")
+    @Fetch(method = RequestMethod.POST, value = "{@self}?action=config")
   @NotNull NetworkQuery<Void> setConfigurationType(@NotNull @Field("config-type") InputOutputNetworkConfigurationType configurationType);
 
 }

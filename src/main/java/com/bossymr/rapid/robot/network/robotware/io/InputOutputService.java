@@ -1,10 +1,10 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Field;
 import com.bossymr.rapid.robot.api.annotations.Service;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -35,6 +35,6 @@ public interface InputOutputService {
                                                        @NotNull @Field("device") String device,
                                                        @NotNull @Field("signal") String signal);
 
-    @Fetch(method = FetchMethod.POST, value = "/signals?action=unblock-signals")
+    @Fetch(method = RequestMethod.POST, value = "/signals?action=unblock-signals")
     @NotNull NetworkQuery<Void> unblockSignals();
 }

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 /**
  * A {@code RegainMode} is used to determine how to move to the next target, if the robot started execution in the
@@ -11,19 +11,19 @@ public enum RegainMode {
     /**
      * Move the robot back to the path if it is within the configurable maximum distance from the path.
      */
-    @Deserializable("continue")
+    @Alias("continue")
     CONTINUE,
 
     /**
      * Move the robot back to the path.
      */
-    @Deserializable("regain")
+    @Alias("regain")
     REGAIN,
 
     /**
      * Clear the path and continue movement directly to the next target.
      */
-    @Deserializable("clear")
+    @Alias("clear")
     CLEAR
 
 }

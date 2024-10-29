@@ -1,15 +1,15 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task.module;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum ReplaceMode {
 
-    @Deserializable("After")
+    @Alias("After")
     AFTER,
 
-    @Deserializable("Before")
+    @Alias("Before")
     BEFORE,
 
-    @Deserializable("Replace")
+    @Alias("Replace")
     REPLACE
 }

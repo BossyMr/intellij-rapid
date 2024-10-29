@@ -4,81 +4,85 @@ import com.bossymr.rapid.robot.api.ResponseStatusException;
 import com.bossymr.rapid.robot.api.SubscriptionEntity;
 import com.bossymr.rapid.robot.api.SubscriptionListener;
 import com.bossymr.rapid.robot.api.SubscriptionPriority;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
+import com.bossymr.rapid.robot.api.client.security.Authenticator;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
-import com.bossymr.rapid.robot.api.client.security.impl.DigestAuthenticator;
-import com.intellij.openapi.diagnostic.Logger;
-import okhttp3.*;
+import com.bossymr.rapid.robot.api.client.security.DigestAuthenticator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.CookieManager;
 import java.net.URI;
-import java.time.Duration;
-import java.util.ArrayList;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
 
 public class NetworkClient {
 
-    private static final Logger logger = Logger.getInstance(NetworkClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(NetworkClient.class);
+    private final @Nullable Authenticator authenticator;
 
-    private final @NotNull SubscriptionGroup subscriptionGroup;
-    private final @NotNull OkHttpClient httpClient;
+    private final HttpClient client;
+    private final URI basePath;
+    private final SubscriptionGroup subscriptionGroup;
 
-    private final @NotNull URI defaultPath;
-
-    public NetworkClient(@NotNull URI defaultPath, @Nullable Credentials credentials) {
-        this.defaultPath = defaultPath;
-        CookieJar cookieJar = new CookieJar() {
-            private final HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
-
-            @Override
-            public void saveFromResponse(@NotNull HttpUrl url, @NotNull List<Cookie> cookies) {
-                cookieStore.put(url.host(), cookies);
-            }
-
-            @Override
-            public @NotNull List<Cookie> loadForRequest(@NotNull HttpUrl url) {
-                List<Cookie> cookies = cookieStore.get(url.host());
-                return cookies != null ? cookies : new ArrayList<Cookie>();
-            }
-        };
-        Dispatcher dispatcher = new Dispatcher();
-        dispatcher.setMaxRequestsPerHost(1);
-        this.httpClient = new OkHttpClient.Builder()
-                .authenticator(new DigestAuthenticator(credentials))
-                .cookieJar(cookieJar)
-                .callTimeout(Duration.ofSeconds(10))
-                .writeTimeout(Duration.ofSeconds(10))
-                .readTimeout(Duration.ofSeconds(30))
-                .addInterceptor(chain -> {
-                    Response response = chain.proceed(chain.request());
-                    logger.debug("Request {} -> {}", chain.request(), response);
-                    if(response.code() >= 300) {
-                        throw new ResponseStatusException(response, response.body().string());
-                    }
-                    return response;
-                })
-                .dispatcher(dispatcher)
+    public NetworkClient(@NotNull URI basePath, @Nullable Credentials credentials) {
+        this.basePath = basePath;
+        this.client = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .cookieHandler(new CookieManager())
                 .build();
-        this.subscriptionGroup = new SubscriptionGroup(this);
+        if (credentials != null) {
+            this.authenticator = new DigestAuthenticator(credentials);
+        } else {
+            this.authenticator = null;
+        }
+        this.subscriptionGroup = new SubscriptionGroup(this, client);
     }
 
-    public @NotNull URI getDefaultPath() {
-        return defaultPath;
+    public @NotNull URI getBasePath() {
+        return basePath;
     }
 
-    public @NotNull OkHttpClient getHttpClient() {
-        return httpClient;
+    public @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
+        HttpResponse<byte[]> response = send(request, HttpResponse.BodyHandlers.ofByteArray());
+        if(response.statusCode() >= 300) {
+            throw new ResponseStatusException(response);
+        }
+        return response;
     }
 
-    public @NotNull Response send(@NotNull NetworkRequest<?> request) throws IOException, InterruptedException {
-        return send(request.build(defaultPath));
+    private <T> @NotNull HttpResponse<T> send(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
+        // Try to preemptively authenticate the request
+        if (authenticator != null) {
+            request = authenticate(request);
+        }
+        HttpResponse<T> response = client.send(request, bodyHandler);
+        // Check if the request needs to be authenticated
+        if (response.statusCode() != 401 && response.statusCode() != 407) {
+            return response;
+        }
+        if (authenticator != null) {
+            // Try to reauthenticate the request
+            request = authenticator.authenticate(response);
+            if (request != null) {
+                // The request could be authenticated
+                return client.send(request, bodyHandler);
+            }
+        }
+        return response;
     }
 
-    public @NotNull Response send(@NotNull Request request) throws IOException, InterruptedException {
-        return httpClient.newCall(request).execute();
+    private @NotNull HttpRequest authenticate(@NotNull HttpRequest request) {
+        if (authenticator == null) {
+            return request;
+        }
+        HttpRequest httpRequest = authenticator.authenticate(request);
+        return httpRequest != null ? httpRequest : request;
     }
 
     public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {

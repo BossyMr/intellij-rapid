@@ -1,12 +1,12 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum InputOutputPhysicalState {
-    @Deserializable("halted") HALTED,
-    @Deserializable("running") RUNNING,
-    @Deserializable("error") ERROR,
-    @Deserializable("startup") STARTUP,
-    @Deserializable("init") INITIALIZING,
-    @Deserializable("unknown") UNKNOWN,
+    @Alias("halted") HALTED,
+    @Alias("running") RUNNING,
+    @Alias("error") ERROR,
+    @Alias("startup") STARTUP,
+    @Alias("init") INITIALIZING,
+    @Alias("unknown") UNKNOWN,
 }

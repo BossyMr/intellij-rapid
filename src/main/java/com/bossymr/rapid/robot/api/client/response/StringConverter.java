@@ -9,6 +9,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 
 public class StringConverter implements ResponseConverter<String> {
 
@@ -24,7 +26,7 @@ public class StringConverter implements ResponseConverter<String> {
     };
 
     @Override
-    public @Nullable String convert(@NotNull Response response) throws IOException {
-        return response.body().string();
+    public @Nullable String convert(@NotNull HttpResponse<byte[]> response) throws IOException {
+        return new String(response.body(), StandardCharsets.UTF_8);
     }
 }

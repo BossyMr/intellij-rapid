@@ -1,12 +1,12 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum UserLocale {
 
-    @Deserializable("remote")
+    @Alias("remote")
     REMOTE,
 
-    @Deserializable("local")
+    @Alias("local")
     LOCAL
 }

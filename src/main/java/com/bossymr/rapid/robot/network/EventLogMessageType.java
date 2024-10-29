@@ -1,15 +1,15 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum EventLogMessageType {
 
-    @Deserializable("1")
+    @Alias("1")
     INFORMATION,
 
-    @Deserializable("2")
+    @Alias("2")
     WARNING,
 
-    @Deserializable("3")
+    @Alias("3")
     ERROR
 }

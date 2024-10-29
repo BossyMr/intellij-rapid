@@ -1,4 +1,4 @@
-package com.bossymr.network;
+package com.bossymr.rapid.robot.api;
 
 /**
  * The {@code RequestType} represents the different request methods.

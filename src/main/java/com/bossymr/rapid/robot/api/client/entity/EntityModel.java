@@ -1,4 +1,4 @@
-package com.bossymr.network.client.parse;
+package com.bossymr.rapid.robot.api.client.entity;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -128,8 +128,18 @@ public class EntityModel {
             return this;
         }
 
+        public @NotNull Builder<T> properties(@NotNull Map<String, String> properties) {
+            model.getProperties().putAll(properties);
+            return this;
+        }
+
         public @NotNull Builder<T> link(@NotNull String key, @NotNull URI value) {
             model.getLinks().put(key, value);
+            return this;
+        }
+
+        public @NotNull Builder<T> links(@NotNull Map<String, URI> links) {
+            model.getLinks().putAll(links);
             return this;
         }
 

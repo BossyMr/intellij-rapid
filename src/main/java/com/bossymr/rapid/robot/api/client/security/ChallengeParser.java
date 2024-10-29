@@ -1,4 +1,4 @@
-package com.bossymr.network.client.security;
+package com.bossymr.rapid.robot.api.client.security;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

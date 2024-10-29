@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot;
 
-import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
 import java.io.IOException;

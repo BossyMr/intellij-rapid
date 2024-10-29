@@ -1,13 +1,13 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task.module;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum ModuleType {
 
-    @Deserializable("ProgMod")
+    @Alias("ProgMod")
     PROGRAM_MODULE,
 
-    @Deserializable("SysMod")
+    @Alias("SysMod")
     SYSTEM_MODULE
 
 }

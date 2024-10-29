@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.api.client.proxy;
 
-import com.bossymr.rapid.robot.api.client.EntityModel;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,11 +19,11 @@ public interface EntityProxy extends NetworkProxy {
     @NotNull EntityModel getModel();
 
     default @NotNull String getType() {
-        return getModel().type();
+        return getModel().getType();
     }
 
     default @NotNull String getTitle() {
-        return getModel().title();
+        return getModel().getTitle();
     }
 
     @Nullable URI getReference(@NotNull String type);

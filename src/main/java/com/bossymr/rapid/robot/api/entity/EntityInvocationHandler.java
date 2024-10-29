@@ -1,17 +1,15 @@
 package com.bossymr.rapid.robot.api.entity;
 
 import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Title;
-import com.bossymr.rapid.robot.api.client.EntityModel;
 import com.bossymr.rapid.robot.api.client.RequestFactory;
-import com.bossymr.rapid.robot.api.client.ResponseModel;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
+import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,6 +19,9 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -48,7 +49,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             return ((NetworkManager) args[0]).createEntity(type, model);
         }
         if (isMethod(method, EntityProxy.class, "refresh")) {
-            if (model.reference("self") == null) {
+            if (model.getLink("self") == null) {
                 throw new ProxyException("Could not refresh");
             }
             getSelf();
@@ -63,7 +64,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             return model;
         }
         if (method.isAnnotationPresent(Title.class)) {
-            return model.title();
+            return model.getTitle();
         }
         if (method.isAnnotationPresent(Property.class)) {
             Property property = method.getAnnotation(Property.class);
@@ -134,9 +135,9 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     }
 
     private void getField(@NotNull Field field, Map<String, Object> constants) throws IllegalAccessException {
-        Deserializable deserializable = field.getAnnotation(Deserializable.class);
-        if (deserializable != null) {
-            for (String value : deserializable.value()) {
+        Alias alias = field.getAnnotation(Alias.class);
+        if (alias != null) {
+            for (String value : alias.value()) {
                 if (constants.containsKey(value)) {
                     throw new IllegalArgumentException("Enum contains duplicate constant '" + value + "'");
                 }
@@ -165,23 +166,23 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     }
 
     private @Nullable URI getReference(@NotNull String type) {
-        URI reference = model.reference(type);
+        URI reference = model.getLink(type);
         if (reference != null) {
             return reference;
         }
-        if (model.type().endsWith("-li")) {
-            return getSelf().reference(type);
+        if (model.getType().endsWith("-li")) {
+            return getSelf().getLink(type);
         }
         return null;
     }
 
     private @Nullable String getProperty(@NotNull String type) {
-        String field = model.property(type);
+        String field = model.getProperty(type);
         if (field != null) {
             return field;
         }
-        if (model.type().endsWith("-li")) {
-            return getSelf().property(type);
+        if (model.getType().endsWith("-li")) {
+            return getSelf().getProperty(type);
         }
         return null;
     }
@@ -190,20 +191,18 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         if (manager == null) {
             throw new IllegalStateException("Entity is not managed");
         }
-        URI reference = model.reference("self");
+        URI reference = model.getLink("self");
         if (reference == null) {
             throw new ProxyException("Entity '" + model + "' has no reference to itself");
         }
-        Request httpRequest = new Request.Builder().url(reference.toString()).build();
+        HttpRequest request = HttpRequest.newBuilder(reference).build();
         try {
-            ResponseModel collectionModel;
-            try (Response response = manager.getNetworkClient().send(httpRequest)) {
-                collectionModel = ResponseModel.convert(response.body().bytes());
-            }
-            if (collectionModel.entities().size() != 1) {
+            HttpResponse<byte[]> response = manager.getNetworkClient().send(request);
+            ResponseModel collectionModel = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
+            if (collectionModel.getEntities().size() != 1) {
                 throw new ProxyException("Request to self reference '" + reference + "' responded with multiple entities");
             }
-            return model = collectionModel.entities().get(0);
+            return model = collectionModel.getEntities().getFirst();
         } catch (IOException | InterruptedException e) {
             throw new ProxyException(e);
         }

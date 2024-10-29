@@ -1,10 +1,10 @@
 package com.bossymr.rapid.robot.network;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Field;
 import com.bossymr.rapid.robot.api.annotations.Service;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -25,7 +25,7 @@ public interface UserService {
      * @param location the location of the user.
      * @param locale the locale of the user.
      */
-    @Fetch(method = FetchMethod.POST, value = "")
+    @Fetch(method = RequestMethod.POST, value = "")
   @NotNull NetworkQuery<Void> register(@NotNull @Field("username") String username,
                                 @NotNull @Field("application") String application,
                                 @NotNull @Field("location") String location,
@@ -36,7 +36,7 @@ public interface UserService {
      *
      * @param identifier the identifier of the user to impersonate.
      */
-    @Fetch(method = FetchMethod.POST, value = "?action=impersonate")
+    @Fetch(method = RequestMethod.POST, value = "?action=impersonate")
   @NotNull NetworkQuery<Void> impersonate(@NotNull @Field("uid") String identifier);
 
     /**
@@ -45,7 +45,7 @@ public interface UserService {
      *
      * @param locale the new locale.
      */
-    @Fetch(method = FetchMethod.POST, value = "?action=set-locale")
+    @Fetch(method = RequestMethod.POST, value = "?action=set-locale")
   @NotNull NetworkQuery<Void> login(@NotNull @Field("type") UserLocale locale);
 
     /**

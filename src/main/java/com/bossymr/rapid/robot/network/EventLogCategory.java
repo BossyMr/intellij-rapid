@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.network;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.SubscribableNetworkQuery;
 import com.bossymr.rapid.robot.api.annotations.*;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,7 +50,7 @@ public interface EventLogCategory {
     /**
      * Clears all messages in this category.
      */
-    @Fetch(method = FetchMethod.POST, value = "{@self}?action=clear")
+    @Fetch(method = RequestMethod.POST, value = "{@self}?action=clear")
     @NotNull NetworkQuery<Void> clear();
 
     /**

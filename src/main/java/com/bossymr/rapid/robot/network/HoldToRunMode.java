@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionService;
 
 /**
@@ -10,11 +10,11 @@ import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionServic
  */
 public enum HoldToRunMode {
 
-    @Deserializable("press")
+    @Alias("press")
     PRESS,
 
-    @Deserializable("held")
+    @Alias("held")
     HELD,
-    @Deserializable("release")
+    @Alias("release")
     RELEASE,
 }

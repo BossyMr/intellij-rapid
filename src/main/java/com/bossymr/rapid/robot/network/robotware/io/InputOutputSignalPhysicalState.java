@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum InputOutputSignalPhysicalState {
-    @Deserializable("valid") VALID,
-    @Deserializable("invalid") INVALID,
+    @Alias("valid") VALID,
+    @Alias("invalid") INVALID,
 }

@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.mastership;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 /**
  * {@code MastershipType} represents the possible mastership domains.
@@ -10,18 +10,18 @@ public enum MastershipType {
     /**
      * Mastership domain required to update robot configuration.
      */
-    @Deserializable("cfg")
+    @Alias("cfg")
     CONFIGURATION,
 
     /**
      * Mastership domain required to move robot.
      */
-    @Deserializable("motion")
+    @Alias("motion")
     MOTION,
 
     /**
      * Mastership domain required to update or run {@code RAPID} program.
      */
-    @Deserializable("rapid")
+    @Alias("rapid")
     RAPID
 }

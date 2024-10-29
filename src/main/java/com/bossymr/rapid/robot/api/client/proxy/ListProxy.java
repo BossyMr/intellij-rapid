@@ -3,8 +3,8 @@ package com.bossymr.rapid.robot.api.client.proxy;
 import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.NetworkQuery;
-import com.bossymr.rapid.robot.api.client.NetworkRequest;
-import com.bossymr.rapid.robot.api.client.ResponseModel;
+import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
+import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -15,20 +15,20 @@ public class ListProxy<T> extends AbstractList<T> {
 
     private final @NotNull List<List<T>> sections;
 
-    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkRequest<?> request) throws IOException, InterruptedException {
+    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull RawNetworkQuery<?> request) throws IOException, InterruptedException {
         this.sections = build(manager, entityType, request);
     }
 
-    private static <T> @NotNull List<List<T>> build(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull NetworkRequest<?> request) throws IOException, InterruptedException {
-        NetworkRequest<ResponseModel> modelCopy = new NetworkRequest<>(request.getMethod(), request.getPath(), GenericType.of(ResponseModel.class));
-        modelCopy.getFields().putAll(request.getFields());
+    private static <T> @NotNull List<List<T>> build(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull RawNetworkQuery<?> request) throws IOException, InterruptedException {
+        RawNetworkQuery<ResponseModel> modelCopy = new RawNetworkQuery<>(manager.getNetworkClient(), request.getMethod(), request.getPath(), GenericType.of(ResponseModel.class));
+        modelCopy.getProperties().putAll(request.getProperties());
         ResponseModel model = getModel(manager, modelCopy);
         List<List<T>> sections = new ArrayList<>();
         sections.add(createElements(manager, type, model));
         URI next;
-        while ((next = model.model().reference("next")) != null) {
-            NetworkRequest<ResponseModel> copy = new NetworkRequest<>(request.getMethod(), next, GenericType.of(ResponseModel.class));
-            copy.getFields().putAll(request.getFields());
+        while ((next = model.getLink("next")) != null) {
+            RawNetworkQuery<ResponseModel> copy = new RawNetworkQuery<>(manager.getNetworkClient(), request.getMethod(), next, GenericType.of(ResponseModel.class));
+            copy.getProperties().putAll(request.getProperties());
             model = getModel(manager, copy);
             sections.add(createElements(manager, type, model));
         }
@@ -36,7 +36,7 @@ public class ListProxy<T> extends AbstractList<T> {
     }
 
     private static <T> @NotNull List<T> createElements(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull ResponseModel response) {
-        return response.entities().stream()
+        return response.getEntities().stream()
                        .map(entity -> {
                            try {
                                return manager.createEntity(type, entity);
@@ -49,7 +49,7 @@ public class ListProxy<T> extends AbstractList<T> {
                        .toList();
     }
 
-    private static @NotNull ResponseModel getModel(@NotNull NetworkManager manager, @NotNull NetworkRequest<ResponseModel> request) throws IOException, InterruptedException {
+    private static @NotNull ResponseModel getModel(@NotNull NetworkManager manager, @NotNull RawNetworkQuery<ResponseModel> request) throws IOException, InterruptedException {
         NetworkQuery<ResponseModel> query = manager.createQuery(request);
         ResponseModel model = query.get();
         if (model == null) {

@@ -1,42 +1,53 @@
 package com.bossymr.rapid.robot.api.client;
 
 import com.bossymr.rapid.robot.api.GenericType;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.ResponseStatusException;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.http.Body;
+import com.github.tomakehurst.wiremock.http.ContentTypeHeader;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpResponse;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.ok;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @WireMockTest
-public class NetworkClientTest {
+class NetworkClientTest {
 
     @Test
     void successful(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(ok("Hello, World!")));
-        NetworkClient networkClient = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
-        NetworkRequest<?> request = new NetworkRequest<>(URI.create("/"), GenericType.of(ResponseModel.class));
-        try (Response response = networkClient.send(request)) {
-            assertEquals("Hello, World!", response.body().string());
-        }
+        NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
+        RawNetworkQuery<String> query = new RawNetworkQuery<>(client, RequestMethod.GET, URI.create("/"), GenericType.of(String.class));
+        HttpResponse<byte[]> response = query.get();
+        assertEquals("Hello, World!", new String(response.body()));
     }
 
     @Test
     void unsuccessful(@NotNull WireMockRuntimeInfo runtimeInfo) {
         WireMock wireMock = runtimeInfo.getWireMock();
-        wireMock.register(get("/").willReturn(badRequest()));
-        NetworkClient networkClient = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", "".toCharArray()));
-        NetworkRequest<?> request = new NetworkRequest<>(URI.create("/"), GenericType.of(ResponseModel.class));
-        assertThrows(ResponseStatusException.class, () -> networkClient.send(request).close());
+        wireMock.register(get("/").willReturn(WireMock.status(321).withResponseBody(Body.ofBinaryOrText("Hello, World!".getBytes(), ContentTypeHeader.absent()))));
+        NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
+        RawNetworkQuery<String> query = new RawNetworkQuery<>(client, RequestMethod.GET, URI.create("/"), GenericType.of(String.class));
+        try {
+            query.get();
+            fail();
+        } catch (ResponseStatusException e) {
+            assertEquals(321, e.getResponse().statusCode());
+            assertEquals("Hello, World!", new String(e.getResponse().body()));
+        } catch (Exception e) {
+            fail();
+        }
     }
 }

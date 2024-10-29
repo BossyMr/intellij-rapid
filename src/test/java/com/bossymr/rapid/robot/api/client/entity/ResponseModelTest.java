@@ -1,4 +1,4 @@
-package com.bossymr.network.client.parse;
+package com.bossymr.rapid.robot.api.client.entity;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

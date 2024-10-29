@@ -12,6 +12,7 @@ import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -60,7 +61,7 @@ public class RequestFactory {
         throw new ProxyException("Cannot handle method '" + method.getName() + "' in '" + type.getName() + "'");
     }
 
-    private @NotNull NetworkQuery<?> createNetworkCall(@NotNull FetchMethod command, @NotNull String path, @NotNull String @NotNull [] arguments, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
+    private @NotNull NetworkQuery<?> createNetworkCall(@NotNull RequestMethod command, @NotNull String path, @NotNull String @NotNull [] arguments, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         MultiMap<String, String> collected = collect(method, args, annotation -> annotation instanceof Argument argument ? argument.value() : null);
         for (String argument : arguments) {
             String key = argument.split("=")[0];
@@ -73,11 +74,11 @@ public class RequestFactory {
             collected.put(key, value);
         }
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        NetworkRequest<?> request = new NetworkRequest<>(command, URI.create(interpolate(path, proxy, method, args)), GenericType.of(returnType));
-        request.putArguments(collected);
-        request.getFields().putAll(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null));
+        RawNetworkQuery<?> request = new RawNetworkQuery<>(manager.getNetworkClient(), command, URI.create(interpolate(path, proxy, method, args)), GenericType.of(returnType));
+        request.getArguments().putAll(collected);
+        request.getProperties().putAll(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null));
         NetworkQuery<?> query = manager.createQuery(request);
-        if(!method.isAnnotationPresent(RequiresMastership.class)) {
+        if (!method.isAnnotationPresent(RequiresMastership.class)) {
             return query;
         }
         /*
@@ -90,7 +91,7 @@ public class RequestFactory {
             MastershipService mastershipService = manager.createService(MastershipService.class);
             MastershipDomain mastershipDomain = mastershipService.getDomain(mastershipType).get();
             Boolean isHolding = mastershipDomain.isHolding();
-            if(isHolding != null && isHolding) {
+            if (isHolding != null && isHolding) {
                 /*
                  * Mastership is already being held. Mastership should not be released after the request is called,
                  * because some other code - the code that requested mastership - might still require mastership.
@@ -98,7 +99,7 @@ public class RequestFactory {
                 return query.get();
             }
             MastershipStatus status = mastershipDomain.getStatus();
-            if(status != MastershipStatus.NO_MASTER) {
+            if (status != MastershipStatus.NO_MASTER) {
                 /*
                  * Mastership is not held by this client, but it is currently being held by some other client. As such,
                  * the request cannot be completed.
@@ -111,14 +112,17 @@ public class RequestFactory {
              * The network client might close if the request fails and the network client is configured to close on
              * failure.
              */
-            manager.subscribe(() -> {
-                /*
-                 * Check that mastership is still being held.
-                 */
-                MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
-                Boolean holding = domain.isHolding();
-                if(holding != null && holding) {
-                    domain.release().get();
+            manager.subscribe(new NetworkManager.Listener() {
+                @Override
+                public void onClose() throws IOException, InterruptedException {
+                    /*
+                     * Check that mastership is still being held.
+                     */
+                    MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
+                    Boolean holding = domain.isHolding();
+                    if (holding != null && holding) {
+                        domain.release().get();
+                    }
                 }
             });
             Object result = query.get();
@@ -127,7 +131,7 @@ public class RequestFactory {
              */
             MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
             Boolean holding = domain.isHolding();
-            if(holding != null && holding) {
+            if (holding != null && holding) {
                 domain.release().get();
             }
             return result;
@@ -144,36 +148,36 @@ public class RequestFactory {
         MultiMap<String, String> map = collect(method, args, annotation -> annotation instanceof Path argument ? argument.value() : null);
         List<String> query = new ArrayList<>();
         String replaced = Pattern.compile("\\{([^}]*)}").matcher(path)
-                                 .replaceAll(result -> {
-                                     String value = result.group().substring(1, result.group().length() - 1);
-                                     if (value.startsWith("@")) {
-                                         if (!(proxy instanceof EntityProxy model)) {
-                                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a link");
-                                         }
-                                         URI link = model.getReference(value.substring(1));
-                                         if (link == null) {
-                                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
-                                         }
-                                         if (link.getQuery() != null) {
-                                             query.add(link.getQuery());
-                                         }
-                                         return link.getPath();
-                                     }
-                                     if (value.startsWith("#")) {
-                                         if (!(proxy instanceof EntityProxy model)) {
-                                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a field");
-                                         }
-                                         String field = model.getProperty(value.substring(1));
-                                         if (field == null) {
-                                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing field '" + value + "'");
-                                         }
-                                         return field;
-                                     }
-                                     if (map.containsKey(value)) {
-                                         return map.get(value);
-                                     }
-                                     throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' does not provide value for '" + value + "'");
-                                 });
+                .replaceAll(result -> {
+                    String value = result.group().substring(1, result.group().length() - 1);
+                    if (value.startsWith("@")) {
+                        if (!(proxy instanceof EntityProxy model)) {
+                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a link");
+                        }
+                        URI link = model.getReference(value.substring(1));
+                        if (link == null) {
+                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
+                        }
+                        if (link.getQuery() != null) {
+                            query.add(link.getQuery());
+                        }
+                        return link.getPath();
+                    }
+                    if (value.startsWith("#")) {
+                        if (!(proxy instanceof EntityProxy model)) {
+                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a field");
+                        }
+                        String field = model.getProperty(value.substring(1));
+                        if (field == null) {
+                            throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing field '" + value + "'");
+                        }
+                        return field;
+                    }
+                    if (map.containsKey(value)) {
+                        return map.get(value);
+                    }
+                    throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' does not provide value for '" + value + "'");
+                });
         if (query.isEmpty()) {
             return replaced;
         }
@@ -217,7 +221,7 @@ public class RequestFactory {
     private @NotNull String convert(@NotNull Object object) throws NoSuchFieldException {
         if (object instanceof Enum<?> enumerated) {
             var field = object.getClass().getField(enumerated.name());
-            Deserializable annotation = field.getAnnotation(Deserializable.class);
+            Alias annotation = field.getAnnotation(Alias.class);
             return annotation != null ? annotation.value()[0] : enumerated.name();
         }
         return String.valueOf(object);

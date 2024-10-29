@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.api.annotations;
 
-import com.bossymr.rapid.robot.api.client.FetchMethod;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.*;
@@ -15,12 +15,12 @@ import java.lang.annotation.*;
 public @interface Fetch {
 
     /**
-     * Specifies the request method of the request, by default the request will send a {@link FetchMethod#GET GET}
+     * Specifies the request method of the request, by default the request will send a {@link RequestMethod#GET GET}
      * request.
      *
      * @return the request method of the request.
      */
-    @NotNull FetchMethod method() default FetchMethod.GET;
+    @NotNull RequestMethod method() default RequestMethod.GET;
 
     /**
      * Specifies the path of the request. If the path is relative, it will be resolved against the path to the robot.

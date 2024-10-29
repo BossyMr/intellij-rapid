@@ -3,7 +3,6 @@ package com.bossymr.rapid.ide.completion;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.codeInsight.completion.CompletionType;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;

@@ -8,8 +8,8 @@ import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.ResponseStatusException;
-import com.bossymr.rapid.robot.api.client.EntityModel;
 import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.impl.VirtualSymbolFactory;
@@ -157,7 +157,7 @@ public class RapidRobot implements Disposable {
         try {
             return manager.createService(RapidService.class).findSymbol(name).get();
         } catch (ResponseStatusException e) {
-            if (e.getResponse().code() == 400) {
+            if (e.getResponse().statusCode() == 400) {
                 return null;
             }
             throw e;
@@ -277,7 +277,7 @@ public class RapidRobot implements Disposable {
             VirtualSymbol symbol = symbols.get(parentName.toLowerCase());
             if (childName != null) {
                 List<RapidSymbol> results = ResolveService.getChildSymbol(symbol, childName);
-                return results.isEmpty() ? null : (VirtualSymbol) results.get(0);
+                return results.isEmpty() ? null : (VirtualSymbol) results.getFirst();
             }
             return symbol;
         }
@@ -628,8 +628,8 @@ public class RapidRobot implements Disposable {
 
         private static @NotNull Entity convert(EntityModel model) {
             Map<String, String> references = new HashMap<>();
-            model.references().forEach((name, value) -> references.put(name, value.toString()));
-            return new Entity(model.title(), model.type(), model.properties(), Map.copyOf(references));
+            model.getLinks().forEach((name, value) -> references.put(name, value.toString()));
+            return new Entity(model.getTitle(), model.getType(), model.getProperties(), Map.copyOf(references));
         }
 
         /**
@@ -650,7 +650,10 @@ public class RapidRobot implements Disposable {
             }
             Map<String, URI> references = new HashMap<>();
             links.forEach((name, value) -> references.put(name, URI.create(value)));
-            EntityModel model = new EntityModel(title, type, Map.copyOf(references), Map.copyOf(fields));
+            EntityModel model = EntityModel.newBuilder(title, type)
+                    .links(Map.copyOf(references))
+                    .properties(Map.copyOf(fields))
+                    .build();
             if (manager == null) {
                 return NetworkManager.createLightEntity(entityType, model);
             } else {

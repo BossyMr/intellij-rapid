@@ -53,10 +53,12 @@ dependencies {
         instrumentationTools()
         pluginVerifier()
         zipSigner()
+
         testFramework(TestFrameworkType.Platform)
+        testFramework(TestFrameworkType.JUnit5)
     }
 
-    // Annotations used by Intellij for static analysis.
+    // Annotations used for static analysis
     compileOnly("org.jetbrains:annotations:26.0.1")
     // z3 is used for data flow analysis
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
@@ -64,23 +66,26 @@ dependencies {
     implementation("org.apache.tika:tika-core:2.9.2")
     implementation("org.apache.tika:tika-parser-microsoft-module:2.9.2")
     // Jsoup is used to reformat external documentation
-    implementation("org.jsoup:jsoup:1.17.2")
+    implementation("org.jsoup:jsoup:1.18.1")
     // OkHttp is used to communicate with a remote robot
     api("com.squareup.okhttp3:okhttp:5.0.0-alpha.12")
     implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.12")
-    // Junit is used for testing
-    testImplementation(platform("org.junit:junit-bom:5.11.3"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.junit.jupiter:junit-jupiter-api")
-    testImplementation("junit:junit:4.13.2")
-    //  Wiremock is used to test network API
-    testImplementation("org.wiremock:wiremock:3.5.3")
     // JmDNS is used to discover robots on the local network
     implementation("org.jmdns:jmdns:3.5.9")
     // Sentry is used to report errors
     implementation(platform("io.sentry:sentry-bom:7.8.0"))
     implementation("io.sentry:sentry")
+    // Junit is used for testing
+    testImplementation(platform("org.junit:junit-bom:5.11.3"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("junit:junit:4.13.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    //  Wiremock is used to test network API
+    testImplementation("org.wiremock:wiremock:3.5.3")
 }
+
 
 // Configure IntelliJ Platform Gradle Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
 intellijPlatform {
@@ -131,12 +136,6 @@ intellijPlatform {
 changelog {
     groups.empty()
     repositoryUrl = providers.gradleProperty("pluginRepositoryUrl")
-}
-
-configurations {
-    all {
-        resolutionStrategy.sortArtifacts(ResolutionStrategy.SortOrder.DEPENDENCY_FIRST)
-    }
 }
 
 tasks {

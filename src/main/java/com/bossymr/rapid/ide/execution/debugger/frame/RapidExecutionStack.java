@@ -2,8 +2,8 @@ package com.bossymr.rapid.ide.execution.debugger.frame;
 
 import com.bossymr.rapid.robot.api.NetworkAction;
 import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
+import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskExecutionState;
@@ -69,7 +69,7 @@ public class RapidExecutionStack extends XExecutionStack {
             stackFrames = new ArrayList<>();
             NetworkManager manager = new NetworkAction(process.getManager()) {
                 @Override
-                protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                     close();
                     container.errorOccurred(throwable.getLocalizedMessage());
                     return false;

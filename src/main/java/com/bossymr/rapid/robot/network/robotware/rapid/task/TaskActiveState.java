@@ -1,13 +1,13 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum TaskActiveState {
 
-    @Deserializable("On")
+    @Alias("On")
     ENABLED,
 
-    @Deserializable("Off")
+    @Alias("Off")
     DISABLED
 
 }

@@ -5,7 +5,7 @@ import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkAction;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.ResponseStatusException;
-import com.bossymr.rapid.robot.api.client.NetworkRequest;
+import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
@@ -24,7 +24,7 @@ import java.util.Map;
 
 public class RobotNetworkAction extends NetworkAction {
 
-    private final Map<String, NetworkRequest<Void>> onClose = new HashMap<>();
+    private final Map<String, RawNetworkQuery<Void>> onClose = new HashMap<>();
     private volatile boolean showNotifications = true;
 
     public RobotNetworkAction(@NotNull NetworkManager manager) {
@@ -32,7 +32,7 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected <T> boolean onSuccess(@NotNull NetworkRequest<T> request, @Nullable T response) {
+    protected <T> boolean onSuccess(@NotNull RawNetworkQuery<T> request, @Nullable T response) {
         URI previous = request.getPath();
         String path = previous.getPath();
         String query = previous.getQuery();
@@ -40,9 +40,9 @@ public class RobotNetworkAction extends NetworkAction {
             if ("action=request".equals(query)) {
                 try {
                     URI queryPath = new URI(previous.getScheme(), previous.getUserInfo(), previous.getHost(), previous.getPort(), previous.getPath(), "action=release", previous.getFragment());
-                    NetworkRequest<Void> networkRequest = new NetworkRequest<>(queryPath, GenericType.of(Void.class));
-                    networkRequest.getFields().putAll(request.getFields());
-                    onClose.put(previous.getPath(), networkRequest);
+                    RawNetworkQuery<Void> RawNetworkQuery = new RawNetworkQuery<>(getNetworkClient(), queryPath, GenericType.voidType());
+                    RawNetworkQuery.getProperties().putAll(request.getProperties());
+                    onClose.put(previous.getPath(), RawNetworkQuery);
                 } catch (URISyntaxException ignored) {}
             }
             if ("action=release".equals(query)) {
@@ -53,9 +53,9 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+    protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
         if (throwable instanceof ResponseStatusException exception) {
-            if (exception.getResponse().code() == 400) {
+            if (exception.getResponse().statusCode() == 400) {
                 return false;
             }
         }
@@ -69,7 +69,7 @@ public class RobotNetworkAction extends NetworkAction {
             }
         }
         if (showNotifications) {
-            showNotification(request, throwable);
+            showNotification(request);
         }
         close();
         return true;
@@ -77,15 +77,15 @@ public class RobotNetworkAction extends NetworkAction {
 
     @Override
     public void close() throws IOException, InterruptedException {
-        for (NetworkRequest<Void> value : onClose.values()) {
-            getNetworkClient().send(value).close();
+        for (RawNetworkQuery<Void> value : onClose.values()) {
+            value.get();
         }
         super.close();
     }
 
-    private void showNotification(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {
+    private void showNotification(@NotNull RawNetworkQuery<?> request) {
         showNotifications = false;
-        URI path = getNetworkClient().getDefaultPath().resolve(request.getPath());
+        URI path = getNetworkClient().getBasePath().resolve(request.getPath());
         String presentablePath = getPresentablePath(path);
         NotificationGroupManager.getInstance()
                                 .getNotificationGroup("Robot connection errors")

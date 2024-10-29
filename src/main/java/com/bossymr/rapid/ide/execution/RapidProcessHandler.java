@@ -5,7 +5,7 @@ import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.robot.api.NetworkAction;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.SubscriptionPriority;
-import com.bossymr.rapid.robot.api.client.NetworkRequest;
+import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.network.EventLogCategory;
 import com.bossymr.rapid.robot.network.EventLogMessage;
 import com.bossymr.rapid.robot.network.EventLogService;
@@ -36,7 +36,7 @@ public class RapidProcessHandler extends ProcessHandler {
     public RapidProcessHandler(@NotNull CompletableFuture<NetworkManager> future, @NotNull List<TaskState> tasks, @NotNull ExecutorService executorService) {
         this.manager = future.thenApply(manager -> new NetworkAction(manager) {
             @Override
-            protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+            protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                 handleException(throwable);
                 return false;
             }
@@ -79,7 +79,7 @@ public class RapidProcessHandler extends ProcessHandler {
         for (int i = 1; i < categories.size(); i++) {
             NetworkManager action = new NetworkAction(getNetworkManager()) {
                 @Override
-                protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                     close();
                     return false;
                 }
