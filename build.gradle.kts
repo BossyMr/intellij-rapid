@@ -67,9 +67,6 @@ dependencies {
     implementation("org.apache.tika:tika-parser-microsoft-module:2.9.2")
     // Jsoup is used to reformat external documentation
     implementation("org.jsoup:jsoup:1.18.1")
-    // OkHttp is used to communicate with a remote robot
-    api("com.squareup.okhttp3:okhttp:5.0.0-alpha.12")
-    implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.12")
     // JmDNS is used to discover robots on the local network
     implementation("org.jmdns:jmdns:3.5.9")
     // Sentry is used to report errors

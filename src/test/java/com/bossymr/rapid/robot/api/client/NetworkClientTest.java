@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.api.client;
 
-import com.bossymr.rapid.robot.api.GenericType;
+import com.bossymr.rapid.robot.api.NetworkQuery;
 import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.ResponseStatusException;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
@@ -29,7 +29,7 @@ class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(ok("Hello, World!")));
         NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
-        RawNetworkQuery<String> query = new RawNetworkQuery<>(client, RequestMethod.GET, URI.create("/"), GenericType.of(String.class));
+        NetworkQuery<HttpResponse<byte[]>> query = client.newRequest(RequestMethod.GET, URI.create("/")).build();
         HttpResponse<byte[]> response = query.get();
         assertEquals("Hello, World!", new String(response.body()));
     }
@@ -39,7 +39,7 @@ class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(WireMock.status(321).withResponseBody(Body.ofBinaryOrText("Hello, World!".getBytes(), ContentTypeHeader.absent()))));
         NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
-        RawNetworkQuery<String> query = new RawNetworkQuery<>(client, RequestMethod.GET, URI.create("/"), GenericType.of(String.class));
+        NetworkQuery<HttpResponse<byte[]>> query = client.newRequest(RequestMethod.GET, URI.create("/")).build();
         try {
             query.get();
             fail();

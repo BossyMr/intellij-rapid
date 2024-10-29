@@ -1,9 +1,6 @@
 package com.bossymr.rapid.robot.api.client;
 
-import com.bossymr.rapid.robot.api.GenericType;
-import com.bossymr.rapid.robot.api.MultiMap;
-import com.bossymr.rapid.robot.api.RequestMethod;
-import com.bossymr.rapid.robot.api.SubscriptionEntity;
+import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.intellij.openapi.diagnostic.Logger;
@@ -88,8 +85,9 @@ public class SubscriptionGroup {
                 start();
             } else {
                 logger.debug("Updating SubscriptionGroup '{}'", getEntities());
-                RawNetworkQuery<Void> request = new RawNetworkQuery<>(networkClient, RequestMethod.PUT, path, GenericType.voidType());
-                request.getProperties().putAll(getBody(getEntities()));
+                NetworkQuery<HttpResponse<byte[]>> request = networkClient.newRequest(RequestMethod.PUT, path)
+                        .properties(getBody(getEntities()))
+                        .build();
                 request.get();
             }
         } finally {
@@ -99,8 +97,9 @@ public class SubscriptionGroup {
 
     private void start() throws IOException, InterruptedException {
         logger.debug("Starting SubscriptionGroup '{}'", getEntities());
-        RawNetworkQuery<Void> request = new RawNetworkQuery<>(networkClient, RequestMethod.POST, URI.create("/subscription"), GenericType.voidType());
-        request.getProperties().putAll(getBody(entities));
+        NetworkQuery<HttpResponse<byte[]>> request = networkClient.newRequest(RequestMethod.POST, URI.create("/subscription"))
+                .properties(getBody(getEntities()))
+                .build();
         HttpResponse<byte[]> response = request.get();
         ResponseModel model = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
         String path = response.headers().firstValue("Location").orElseThrow();
@@ -135,7 +134,7 @@ public class SubscriptionGroup {
         if (path == null || webSocket == null) {
             return;
         }
-        RawNetworkQuery<Void> request = new RawNetworkQuery<>(networkClient, RequestMethod.DELETE, path, GenericType.of(Void.class));
+        NetworkQuery<HttpResponse<byte[]>> request = networkClient.newRequest(RequestMethod.DELETE, path).build();
         path = null;
         try {
             request.get();

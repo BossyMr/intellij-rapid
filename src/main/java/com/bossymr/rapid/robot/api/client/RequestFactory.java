@@ -20,6 +20,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -74,10 +75,11 @@ public class RequestFactory {
             collected.put(key, value);
         }
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        RawNetworkQuery<?> request = new RawNetworkQuery<>(manager.getNetworkClient(), command, URI.create(interpolate(path, proxy, method, args)), GenericType.of(returnType));
-        request.getArguments().putAll(collected);
-        request.getProperties().putAll(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null));
-        NetworkQuery<?> query = manager.createQuery(request);
+        NetworkQuery<HttpResponse<byte[]>> request = manager.getNetworkClient().newRequest(command, URI.create(interpolate(path, proxy, method, args)))
+                .arguments(collected)
+                .properties(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
+                .build();
+        NetworkQuery<?> query = manager.createQuery(request, GenericType.of(returnType));
         if (!method.isAnnotationPresent(RequiresMastership.class)) {
             return query;
         }

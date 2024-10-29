@@ -10,6 +10,7 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.language.type.RapidType;
+import com.bossymr.rapid.robot.api.NetworkQuery;
 import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
@@ -103,7 +104,7 @@ public class RapidSymbolValue extends XNamedValue {
     protected @NotNull String getValue() throws IOException, InterruptedException {
         NetworkManager manager = new NetworkAction(process.getManager()) {
             @Override
-            protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+            protected boolean onFailure(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                 close();
                 return false;
             }

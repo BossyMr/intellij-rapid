@@ -1,9 +1,6 @@
 package com.bossymr.rapid.robot.api.client.response;
 
-import com.bossymr.rapid.robot.api.GenericType;
-import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.ResponseConverter;
-import com.bossymr.rapid.robot.api.ResponseConverterFactory;
+import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
@@ -14,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -120,11 +118,11 @@ public class EntityConverter<T> implements ResponseConverter<T> {
         ResponseModel collectionModel = ResponseModel.fromXML(new String(body, StandardCharsets.UTF_8));
         List<EntityModel> models = new ArrayList<>(collectionModel.getEntities());
         onSingleEntity(models, collectionModel);
-        while (collectionModel.getLink("next") != null) {
-            HttpRequest next = HttpRequest.newBuilder(response.request(), (name, value) -> true)
-                    .uri(collectionModel.getLink("next"))
-                    .build();
-            response = manager.getNetworkClient().send(next);
+        collectionModel.getLink("next");
+        URI nextLink;
+        while ((nextLink = collectionModel.getLink("next")) != null) {
+            NetworkQuery<HttpResponse<byte[]>> next = manager.getNetworkClient().newRequest(nextLink).build();
+            response = next.get();
             collectionModel = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
             models.addAll(collectionModel.getEntities());
         }

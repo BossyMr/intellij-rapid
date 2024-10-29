@@ -12,6 +12,9 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * An authenticator that will authenticate requests according to the {@code Digest} scheme.
+ */
 public class DigestAuthenticator implements Authenticator {
 
     private final Credentials credentials;

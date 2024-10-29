@@ -4,7 +4,6 @@ import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.ResponseConverter;
 import com.bossymr.rapid.robot.api.ResponseConverterFactory;
-import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

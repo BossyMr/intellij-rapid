@@ -1,12 +1,10 @@
 package com.bossymr.rapid.robot.api.client;
 
-import com.bossymr.rapid.robot.api.ResponseStatusException;
-import com.bossymr.rapid.robot.api.SubscriptionEntity;
-import com.bossymr.rapid.robot.api.SubscriptionListener;
-import com.bossymr.rapid.robot.api.SubscriptionPriority;
+import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.security.Authenticator;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
+import com.bossymr.rapid.robot.api.client.security.DefaultAuthenticator;
 import com.bossymr.rapid.robot.api.client.security.DigestAuthenticator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,15 +19,27 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Collection;
 
+/**
+ * A network client.
+ * <p>
+ * A {@code NetworkClient} wraps a regular network client and adds support for authentication. It also supports
+ * subscribable events and will automatically manage a {@code WebSocket} connection.
+ */
 public class NetworkClient {
 
     private static final Logger logger = LoggerFactory.getLogger(NetworkClient.class);
-    private final @Nullable Authenticator authenticator;
+    private final Authenticator authenticator;
 
     private final HttpClient client;
     private final URI basePath;
     private final SubscriptionGroup subscriptionGroup;
 
+    /**
+     * Create a new {@code NetworkClient}.
+     *
+     * @param basePath the base path, to which all requests are resolved against.
+     * @param credentials the credentials to authenticate requests with or {@code null} to disable authentication.
+     */
     public NetworkClient(@NotNull URI basePath, @Nullable Credentials credentials) {
         this.basePath = basePath;
         this.client = HttpClient.newBuilder()
@@ -39,18 +49,41 @@ public class NetworkClient {
         if (credentials != null) {
             this.authenticator = new DigestAuthenticator(credentials);
         } else {
-            this.authenticator = null;
+            // To disable authentication, we use an empty authenticator.
+            // This allows us to assume that all requests will be 'authenticated'.
+            this.authenticator = new DefaultAuthenticator();
         }
         this.subscriptionGroup = new SubscriptionGroup(this, client);
     }
 
-    public @NotNull URI getBasePath() {
+    public URI getBasePath() {
         return basePath;
     }
 
-    public @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
+    /**
+     * Creates a new {@code NetworkQuery} builder.
+     *
+     * @param path the request path.
+     * @return a new query builder.
+     */
+    public @NotNull RawNetworkQuery.Builder newRequest(@NotNull URI path) {
+        return new RawNetworkQuery.Builder(this, basePath.resolve(path));
+    }
+
+    /**
+     * Creates a new {@code NetworkQuery} builder.
+     *
+     * @param method the request method.
+     * @param path the request path.
+     * @return a new query builder.
+     */
+    public @NotNull RawNetworkQuery.Builder newRequest(@NotNull RequestMethod method, @NotNull URI path) {
+        return new RawNetworkQuery.Builder(this, method, basePath.resolve(path));
+    }
+
+    protected @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
         HttpResponse<byte[]> response = send(request, HttpResponse.BodyHandlers.ofByteArray());
-        if(response.statusCode() >= 300) {
+        if (response.statusCode() >= 300) {
             throw new ResponseStatusException(response);
         }
         return response;
@@ -58,21 +91,17 @@ public class NetworkClient {
 
     private <T> @NotNull HttpResponse<T> send(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
         // Try to preemptively authenticate the request
-        if (authenticator != null) {
-            request = authenticate(request);
-        }
+        request = authenticate(request);
         HttpResponse<T> response = client.send(request, bodyHandler);
         // Check if the request needs to be authenticated
         if (response.statusCode() != 401 && response.statusCode() != 407) {
             return response;
         }
-        if (authenticator != null) {
-            // Try to reauthenticate the request
-            request = authenticator.authenticate(response);
-            if (request != null) {
-                // The request could be authenticated
-                return client.send(request, bodyHandler);
-            }
+        // Try to reauthenticate the request
+        request = authenticator.authenticate(response);
+        if (request != null) {
+            // The request could be authenticated
+            return client.send(request, bodyHandler);
         }
         return response;
     }
@@ -132,4 +161,5 @@ public class NetworkClient {
         subscriptionGroup.getEntities().clear();
         subscriptionGroup.update();
     }
+
 }

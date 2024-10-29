@@ -1,6 +1,7 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
 import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.NetworkQuery;
 import com.bossymr.rapid.robot.api.ResponseStatusException;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidSourcePosition;
@@ -100,7 +101,7 @@ public class RapidStackFrame extends XStackFrame {
             XValueChildrenList childrenList = new XValueChildrenList();
             NetworkAction manager = new NetworkAction(process.getManager()) {
                 @Override
-                protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                protected boolean onFailure(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                     if (throwable instanceof ResponseStatusException e && e.getResponse().statusCode() == 400) {
                         return false;
                     }

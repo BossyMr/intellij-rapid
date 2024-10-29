@@ -15,7 +15,7 @@ public class NetworkPath {
 
     public NetworkPath(@NotNull URI path) {
         String query = path.getQuery();
-        if (query == null) {
+        if (query == null || query.isEmpty()) {
             this.path = path;
             return;
         }

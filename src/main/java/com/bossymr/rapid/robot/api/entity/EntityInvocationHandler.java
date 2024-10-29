@@ -1,6 +1,7 @@
 package com.bossymr.rapid.robot.api.entity;
 
 import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.NetworkQuery;
 import com.bossymr.rapid.robot.api.annotations.Alias;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Title;
@@ -19,7 +20,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -195,9 +195,9 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         if (reference == null) {
             throw new ProxyException("Entity '" + model + "' has no reference to itself");
         }
-        HttpRequest request = HttpRequest.newBuilder(reference).build();
+        NetworkQuery<HttpResponse<byte[]>> query = manager.getNetworkClient().newRequest(reference).build();
         try {
-            HttpResponse<byte[]> response = manager.getNetworkClient().send(request);
+            HttpResponse<byte[]> response = query.get();
             ResponseModel collectionModel = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
             if (collectionModel.getEntities().size() != 1) {
                 throw new ProxyException("Request to self reference '" + reference + "' responded with multiple entities");

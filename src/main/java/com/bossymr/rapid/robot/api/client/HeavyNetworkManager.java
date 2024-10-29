@@ -46,9 +46,8 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull RawNetworkQuery<T> request) {
+    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull NetworkQuery<HttpResponse<byte[]>> request, @NotNull GenericType<T> type) {
         return () -> {
-            GenericType<T> type = request.getType();
             if (type.getRawType().equals(List.class)) {
                 ParameterizedType parameterizedType = (ParameterizedType) type.getType();
                 Type typeArgument = parameterizedType.getActualTypeArguments()[0];
@@ -147,11 +146,11 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @Override
-    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull RawNetworkQuery<T> request) {
+    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull NetworkQuery<HttpResponse<byte[]>> request, @NotNull GenericType<T> type) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
-        return createQuery(this, request);
+        return createQuery(this, request, type);
     }
 
     @Override

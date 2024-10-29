@@ -13,6 +13,8 @@ public interface Authenticator {
 
     /**
      * Preemptively authenticates the specified request. This is called for each request.
+     * <p>
+     * The authenticator should try to authenticate the provided request.
      *
      * @param request the request to authenticate.
      * @return the authenticated request, or {@code null} if the request could not be preemptively authenticated.
@@ -20,11 +22,15 @@ public interface Authenticator {
     @Nullable HttpRequest authenticate(@NotNull HttpRequest request);
 
     /**
-     * Authenticate the specified response. This is called the first time a response is received with a {@code 401} or
-     * {@code 407} status code.
+     * Authenticate the specified response.
+     * <p>
+     * This is called the first time a response is received with a {@code 401} or {@code 407} status code. The
+     * authenticator should try to find a suitable challenge, copy the original request and attempt to authenticate it.
+     * Lastly, the authenticated request should be returned.
      *
      * @param response the response to authenticate.
      * @return the authenticated request, or {@code null} if the request could not be authenticated.
+     * @see Challenge#getChallenges(String)
      */
     @Nullable HttpRequest authenticate(@NotNull HttpResponse<?> response);
 

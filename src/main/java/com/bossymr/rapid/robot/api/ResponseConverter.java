@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot.api;
 
-import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

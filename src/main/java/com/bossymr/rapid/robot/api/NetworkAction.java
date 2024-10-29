@@ -2,7 +2,6 @@ package com.bossymr.rapid.robot.api;
 
 import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
 import com.bossymr.rapid.robot.api.client.NetworkClient;
-import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.api.client.SubscribableEvent;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.response.EntityConverter;
@@ -11,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpResponse;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -51,7 +51,7 @@ public class NetworkAction implements NetworkManager {
      * @throws IOException if an I/O error has occurred.
      * @throws InterruptedException if the current thread is interrupted.
      */
-    protected <T> boolean onSuccess(@NotNull RawNetworkQuery<T> request, @Nullable T entity) throws IOException, InterruptedException {
+    protected <T> boolean onSuccess(@NotNull NetworkQuery<T> request, @Nullable T entity) throws IOException, InterruptedException {
         return true;
     }
 
@@ -64,7 +64,7 @@ public class NetworkAction implements NetworkManager {
      * @throws IOException if an I/O error has occurred.
      * @throws InterruptedException if the current thread is interrupted.
      */
-    protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+    protected boolean onFailure(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
         close();
         return true;
     }
@@ -88,17 +88,17 @@ public class NetworkAction implements NetworkManager {
     }
 
     @Override
-    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull RawNetworkQuery<T> request) {
+    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull NetworkQuery<HttpResponse<byte[]>> request, @NotNull GenericType<T> type) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
-        NetworkQuery<T> query = HeavyNetworkManager.createQuery(this, request);
+        NetworkQuery<T> query = HeavyNetworkManager.createQuery(this, request, type);
         return () -> {
             try {
                 T response = query.get();
                 NetworkManager entity = this;
                 while (entity instanceof NetworkAction action) {
-                    if (!(onSuccess(request, response))) {
+                    if (!(onSuccess(query, response))) {
                         break;
                     }
                     entity = action.manager;
@@ -137,14 +137,14 @@ public class NetworkAction implements NetworkManager {
                 entities.add(entity);
                 return entity;
             } catch (IOException | RuntimeException e) {
-                RawNetworkQuery<Void> request = new RawNetworkQuery<>(getNetworkClient(), URI.create("/subscription"), GenericType.voidType());
+                NetworkQuery<HttpResponse<byte[]>> request = getNetworkClient().newRequest(URI.create("/subscription")).build();
                 onException(request, e);
                 throw e;
             }
         };
     }
 
-    private <T> void onException(@NotNull RawNetworkQuery<T> request, @NotNull Exception e) throws IOException, InterruptedException {
+    private <T> void onException(@NotNull NetworkQuery<T> request, @NotNull Exception e) throws IOException, InterruptedException {
         NetworkManager entity = this;
         while (entity instanceof NetworkAction action) {
             if (!(onFailure(request, e))) {

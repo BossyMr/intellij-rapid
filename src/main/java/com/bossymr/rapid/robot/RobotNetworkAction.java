@@ -1,10 +1,7 @@
 package com.bossymr.rapid.robot;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.robot.api.GenericType;
-import com.bossymr.rapid.robot.api.NetworkAction;
-import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.notification.Notification;
@@ -19,12 +16,13 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 
 public class RobotNetworkAction extends NetworkAction {
 
-    private final Map<String, RawNetworkQuery<Void>> onClose = new HashMap<>();
+    private final Map<String, NetworkQuery<Void>> onClose = new HashMap<>();
     private volatile boolean showNotifications = true;
 
     public RobotNetworkAction(@NotNull NetworkManager manager) {
@@ -32,17 +30,19 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected <T> boolean onSuccess(@NotNull RawNetworkQuery<T> request, @Nullable T response) {
-        URI previous = request.getPath();
+    protected <T> boolean onSuccess(@NotNull NetworkQuery<T> request, @Nullable T response) {
+        if(!(request instanceof RawNetworkQuery rawQuery)) return false;
+        URI previous = rawQuery.getPath();
         String path = previous.getPath();
         String query = previous.getQuery();
         if (path != null && path.startsWith("/rw/mastership")) {
             if ("action=request".equals(query)) {
                 try {
                     URI queryPath = new URI(previous.getScheme(), previous.getUserInfo(), previous.getHost(), previous.getPort(), previous.getPath(), "action=release", previous.getFragment());
-                    RawNetworkQuery<Void> RawNetworkQuery = new RawNetworkQuery<>(getNetworkClient(), queryPath, GenericType.voidType());
-                    RawNetworkQuery.getProperties().putAll(request.getProperties());
-                    onClose.put(previous.getPath(), RawNetworkQuery);
+                    NetworkQuery<HttpResponse<byte[]>> nextQuery = getNetworkClient().newRequest(queryPath)
+                            .properties(rawQuery.getProperties())
+                            .build();
+                    onClose.put(previous.getPath(), nextQuery.map(result -> null));
                 } catch (URISyntaxException ignored) {}
             }
             if ("action=release".equals(query)) {
@@ -53,7 +53,7 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected boolean onFailure(@NotNull RawNetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+    protected boolean onFailure(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
         if (throwable instanceof ResponseStatusException exception) {
             if (exception.getResponse().statusCode() == 400) {
                 return false;
@@ -68,8 +68,8 @@ public class RobotNetworkAction extends NetworkAction {
                 } catch (IOException | InterruptedException ignored) {}
             }
         }
-        if (showNotifications) {
-            showNotification(request);
+        if (request instanceof RawNetworkQuery query && showNotifications) {
+            showNotification(query);
         }
         close();
         return true;
@@ -77,13 +77,13 @@ public class RobotNetworkAction extends NetworkAction {
 
     @Override
     public void close() throws IOException, InterruptedException {
-        for (RawNetworkQuery<Void> value : onClose.values()) {
+        for (NetworkQuery<Void> value : onClose.values()) {
             value.get();
         }
         super.close();
     }
 
-    private void showNotification(@NotNull RawNetworkQuery<?> request) {
+    private void showNotification(@NotNull RawNetworkQuery request) {
         showNotifications = false;
         URI path = getNetworkClient().getBasePath().resolve(request.getPath());
         String presentablePath = getPresentablePath(path);

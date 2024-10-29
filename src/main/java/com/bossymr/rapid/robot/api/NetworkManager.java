@@ -13,6 +13,7 @@ import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.net.http.HttpResponse;
 
 /**
  * A {@code NetworkManager} is connected to a remote server, and can create and manage entities and services.
@@ -66,7 +67,7 @@ public interface NetworkManager extends AutoCloseable {
      * @param <T> the response type.
      * @return the query.
      */
-    <T> @NotNull NetworkQuery<T> createQuery(@NotNull RawNetworkQuery<T> request);
+    <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkQuery<HttpResponse<byte[]>> request, @NotNull GenericType<T> type);
 
     /**
      * Creates a new {@code SubscribableNetworkQuery} which will subscribe to the specified event.

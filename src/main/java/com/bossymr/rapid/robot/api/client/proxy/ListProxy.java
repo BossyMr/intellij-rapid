@@ -1,35 +1,33 @@
 package com.bossymr.rapid.robot.api.client.proxy;
 
-import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.NetworkQuery;
-import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class ListProxy<T> extends AbstractList<T> {
 
     private final @NotNull List<List<T>> sections;
 
-    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull RawNetworkQuery<?> request) throws IOException, InterruptedException {
+    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkQuery<HttpResponse<byte[]>> request) throws IOException, InterruptedException {
         this.sections = build(manager, entityType, request);
     }
 
-    private static <T> @NotNull List<List<T>> build(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull RawNetworkQuery<?> request) throws IOException, InterruptedException {
-        RawNetworkQuery<ResponseModel> modelCopy = new RawNetworkQuery<>(manager.getNetworkClient(), request.getMethod(), request.getPath(), GenericType.of(ResponseModel.class));
-        modelCopy.getProperties().putAll(request.getProperties());
-        ResponseModel model = getModel(manager, modelCopy);
+    private static <T> @NotNull List<List<T>> build(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull NetworkQuery<HttpResponse<byte[]>> request) throws IOException, InterruptedException {
+        ResponseModel model = getModel(request.map(response -> ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8))));
         List<List<T>> sections = new ArrayList<>();
         sections.add(createElements(manager, type, model));
         URI next;
         while ((next = model.getLink("next")) != null) {
-            RawNetworkQuery<ResponseModel> copy = new RawNetworkQuery<>(manager.getNetworkClient(), request.getMethod(), next, GenericType.of(ResponseModel.class));
-            copy.getProperties().putAll(request.getProperties());
-            model = getModel(manager, copy);
+            NetworkQuery<ResponseModel> query = manager.getNetworkClient().newRequest(next).build()
+                    .map(response -> ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8)));
+            model = getModel(query);
             sections.add(createElements(manager, type, model));
         }
         return sections;
@@ -37,21 +35,20 @@ public class ListProxy<T> extends AbstractList<T> {
 
     private static <T> @NotNull List<T> createElements(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull ResponseModel response) {
         return response.getEntities().stream()
-                       .map(entity -> {
-                           try {
-                               return manager.createEntity(type, entity);
-                           } catch (IllegalArgumentException e) {
-                               // Skip entities which could not converted.
-                               return null;
-                           }
-                       })
-                       .filter(Objects::nonNull)
-                       .toList();
+                .map(entity -> {
+                    try {
+                        return manager.createEntity(type, entity);
+                    } catch (IllegalArgumentException e) {
+                        // Skip entities which could not converted.
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
-    private static @NotNull ResponseModel getModel(@NotNull NetworkManager manager, @NotNull RawNetworkQuery<ResponseModel> request) throws IOException, InterruptedException {
-        NetworkQuery<ResponseModel> query = manager.createQuery(request);
-        ResponseModel model = query.get();
+    private static @NotNull ResponseModel getModel(@NotNull NetworkQuery<ResponseModel> request) throws IOException, InterruptedException {
+        ResponseModel model = request.get();
         if (model == null) {
             throw new ProxyException("Could not evaluate response '" + request + "'");
         }
