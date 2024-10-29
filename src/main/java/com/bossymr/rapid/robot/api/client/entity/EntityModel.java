@@ -67,12 +67,12 @@ public class EntityModel {
     }
 
     protected static void fromXML(@NotNull EntityModel model, @NotNull URI defaultPath, @NotNull Element element) {
-        for (Element link : element.select("a")) {
+        for (Element link : element.select(":root > a")) {
             String linkType = link.attr("rel");
             URI value = defaultPath.resolve(URI.create(link.attr("href")));
             model.getLinks().put(linkType, value);
         }
-        for (Element property : element.select("span")) {
+        for (Element property : element.select(":root > span")) {
             String propertyType = property.className();
             String value = property.text();
             model.getProperties().put(propertyType, value);

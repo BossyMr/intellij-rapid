@@ -38,7 +38,7 @@ class HeavyNetworkManagerTest {
     @Test
     void modelQuery(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        EntityModel entity = EntityModel.newBuilder("Hello!", "entity")
+        EntityModel entity = EntityModel.newBuilder("entity", "Hello!")
                 .property("string", "Hello, World!")
                 .property("integer", "1")
                 .property("enum", "state")
@@ -65,7 +65,7 @@ class HeavyNetworkManagerTest {
     @Test
     void subtypeQuery(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        EntityModel entity = EntityModel.newBuilder("", "subtype")
+        EntityModel entity = EntityModel.newBuilder("subtype", "")
                 .property("string", "Hello, World!")
                 .property("integer", "1")
                 .property("override", "2")
@@ -92,7 +92,7 @@ class HeavyNetworkManagerTest {
     @Test
     void modelFetch(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        EntityModel entity = EntityModel.newBuilder("", "entity")
+        EntityModel entity = EntityModel.newBuilder("entity", "")
                 .property("property", "/propertyPath")
                 .link("self", URI.create("/selfPath"))
                 .build();
@@ -132,7 +132,7 @@ class HeavyNetworkManagerTest {
     void expandTest(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
         ResponseModel completeModel = ResponseModel.newBuilder("", "")
-                .entity("Hello!", "entity", builder -> builder
+                .entity("entity", "Hello!", builder -> builder
                         .property("string", "Hello, World!")
                         .property("integer", "1")
                         .property("enum", "state")
@@ -140,7 +140,7 @@ class HeavyNetworkManagerTest {
                         .build())
                 .build();
         ResponseModel simpleModel = ResponseModel.newBuilder("", "")
-                .entity("Hello!", "entity-li", builder -> builder
+                .entity("entity-li", "Hello!", builder -> builder
                         .property("string", "Hello, World!")
                         .link("self", URI.create(runtimeInfo.getHttpBaseUrl()).resolve("/complete"))
                         .build())

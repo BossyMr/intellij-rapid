@@ -20,8 +20,8 @@ class ResponseModelTest {
                 .property("property-key", "value")
                 .link("link-key", URI.create("http://localhost"))
                 .entity("entity-type", "model-title", builder ->
-                        builder.property("property-key", "value")
-                                .link("link-key", URI.create("http://localhost")))
+                        builder.property("child-property-key", "value")
+                                .link("child-link-key", URI.create("http://localhost")))
                 .build();
         Assertions.assertEquals(trimString("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -36,8 +36,8 @@ class ResponseModelTest {
                     <span class="property-key">value</span>
                     <ul>
                         <li class="entity-type" title="model-title">
-                            <a rel="link-key" href="http://localhost"></a>
-                            <span class="property-key">value</span>
+                            <a rel="child-link-key" href="http://localhost"></a>
+                            <span class="child-property-key">value</span>
                         </li>
                     </ul>
                 </div>
@@ -52,8 +52,8 @@ class ResponseModelTest {
                 .property("property-key", "value")
                 .link("link-key", URI.create("http://localhost"))
                 .entity("entity-type", "model-title", builder ->
-                        builder.property("property-key", "value")
-                                .link("link-key", URI.create("http://localhost")))
+                        builder.property("child-property-key", "value")
+                                .link("child-link-key", URI.create("http://localhost")))
                 .build();
         Assertions.assertEquals(model, ResponseModel.fromXML("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -68,8 +68,8 @@ class ResponseModelTest {
                     <span class="property-key">value</span>
                     <ul>
                         <li class="entity-type" title="model-title">
-                            <a rel="link-key" href="http://localhost"></a>
-                            <span class="property-key">value</span>
+                            <a rel="child-link-key" href="http://localhost"></a>
+                            <span class="child-property-key">value</span>
                         </li>
                     </ul>
                 </div>

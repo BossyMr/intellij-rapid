@@ -54,8 +54,8 @@ dependencies {
         pluginVerifier()
         zipSigner()
 
-        testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.JUnit5)
+        testFramework(TestFrameworkType.Platform)
     }
 
     // Annotations used for static analysis
@@ -80,8 +80,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     //  Wiremock is used to test network API
     testImplementation("org.wiremock:wiremock:3.5.3")
 }
@@ -139,6 +137,14 @@ changelog {
 }
 
 tasks {
+    test {
+        useJUnitPlatform()
+    }
+
+    compileJava {
+        options.encoding = "UTF-8"
+    }
+
     wrapper {
         gradleVersion = providers.gradleProperty("gradleVersion").get()
     }
