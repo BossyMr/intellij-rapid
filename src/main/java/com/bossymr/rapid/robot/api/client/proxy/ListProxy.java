@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.api.client.proxy;
 
+import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.NetworkQuery;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
@@ -20,13 +21,13 @@ public class ListProxy<T> extends AbstractList<T> {
     }
 
     private static <T> @NotNull List<List<T>> build(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull NetworkQuery<HttpResponse<byte[]>> request) throws IOException, InterruptedException {
-        ResponseModel model = getModel(request.map(response -> ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8))));
+        ResponseModel model = getModel(request.map(GenericType.of(ResponseModel.class), response -> ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8))));
         List<List<T>> sections = new ArrayList<>();
         sections.add(createElements(manager, type, model));
         URI next;
         while ((next = model.getLink("next")) != null) {
             NetworkQuery<ResponseModel> query = manager.getNetworkClient().newRequest(next).build()
-                    .map(response -> ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8)));
+                    .map(GenericType.of(ResponseModel.class), response -> ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8)));
             model = getModel(query);
             sections.add(createElements(manager, type, model));
         }

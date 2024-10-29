@@ -33,9 +33,8 @@ public class HeavyNetworkManager implements NetworkManager {
     private static final Logger logger = Logger.getInstance(HeavyNetworkManager.class);
 
     private final NetworkClient networkClient;
-    private volatile boolean closed;
-
     private final @NotNull Set<NetworkManager.Listener> listeners = ConcurrentHashMap.newKeySet();
+    private volatile boolean closed;
 
     public HeavyNetworkManager(@NotNull URI defaultPath, @Nullable Credentials credentials) {
         this.networkClient = new NetworkClient(defaultPath, credentials);
@@ -47,27 +46,40 @@ public class HeavyNetworkManager implements NetworkManager {
 
     @SuppressWarnings("unchecked")
     public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull NetworkQuery<HttpResponse<byte[]>> request, @NotNull GenericType<T> type) {
-        return () -> {
-            if (type.getRawType().equals(List.class)) {
-                ParameterizedType parameterizedType = (ParameterizedType) type.getType();
-                Type typeArgument = parameterizedType.getActualTypeArguments()[0];
-                if (!(typeArgument instanceof Class<?> classArgument)) {
-                    throw new IllegalArgumentException("Cannot retrieve list of type " + typeArgument);
-                }
-                return (T) new ListProxy<>(manager, classArgument, request);
+        return new NetworkQuery<T>() {
+            @Override
+            public GenericType<T> getType() {
+                return type;
             }
-            HttpResponse<byte[]> response = request.get();
-            if (type.getType().equals(Void.class)) {
+
+            @Override
+            public URI getPath() {
+                return request.getPath();
+            }
+
+            @Override
+            public T get() throws IOException, InterruptedException {
+                if (type.getRawType().equals(List.class)) {
+                    ParameterizedType parameterizedType = (ParameterizedType) type.getType();
+                    Type typeArgument = parameterizedType.getActualTypeArguments()[0];
+                    if (!(typeArgument instanceof Class<?> classArgument)) {
+                        throw new IllegalArgumentException("Cannot retrieve list of type " + typeArgument);
+                    }
+                    return (T) new ListProxy<>(manager, classArgument, request);
+                }
+                HttpResponse<byte[]> response = request.get();
+                if (type.getType().equals(Void.class)) {
+                    return null;
+                }
+                for (ResponseConverterFactory factory : Set.of(StringConverter.FACTORY, ResponseModelConverter.FACTORY, EntityConverter.FACTORY)) {
+                    ResponseConverter<T> converter = factory.create(manager, type);
+                    if (converter != null) {
+                        return converter.convert(response);
+                    }
+                }
+                logger.warn("Could not convert " + response + " into " + type);
                 return null;
             }
-            for (ResponseConverterFactory factory : Set.of(StringConverter.FACTORY, ResponseModelConverter.FACTORY, EntityConverter.FACTORY)) {
-                ResponseConverter<T> converter = factory.create(manager, type);
-                if (converter != null) {
-                    return converter.convert(response);
-                }
-            }
-            logger.warn("Could not convert " + response + " into " + type);
-            return null;
         };
     }
 

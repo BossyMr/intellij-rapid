@@ -42,7 +42,7 @@ public class RobotNetworkAction extends NetworkAction {
                     NetworkQuery<HttpResponse<byte[]>> nextQuery = getNetworkClient().newRequest(queryPath)
                             .properties(rawQuery.getProperties())
                             .build();
-                    onClose.put(previous.getPath(), nextQuery.map(result -> null));
+                    onClose.put(previous.getPath(), nextQuery.map(GenericType.voidType(), result -> null));
                 } catch (URISyntaxException ignored) {}
             }
             if ("action=release".equals(query)) {

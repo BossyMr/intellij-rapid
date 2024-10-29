@@ -1,5 +1,6 @@
 package com.bossymr.rapid.robot.api.client;
 
+import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.MultiMap;
 import com.bossymr.rapid.robot.api.NetworkQuery;
 import com.bossymr.rapid.robot.api.RequestMethod;
@@ -30,8 +31,14 @@ public class RawNetworkQuery implements NetworkQuery<HttpResponse<byte[]>> {
         this.path = new NetworkPath(path);
     }
 
+    @Override
     public @NotNull URI getPath() {
         return path.getPath();
+    }
+
+    @Override
+    public GenericType<HttpResponse<byte[]>> getType() {
+        return new GenericType<>() {};
     }
 
     public RequestMethod getMethod() {

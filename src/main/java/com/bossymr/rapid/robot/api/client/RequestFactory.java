@@ -89,54 +89,68 @@ public class RequestFactory {
          * fails.
          */
         MastershipType mastershipType = method.getAnnotation(RequiresMastership.class).value();
-        return () -> {
-            MastershipService mastershipService = manager.createService(MastershipService.class);
-            MastershipDomain mastershipDomain = mastershipService.getDomain(mastershipType).get();
-            Boolean isHolding = mastershipDomain.isHolding();
-            if (isHolding != null && isHolding) {
-                /*
-                 * Mastership is already being held. Mastership should not be released after the request is called,
-                 * because some other code - the code that requested mastership - might still require mastership.
-                 */
-                return query.get();
+        return new NetworkQuery<>() {
+            @SuppressWarnings("unchecked")
+            @Override
+            public GenericType<Object> getType() {
+                return (GenericType<Object>) GenericType.of(returnType);
             }
-            MastershipStatus status = mastershipDomain.getStatus();
-            if (status != MastershipStatus.NO_MASTER) {
-                /*
-                 * Mastership is not held by this client, but it is currently being held by some other client. As such,
-                 * the request cannot be completed.
-                 */
-                throw new MastershipException(mastershipType, mastershipDomain.getApplication());
+
+            @Override
+            public URI getPath() {
+                return request.getPath();
             }
-            mastershipDomain.request().get();
-            /*
-             * Tell the network client that, if it closes before mastership is released, it needs to release mastership.
-             * The network client might close if the request fails and the network client is configured to close on
-             * failure.
-             */
-            manager.subscribe(new NetworkManager.Listener() {
-                @Override
-                public void onClose() throws IOException, InterruptedException {
+
+            @Override
+            public Object get() throws IOException, InterruptedException {
+                MastershipService mastershipService = manager.createService(MastershipService.class);
+                MastershipDomain mastershipDomain = mastershipService.getDomain(mastershipType).get();
+                Boolean isHolding = mastershipDomain.isHolding();
+                if (isHolding != null && isHolding) {
                     /*
-                     * Check that mastership is still being held.
+                     * Mastership is already being held. Mastership should not be released after the request is called,
+                     * because some other code - the code that requested mastership - might still require mastership.
                      */
-                    MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
-                    Boolean holding = domain.isHolding();
-                    if (holding != null && holding) {
-                        domain.release().get();
-                    }
+                    return query.get();
                 }
-            });
-            Object result = query.get();
-            /*
-             * Check that mastership is still being held.
-             */
-            MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
-            Boolean holding = domain.isHolding();
-            if (holding != null && holding) {
-                domain.release().get();
+                MastershipStatus status = mastershipDomain.getStatus();
+                if (status != MastershipStatus.NO_MASTER) {
+                    /*
+                     * Mastership is not held by this client, but it is currently being held by some other client. As such,
+                     * the request cannot be completed.
+                     */
+                    throw new MastershipException(mastershipType, mastershipDomain.getApplication());
+                }
+                mastershipDomain.request().get();
+                /*
+                 * Tell the network client that, if it closes before mastership is released, it needs to release mastership.
+                 * The network client might close if the request fails and the network client is configured to close on
+                 * failure.
+                 */
+                manager.subscribe(new NetworkManager.Listener() {
+                    @Override
+                    public void onClose() throws IOException, InterruptedException {
+                        /*
+                         * Check that mastership is still being held.
+                         */
+                        MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
+                        Boolean holding = domain.isHolding();
+                        if (holding != null && holding) {
+                            domain.release().get();
+                        }
+                    }
+                });
+                Object result = query.get();
+                /*
+                 * Check that mastership is still being held.
+                 */
+                MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
+                Boolean holding = domain.isHolding();
+                if (holding != null && holding) {
+                    domain.release().get();
+                }
+                return result;
             }
-            return result;
         };
     }
 

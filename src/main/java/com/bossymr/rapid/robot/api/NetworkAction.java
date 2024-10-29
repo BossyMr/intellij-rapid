@@ -93,20 +93,33 @@ public class NetworkAction implements NetworkManager {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
         NetworkQuery<T> query = HeavyNetworkManager.createQuery(this, request, type);
-        return () -> {
-            try {
-                T response = query.get();
-                NetworkManager entity = this;
-                while (entity instanceof NetworkAction action) {
-                    if (!(onSuccess(query, response))) {
-                        break;
+        return new NetworkQuery<>() {
+            @Override
+            public GenericType<T> getType() {
+                return query.getType();
+            }
+
+            @Override
+            public URI getPath() {
+                return query.getPath();
+            }
+
+            @Override
+            public T get() throws IOException, InterruptedException {
+                try {
+                    T response = query.get();
+                    NetworkManager entity = NetworkAction.this;
+                    while (entity instanceof NetworkAction action) {
+                        if (!(onSuccess(query, response))) {
+                            break;
+                        }
+                        entity = action.manager;
                     }
-                    entity = action.manager;
+                    return response;
+                } catch (IOException | RuntimeException e) {
+                    onException(request, e);
+                    throw e;
                 }
-                return response;
-            } catch (IOException | RuntimeException e) {
-                onException(request, e);
-                throw e;
             }
         };
     }
