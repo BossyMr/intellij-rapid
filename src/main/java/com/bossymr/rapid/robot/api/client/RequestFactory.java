@@ -20,7 +20,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -75,11 +74,11 @@ public class RequestFactory {
             collected.put(key, value);
         }
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        NetworkQuery<HttpResponse<byte[]>> request = manager.getNetworkClient().newRequest(command, URI.create(interpolate(path, proxy, method, args)))
+        NetworkTarget<?> target = NetworkTarget.newTarget(command, URI.create(interpolate(path, proxy, method, args)), GenericType.of(returnType))
                 .arguments(collected)
                 .properties(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
                 .build();
-        NetworkQuery<?> query = manager.createQuery(request, GenericType.of(returnType));
+        NetworkQuery<?> query = manager.createQuery(target);
         if (!method.isAnnotationPresent(RequiresMastership.class)) {
             return query;
         }
@@ -98,7 +97,7 @@ public class RequestFactory {
 
             @Override
             public URI getPath() {
-                return request.getPath();
+                return target.getPath();
             }
 
             @Override
@@ -156,7 +155,7 @@ public class RequestFactory {
 
     private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkQuery(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         Class<?> returnType = (Class<?>) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        SubscribableEvent<?> event = new SubscribableEvent<>(URI.create(interpolate(path, proxy, method, args)), returnType);
+        SubscribableTarget<?> event = new SubscribableTarget<>(URI.create(interpolate(path, proxy, method, args)), returnType);
         return manager.createSubscribableQuery(event);
     }
 

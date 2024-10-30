@@ -2,7 +2,6 @@ package com.bossymr.rapid.robot;
 
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.robot.api.*;
-import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
@@ -15,8 +14,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,20 +27,16 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected <T> boolean onSuccess(@NotNull NetworkQuery<T> request, @Nullable T response) {
-        if(!(request instanceof RawNetworkQuery rawQuery)) return false;
-        URI previous = rawQuery.getPath();
+    protected <T> boolean onSuccess(@NotNull NetworkTarget<T> target, @Nullable T response) {
+        URI previous = target.getPath();
         String path = previous.getPath();
         String query = previous.getQuery();
         if (path != null && path.startsWith("/rw/mastership")) {
             if ("action=request".equals(query)) {
-                try {
-                    URI queryPath = new URI(previous.getScheme(), previous.getUserInfo(), previous.getHost(), previous.getPort(), previous.getPath(), "action=release", previous.getFragment());
-                    NetworkQuery<HttpResponse<byte[]>> nextQuery = getNetworkClient().newRequest(queryPath)
-                            .properties(rawQuery.getProperties())
-                            .build();
-                    onClose.put(previous.getPath(), nextQuery.map(GenericType.voidType(), result -> null));
-                } catch (URISyntaxException ignored) {}
+                NetworkTarget<Void> releaseTarget = NetworkTarget.newTarget(RequestMethod.POST, target.getPath(), GenericType.voidType())
+                        .argument("action", "release")
+                        .build();
+                onClose.put(previous.getPath(), createQuery(releaseTarget));
             }
             if ("action=release".equals(query)) {
                 onClose.remove(previous.getPath());
@@ -53,7 +46,7 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected boolean onFailure(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+    protected boolean onFailure(@NotNull NetworkTarget<?> target, @NotNull Throwable throwable) throws IOException, InterruptedException {
         if (throwable instanceof ResponseStatusException exception) {
             if (exception.getResponse().statusCode() == 400) {
                 return false;
@@ -68,8 +61,8 @@ public class RobotNetworkAction extends NetworkAction {
                 } catch (IOException | InterruptedException ignored) {}
             }
         }
-        if (request instanceof RawNetworkQuery query && showNotifications) {
-            showNotification(query);
+        if (showNotifications) {
+            showNotification(target);
         }
         close();
         return true;
@@ -83,17 +76,17 @@ public class RobotNetworkAction extends NetworkAction {
         super.close();
     }
 
-    private void showNotification(@NotNull RawNetworkQuery request) {
+    private void showNotification(@NotNull NetworkTarget<?> target) {
         showNotifications = false;
-        URI path = getNetworkClient().getBasePath().resolve(request.getPath());
+        URI path = getNetworkClient().getBasePath().resolve(target.getPath());
         String presentablePath = getPresentablePath(path);
         NotificationGroupManager.getInstance()
-                                .getNotificationGroup("Robot connection errors")
-                                .createNotification(RapidBundle.message("notification.title.robot.connect.error", presentablePath), NotificationType.ERROR)
-                                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
-                                .addAction(new ConnectNotificationAction(path))
-                                .whenExpired(() -> showNotifications = true)
-                                .notify(null);
+                .getNotificationGroup("Robot connection errors")
+                .createNotification(RapidBundle.message("notification.title.robot.connect.error", presentablePath), NotificationType.ERROR)
+                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
+                .addAction(new ConnectNotificationAction(path))
+                .whenExpired(() -> showNotifications = true)
+                .notify(null);
     }
 
     private @NotNull String getPresentablePath(@NotNull URI path) {

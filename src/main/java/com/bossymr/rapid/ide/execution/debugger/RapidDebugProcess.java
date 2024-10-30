@@ -10,7 +10,6 @@ import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.api.*;
-import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
 import com.bossymr.rapid.robot.network.robotware.rapid.execution.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.*;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleEntity;
@@ -247,7 +246,7 @@ public class RapidDebugProcess extends XDebugProcess {
     public @Nullable BreakpointEntity registerBreakpoint(@NotNull String taskName, @NotNull String moduleName, int line) throws IOException, InterruptedException {
         NetworkAction action = new NetworkAction(manager) {
             @Override
-            protected boolean onFailure(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+            protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                 return false;
             }
         };

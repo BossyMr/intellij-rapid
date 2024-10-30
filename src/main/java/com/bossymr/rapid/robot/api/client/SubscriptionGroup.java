@@ -41,7 +41,7 @@ public class SubscriptionGroup {
         logger.debug("Received event '" + model + "'");
         for (SubscriptionEntity entity : List.copyOf(entities)) {
             String path = Objects.requireNonNull(model.getLink("self")).getPath();
-            String event = entity.getEvent().getResource().toString();
+            String event = entity.getEvent().getPath().toString();
             if (path.startsWith(event)) {
                 logger.debug("Sending event '" + model + "' to entity '" + entity + "'");
                 entity.event(model);
@@ -52,7 +52,7 @@ public class SubscriptionGroup {
     private static @NotNull @Unmodifiable List<SubscriptionEntity> getUnique(@NotNull List<SubscriptionEntity> entities) {
         Map<URI, SubscriptionEntity> cache = new HashMap<>();
         for (SubscriptionEntity entity : entities) {
-            URI resource = entity.getEvent().getResource();
+            URI resource = entity.getEvent().getPath();
             if (cache.containsKey(resource)) {
                 SubscriptionEntity cached = cache.get(resource);
                 if (entity.getPriority().ordinal() <= cached.getPriority().ordinal()) {
@@ -70,7 +70,7 @@ public class SubscriptionGroup {
         for (int i = 0; i < unique.size(); i++) {
             SubscriptionEntity entity = unique.get(i);
             map.put("resources", String.valueOf(i));
-            map.put(String.valueOf(i), String.valueOf(entity.getEvent().getResource()));
+            map.put(String.valueOf(i), String.valueOf(entity.getEvent().getPath()));
             map.put(i + "-p", String.valueOf(entity.getPriority().ordinal()));
         }
         return map;
@@ -85,10 +85,9 @@ public class SubscriptionGroup {
                 start();
             } else {
                 logger.debug("Updating SubscriptionGroup '{}'", getEntities());
-                NetworkQuery<HttpResponse<byte[]>> request = networkClient.newRequest(RequestMethod.PUT, path)
+                networkClient.send(NetworkTarget.newTarget(RequestMethod.PUT, path, GenericType.voidType())
                         .properties(getBody(getEntities()))
-                        .build();
-                request.get();
+                        .build());
             }
         } finally {
             semaphore.release();
@@ -97,10 +96,9 @@ public class SubscriptionGroup {
 
     private void start() throws IOException, InterruptedException {
         logger.debug("Starting SubscriptionGroup '{}'", getEntities());
-        NetworkQuery<HttpResponse<byte[]>> request = networkClient.newRequest(RequestMethod.POST, URI.create("/subscription"))
+        HttpResponse<byte[]> response = networkClient.send(NetworkTarget.newTarget(RequestMethod.POST, URI.create("/subscription"), GenericType.voidType())
                 .properties(getBody(getEntities()))
-                .build();
-        HttpResponse<byte[]> response = request.get();
+                .build());
         ResponseModel model = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
         String path = response.headers().firstValue("Location").orElseThrow();
         httpClient.newWebSocketBuilder()
@@ -134,10 +132,10 @@ public class SubscriptionGroup {
         if (path == null || webSocket == null) {
             return;
         }
-        NetworkQuery<HttpResponse<byte[]>> request = networkClient.newRequest(RequestMethod.DELETE, path).build();
+        NetworkTarget<Void> target = NetworkTarget.newTarget(RequestMethod.DELETE, path, GenericType.voidType()).build();
         path = null;
         try {
-            request.get();
+            networkClient.send(target);
             webSocket.sendClose(1000, "");
         } finally {
             webSocket = null;

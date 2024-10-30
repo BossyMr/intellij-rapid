@@ -18,6 +18,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Collection;
+import java.util.stream.Collectors;
 
 /**
  * A network client.
@@ -61,24 +62,39 @@ public class NetworkClient {
     }
 
     /**
-     * Creates a new {@code NetworkQuery} builder.
+     * Sends a request to the specified target.
      *
-     * @param path the request path.
-     * @return a new query builder.
+     * @param target the target.
+     * @return the response.
+     * @throws IOException if an I/O error occurs.
+     * @throws InterruptedException if the current thread is interrupted.
      */
-    public @NotNull RawNetworkQuery.Builder newRequest(@NotNull URI path) {
-        return new RawNetworkQuery.Builder(this, basePath.resolve(path));
+    public @NotNull HttpResponse<byte[]> send(@NotNull NetworkTarget<?> target) throws IOException, InterruptedException {
+        return send(getRequest(target));
     }
 
-    /**
-     * Creates a new {@code NetworkQuery} builder.
-     *
-     * @param method the request method.
-     * @param path the request path.
-     * @return a new query builder.
-     */
-    public @NotNull RawNetworkQuery.Builder newRequest(@NotNull RequestMethod method, @NotNull URI path) {
-        return new RawNetworkQuery.Builder(this, method, basePath.resolve(path));
+    private @NotNull HttpRequest getRequest(@NotNull NetworkTarget<?> target) {
+        String body = getRequestBody(target);
+        HttpRequest.BodyPublisher bodyPublisher;
+        if (body != null) {
+            bodyPublisher = HttpRequest.BodyPublishers.ofString(body);
+        } else {
+            bodyPublisher = HttpRequest.BodyPublishers.noBody();
+        }
+        URI path = basePath.resolve(target.getPath());
+        return HttpRequest.newBuilder(path)
+                .method(target.getMethod().name(), bodyPublisher)
+                .build();
+    }
+
+    private @Nullable String getRequestBody(@NotNull NetworkTarget<?> target) {
+        MultiMap<String, String> properties = target.getProperties();
+        if (properties.isEmpty()) {
+            return null;
+        }
+        return properties.entrySet().stream()
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .collect(Collectors.joining("&"));
     }
 
     protected @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
@@ -114,8 +130,8 @@ public class NetworkClient {
         return httpRequest != null ? httpRequest : request;
     }
 
-    public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
-        logger.debug("Subscribing to '{}' with priority {}", event.getResource(), priority);
+    public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableTarget<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
+        logger.debug("Subscribing to '{}' with priority {}", event.getPath(), priority);
         SubscriptionEntity entity = new SubscriptionEntity(this, event, priority) {
 
             @Override
@@ -136,7 +152,7 @@ public class NetworkClient {
             subscriptionGroup.getEntities().remove(entity);
             throw e;
         }
-        logger.debug("Subscribed to '{}' with priority {}", event.getResource(), priority);
+        logger.debug("Subscribed to '{}' with priority {}", event.getPath(), priority);
         return entity;
     }
 

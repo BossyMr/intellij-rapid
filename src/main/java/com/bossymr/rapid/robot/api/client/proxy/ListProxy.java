@@ -3,31 +3,34 @@ package com.bossymr.rapid.robot.api.client.proxy;
 import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.NetworkTarget;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class ListProxy<T> extends AbstractList<T> {
 
     private final @NotNull List<List<T>> sections;
 
-    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkQuery<HttpResponse<byte[]>> request) throws IOException, InterruptedException {
-        this.sections = build(manager, entityType, request);
+    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkTarget<?> target) throws IOException, InterruptedException {
+        this.sections = build(manager, entityType, target);
     }
 
-    private static <T> @NotNull List<List<T>> build(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull NetworkQuery<HttpResponse<byte[]>> request) throws IOException, InterruptedException {
-        ResponseModel model = getModel(request.map(GenericType.of(ResponseModel.class), response -> ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8))));
+    private static <T> @NotNull List<List<T>> build(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull NetworkTarget<?> target) throws IOException, InterruptedException {
+        NetworkQuery<ResponseModel> query = manager.createQuery(NetworkTarget.newTarget(target.getMethod(), target.getPath(), GenericType.of(ResponseModel.class))
+                .properties(target.getProperties())
+                .build());
+        ResponseModel model = getModel(query);
         List<List<T>> sections = new ArrayList<>();
         sections.add(createElements(manager, type, model));
         URI next;
         while ((next = model.getLink("next")) != null) {
-            NetworkQuery<ResponseModel> query = manager.getNetworkClient().newRequest(next).build()
-                    .map(GenericType.of(ResponseModel.class), response -> ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8)));
+            query = manager.createQuery(NetworkTarget.newTarget(target.getMethod(), next, GenericType.of(ResponseModel.class))
+                    .properties(target.getProperties())
+                    .build());
             model = getModel(query);
             sections.add(createElements(manager, type, model));
         }

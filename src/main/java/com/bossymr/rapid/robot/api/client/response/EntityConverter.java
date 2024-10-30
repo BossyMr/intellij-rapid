@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -121,8 +120,7 @@ public class EntityConverter<T> implements ResponseConverter<T> {
         collectionModel.getLink("next");
         URI nextLink;
         while ((nextLink = collectionModel.getLink("next")) != null) {
-            NetworkQuery<HttpResponse<byte[]>> next = manager.getNetworkClient().newRequest(nextLink).build();
-            response = next.get();
+            response = manager.getNetworkClient().send(NetworkTarget.newTarget(nextLink, GenericType.of(ResponseModel.class)).build());
             collectionModel = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
             models.addAll(collectionModel.getEntities());
         }

@@ -45,11 +45,11 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull NetworkQuery<HttpResponse<byte[]>> request, @NotNull GenericType<T> type) {
+    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull NetworkTarget<T> request) {
         return new NetworkQuery<T>() {
             @Override
             public GenericType<T> getType() {
-                return type;
+                return request.getType();
             }
 
             @Override
@@ -59,6 +59,7 @@ public class HeavyNetworkManager implements NetworkManager {
 
             @Override
             public T get() throws IOException, InterruptedException {
+                GenericType<T> type = request.getType();
                 if (type.getRawType().equals(List.class)) {
                     ParameterizedType parameterizedType = (ParameterizedType) type.getType();
                     Type typeArgument = parameterizedType.getActualTypeArguments()[0];
@@ -67,7 +68,7 @@ public class HeavyNetworkManager implements NetworkManager {
                     }
                     return (T) new ListProxy<>(manager, classArgument, request);
                 }
-                HttpResponse<byte[]> response = request.get();
+                HttpResponse<byte[]> response = manager.getNetworkClient().send(request);;
                 if (type.getType().equals(Void.class)) {
                     return null;
                 }
@@ -158,22 +159,22 @@ public class HeavyNetworkManager implements NetworkManager {
     }
 
     @Override
-    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull NetworkQuery<HttpResponse<byte[]>> request, @NotNull GenericType<T> type) {
+    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull NetworkTarget<T> request) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
-        return createQuery(this, request, type);
+        return createQuery(this, request);
     }
 
     @Override
-    public @NotNull <T> SubscribableNetworkQuery<T> createSubscribableQuery(@NotNull SubscribableEvent<T> event) {
+    public @NotNull <T> SubscribableNetworkQuery<T> createSubscribableQuery(@NotNull SubscribableTarget<T> event) {
         if (closed) {
             throw new IllegalArgumentException("NetworkManager is closed");
         }
         return (priority, listener) -> getNetworkClient().subscribe(event, priority, new SubscriptionListener<>() {
             @Override
             public void onEvent(@NotNull SubscriptionEntity entity, @NotNull EntityModel response) {
-                EntityConverter<T> converter = new EntityConverter<>(HeavyNetworkManager.this, GenericType.of(event.getEventType()));
+                EntityConverter<T> converter = new EntityConverter<>(HeavyNetworkManager.this, GenericType.of(event.getType()));
                 T result = converter.convert(response);
                 if (result != null) {
                     listener.onEvent(entity, result);

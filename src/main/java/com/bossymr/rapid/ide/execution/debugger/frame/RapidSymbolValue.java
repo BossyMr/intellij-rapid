@@ -1,7 +1,5 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
-import com.bossymr.rapid.robot.api.NetworkAction;
-import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.*;
@@ -10,8 +8,9 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.language.type.RapidType;
-import com.bossymr.rapid.robot.api.NetworkQuery;
-import com.bossymr.rapid.robot.api.client.RawNetworkQuery;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.NetworkTarget;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
@@ -62,7 +61,7 @@ public class RapidSymbolValue extends XNamedValue {
             if (module == null) throw new IllegalStateException();
             stringJoiner.add(module.getName());
             PhysicalRoutine routine = PhysicalRoutine.getRoutine(physicalSymbol);
-            if(routine != null) {
+            if (routine != null) {
                 stringJoiner.add(routine.getName());
             }
             stringJoiner.add(physicalSymbol.getName());
@@ -77,7 +76,7 @@ public class RapidSymbolValue extends XNamedValue {
 
     public static @NotNull QueryableSymbol findSymbol(@NotNull NetworkManager manager, @NotNull RapidVariable symbol, @NotNull StackFrame stackFrame) throws IOException, InterruptedException {
         SymbolModel symbolModel = manager.createService(RapidService.class)
-                                         .findSymbol(getCanonicalName(symbol, stackFrame)).get();
+                .findSymbol(getCanonicalName(symbol, stackFrame)).get();
         if (!(symbolModel instanceof QueryableSymbol queryableSymbol)) {
             throw new IllegalStateException();
         }
@@ -104,7 +103,7 @@ public class RapidSymbolValue extends XNamedValue {
     protected @NotNull String getValue() throws IOException, InterruptedException {
         NetworkManager manager = new NetworkAction(process.getManager()) {
             @Override
-            protected boolean onFailure(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+            protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                 close();
                 return false;
             }

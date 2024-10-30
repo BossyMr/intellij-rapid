@@ -1,8 +1,6 @@
 package com.bossymr.rapid.robot.api.client;
 
-import com.bossymr.rapid.robot.api.NetworkQuery;
-import com.bossymr.rapid.robot.api.RequestMethod;
-import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.http.Body;
@@ -29,8 +27,8 @@ class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(ok("Hello, World!")));
         NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
-        NetworkQuery<HttpResponse<byte[]>> query = client.newRequest(RequestMethod.GET, URI.create("/")).build();
-        HttpResponse<byte[]> response = query.get();
+        NetworkTarget<Void> target = NetworkTarget.newTarget(RequestMethod.GET, URI.create("/"), GenericType.voidType()).build();
+        HttpResponse<byte[]> response = client.send(target);
         assertEquals("Hello, World!", new String(response.body()));
     }
 
@@ -39,9 +37,9 @@ class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(WireMock.status(321).withResponseBody(Body.ofBinaryOrText("Hello, World!".getBytes(), ContentTypeHeader.absent()))));
         NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
-        NetworkQuery<HttpResponse<byte[]>> query = client.newRequest(RequestMethod.GET, URI.create("/")).build();
+        NetworkTarget<Void> target = NetworkTarget.newTarget(RequestMethod.GET, URI.create("/"), GenericType.voidType()).build();
         try {
-            query.get();
+            client.send(target);
             fail();
         } catch (ResponseStatusException e) {
             assertEquals(321, e.getResponse().statusCode());

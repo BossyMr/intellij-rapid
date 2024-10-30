@@ -5,13 +5,11 @@ import com.bossymr.rapid.robot.function.ThrowableFunction;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
- * A {@code NetworkQuery} represents a query to a remote resource.
+ * A {@code NetworkQuery} represents a network query.
  *
- * @param <T> the value of the remote resource.
+ * @param <T> the return type of the query.
  */
 public interface NetworkQuery<T> {
 

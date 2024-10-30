@@ -3,7 +3,7 @@ package com.bossymr.rapid.robot.api.client;
 import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkAction;
 import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.NetworkTarget;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpResponse;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
@@ -28,32 +27,32 @@ class NetworkActionTest {
         wireMock.register(get("/success").willReturn(okForContentType("text/plain", "Hello, World!")));
         wireMock.register(get("/failure").willReturn(badRequest()));
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
-            record SuccessEntity<T>(@NotNull NetworkQuery<T> request, @Nullable T entity) {}
-            record FailureEntity(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) {}
+            record SuccessEntity<T>(@NotNull NetworkTarget<T> request, @Nullable T entity) {}
+            record FailureEntity(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) {}
 
             AtomicReference<SuccessEntity<?>> success = new AtomicReference<>();
             AtomicReference<FailureEntity> failure = new AtomicReference<>();
             NetworkAction action = new NetworkAction(manager) {
                 @Override
-                protected  <T> boolean onSuccess(@NotNull NetworkQuery<T> request, @Nullable T entity) {
+                protected <T> boolean onSuccess(@NotNull NetworkTarget<T> request, @Nullable T entity) {
                     success.set(new SuccessEntity<>(request, entity));
                     return false;
                 }
 
                 @Override
-                protected boolean onFailure(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) {
+                protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) {
                     failure.set(new FailureEntity(request, throwable));
                     return false;
                 }
             };
-            NetworkQuery<HttpResponse<byte[]>> successRequest = action.getNetworkClient().newRequest(URI.create("/success")).build();
-            String entity = action.createQuery(successRequest, GenericType.of(String.class)).get();
+            NetworkTarget<String> successRequest = NetworkTarget.newTarget(URI.create("/success"), GenericType.of(String.class)).build();
+            String entity = action.createQuery(successRequest).get();
             assertNotNull(success.get());
-            // assertEquals(successRequest, success.get().request());
+            assertEquals(successRequest, success.get().request());
             assertEquals(entity, success.get().entity());
-            NetworkQuery<HttpResponse<byte[]>> failureRequest = action.getNetworkClient().newRequest(URI.create("/failure")).build();
+            NetworkTarget<String> failureRequest = NetworkTarget.newTarget(URI.create("/failure"), GenericType.of(String.class)).build();
             try {
-                action.createQuery(failureRequest, GenericType.of(String.class)).get();
+                action.createQuery(failureRequest).get();
                 fail();
             } catch (IOException e) {
                 assertNotNull(failure.get());
@@ -71,24 +70,24 @@ class NetworkActionTest {
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             NetworkAction action = new NetworkAction(manager) {
                 @Override
-                protected <T> boolean onSuccess(@NotNull NetworkQuery<T> request, @Nullable T entity) {
+                protected <T> boolean onSuccess(@NotNull NetworkTarget<T> request, @Nullable T entity) {
                     throw new IllegalArgumentException();
                 }
 
                 @Override
-                protected boolean onFailure(@NotNull NetworkQuery<?> request, @NotNull Throwable throwable) {
+                protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) {
                     throw new IllegalStateException(throwable);
                 }
             };
-            NetworkQuery<HttpResponse<byte[]>> successRequest = action.getNetworkClient().newRequest(URI.create("/success")).build();
+            NetworkTarget<String> successRequest = NetworkTarget.newTarget(URI.create("/success"), GenericType.of(String.class)).build();
             try {
-                action.createQuery(successRequest, GenericType.of(String.class)).get();
+                action.createQuery(successRequest).get();
             } catch (IllegalStateException e) {
                 // As the request will throw an exception if successful, the onFailure handler will also be called.
                 assertInstanceOf(IllegalArgumentException.class, e.getCause());
             }
-            NetworkQuery<HttpResponse<byte[]>> failureRequest = action.getNetworkClient().newRequest(URI.create("/failure")).build();
-            assertThrows(IllegalStateException.class, () -> action.createQuery(failureRequest, GenericType.of(String.class)).get());
+            NetworkTarget<String> failureRequest = NetworkTarget.newTarget(URI.create("/failure"), GenericType.of(String.class)).build();
+            assertThrows(IllegalStateException.class, () -> action.createQuery(failureRequest).get());
         }
     }
 }

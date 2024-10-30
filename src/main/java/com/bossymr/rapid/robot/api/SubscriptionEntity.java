@@ -1,7 +1,6 @@
 package com.bossymr.rapid.robot.api;
 
 import com.bossymr.rapid.robot.api.client.NetworkClient;
-import com.bossymr.rapid.robot.api.client.SubscribableEvent;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,7 +12,7 @@ import java.util.*;
  */
 public abstract class SubscriptionEntity {
 
-    private final @NotNull SubscribableEvent<?> event;
+    private final @NotNull SubscribableTarget<?> event;
     private final @NotNull SubscriptionPriority priority;
     private final @NotNull NetworkClient client;
 
@@ -24,7 +23,7 @@ public abstract class SubscriptionEntity {
      * @param event the event which is subscribed to.
      * @param priority the subscription priority.
      */
-    public SubscriptionEntity(@NotNull NetworkClient client, @NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority) {
+    public SubscriptionEntity(@NotNull NetworkClient client, @NotNull SubscribableTarget<?> event, @NotNull SubscriptionPriority priority) {
         this.client = client;
         this.event = event;
         this.priority = priority;
@@ -52,7 +51,7 @@ public abstract class SubscriptionEntity {
      *
      * @return the event to which this entity is subscribed.
      */
-    public @NotNull SubscribableEvent<?> getEvent() {
+    public @NotNull SubscribableTarget<?> getEvent() {
         return event;
     }
 

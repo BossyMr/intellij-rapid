@@ -1,7 +1,9 @@
 package com.bossymr.rapid.robot.api.entity;
 
+import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.NetworkTarget;
 import com.bossymr.rapid.robot.api.annotations.Alias;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Title;
@@ -195,9 +197,8 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         if (reference == null) {
             throw new ProxyException("Entity '" + model + "' has no reference to itself");
         }
-        NetworkQuery<HttpResponse<byte[]>> query = manager.getNetworkClient().newRequest(reference).build();
         try {
-            HttpResponse<byte[]> response = query.get();
+            HttpResponse<byte[]> response = manager.getNetworkClient().send(NetworkTarget.newTarget(reference, GenericType.voidType()).build());
             ResponseModel collectionModel = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
             if (collectionModel.getEntities().size() != 1) {
                 throw new ProxyException("Request to self reference '" + reference + "' responded with multiple entities");
