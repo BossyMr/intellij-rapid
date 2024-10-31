@@ -210,7 +210,7 @@ public class RequestFactory {
                         if (!(proxy instanceof EntityProxy model)) {
                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a link");
                         }
-                        URI link = model.getReference(value.substring(1));
+                        URI link = model.getModel().getLink(value.substring(1));
                         if (link == null) {
                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing link '" + value + "'");
                         }
@@ -223,7 +223,7 @@ public class RequestFactory {
                         if (!(proxy instanceof EntityProxy model)) {
                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' cannot point to a field");
                         }
-                        String field = model.getProperty(value.substring(1));
+                        String field = model.getModel().getProperty(value.substring(1));
                         if (field == null) {
                             throw new ProxyException("Method '" + method.getName() + "' of '" + method.getDeclaringClass().getName() + "' points to missing field '" + value + "'");
                         }

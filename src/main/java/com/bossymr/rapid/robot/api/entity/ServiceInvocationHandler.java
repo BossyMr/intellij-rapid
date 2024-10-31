@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.api.entity;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.client.RequestFactory;
 import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
+import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,7 +15,6 @@ import java.util.Objects;
 public class ServiceInvocationHandler extends AbstractInvocationHandler {
 
     private final @NotNull Class<?> type;
-    private final @NotNull NetworkManager manager;
 
     public ServiceInvocationHandler(@NotNull NetworkManager manager, @NotNull Class<?> type) {
         this.manager = manager;
@@ -26,8 +26,8 @@ public class ServiceInvocationHandler extends AbstractInvocationHandler {
         if (isMethod(method, NetworkProxy.class, "getNetworkManager")) {
             return manager;
         }
-        if (isMethod(method, NetworkProxy.class, "move", NetworkManager.class)) {
-            return ((NetworkManager) args[0]).createService(type);
+        if (manager == null) {
+            throw new ProxyException("could not invoke method '" + method.getName() + "': service is not managed");
         }
         return new RequestFactory(manager).createQuery(type, proxy, method, args);
     }

@@ -8,6 +8,7 @@ import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.api.entity.EntityInvocationHandler;
 import com.bossymr.rapid.robot.api.entity.ServiceInvocationHandler;
+import net.bytebuddy.ByteBuddy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -98,12 +99,12 @@ public class HeavyNetworkManager implements NetworkManager {
         return entities;
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> @NotNull T move(@NotNull T entity, @NotNull NetworkManager manager) {
         if (!(entity instanceof NetworkProxy proxy)) {
             throw new IllegalArgumentException("Argument '" + entity + "' doesn't represent an @Entity or @Service");
         }
-        return (T) proxy.move(manager);
+        proxy.attach(manager);
+        return entity;
     }
 
     @Override

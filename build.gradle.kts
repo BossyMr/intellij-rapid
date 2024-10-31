@@ -58,26 +58,25 @@ dependencies {
         testFramework(TestFrameworkType.Platform)
     }
 
-    // Annotations used for static analysis
+    // Static analysis
     compileOnly("org.jetbrains:annotations:26.0.1")
-    // z3 is used for data flow analysis
+    // Data flow analysis
     implementation(files("src/main/resources/lib/com.microsoft.z3.jar"))
-    // Apache Tika is used to extract external documentation
+    // Extract external documentation
     implementation("org.apache.tika:tika-core:2.9.2")
     implementation("org.apache.tika:tika-parser-microsoft-module:2.9.2")
-    // Jsoup is used to reformat external documentation
+    // Networking
     implementation("org.jsoup:jsoup:1.18.1")
-    // JmDNS is used to discover robots on the local network
     implementation("org.jmdns:jmdns:3.5.9")
-    // Sentry is used to report errors
+    implementation("net.bytebuddy:byte-buddy:1.15.7")
+    // Error handling
     implementation(platform("io.sentry:sentry-bom:7.8.0"))
     implementation("io.sentry:sentry")
-    // Junit is used for testing
+    // Testing
     testImplementation(platform("org.junit:junit-bom:5.11.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("junit:junit:4.13.2")
-    //  Wiremock is used to test network API
     testImplementation("org.wiremock:wiremock:3.5.3")
 }
 

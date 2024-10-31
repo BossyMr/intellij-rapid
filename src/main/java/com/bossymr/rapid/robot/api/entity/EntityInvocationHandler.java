@@ -10,7 +10,6 @@ import com.bossymr.rapid.robot.api.client.RequestFactory;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
-import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,7 +29,6 @@ import java.util.Objects;
 public class EntityInvocationHandler extends AbstractInvocationHandler {
 
     private final @NotNull Class<?> type;
-    private final @Nullable NetworkManager manager;
     private @NotNull EntityModel model;
 
     public EntityInvocationHandler(@Nullable NetworkManager manager, @NotNull Class<?> type, @NotNull EntityModel model) {
@@ -41,26 +39,11 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
 
     @Override
     public @Nullable Object execute(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
-        if (isMethod(method, NetworkProxy.class, "getNetworkAction")) {
-            return manager;
-        }
-        if (isMethod(method, NetworkProxy.class, "move", NetworkManager.class)) {
-            return ((NetworkManager) args[0]).createEntity(type, model);
-        }
         if (isMethod(method, EntityProxy.class, "refresh")) {
             if (model.getLink("self") == null) {
-                throw new ProxyException("Could not refresh");
+                throw new ProxyException("could not refresh entity: no 'self' link");
             }
             getSelf();
-        }
-        if (isMethod(method, EntityProxy.class, "getProperty", String.class)) {
-            return getProperty((String) args[0]);
-        }
-        if (isMethod(method, EntityProxy.class, "getReference", String.class)) {
-            return getReference((String) args[0]);
-        }
-        if (isMethod(method, EntityProxy.class, "getModel")) {
-            return model;
         }
         if (method.isAnnotationPresent(Title.class)) {
             return model.getTitle();
@@ -93,7 +76,7 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             return null;
         }
         if (manager == null) {
-            throw new IllegalStateException("Entity is not managed");
+            throw new ProxyException("could not invoke method '" + method.getName() + "': entity is not managed");
         }
         return new RequestFactory(manager).createQuery(type, proxy, method, args);
     }

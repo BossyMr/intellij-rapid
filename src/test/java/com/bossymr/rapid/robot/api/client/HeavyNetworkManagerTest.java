@@ -154,14 +154,14 @@ class HeavyNetworkManagerTest {
                 TestService service = action.createService(TestService.class);
                 TestEntity entity = service.getEntity().get();
                 EntityProxy proxy = assertInstanceOf(EntityProxy.class, entity);
-                assertEquals("entity-li", proxy.getType());
+                assertEquals("entity-li", proxy.getModel().getType());
                 int events = wireMock.getServeEvents().size();
                 entity.getProperty();
                 assertEquals(events, wireMock.getServeEvents().size());
-                assertEquals("entity-li", proxy.getType());
+                assertEquals("entity-li", proxy.getModel().getType());
                 entity.getInteger();
                 assertEquals(events + 1, wireMock.getServeEvents().size());
-                assertEquals("entity", proxy.getType());
+                assertEquals("entity", proxy.getModel().getType());
             }
         }
     }
