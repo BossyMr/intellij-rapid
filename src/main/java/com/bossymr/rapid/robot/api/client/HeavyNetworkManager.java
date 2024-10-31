@@ -1,14 +1,11 @@
 package com.bossymr.rapid.robot.api.client;
 
 import com.bossymr.rapid.robot.api.*;
-import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
-import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.api.entity.EntityInvocationHandler;
 import com.bossymr.rapid.robot.api.entity.ServiceInvocationHandler;
-import net.bytebuddy.ByteBuddy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,8 +13,6 @@ import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.http.HttpResponse;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,16 +38,8 @@ public class HeavyNetworkManager implements NetworkManager {
         };
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> @NotNull T createEntity(@Nullable NetworkManager manager, @NotNull Class<T> entityType, @NotNull EntityModel model) {
-        Class<? extends T> actualType = getEntityType(entityType, model);
-        if (actualType != null) {
-            return (T) Proxy.newProxyInstance(
-                    actualType.getClassLoader(),
-                    new Class[]{actualType, EntityProxy.class},
-                    new EntityInvocationHandler(manager, actualType, model));
-        }
-        throw new IllegalArgumentException(model.getType() + " could not be converted into " + entityType.getName());
+        return EntityInvocationHandler.createEntity(manager, entityType, model);
     }
 
     @SuppressWarnings("unchecked")
@@ -61,42 +48,6 @@ public class HeavyNetworkManager implements NetworkManager {
                 serviceType.getClassLoader(),
                 new Class[]{serviceType, NetworkProxy.class},
                 new ServiceInvocationHandler(manager, serviceType));
-    }
-
-    private static <T> @Nullable Class<? extends T> getEntityType(@NotNull Class<T> entityType, @NotNull EntityModel model) {
-        Map<String, Class<? extends T>> entities = getEntityGraph(entityType);
-        String type = model.getType();
-        if (type.endsWith("-li")) {
-            return entities.get(type.substring(0, type.length() - "-li".length()));
-        } else {
-            return entities.get(type);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> @NotNull Map<String, Class<? extends T>> getEntityGraph(@NotNull Class<? extends T> entityType) {
-        Map<String, Class<? extends T>> entities = new HashMap<>();
-        Entity entity = entityType.getAnnotation(Entity.class);
-        if (entity == null) {
-            throw new IllegalArgumentException(entityType.getName() + " is not annotated with Entity");
-        }
-        for (String name : entity.value()) {
-            if (entities.containsKey(name)) {
-                throw new IllegalArgumentException(entityType.getName() + " (" + name + ") is declared more than once");
-            }
-            entities.put(name, entityType);
-        }
-        for (Class<?> subtype : entity.subtype()) {
-            if (entityType.equals(subtype)) {
-                throw new IllegalArgumentException(subtype.getName() + " cannot be declared as subtype of itself");
-            }
-            if (!entityType.isAssignableFrom(subtype)) {
-                throw new IllegalArgumentException(subtype.getName() + " does not implement supertype " + entityType.getName());
-            }
-            Map<String, Class<? extends T>> graph = getEntityGraph((Class<? extends T>) subtype);
-            entities.putAll(graph);
-        }
-        return entities;
     }
 
     public static <T> @NotNull T move(@NotNull T entity, @NotNull NetworkManager manager) {

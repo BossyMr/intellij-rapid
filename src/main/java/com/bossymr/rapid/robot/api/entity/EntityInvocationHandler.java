@@ -4,6 +4,7 @@ import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.NetworkTarget;
 import com.bossymr.rapid.robot.api.NetworkType;
 import com.bossymr.rapid.robot.api.annotations.Alias;
+import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Title;
 import com.bossymr.rapid.robot.api.client.RequestFactory;
@@ -11,14 +12,17 @@ import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.InvocationHandlerAdapter;
+import net.bytebuddy.matcher.ElementMatchers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,6 +41,64 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         this.type = type;
     }
 
+    public static <T> @NotNull T createEntity(@Nullable NetworkManager manager, @NotNull Class<T> entityType, @NotNull EntityModel model) {
+        Class<? extends T> actualType = getEntityType(entityType, model);
+        if (actualType == null) {
+            throw new IllegalArgumentException(model.getType() + " could not be converted into " + entityType.getName());
+        }
+        Class<? extends T> virtualType = new ByteBuddy()
+                .subclass(actualType)
+                .implement(EntityProxy.class)
+                .method(ElementMatchers.any())
+                .intercept(InvocationHandlerAdapter.of(new EntityInvocationHandler(manager, actualType, model)))
+                .make()
+                .load(NetworkManager.class.getClassLoader())
+                .getLoaded();
+        try {
+            Constructor<? extends T> constructor = virtualType.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return constructor.newInstance();
+        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            throw new IllegalArgumentException("could not create entity: entity '" + entityType + "' must define a constructor with no arguments", e);
+        }
+    }
+
+    private static <T> @Nullable Class<? extends T> getEntityType(@NotNull Class<T> entityType, @NotNull EntityModel model) {
+        Map<String, Class<? extends T>> entities = getEntityGraph(entityType);
+        String type = model.getType();
+        if (type.endsWith("-li")) {
+            return entities.get(type.substring(0, type.length() - "-li".length()));
+        } else {
+            return entities.get(type);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> @NotNull Map<String, Class<? extends T>> getEntityGraph(@NotNull Class<? extends T> entityType) {
+        Map<String, Class<? extends T>> entities = new HashMap<>();
+        Entity entity = entityType.getAnnotation(Entity.class);
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity '" + entityType + "' must be annotated with Entity");
+        }
+        for (String type : entity.value()) {
+            if (entities.containsKey(type)) {
+                throw new IllegalArgumentException(entityType.getName() + " (" + type + ") is declared more than once");
+            }
+            entities.put(type, entityType);
+        }
+        for (Class<?> subtype : entity.subtype()) {
+            if (entityType.equals(subtype)) {
+                throw new IllegalArgumentException(subtype.getName() + " cannot be declared as subtype of itself");
+            }
+            if (!(entityType.isAssignableFrom(subtype))) {
+                throw new IllegalArgumentException(subtype.getName() + " does not implement supertype " + entityType.getName());
+            }
+            Map<String, Class<? extends T>> graph = getEntityGraph((Class<? extends T>) subtype);
+            entities.putAll(graph);
+        }
+        return entities;
+    }
+
     @Override
     public @Nullable Object execute(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
         if (isMethod(method, EntityProxy.class, "refresh")) {
@@ -44,6 +106,9 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
                 throw new ProxyException("could not refresh entity: no 'self' link");
             }
             getSelf();
+        }
+        if (isMethod(method, EntityProxy.class, "getModel")) {
+            return model;
         }
         if (method.isAnnotationPresent(Title.class)) {
             return model.getTitle();
@@ -177,9 +242,9 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
 
     @Override
     public boolean equals(@NotNull Object proxy, @NotNull Object obj) {
-        InvocationHandler invocationHandler = Proxy.getInvocationHandler(obj);
-        if (!(invocationHandler instanceof EntityInvocationHandler entity)) return false;
-        return entity.type.equals(type) && entity.model.equals(model) && Objects.equals(entity.manager, manager);
+        if (!(obj instanceof EntityProxy entity)) return false;
+        if (!(type.isInstance(obj))) return false;
+        return entity.getModel().equals(model) && Objects.equals(entity.getNetworkManager(), manager);
     }
 
     @Override

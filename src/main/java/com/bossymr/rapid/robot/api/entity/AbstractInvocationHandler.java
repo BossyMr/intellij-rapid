@@ -32,7 +32,7 @@ public abstract class AbstractInvocationHandler implements InvocationHandler {
         if (isMethod(method, Object.class, "toString")) {
             return toString(proxy);
         }
-        if (isMethod(method, NetworkProxy.class, "getNetworkAction")) {
+        if (isMethod(method, NetworkProxy.class, "getNetworkManager")) {
             return manager;
         }
         if (isMethod(method, NetworkProxy.class, "attach", NetworkManager.class)) {
