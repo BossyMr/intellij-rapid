@@ -1,7 +1,6 @@
 package com.bossymr.rapid;
 
 import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkTarget;
 import com.bossymr.rapid.robot.api.NetworkType;
 import com.bossymr.rapid.robot.api.client.NetworkClient;

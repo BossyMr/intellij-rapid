@@ -1,6 +1,5 @@
 package com.bossymr.rapid.robot.api.entity;
 
-import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.NetworkTarget;
 import com.bossymr.rapid.robot.api.NetworkType;
@@ -22,8 +21,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -102,16 +99,15 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     }
 
     private @NotNull Object convert(@NotNull String value, @NotNull Class<?> type) throws IllegalAccessException {
-        type = getBoxType(type);
         if (type == String.class) return value;
-        if (type == Byte.class) return Byte.parseByte(value);
-        if (type == Short.class) return Short.parseShort(value);
-        if (type == Integer.class) return Integer.parseInt(value);
-        if (type == Long.class) return Long.parseLong(value);
-        if (type == Float.class) return Float.parseFloat(value);
-        if (type == Double.class) return Double.parseDouble(value);
-        if (type == Boolean.class) return Boolean.parseBoolean(value);
-        if (type == Character.class) return value.charAt(0);
+        if (type == byte.class || type == Byte.class) return Byte.parseByte(value);
+        if (type == short.class || type == Short.class) return Short.parseShort(value);
+        if (type == int.class || type == Integer.class) return Integer.parseInt(value);
+        if (type == long.class || type == Long.class) return Long.parseLong(value);
+        if (type == float.class || type == Float.class) return Float.parseFloat(value);
+        if (type == double.class || type == Double.class) return Double.parseDouble(value);
+        if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(value);
+        if (type == char.class || type == Character.class) return value.charAt(0);
         if (type == URI.class) {
             try {
                 return URI.create(value);
@@ -154,19 +150,6 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         }
     }
 
-    private @NotNull Class<?> getBoxType(@NotNull Class<?> type) {
-        if (!(type.isPrimitive())) return type;
-        if (type == boolean.class) return Boolean.class;
-        if (type == byte.class) return Byte.class;
-        if (type == short.class) return Short.class;
-        if (type == int.class) return Integer.class;
-        if (type == long.class) return Long.class;
-        if (type == float.class) return Float.class;
-        if (type == double.class) return Double.class;
-        if (type == char.class) return Character.class;
-        return type;
-    }
-
     private @Nullable URI getReference(@NotNull String type) {
         URI reference = model.getLink(type);
         if (reference != null) {
@@ -198,8 +181,8 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             throw new ProxyException("Entity '" + model + "' has no reference to itself");
         }
         try {
-            HttpResponse<byte[]> response = manager.getNetworkClient().send(NetworkTarget.newTarget(reference, NetworkType.voidType()).build());
-            ResponseModel collectionModel = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
+            NetworkTarget<ResponseModel> target = NetworkTarget.newTarget(reference, NetworkType.modelType()).build();
+            ResponseModel collectionModel = manager.createQuery(target).get();
             if (collectionModel.getEntities().size() != 1) {
                 throw new ProxyException("Request to self reference '" + reference + "' responded with multiple entities");
             }

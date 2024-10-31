@@ -20,14 +20,8 @@ import java.util.regex.Pattern;
  */
 public abstract class NetworkType<T> {
 
-    private final @NotNull GenericType<T> type;
-
-    protected NetworkType(@NotNull GenericType<T> type) {
-        this.type = type;
-    }
-
-    private static <T> @NotNull NetworkType<T> customType(@NotNull GenericType<T> type, @NotNull TransformFunction<HttpResponse<byte[]>, T> transform) {
-        return new NetworkType<>(type) {
+    private static <T> @NotNull NetworkType<T> customType(@NotNull TransformFunction<HttpResponse<byte[]>, T> transform) {
+        return new NetworkType<>() {
             @Override
             public T convert(@NotNull NetworkManager manager, @NotNull HttpResponse<byte[]> response) throws IOException {
                 return transform.convert(manager, response);
@@ -39,28 +33,28 @@ public abstract class NetworkType<T> {
      * {@return a NetworkType that will discard the response}
      */
     public static @NotNull NetworkType<Void> voidType() {
-        return customType(GenericType.voidType(), (manager, response) -> null);
+        return customType((manager, response) -> null);
     }
 
     /**
      * {@return a NetworkType that will return the response as-is}
      */
     public static @NotNull NetworkType<HttpResponse<byte[]>> rawType() {
-        return customType(new GenericType<>() {}, (manager, response) -> response);
+        return customType((manager, response) -> response);
     }
 
     /**
      * {@return a NetworkType that will return the response formatted as a string}
      */
     public static @NotNull NetworkType<String> stringType() {
-        return customType(GenericType.of(String.class), (manager, response) -> new String(response.body(), StandardCharsets.UTF_8));
+        return customType((manager, response) -> new String(response.body(), StandardCharsets.UTF_8));
     }
 
     /**
      * {@return a NetworkType that will return the response as a ResponseModel}
      */
     public static @NotNull NetworkType<ResponseModel> modelType() {
-        return stringType().transform(GenericType.of(ResponseModel.class), (manager, body) -> {
+        return stringType().transform((manager, body) -> {
             Pattern pattern = Pattern.compile("\"([^\"]*)\"");
             Matcher matcher = pattern.matcher(body);
             body = matcher.replaceAll(result -> result.group()
@@ -78,7 +72,7 @@ public abstract class NetworkType<T> {
      * @return a {@code NetworkType}.
      */
     public static <T> @NotNull NetworkType<T> entityType(Class<T> entityType) {
-        return modelType().transform(GenericType.of(entityType), (manager, model) -> {
+        return modelType().transform((manager, model) -> {
             List<T> entities = model.getEntities().stream()
                     .map(entity -> {
                         try {
@@ -103,14 +97,7 @@ public abstract class NetworkType<T> {
      * @return a {@code NetworkType}.
      */
     public static <T> @NotNull NetworkType<List<T>> listType(Class<T> entityType) {
-        return modelType().transform(new GenericType<>() {}, (manager, model) -> new ListProxy<>(manager, entityType, model));
-    }
-
-    /**
-     * {@return the return type of the network request}
-     */
-    public @NotNull GenericType<T> getType() {
-        return type;
+        return modelType().transform((manager, model) -> new ListProxy<>(manager, entityType, model));
     }
 
     /**
@@ -127,13 +114,12 @@ public abstract class NetworkType<T> {
      * Transforms this {@code NetworkType} into another {@code NetworkType} by passing the return value computed by this
      * type into the provided function.
      *
-     * @param type the return type of the new {@code NetworkType}.
      * @param transform a function.
      * @param <E> the return type of the new {@code NetworkType}.
      * @return a new {@code NetworkType}.
      */
-    public <E> @NotNull NetworkType<E> transform(@NotNull GenericType<E> type, @NotNull TransformFunction<T, E> transform) {
-        return new NetworkType<>(type) {
+    public <E> @NotNull NetworkType<E> transform(@NotNull TransformFunction<T, E> transform) {
+        return new NetworkType<>() {
             @Override
             public E convert(@NotNull NetworkManager manager, @NotNull HttpResponse<byte[]> response) throws IOException {
                 return transform.convert(manager, NetworkType.this.convert(manager, response));

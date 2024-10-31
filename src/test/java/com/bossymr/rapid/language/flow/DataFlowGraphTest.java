@@ -1,6 +1,7 @@
 package com.bossymr.rapid.language.flow;
 
 import com.bossymr.rapid.RapidTestCase;
+import com.bossymr.rapid.RobotTest;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.bossymr.rapid.language.flow.debug.DataFlowGraphService;
@@ -67,6 +68,7 @@ class DataFlowGraphTest extends RapidTestCase {
         DataFlowGraphService.convert(outputFile, dataFlow);
     }
 
+    @RobotTest
     @Test
     void largeFile(TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         RobotService.getInstance().connect(URI.create("http://localhost"), RobotService.DEFAULT_CREDENTIALS);
@@ -91,6 +93,7 @@ class DataFlowGraphTest extends RapidTestCase {
                 """);
     }
 
+    @RobotTest
     @Test
     void unknownFunction(TestInfo testInfo) throws IOException, ExecutionException {
         try {

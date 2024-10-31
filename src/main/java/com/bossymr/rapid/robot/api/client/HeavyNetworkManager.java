@@ -34,24 +34,11 @@ public class HeavyNetworkManager implements NetworkManager {
         return createEntity(null, entityType, model);
     }
 
-    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull NetworkTarget<T> request) {
-        return new NetworkQuery<>() {
-            @Override
-            public GenericType<T> getType() {
-                return request.getType().getType();
-            }
-
-            @Override
-            public URI getPath() {
-                return request.getPath();
-            }
-
-            @Override
-            public T get() throws IOException, InterruptedException {
-                NetworkType<T> type = request.getType();
-                HttpResponse<byte[]> response = manager.getNetworkClient().send(request);
-                return type.convert(manager, response);
-            }
+    public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull NetworkTarget<T> target) {
+        return () -> {
+            NetworkType<T> type = target.getType();
+            HttpResponse<byte[]> response = manager.getNetworkClient().send(target);
+            return type.convert(manager, response);
         };
     }
 

@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.api.client;
 import com.bossymr.rapid.robot.MastershipException;
 import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.annotations.*;
+import com.bossymr.rapid.robot.api.annotations.Field;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
@@ -15,10 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -89,73 +87,59 @@ public class RequestFactory {
          * fails.
          */
         MastershipType mastershipType = method.getAnnotation(RequiresMastership.class).value();
-        return new NetworkQuery<>() {
-            @SuppressWarnings("unchecked")
-            @Override
-            public GenericType<Object> getType() {
-                return (GenericType<Object>) GenericType.of(returnType);
-            }
-
-            @Override
-            public URI getPath() {
-                return target.getPath();
-            }
-
-            @Override
-            public Object get() throws IOException, InterruptedException {
-                MastershipService mastershipService = manager.createService(MastershipService.class);
-                MastershipDomain mastershipDomain = mastershipService.getDomain(mastershipType).get();
-                Boolean isHolding = mastershipDomain.isHolding();
-                if (isHolding != null && isHolding) {
-                    /*
-                     * Mastership is already being held. Mastership should not be released after the request is called,
-                     * because some other code - the code that requested mastership - might still require mastership.
-                     */
-                    return query.get();
-                }
-                MastershipStatus status = mastershipDomain.getStatus();
-                if (status != MastershipStatus.NO_MASTER) {
-                    /*
-                     * Mastership is not held by this client, but it is currently being held by some other client. As such,
-                     * the request cannot be completed.
-                     */
-                    throw new MastershipException(mastershipType, mastershipDomain.getApplication());
-                }
-                mastershipDomain.request().get();
+        return () -> {
+            MastershipService mastershipService = manager.createService(MastershipService.class);
+            MastershipDomain mastershipDomain = mastershipService.getDomain(mastershipType).get();
+            Boolean isHolding = mastershipDomain.isHolding();
+            if (isHolding != null && isHolding) {
                 /*
-                 * Tell the network client that, if it closes before mastership is released, it needs to release mastership.
-                 * The network client might close if the request fails and the network client is configured to close on
-                 * failure.
+                 * Mastership is already being held. Mastership should not be released after the request is called,
+                 * because some other code - the code that requested mastership - might still require mastership.
                  */
-                manager.subscribe(new NetworkManager.Listener() {
-                    @Override
-                    public void onClose() throws IOException, InterruptedException {
-                        /*
-                         * Check that mastership is still being held.
-                         */
-                        MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
-                        Boolean holding = domain.isHolding();
-                        if (holding != null && holding) {
-                            domain.release().get();
-                        }
+                return query.get();
+            }
+            MastershipStatus status = mastershipDomain.getStatus();
+            if (status != MastershipStatus.NO_MASTER) {
+                /*
+                 * Mastership is not held by this client, but it is currently being held by some other client. As such,
+                 * the request cannot be completed.
+                 */
+                throw new MastershipException(mastershipType, mastershipDomain.getApplication());
+            }
+            mastershipDomain.request().get();
+            /*
+             * Tell the network client that, if it closes before mastership is released, it needs to release mastership.
+             * The network client might close if the request fails and the network client is configured to close on
+             * failure.
+             */
+            manager.subscribe(new NetworkManager.Listener() {
+                @Override
+                public void onClose() throws IOException, InterruptedException {
+                    /*
+                     * Check that mastership is still being held.
+                     */
+                    MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
+                    Boolean holding = domain.isHolding();
+                    if (holding != null && holding) {
+                        domain.release().get();
                     }
-                });
-                Object result = query.get();
-                /*
-                 * Check that mastership is still being held.
-                 */
-                MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
-                Boolean holding = domain.isHolding();
-                if (holding != null && holding) {
-                    domain.release().get();
                 }
-                return result;
+            });
+            Object result = query.get();
+            /*
+             * Check that mastership is still being held.
+             */
+            MastershipDomain domain = mastershipService.getDomain(mastershipType).get();
+            Boolean holding = domain.isHolding();
+            if (holding != null && holding) {
+                domain.release().get();
             }
+            return result;
         };
     }
 
     private @NotNull NetworkType<?> getNetworkType(Type type) {
-        if (GenericType.of(type).getRawType().equals(List.class)) {
+        if (getRawType(type).equals(List.class)) {
             ParameterizedType parameterizedType = (ParameterizedType) type;
             Type typeArgument = parameterizedType.getActualTypeArguments()[0];
             if (!(typeArgument instanceof Class<?> classType)) {
@@ -177,6 +161,38 @@ public class RequestFactory {
         }
         return NetworkType.entityType(classType);
     }
+
+    /**
+     * Calculates the outermost type. For example, for {@code List<String>}, the outermost type is {@code List}.
+     * Likewise, for {@code String[]}, the outermost type is {@code String}.
+     *
+     * @param type the type.
+     * @return the outermost type of the specified type.
+     */
+    private @NotNull Class<?> getRawType(@NotNull Type type) {
+        if (type instanceof Class<?> classType) {
+            return classType;
+        }
+        if (type instanceof ParameterizedType parameterizedType) {
+            if (!(parameterizedType.getRawType() instanceof Class<?> classType)) {
+                throw new IllegalStateException();
+            }
+            return classType;
+        }
+        if (type instanceof GenericArrayType genericArrayType) {
+            Type componentType = genericArrayType.getGenericComponentType();
+            return Array.newInstance(getRawType(componentType), 0).getClass();
+        }
+        if (type instanceof TypeVariable<?>) {
+            return Object.class;
+        }
+        if (type instanceof WildcardType wildcardType) {
+            assert wildcardType.getUpperBounds().length == 1;
+            return getRawType(wildcardType.getUpperBounds()[0]);
+        }
+        throw new IllegalArgumentException();
+    }
+
 
     private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkQuery(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
         Class<?> returnType = (Class<?>) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
