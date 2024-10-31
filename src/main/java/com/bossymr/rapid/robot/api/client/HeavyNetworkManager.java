@@ -68,7 +68,8 @@ public class HeavyNetworkManager implements NetworkManager {
                     }
                     return (T) new ListProxy<>(manager, classArgument, request);
                 }
-                HttpResponse<byte[]> response = manager.getNetworkClient().send(request);;
+                HttpResponse<byte[]> response = manager.getNetworkClient().send(request);
+                ;
                 if (type.getType().equals(Void.class)) {
                     return null;
                 }

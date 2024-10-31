@@ -1,5 +1,6 @@
 package com.bossymr.rapid.ide.formatting;
 
+import com.bossymr.rapid.RapidTestCase;
 import com.bossymr.rapid.ide.editor.formatting.RapidCodeStyleSettings;
 import com.bossymr.rapid.language.RapidFileType;
 import com.intellij.application.options.CodeStyle;
@@ -8,24 +9,26 @@ import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.function.BiConsumer;
 
-public class RapidFormattingTest extends BasePlatformTestCase {
+class RapidFormattingTest extends RapidTestCase {
 
     private void doTest(@NotNull String input, @NotNull String expected, @NotNull BiConsumer<CommonCodeStyleSettings, RapidCodeStyleSettings> settings) {
-        myFixture.configureByText(RapidFileType.getInstance(), input);
-        CommonCodeStyleSettings languageSettings = CodeStyle.getLanguageSettings(myFixture.getFile());
-        RapidCodeStyleSettings customSettings = CodeStyle.getCustomSettings(myFixture.getFile(), RapidCodeStyleSettings.class);
+        getFixture().configureByText(RapidFileType.getInstance(), input);
+        CommonCodeStyleSettings languageSettings = CodeStyle.getLanguageSettings(getFixture().getFile());
+        RapidCodeStyleSettings customSettings = CodeStyle.getCustomSettings(getFixture().getFile(), RapidCodeStyleSettings.class);
         settings.accept(languageSettings, customSettings);
-        WriteCommandAction.writeCommandAction(getProject()).run(() -> {
-            CodeStyleManager.getInstance(getProject()).reformatText(myFixture.getFile(), List.of(myFixture.getFile().getTextRange()));
+        WriteCommandAction.writeCommandAction(getFixture().getProject()).run(() -> {
+            CodeStyleManager.getInstance(getFixture().getProject()).reformatText(getFixture().getFile(), List.of(getFixture().getFile().getTextRange()));
         });
-        myFixture.checkResult(expected);
+        getFixture().checkResult(expected);
     }
 
-    public void testFormatModule() {
+    @Test
+    void formatModule() {
         doTest("""
                 ! COMMENT
                 MODULE name
@@ -44,26 +47,26 @@ public class RapidFormattingTest extends BasePlatformTestCase {
                 """, """
                 ! COMMENT
                 MODULE name
-                                
-                                
+                
+                
                     ! COMMENT
                     RECORD record1
-                    
+                
                         name name1;
-                    
+                
                     ENDRECORD
-                    
-                    
+                
+                
                     ALIAS type1 name1;
-                    
-                    
+                
+                
                     FUNC name1 name2()
                         ! COMMENT
                         CONNECT variable1 with trap1;
                         ERROR
                             TRYNEXT;
                     ENDFUNC
-                    
+                
                 ENDMODULE
                 """, (commonSettings, customSettings) -> {
             customSettings.BLANK_LINES_AROUND_COMPONENT = 1;

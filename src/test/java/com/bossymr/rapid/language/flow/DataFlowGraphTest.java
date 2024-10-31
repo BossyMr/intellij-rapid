@@ -1,13 +1,16 @@
 package com.bossymr.rapid.language.flow;
 
+import com.bossymr.rapid.RapidTestCase;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.bossymr.rapid.language.flow.debug.DataFlowGraphService;
 import com.bossymr.rapid.robot.RobotService;
 import com.intellij.execution.ExecutionException;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.util.io.FileUtil;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,11 +20,12 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class DataFlowGraphTest extends BasePlatformTestCase {
+import static org.junit.jupiter.api.Assertions.fail;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+class DataFlowGraphTest extends RapidTestCase {
+
+    @BeforeEach
+    void setUp() {
         try {
             RobotService.getInstance().disconnect();
         } catch (IOException | InterruptedException e) {
@@ -30,30 +34,25 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
         ControlFlowService.getInstance().reload();
     }
 
-    @Override
-    protected String getTestDataPath() {
-        return "src/test/resources/com/bossymr/rapid/ide/insight/flow/";
-    }
-
-    private void checkByText(@NotNull String text) throws IOException, ExecutionException {
-        check(() -> {
-            myFixture.configureByText(RapidFileType.getInstance(), text);
+    private void checkByText(TestInfo testInfo, String text) throws IOException, ExecutionException {
+        check(testInfo, () -> {
+            getFixture().configureByText(RapidFileType.getInstance(), text);
             ControlFlowService service = ControlFlowService.getInstance();
-            return service.getDataFlow(myFixture.getProject());
+            return ReadAction.compute(() -> service.getDataFlow(getFixture().getProject()));
         });
     }
 
-    private void checkByFile(@NotNull String fileName) throws IOException, ExecutionException {
-        check(() -> {
-            myFixture.configureByFile(fileName);
+    private void checkByFile(TestInfo testInfo, String fileName) throws IOException, ExecutionException {
+        check(testInfo, () -> {
+            getFixture().configureByFile(fileName);
             ControlFlowService service = ControlFlowService.getInstance();
-            return service.getDataFlow(myFixture.getProject());
+            return service.getDataFlow(getFixture().getProject());
         });
     }
 
-    private void check(@NotNull Supplier<Set<ControlFlowBlock>> supplier) throws IOException, ExecutionException {
+    private void check(TestInfo testInfo, Supplier<Set<ControlFlowBlock>> supplier) throws IOException, ExecutionException {
         Set<ControlFlowBlock> dataFlow = supplier.get();
-        String name = getTestName(true);
+        String name = testInfo.getDisplayName();
         File outputDirectory = Path.of(System.getProperty("user.home"), "graph", name).toFile();
         Path path = outputDirectory.toPath();
         if (outputDirectory.exists()) {
@@ -68,18 +67,20 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
         DataFlowGraphService.convert(outputFile, dataFlow);
     }
 
-    public void testLargeFile() throws IOException, ExecutionException, InterruptedException {
+    @Test
+    void largeFile(TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         RobotService.getInstance().connect(URI.create("http://localhost"), RobotService.DEFAULT_CREDENTIALS);
-        checkByFile("File.mod");
+        checkByFile(testInfo,"File.mod");
     }
 
-    public void testFieldVariable() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void fieldVariable(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
-                                
+                
                     VAR num queue{100};
                     VAR num index := 1;
-                                
+                
                     PROC bar()
                         FOR i FROM 2 TO index DO
                             IF i = 3 THEN ENDIF
@@ -90,17 +91,18 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testUnknownFunction() throws IOException, ExecutionException {
+    @Test
+    void unknownFunction(TestInfo testInfo) throws IOException, ExecutionException {
         try {
             RobotService.getInstance().connect(URI.create("http://localhost:80"), RobotService.DEFAULT_CREDENTIALS);
         } catch (IOException | InterruptedException e) {
             fail();
         }
-        checkByText("""
+        checkByText(testInfo, """
                 MODULE foo
                     FUNC num askChoice(string question, string choice1, string choice2, string choice3, string choice4, string choice5)
                         VAR num value;
-                   
+                
                         TPReadFK value, question, choice1, choice2, choice3, choice4, choice5;
                         IF value = 0 THEN
                             value := value + 1;
@@ -112,8 +114,9 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
     }
 
 
-    public void testLargeArraySize() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void largeArraySize(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
                     PROC bar()
                         VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];
@@ -131,8 +134,9 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testArraySize() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void arraySize(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
                     PROC bar(num{*,*} x)
                         VAR num y{2, 13};
@@ -144,8 +148,9 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testFunctionCall() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void functionCall(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
                     PROC bar()
                         VAR num variable := 0;
@@ -153,7 +158,7 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                         IF variable = 1 THEN
                         ENDIF
                     ENDPROC
-                         
+                
                     FUNC num Abs(num value)
                         IF value >= 0 THEN
                             return value;
@@ -165,8 +170,9 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testMutuallyExclusiveArgument() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void mutuallyExclusiveArgument(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
                     PROC bar(\\num x | num y)
                         VAR num z := 0;
@@ -180,8 +186,9 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testMutuallyExclusiveArgument2() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void mutuallyExclusiveArgument2(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
                     PROC bar(\\num x | num y | num z)
                         IF Present(x) THEN
@@ -194,8 +201,9 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testMissingVariable() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void missingVariable(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
                     PROC bar(\\num x)
                         VAR num y := 5;
@@ -208,11 +216,12 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                         ENDIF
                     ENDPROC
                 ENDMODULE
-                         """);
+                """);
     }
 
-    public void testLoop1() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void loop1(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
                     PROC bar(num n)
                         VAR num i := 3;
@@ -229,8 +238,9 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testLoop2() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void loop2(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
                     FUNC num bar(num{*} A, num n, num x)
                         VAR num i;
@@ -247,8 +257,9 @@ public class DataFlowGraphTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testArray() throws IOException, ExecutionException {
-        checkByText("""
+    @Test
+    void array(TestInfo testInfo) throws IOException, ExecutionException {
+        checkByText(testInfo, """
                 MODULE foo
                     PROC bar(num x)
                         VAR num variable{2, 3} := [[0, 1, 2], [3, 4, 5]];

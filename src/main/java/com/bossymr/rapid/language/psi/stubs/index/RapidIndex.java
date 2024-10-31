@@ -3,6 +3,7 @@ package com.bossymr.rapid.language.psi.stubs.index;
 import com.bossymr.rapid.language.symbol.physical.PhysicalSymbol;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ public interface RapidIndex<T extends PhysicalSymbol> {
 
     @NotNull Collection<T> getElements(@NotNull String name, @NotNull Project project, @NotNull GlobalSearchScope scope);
 
+    @RequiresReadLock
     default @NotNull Collection<T> getAllElements(@NotNull Project project, @NotNull GlobalSearchScope scope) {
         List<T> modules = new ArrayList<>();
         for (String routineName : getAllKeys(project)) {

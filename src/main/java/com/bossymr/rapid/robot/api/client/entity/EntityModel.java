@@ -25,32 +25,8 @@ public class EntityModel {
         this.properties = new HashMap<>();
     }
 
-    public static @NotNull Builder<? extends EntityModel> newBuilder(@NotNull String type, @NotNull String title) {
-        return new Builder<>(new EntityModel(type, title));
-    }
-
-    public @NotNull String getType() {
-        return type;
-    }
-
-    public @NotNull String getTitle() {
-        return title;
-    }
-
-    public @NotNull Map<String, URI> getLinks() {
-        return links;
-    }
-
-    public @Nullable URI getLink(@NotNull String type) {
-        return links.get(type);
-    }
-
-    public @NotNull Map<String, String> getProperties() {
-        return properties;
-    }
-
-    public @Nullable String getProperty(@NotNull String type) {
-        return properties.get(type);
+    public static @NotNull Builder newBuilder(@NotNull String type, @NotNull String title) {
+        return new Builder(new EntityModel(type, title));
     }
 
     public static @NotNull EntityModel fromXML(@NotNull String text) {
@@ -77,6 +53,30 @@ public class EntityModel {
             String value = property.text();
             model.getProperties().put(propertyType, value);
         }
+    }
+
+    public @NotNull String getType() {
+        return type;
+    }
+
+    public @NotNull String getTitle() {
+        return title;
+    }
+
+    public @NotNull Map<String, URI> getLinks() {
+        return links;
+    }
+
+    public @Nullable URI getLink(@NotNull String type) {
+        return links.get(type);
+    }
+
+    public @NotNull Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public @Nullable String getProperty(@NotNull String type) {
+        return properties.get(type);
     }
 
     public @NotNull String toXML() {
@@ -108,42 +108,42 @@ public class EntityModel {
     @Override
     public String toString() {
         return "EntityModel{" +
-                "type='" + getType() + '\'' +
-                ", title='" + getTitle() + '\'' +
-                ", links=" + getLinks() +
-                ", properties=" + getProperties() +
-                '}';
+               "type='" + getType() + '\'' +
+               ", title='" + getTitle() + '\'' +
+               ", links=" + getLinks() +
+               ", properties=" + getProperties() +
+               '}';
     }
 
-    public static class Builder<T extends EntityModel> {
+    public static class Builder {
 
-        protected final T model;
+        protected final EntityModel model;
 
-        protected Builder(@NotNull T model) {
+        protected Builder(@NotNull EntityModel model) {
             this.model = model;
         }
 
-        public @NotNull Builder<T> property(@NotNull String key, @NotNull String value) {
+        public @NotNull Builder property(@NotNull String key, @NotNull String value) {
             model.getProperties().put(key, value);
             return this;
         }
 
-        public @NotNull Builder<T> properties(@NotNull Map<String, String> properties) {
+        public @NotNull Builder properties(@NotNull Map<String, String> properties) {
             model.getProperties().putAll(properties);
             return this;
         }
 
-        public @NotNull Builder<T> link(@NotNull String key, @NotNull URI value) {
+        public @NotNull Builder link(@NotNull String key, @NotNull URI value) {
             model.getLinks().put(key, value);
             return this;
         }
 
-        public @NotNull Builder<T> links(@NotNull Map<String, URI> links) {
+        public @NotNull Builder links(@NotNull Map<String, URI> links) {
             model.getLinks().putAll(links);
             return this;
         }
 
-        public @NotNull T build() {
+        public @NotNull EntityModel build() {
             return model;
         }
     }

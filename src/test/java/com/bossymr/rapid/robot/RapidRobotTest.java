@@ -1,13 +1,19 @@
 package com.bossymr.rapid.robot;
 
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
+import com.bossymr.rapid.RapidTestCase;
+import com.bossymr.rapid.RobotTest;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
 
-public class RapidRobotTest extends BasePlatformTestCase {
+import static org.junit.jupiter.api.Assertions.*;
 
-    public void testConnect() throws IOException, InterruptedException {
+@RobotTest
+class RapidRobotTest extends RapidTestCase {
+
+    @Test
+    void connectToRobot() throws IOException, InterruptedException {
         RobotService service = RobotService.getInstance();
         service.disconnect();
         assertNull(service.getRobotState());

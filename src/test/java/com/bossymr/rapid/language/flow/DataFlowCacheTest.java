@@ -1,21 +1,24 @@
 package com.bossymr.rapid.language.flow;
 
+import com.bossymr.rapid.RapidTestCase;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.physical.PhysicalRoutine;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-public class DataFlowCacheTest extends BasePlatformTestCase {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class DataFlowCacheTest extends RapidTestCase {
 
     private void checkByText(@NotNull String text, @NotNull Set<String> processed) {
-        myFixture.configureByText(RapidFileType.getInstance(), text);
+        getFixture().configureByText(RapidFileType.getInstance(), text);
         Set<String> result = new HashSet<>();
         ControlFlowListener.connect(new ControlFlowListener() {
             @Override
@@ -26,7 +29,7 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
         });
         ControlFlowService service = ControlFlowService.getInstance();
         ReadAction.run(() -> {
-            PsiElement element = myFixture.getFile().findElementAt(myFixture.getCaretOffset());
+            PsiElement element = getFixture().getFile().findElementAt(getFixture().getCaretOffset());
             Objects.requireNonNull(element);
             PhysicalRoutine routine = PhysicalRoutine.getRoutine(element);
             Objects.requireNonNull(routine);
@@ -36,7 +39,7 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
     }
 
     private void checkByTextAfterModification(@NotNull String text, @NotNull Set<String> processed) {
-        myFixture.configureByText(RapidFileType.getInstance(), text);
+        getFixture().configureByText(RapidFileType.getInstance(), text);
         Set<String> result = new HashSet<>();
         ControlFlowListener.connect(new ControlFlowListener() {
             @Override
@@ -46,35 +49,37 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
             }
         });
         ControlFlowService service = ControlFlowService.getInstance();
-        service.getDataFlow(myFixture.getProject());
+        ReadAction.run(() -> service.getDataFlow(getFixture().getProject()));
         result.clear();
-        myFixture.type(' ');
-        PsiDocumentManager.getInstance(myFixture.getProject()).commitAllDocuments();
-        ReadAction.run(() -> service.getDataFlow(myFixture.getProject()));
+        getFixture().type(' ');
+        PsiDocumentManager.getInstance(getFixture().getProject()).commitAllDocuments();
+        ReadAction.run(() -> service.getDataFlow(getFixture().getProject()));
         assertEquals(processed, result);
     }
 
-    public void testModificationCache() {
+    @Test
+    void modificationCache() {
         checkByTextAfterModification("""
                 MODULE foo
                     PROC bar()
                         <caret>
                     ENDPROC
-                    
+                
                     PROC baz()
                     ENDPROC
                 ENDMODULE
                 """, Set.of("foo:bar"));
     }
 
-    public void testModificationCacheWithDependency() {
+    @Test
+    void modificationCacheWithDependency() {
         checkByTextAfterModification("""
                 MODULE foo
                     FUNC num bar()
                         <caret>
                         RETURN 0;
                     ENDPROC
-                    
+                
                     PROC baz()
                         VAR value := 0;
                         value := bar();
@@ -83,56 +88,59 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
                 """, Set.of("foo:baz", "foo:bar"));
     }
 
-    public void testUnusedRoutine() {
+    @Test
+    void unusedRoutine() {
         checkByText("""
                 MODULE foo
                     PROC bar()
                         <caret>
                     ENDPROC
-                    
+                
                     PROC baz()
                     ENDPROC
                 ENDMODULE
                 """, Set.of("foo:bar"));
     }
 
-    public void testDisconnectedChain() {
+    @Test
+    void disconnectedChain() {
         checkByText("""
                 MODULE foo
                     PROC bar()
                         <caret>
                         bar2;
                     ENDPROC
-                    
+                
                     PROC bar2()
                         bar3;
                         bar4;
                     ENDPROC
-                    
+                
                     PROC bar3()
                     ENDPROC
-                    
+                
                     PROC bar4()
                     ENDPROC
-                    
+                
                     PROC baz()
                         baz2;
                     ENDPROC
-                    
+                
                     PROC baz2()
                     ENDPROC
                 ENDMODULE
                 """, Set.of("foo:bar"));
     }
 
-    public void testChainWithReturnValue() {
+    @Test
+    void chainWithReturnValue() {
         checkByText("""
                 MODULE foo
                     PROC bar()
                         <caret>
                         VAR value := bar2();
                     ENDPROC
-                    
+                
                     FUNC num bar2()
                         RETURN -1;
                     ENDFUNC
@@ -140,14 +148,15 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
                 """, Set.of("foo:bar", "foo:bar2"));
     }
 
-    public void testChainWithUnusedReturnValue() {
+    @Test
+    void chainWithUnusedReturnValue() {
         checkByText("""
                 MODULE foo
                     PROC bar()
                         <caret>
                         bar2();
                     ENDPROC
-                    
+                
                     FUNC num bar2()
                         RETURN -1;
                     ENDFUNC
@@ -155,14 +164,15 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
                 """, Set.of("foo:bar"));
     }
 
-    public void testChainWithError() {
+    @Test
+    void chainWithError() {
         checkByText("""
                 MODULE foo
                     PROC bar()
                         <caret>
                         bar2();
                     ENDPROC
-                    
+                
                     FUNC num bar2()
                         RAISE 1;
                     ENDFUNC
@@ -170,18 +180,19 @@ public class DataFlowCacheTest extends BasePlatformTestCase {
                 """, Set.of("foo:bar", "foo:bar2"));
     }
 
-    public void testDeepChainWithReturnValue() {
+    @Test
+    void deepChainWithReturnValue() {
         checkByText("""
                 MODULE foo
                     PROC bar()
                         <caret>
                         VAR value := bar2();
                     ENDPROC
-                    
+                
                     FUNC num bar2()
                         RETURN bar3();
                     ENDFUNC
-                    
+                
                     FUNC num bar3()
                         RETURN -1;
                     ENDFUNC

@@ -1,9 +1,7 @@
 package com.bossymr.rapid.robot.api.client.proxy;
 
-import com.bossymr.rapid.robot.api.GenericType;
-import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.NetworkQuery;
-import com.bossymr.rapid.robot.api.NetworkTarget;
+import com.bossymr.rapid.robot.api.*;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,79 +11,145 @@ import java.util.*;
 
 public class ListProxy<T> extends AbstractList<T> {
 
-    private final @NotNull List<List<T>> sections;
-
-    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkTarget<?> target) throws IOException, InterruptedException {
-        this.sections = build(manager, entityType, target);
-    }
-
-    private static <T> @NotNull List<List<T>> build(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull NetworkTarget<?> target) throws IOException, InterruptedException {
-        NetworkQuery<ResponseModel> query = manager.createQuery(NetworkTarget.newTarget(target.getMethod(), target.getPath(), GenericType.of(ResponseModel.class))
-                .properties(target.getProperties())
-                .build());
-        ResponseModel model = getModel(query);
-        List<List<T>> sections = new ArrayList<>();
-        sections.add(createElements(manager, type, model));
-        URI next;
-        while ((next = model.getLink("next")) != null) {
-            query = manager.createQuery(NetworkTarget.newTarget(target.getMethod(), next, GenericType.of(ResponseModel.class))
-                    .properties(target.getProperties())
-                    .build());
-            model = getModel(query);
-            sections.add(createElements(manager, type, model));
-        }
-        return sections;
-    }
-
-    private static <T> @NotNull List<T> createElements(@NotNull NetworkManager manager, @NotNull Class<T> type, @NotNull ResponseModel response) {
-        return response.getEntities().stream()
-                .map(entity -> {
-                    try {
-                        return manager.createEntity(type, entity);
-                    } catch (IllegalArgumentException e) {
-                        // Skip entities which could not converted.
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    private static @NotNull ResponseModel getModel(@NotNull NetworkQuery<ResponseModel> request) throws IOException, InterruptedException {
-        ResponseModel model = request.get();
-        if (model == null) {
-            throw new ProxyException("Could not evaluate response '" + request + "'");
-        }
-        return model;
-    }
+    private final @NotNull NetworkManager manager;
+    private final @NotNull Class<T> entityType;
+    private final @NotNull NetworkTarget<?> target;
 
     /**
-     * Returns the element at the specified position in this list.
-     *
-     * @param index index of the element to return.
-     * @return the element at the specified position in this list.
-     * @throws IndexOutOfBoundsException if the index is out of range ({@code index < 0 || index >= size()}).
+     * The list of elements in this list. A {@code null} element has not yet been loaded.
      */
-    @Override
-    public T get(int index) {
-        for (int i = 0, j = 0; i < sections.size(); i++) {
-            List<T> block = sections.get(i);
-            if (index < (j + block.size())) {
-                return block.get(index - j);
-            }
-            j += block.size();
-        }
-        throw new NoSuchElementException();
-    }
+    private final @NotNull List<T> elements = new ArrayList<>();
 
     /**
-     * Returns the number of elements in this list. Fetches the first page of the response, if it has not already been
+     * The size of a single page. If the page size is less than zero, the page size is unknown.
+     */
+    private int pageSize = -1;
+
+    /**
+     * The upper bound size of this list. The lower bound size is the size of {@code elements}.
+     */
+    private int sizeUpper = Integer.MAX_VALUE;
+
+    /**
+     * Creates a new {@code ListProxy} based on the specified target. The first page of the list will be automatically
      * retrieved.
      *
-     * @return the number of elements in this list.
+     * @param manager the manager of this list.
+     * @param entityType the type of entity in this list.
+     * @param target the target.
+     * @throws ProxyException if an error occurs while creating this proxy.
      */
+    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkTarget<?> target) throws ProxyException {
+        this.manager = manager;
+        this.entityType = entityType;
+        this.target = target;
+        loadPage(0);
+    }
+
+    private @NotNull List<T> loadPage(int pageStart) throws ProxyException {
+        if (pageStart >= sizeUpper) {
+            return List.of();
+        }
+        NetworkTarget.Builder<ResponseModel> builder = NetworkTarget.newTarget(target.getMethod(), target.getPath(), GenericType.of(ResponseModel.class))
+                .properties(target.getProperties())
+                .argument("start", String.valueOf(pageStart));
+        if (pageSize > 0) {
+            builder.argument("size", String.valueOf(pageSize));
+        }
+        NetworkTarget<ResponseModel> target = builder.build();
+        ResponseModel model;
+        try {
+            model = manager.createQuery(target).get();
+        } catch (ResponseStatusException e) {
+            if (e.getResponse().statusCode() == 400) {
+                // The requested page does not exist.
+                this.sizeUpper = pageStart;
+                return List.of();
+            } else {
+                throw new ProxyException("could not load page with start '" + pageStart + "'", e);
+            }
+        } catch (IOException e) {
+            throw new ProxyException("could not load page with start '" + pageStart + "'", e);
+        } catch (InterruptedException e) {
+            throw new ProxyException("the current thread was interrupted", e);
+        }
+        // Try to find the size of a single page, if possible.
+        if (pageSize <= 0) {
+            URI self = model.getLink("self");
+            if (self != null) {
+                NetworkTarget.Path path = new NetworkTarget.Path(self);
+                try {
+                    this.pageSize = Integer.parseInt(path.getArguments().get("size"));
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        int entityIndex = pageStart;
+        List<EntityModel> entities = model.getEntities();
+        while (elements.size() < (pageStart + entities.size())) {
+            elements.add(null);
+        }
+        for (EntityModel entity : entities) {
+            try {
+                T managed = manager.createEntity(entityType, entity);
+                elements.set(entityIndex, managed);
+            } catch (IllegalArgumentException e) {
+                throw new ProxyException("could not convert list entity", e);
+            }
+            entityIndex += 1;
+        }
+        if (model.getLink("next") == null) {
+            this.sizeUpper = pageStart + entities.size();
+        }
+        return elements.subList(pageStart, pageStart + entities.size());
+    }
+
+    private void loadLast() throws ProxyException {
+        while (sizeUpper > elements.size()) {
+            int pageStart = getPageStart(elements.size());
+            loadPage(pageStart);
+        }
+    }
+
+    private int getPageStart(int index) {
+        if (pageSize <= 0) {
+            return index;
+        }
+        return (int) (Math.floor((double) index / pageSize) * pageSize);
+    }
+
+    @Override
+    public T get(int index) {
+        if (sizeUpper >= 0 && index >= sizeUpper) {
+            throw new IndexOutOfBoundsException("index '" + index + "' is larger than the upper bound size of the list '" + sizeUpper + "'");
+        }
+        if (elements.size() > index) {
+            T element = elements.get(index);
+            if (element != null) {
+                return element;
+            }
+        }
+        List<T> result = loadPage(getPageStart(index));
+        if (result.isEmpty()) {
+            throw new IndexOutOfBoundsException("index '" + index + "' is larger than the size of the list '" + sizeUpper + "'");
+        }
+        if (elements.size() > index) {
+            T element = elements.get(index);
+            if (element != null) {
+                return element;
+            }
+            throw new NoSuchElementException("index '" + index + "' could not be loaded");
+        }
+        throw new IndexOutOfBoundsException("index '" + index + "' is larger than the size of the list '" + sizeUpper + "'");
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return elements.isEmpty();
+    }
+
     @Override
     public int size() {
-        return sections.stream().mapToInt(List::size).sum();
+        loadLast();
+        return elements.size();
     }
 }

@@ -157,11 +157,10 @@ public class NetworkTarget<T> {
         }
     }
 
-
     /**
      * A {@code Path} represents a path but adds support for easily modifying query arguments.
      */
-    private static class Path {
+    public static class Path {
 
         private final URI path;
         private final MultiMap<String, String> arguments = new MultiMap<>();

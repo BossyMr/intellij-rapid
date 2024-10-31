@@ -1,28 +1,31 @@
 package com.bossymr.rapid.ide.insight.flow;
 
+import com.bossymr.rapid.RapidTestCase;
 import com.bossymr.rapid.ide.editor.insight.inspection.flow.UnreachableStatementInspection;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-public class UnreachableStatementInspectionTest extends BasePlatformTestCase {
+class UnreachableStatementInspectionTest extends RapidTestCase {
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        myFixture.enableInspections(List.of(UnreachableStatementInspection.class));
+    @BeforeEach
+    void setUp() {
+        getFixture().enableInspections(List.of(UnreachableStatementInspection.class));
         ControlFlowService.getInstance().reload();
     }
 
     private void doTest(@NotNull String text) {
-        myFixture.configureByText(RapidFileType.getInstance(), text);
-        myFixture.checkHighlighting(true, true, true, true);
+        getFixture().configureByText(RapidFileType.getInstance(), text);
+        getFixture().checkHighlighting(true, true, true, true);
     }
 
-    public void testSingleStatement() {
+    @Test
+    void singleStatement() {
         doTest("""
                 MODULE foo
                     PROC bar()
@@ -35,7 +38,8 @@ public class UnreachableStatementInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testGroup() {
+    @Test
+    void group() {
         doTest("""
                 MODULE foo
                     PROC bar()
@@ -49,7 +53,8 @@ public class UnreachableStatementInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testGroupWithJump() {
+    @Test
+    void groupWithJump() {
         doTest("""
                 MODULE foo
                     PROC bar()
@@ -65,7 +70,8 @@ public class UnreachableStatementInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testSplitGroup() {
+    @Test
+    void splitGroup() {
         doTest("""
                 MODULE foo
                     PROC bar()
@@ -82,7 +88,8 @@ public class UnreachableStatementInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testSplitGroup2() {
+    @Test
+    void splitGroup2() {
         doTest("""
                 MODULE foo
                     PROC bar()
@@ -107,7 +114,8 @@ public class UnreachableStatementInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testChild() {
+    @Test
+    void child() {
         doTest("""
                 MODULE foo
                     PROC bar()

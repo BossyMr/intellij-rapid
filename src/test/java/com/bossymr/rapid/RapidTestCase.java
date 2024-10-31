@@ -27,10 +27,6 @@ public abstract class RapidTestCase {
         fixture.tearDown();
     }
 
-    private String getTestDataPath() {
-        return "src/test/resources/com/bossymr/rapid/";
-    }
-
     public CodeInsightTestFixture getFixture() {
         return fixture;
     }

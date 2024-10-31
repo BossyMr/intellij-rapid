@@ -103,7 +103,7 @@ public class ResponseModel extends EntityModel {
                 '}';
     }
 
-    public static class Builder extends EntityModel.Builder<ResponseModel> {
+    public static class Builder extends EntityModel.Builder {
 
         public Builder(@NotNull String type, @NotNull String title) {
             super(new ResponseModel(type, title));
@@ -134,26 +134,26 @@ public class ResponseModel extends EntityModel {
         }
 
         public @NotNull Builder entity(@NotNull EntityModel entity) {
-            model.getEntities().add(entity);
+            ((ResponseModel) model).getEntities().add(entity);
             return this;
         }
 
-        public @NotNull Builder entity(@NotNull String type, @NotNull String title, @NotNull Consumer<EntityModel.Builder<? extends EntityModel>> consumer) {
-            EntityModel.Builder<? extends EntityModel> builder = EntityModel.newBuilder(type, title);
+        public @NotNull Builder entity(@NotNull String type, @NotNull String title, @NotNull Consumer<EntityModel.Builder> consumer) {
+            EntityModel.Builder builder = EntityModel.newBuilder(type, title);
             consumer.accept(builder);
             EntityModel entity = builder.build();
-            model.getEntities().add(entity);
+            ((ResponseModel) model).getEntities().add(entity);
             return this;
         }
 
         public @NotNull Builder entities(@NotNull List<EntityModel> entities) {
-            model.getEntities().addAll(entities);
+            ((ResponseModel) model).getEntities().addAll(entities);
             return this;
         }
 
         @Override
         public @NotNull ResponseModel build() {
-            return super.build();
+            return ((ResponseModel) super.build());
         }
     }
 }
