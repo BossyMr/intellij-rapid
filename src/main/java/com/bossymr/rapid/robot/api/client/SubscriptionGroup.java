@@ -85,7 +85,7 @@ public class SubscriptionGroup {
                 start();
             } else {
                 logger.debug("Updating SubscriptionGroup '{}'", getEntities());
-                networkClient.send(NetworkTarget.newTarget(RequestMethod.PUT, path, GenericType.voidType())
+                networkClient.send(NetworkTarget.newTarget(RequestMethod.PUT, path, NetworkType.voidType())
                         .properties(getBody(getEntities()))
                         .build());
             }
@@ -96,7 +96,7 @@ public class SubscriptionGroup {
 
     private void start() throws IOException, InterruptedException {
         logger.debug("Starting SubscriptionGroup '{}'", getEntities());
-        HttpResponse<byte[]> response = networkClient.send(NetworkTarget.newTarget(RequestMethod.POST, URI.create("/subscription"), GenericType.voidType())
+        HttpResponse<byte[]> response = networkClient.send(NetworkTarget.newTarget(RequestMethod.POST, URI.create("/subscription"), NetworkType.voidType())
                 .properties(getBody(getEntities()))
                 .build());
         ResponseModel model = ResponseModel.fromXML(new String(response.body(), StandardCharsets.UTF_8));
@@ -132,7 +132,7 @@ public class SubscriptionGroup {
         if (path == null || webSocket == null) {
             return;
         }
-        NetworkTarget<Void> target = NetworkTarget.newTarget(RequestMethod.DELETE, path, GenericType.voidType()).build();
+        NetworkTarget<Void> target = NetworkTarget.newTarget(RequestMethod.DELETE, path, NetworkType.voidType()).build();
         path = null;
         try {
             networkClient.send(target);

@@ -1,6 +1,9 @@
 package com.bossymr.rapid.robot.api.client.proxy;
 
-import com.bossymr.rapid.robot.api.*;
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.NetworkTarget;
+import com.bossymr.rapid.robot.api.NetworkType;
+import com.bossymr.rapid.robot.api.ResponseStatusException;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import org.jetbrains.annotations.NotNull;
@@ -36,21 +39,22 @@ public class ListProxy<T> extends AbstractList<T> {
      *
      * @param manager the manager of this list.
      * @param entityType the type of entity in this list.
-     * @param target the target.
+     * @param model the response for the first page of the list.
      * @throws ProxyException if an error occurs while creating this proxy.
      */
-    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull NetworkTarget<?> target) throws ProxyException {
+    public ListProxy(@NotNull NetworkManager manager, @NotNull Class<T> entityType, @NotNull ResponseModel model) throws ProxyException {
         this.manager = manager;
         this.entityType = entityType;
-        this.target = target;
-        loadPage(0);
+        URI self = Objects.requireNonNull(model.getLink("self"));
+        this.target = NetworkTarget.newTarget(self, NetworkType.voidType()).build();
+        loadPage(0, model);
     }
 
     private @NotNull List<T> loadPage(int pageStart) throws ProxyException {
         if (pageStart >= sizeUpper) {
             return List.of();
         }
-        NetworkTarget.Builder<ResponseModel> builder = NetworkTarget.newTarget(target.getMethod(), target.getPath(), GenericType.of(ResponseModel.class))
+        NetworkTarget.Builder<ResponseModel> builder = NetworkTarget.newTarget(target.getMethod(), target.getPath(), NetworkType.modelType())
                 .properties(target.getProperties())
                 .argument("start", String.valueOf(pageStart));
         if (pageSize > 0) {
@@ -73,6 +77,10 @@ public class ListProxy<T> extends AbstractList<T> {
         } catch (InterruptedException e) {
             throw new ProxyException("the current thread was interrupted", e);
         }
+        return loadPage(pageStart, model);
+    }
+
+    private @NotNull List<T> loadPage(int pageStart, @NotNull ResponseModel model) throws ProxyException {
         // Try to find the size of a single page, if possible.
         if (pageSize <= 0) {
             URI self = model.getLink("self");

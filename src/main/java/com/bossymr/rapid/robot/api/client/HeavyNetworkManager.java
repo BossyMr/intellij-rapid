@@ -4,33 +4,23 @@ import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
-import com.bossymr.rapid.robot.api.client.proxy.ListProxy;
 import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
-import com.bossymr.rapid.robot.api.client.response.EntityConverter;
-import com.bossymr.rapid.robot.api.client.response.ResponseModelConverter;
-import com.bossymr.rapid.robot.api.client.response.StringConverter;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.api.entity.EntityInvocationHandler;
 import com.bossymr.rapid.robot.api.entity.ServiceInvocationHandler;
-import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
-import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class HeavyNetworkManager implements NetworkManager {
-
-    private static final Logger logger = Logger.getInstance(HeavyNetworkManager.class);
 
     private final NetworkClient networkClient;
     private final @NotNull Set<NetworkManager.Listener> listeners = ConcurrentHashMap.newKeySet();
@@ -44,12 +34,11 @@ public class HeavyNetworkManager implements NetworkManager {
         return createEntity(null, entityType, model);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkManager manager, @NotNull NetworkTarget<T> request) {
-        return new NetworkQuery<T>() {
+        return new NetworkQuery<>() {
             @Override
             public GenericType<T> getType() {
-                return request.getType();
+                return request.getType().getType();
             }
 
             @Override
@@ -59,28 +48,9 @@ public class HeavyNetworkManager implements NetworkManager {
 
             @Override
             public T get() throws IOException, InterruptedException {
-                GenericType<T> type = request.getType();
-                if (type.getRawType().equals(List.class)) {
-                    ParameterizedType parameterizedType = (ParameterizedType) type.getType();
-                    Type typeArgument = parameterizedType.getActualTypeArguments()[0];
-                    if (!(typeArgument instanceof Class<?> classArgument)) {
-                        throw new IllegalArgumentException("Cannot retrieve list of type " + typeArgument);
-                    }
-                    return (T) new ListProxy<>(manager, classArgument, request);
-                }
+                NetworkType<T> type = request.getType();
                 HttpResponse<byte[]> response = manager.getNetworkClient().send(request);
-                ;
-                if (type.getType().equals(Void.class)) {
-                    return null;
-                }
-                for (ResponseConverterFactory factory : Set.of(StringConverter.FACTORY, ResponseModelConverter.FACTORY, EntityConverter.FACTORY)) {
-                    ResponseConverter<T> converter = factory.create(manager, type);
-                    if (converter != null) {
-                        return converter.convert(response);
-                    }
-                }
-                logger.warn("Could not convert " + response + " into " + type);
-                return null;
+                return type.convert(manager, response);
             }
         };
     }
@@ -175,11 +145,8 @@ public class HeavyNetworkManager implements NetworkManager {
         return (priority, listener) -> getNetworkClient().subscribe(event, priority, new SubscriptionListener<>() {
             @Override
             public void onEvent(@NotNull SubscriptionEntity entity, @NotNull EntityModel response) {
-                EntityConverter<T> converter = new EntityConverter<>(HeavyNetworkManager.this, GenericType.of(event.getType()));
-                T result = converter.convert(response);
-                if (result != null) {
-                    listener.onEvent(entity, result);
-                }
+                T result = createEntity(event.getType(), response);
+                listener.onEvent(entity, result);
             }
 
             @Override

@@ -33,7 +33,7 @@ public class RobotNetworkAction extends NetworkAction {
         String query = previous.getQuery();
         if (path != null && path.startsWith("/rw/mastership")) {
             if ("action=request".equals(query)) {
-                NetworkTarget<Void> releaseTarget = NetworkTarget.newTarget(RequestMethod.POST, target.getPath(), GenericType.voidType())
+                NetworkTarget<Void> releaseTarget = NetworkTarget.newTarget(RequestMethod.POST, target.getPath(), NetworkType.voidType())
                         .argument("action", "release")
                         .build();
                 onClose.put(previous.getPath(), createQuery(releaseTarget));

@@ -16,7 +16,7 @@ public class NetworkTarget<T> {
 
     private final @NotNull RequestMethod method;
     private final @NotNull Path path;
-    private final @NotNull GenericType<T> type;
+    private final @NotNull NetworkType<T> type;
     private final @NotNull MultiMap<String, String> properties = new MultiMap<>();
 
     /**
@@ -26,7 +26,7 @@ public class NetworkTarget<T> {
      * @param path the path to the resource.
      * @param type the return type of the query.
      */
-    public NetworkTarget(@NotNull RequestMethod method, @NotNull URI path, @NotNull GenericType<T> type) {
+    public NetworkTarget(@NotNull RequestMethod method, @NotNull URI path, @NotNull NetworkType<T> type) {
         this.method = method;
         this.path = new Path(path);
         this.type = type;
@@ -40,7 +40,7 @@ public class NetworkTarget<T> {
      * @param <T> the request type.
      * @return a new builder.
      */
-    public static <T> @NotNull Builder<T> newTarget(@NotNull URI path, @NotNull GenericType<T> type) {
+    public static <T> @NotNull Builder<T> newTarget(@NotNull URI path, @NotNull NetworkType<T> type) {
         return new Builder<>(RequestMethod.GET, path, type);
     }
 
@@ -51,7 +51,7 @@ public class NetworkTarget<T> {
      * @param <T> the request type.
      * @return a new builder.
      */
-    public static <T> @NotNull Builder<T> newTarget(@NotNull RequestMethod method, @NotNull URI path, @NotNull GenericType<T> type) {
+    public static <T> @NotNull Builder<T> newTarget(@NotNull RequestMethod method, @NotNull URI path, @NotNull NetworkType<T> type) {
         return new Builder<>(method, path, type);
     }
 
@@ -72,7 +72,7 @@ public class NetworkTarget<T> {
     /**
      * {@return the return type}
      */
-    public @NotNull GenericType<T> getType() {
+    public @NotNull NetworkType<T> getType() {
         return type;
     }
 
@@ -86,18 +86,18 @@ public class NetworkTarget<T> {
     /**
      * A builder for a {@link NetworkTarget}.
      * <p>
-     * A builder is obtained with {@link NetworkTarget#newTarget(URI, GenericType)} or
-     * {@link NetworkTarget#newTarget(RequestMethod, URI, GenericType)}.
+     * A builder is obtained with {@link NetworkTarget#newTarget(URI, NetworkType)} or
+     * {@link NetworkTarget#newTarget(RequestMethod, URI, NetworkType)}.
      */
     public static class Builder<T> {
 
         private final NetworkTarget<T> target;
 
-        private Builder(@NotNull URI path, @NotNull GenericType<T> type) {
+        private Builder(@NotNull URI path, @NotNull NetworkType<T> type) {
             this(RequestMethod.GET, path, type);
         }
 
-        private Builder(@NotNull RequestMethod method, @NotNull URI path, @NotNull GenericType<T> type) {
+        private Builder(@NotNull RequestMethod method, @NotNull URI path, @NotNull NetworkType<T> type) {
             this.target = new NetworkTarget<>(method, path, type);
         }
 

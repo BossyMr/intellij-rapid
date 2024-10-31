@@ -27,7 +27,7 @@ class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(ok("Hello, World!")));
         NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
-        NetworkTarget<Void> target = NetworkTarget.newTarget(RequestMethod.GET, URI.create("/"), GenericType.voidType()).build();
+        NetworkTarget<Void> target = NetworkTarget.newTarget(RequestMethod.GET, URI.create("/"), NetworkType.voidType()).build();
         HttpResponse<byte[]> response = client.send(target);
         assertEquals("Hello, World!", new String(response.body()));
     }
@@ -37,7 +37,7 @@ class NetworkClientTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(WireMock.status(321).withResponseBody(Body.ofBinaryOrText("Hello, World!".getBytes(), ContentTypeHeader.absent()))));
         NetworkClient client = new NetworkClient(URI.create(runtimeInfo.getHttpBaseUrl()), new Credentials("", ""));
-        NetworkTarget<Void> target = NetworkTarget.newTarget(RequestMethod.GET, URI.create("/"), GenericType.voidType()).build();
+        NetworkTarget<Void> target = NetworkTarget.newTarget(RequestMethod.GET, URI.create("/"), NetworkType.voidType()).build();
         try {
             client.send(target);
             fail();

@@ -1,9 +1,6 @@
 package com.bossymr.rapid.robot.api.client;
 
-import com.bossymr.rapid.robot.api.GenericType;
-import com.bossymr.rapid.robot.api.NetworkAction;
-import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.NetworkTarget;
+import com.bossymr.rapid.robot.api.*;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -45,12 +42,12 @@ class NetworkActionTest {
                     return false;
                 }
             };
-            NetworkTarget<String> successRequest = NetworkTarget.newTarget(URI.create("/success"), GenericType.of(String.class)).build();
+            NetworkTarget<String> successRequest = NetworkTarget.newTarget(URI.create("/success"), NetworkType.stringType()).build();
             String entity = action.createQuery(successRequest).get();
             assertNotNull(success.get());
             assertEquals(successRequest, success.get().request());
             assertEquals(entity, success.get().entity());
-            NetworkTarget<String> failureRequest = NetworkTarget.newTarget(URI.create("/failure"), GenericType.of(String.class)).build();
+            NetworkTarget<String> failureRequest = NetworkTarget.newTarget(URI.create("/failure"), NetworkType.stringType()).build();
             try {
                 action.createQuery(failureRequest).get();
                 fail();
@@ -79,14 +76,14 @@ class NetworkActionTest {
                     throw new IllegalStateException(throwable);
                 }
             };
-            NetworkTarget<String> successRequest = NetworkTarget.newTarget(URI.create("/success"), GenericType.of(String.class)).build();
+            NetworkTarget<String> successRequest = NetworkTarget.newTarget(URI.create("/success"), NetworkType.stringType()).build();
             try {
                 action.createQuery(successRequest).get();
             } catch (IllegalStateException e) {
                 // As the request will throw an exception if successful, the onFailure handler will also be called.
                 assertInstanceOf(IllegalArgumentException.class, e.getCause());
             }
-            NetworkTarget<String> failureRequest = NetworkTarget.newTarget(URI.create("/failure"), GenericType.of(String.class)).build();
+            NetworkTarget<String> failureRequest = NetworkTarget.newTarget(URI.create("/failure"), NetworkType.stringType()).build();
             assertThrows(IllegalStateException.class, () -> action.createQuery(failureRequest).get());
         }
     }

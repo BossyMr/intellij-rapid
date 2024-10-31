@@ -3,7 +3,6 @@ package com.bossymr.rapid.robot.api;
 import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
 import com.bossymr.rapid.robot.api.client.NetworkClient;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
-import com.bossymr.rapid.robot.api.client.response.EntityConverter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -132,11 +131,8 @@ public class NetworkAction implements NetworkManager {
                 SubscriptionEntity entity = getNetworkClient().subscribe(event, priority, new SubscriptionListener<>() {
                     @Override
                     public void onEvent(@NotNull SubscriptionEntity entity, @NotNull EntityModel response) {
-                        EntityConverter<T> converter = new EntityConverter<>(NetworkAction.this, GenericType.of(event.getType()));
-                        T result = converter.convert(response);
-                        if (result != null) {
-                            listener.onEvent(entity, result);
-                        }
+                        T result = manager.createEntity(event.getType(), response);
+                        listener.onEvent(entity, result);
                     }
 
                     @Override
@@ -148,7 +144,7 @@ public class NetworkAction implements NetworkManager {
                 entities.add(entity);
                 return entity;
             } catch (IOException | RuntimeException e) {
-                NetworkTarget<Void> target = NetworkTarget.newTarget(URI.create("/subscription"), GenericType.voidType()).build();
+                NetworkTarget<Void> target = NetworkTarget.newTarget(URI.create("/subscription"), NetworkType.voidType()).build();
                 onException(target, e);
                 throw e;
             }

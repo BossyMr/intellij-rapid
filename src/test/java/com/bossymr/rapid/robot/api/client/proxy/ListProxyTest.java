@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.api.client.proxy;
 
-import com.bossymr.rapid.robot.api.GenericType;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.NetworkTarget;
+import com.bossymr.rapid.robot.api.NetworkType;
 import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.annotations.Property;
@@ -30,8 +30,8 @@ class ListProxyTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             List<EntityObject> models = setupPaging(wireMock, manager, 10, 5);
-            NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), new GenericType<>() {});
-            ListProxy<EntityObject> proxy = new ListProxy<>(manager, EntityObject.class, target);
+            NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), NetworkType.listType(EntityObject.class));
+            List<EntityObject> proxy = manager.createQuery(target).get();
             Assertions.assertEquals(models, proxy);
         }
     }
@@ -41,8 +41,8 @@ class ListProxyTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             List<EntityObject> models = setupPaging(wireMock, manager, 10, 1);
-            NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), new GenericType<>() {});
-            ListProxy<EntityObject> proxy = new ListProxy<>(manager, EntityObject.class, target);
+            NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), NetworkType.listType(EntityObject.class));
+            List<EntityObject> proxy = manager.createQuery(target).get();
             Assertions.assertEquals(models, proxy);
         }
     }
@@ -52,8 +52,8 @@ class ListProxyTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             List<EntityObject> models = setupPaging(wireMock, manager, 10, 5);
-            NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), new GenericType<>() {});
-            ListProxy<EntityObject> proxy = new ListProxy<>(manager, EntityObject.class, target);
+            NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), NetworkType.listType(EntityObject.class));
+            List<EntityObject> proxy = manager.createQuery(target).get();
             // The ListProxy should automatically retrieve the first page.
             wireMock.verifyThat(exactly(1), getRequestedFor(urlPathEqualTo("/")));
             Assertions.assertEquals(models.getFirst(), proxy.getFirst());
@@ -71,8 +71,8 @@ class ListProxyTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             List<EntityObject> models = setupPaging(wireMock, manager, 10, 5);
-            NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), new GenericType<>() {});
-            ListProxy<EntityObject> proxy = new ListProxy<>(manager, EntityObject.class, target);
+            NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), NetworkType.listType(EntityObject.class));
+            List<EntityObject> proxy = manager.createQuery(target).get();
             // The ListProxy should automatically retrieve the first page.
             wireMock.verifyThat(exactly(1), getRequestedFor(urlPathEqualTo("/")));
             Assertions.assertEquals(models.get(30), proxy.get(30));
@@ -103,7 +103,7 @@ class ListProxyTest {
                     .willReturn(okForContentType("application/xhtml+xml", model.toXML())));
             if (i == 0) {
                 wireMock.register(get(urlPathEqualTo("/"))
-                        .withQueryParam("start", equalTo(String.valueOf(0)))
+                        .withQueryParam("start", absent())
                         .withQueryParam("size", absent())
                         .willReturn(okForContentType("application/xhtml+xml", model.toXML())));
             }

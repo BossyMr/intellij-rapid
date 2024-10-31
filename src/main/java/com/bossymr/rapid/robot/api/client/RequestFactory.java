@@ -3,6 +3,7 @@ package com.bossymr.rapid.robot.api.client;
 import com.bossymr.rapid.robot.MastershipException;
 import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.annotations.*;
+import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipDomain;
@@ -74,7 +75,7 @@ public class RequestFactory {
             collected.put(key, value);
         }
         Type returnType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-        NetworkTarget<?> target = NetworkTarget.newTarget(command, URI.create(interpolate(path, proxy, method, args)), GenericType.of(returnType))
+        NetworkTarget<?> target = NetworkTarget.newTarget(command, URI.create(interpolate(path, proxy, method, args)), getNetworkType(returnType))
                 .arguments(collected)
                 .properties(collect(method, args, annotation -> annotation instanceof Field field ? field.value() : null))
                 .build();
@@ -151,6 +152,30 @@ public class RequestFactory {
                 return result;
             }
         };
+    }
+
+    private @NotNull NetworkType<?> getNetworkType(Type type) {
+        if (GenericType.of(type).getRawType().equals(List.class)) {
+            ParameterizedType parameterizedType = (ParameterizedType) type;
+            Type typeArgument = parameterizedType.getActualTypeArguments()[0];
+            if (!(typeArgument instanceof Class<?> classType)) {
+                throw new IllegalArgumentException("could not convert type '" + type + "'");
+            }
+            return NetworkType.listType(classType);
+        }
+        if (!(type instanceof Class<?> classType)) {
+            throw new ProxyException("could not convert type '" + type + "'");
+        }
+        if (classType == String.class) {
+            return NetworkType.stringType();
+        }
+        if (classType == ResponseModel.class) {
+            return NetworkType.modelType();
+        }
+        if (classType == Void.class) {
+            return NetworkType.voidType();
+        }
+        return NetworkType.entityType(classType);
     }
 
     private @NotNull SubscribableNetworkQuery<?> createSubscribableNetworkQuery(@NotNull String path, @NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws NoSuchFieldException {
