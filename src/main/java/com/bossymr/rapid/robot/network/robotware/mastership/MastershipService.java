@@ -1,12 +1,12 @@
 package com.bossymr.rapid.robot.network.robotware.mastership;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.SubscribableNetworkQuery;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Path;
 import com.bossymr.rapid.robot.api.annotations.Service;
 import com.bossymr.rapid.robot.api.annotations.Subscribable;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import com.bossymr.rapid.robot.network.ManualModePrivilegeService;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,13 +22,13 @@ public interface MastershipService {
      * If the robot is in manual mode, {@code Manual Mode Privilege (RMMP)} is required, see
      * {@link ManualModePrivilegeService}.
      */
-    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=request")
+    @Fetch(method = RequestMethod.POST, value = "", arguments = "action=request")
   @NotNull NetworkQuery<Void> request();
 
     /**
      * Releases mastership for all mastership domains.
      */
-    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=release")
+    @Fetch(method = RequestMethod.POST, value = "", arguments = "action=release")
   @NotNull NetworkQuery<Void> release();
 
     /**

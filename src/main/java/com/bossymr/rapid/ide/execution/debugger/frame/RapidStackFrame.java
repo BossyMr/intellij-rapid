@@ -1,8 +1,5 @@
 package com.bossymr.rapid.ide.execution.debugger.frame;
 
-import com.bossymr.rapid.robot.api.NetworkAction;
-import com.bossymr.rapid.robot.api.ResponseStatusException;
-import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
 import com.bossymr.rapid.ide.execution.debugger.RapidSourcePosition;
 import com.bossymr.rapid.language.symbol.RapidField;
@@ -12,6 +9,9 @@ import com.bossymr.rapid.language.symbol.physical.*;
 import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
+import com.bossymr.rapid.robot.api.NetworkAction;
+import com.bossymr.rapid.robot.api.NetworkTarget;
+import com.bossymr.rapid.robot.api.ResponseStatusException;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolValue;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
@@ -100,8 +100,8 @@ public class RapidStackFrame extends XStackFrame {
             XValueChildrenList childrenList = new XValueChildrenList();
             NetworkAction manager = new NetworkAction(process.getManager()) {
                 @Override
-                protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
-                    if (throwable instanceof ResponseStatusException e && e.getResponse().code() == 400) {
+                protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                    if (throwable instanceof ResponseStatusException e && e.getResponse().statusCode() == 400) {
                         return false;
                     }
                     return super.onFailure(request, throwable);
@@ -124,7 +124,7 @@ public class RapidStackFrame extends XStackFrame {
                                 childrenList.add(new RapidSymbolValue(process, parameter, stackFrame));
                             }
                         } catch (ResponseStatusException e) {
-                            if (e.getResponse().code() != 400) {
+                            if (e.getResponse().statusCode() != 400) {
                                 throw e;
                             }
                         }
@@ -164,7 +164,7 @@ public class RapidStackFrame extends XStackFrame {
     @Override
     public String toString() {
         return "RapidStackFrame{" +
-                "stackFrame=" + stackFrame +
-                '}';
+               "stackFrame=" + stackFrame +
+               '}';
     }
 }

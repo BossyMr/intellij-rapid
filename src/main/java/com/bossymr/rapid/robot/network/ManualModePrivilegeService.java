@@ -1,12 +1,12 @@
 package com.bossymr.rapid.robot.network;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.SubscribableNetworkQuery;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Field;
 import com.bossymr.rapid.robot.api.annotations.Service;
 import com.bossymr.rapid.robot.api.annotations.Subscribable;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -32,7 +32,7 @@ public interface ManualModePrivilegeService {
      * @param privilege the privilege to request, must be {@link ManualModePrivilege#MODIFY MODIFY} or
      * {@link ManualModePrivilege#EXECUTE EXECUTE}.
      */
-    @Fetch(method = FetchMethod.POST, value = "")
+    @Fetch(method = RequestMethod.POST, value = "")
   @NotNull NetworkQuery<Void> request(@NotNull @Field("privilege") RequestManualModePrivilege privilege);
 
     /**
@@ -41,14 +41,14 @@ public interface ManualModePrivilegeService {
      * @param identifier the identifier of the user who made the request.
      * @param privilege the response to the request.
      */
-    @Fetch(method = FetchMethod.POST, value = "?action=set")
+    @Fetch(method = RequestMethod.POST, value = "?action=set")
   @NotNull NetworkQuery<Void> respond(@NotNull @Field("uid") String identifier,
                                @NotNull @Field("privilege") RequestManualModePrivilege privilege);
 
     /**
      * Cancels a held {@code Manual Mode Privilege (RMMP)} or a requested privilege.
      */
-    @Fetch(method = FetchMethod.POST, value = "?action=cancel")
+    @Fetch(method = RequestMethod.POST, value = "?action=cancel")
   @NotNull NetworkQuery<Void> cancel();
 
     /**

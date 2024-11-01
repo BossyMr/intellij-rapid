@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum HoldToRunState {
-    @Deserializable("HdTREvent WaitEntered") WAIT_ENTERED,
-    @Deserializable("HdTREvent WaitLeft") WAIT_LEFT
+    @Alias("HdTREvent WaitEntered") WAIT_ENTERED,
+    @Alias("HdTREvent WaitLeft") WAIT_LEFT
 }

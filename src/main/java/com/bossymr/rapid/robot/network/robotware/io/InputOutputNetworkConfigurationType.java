@@ -1,11 +1,11 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum InputOutputNetworkConfigurationType {
-    @Deserializable("BITS") BITS,
-    @Deserializable("GROUPS") GROUPS,
-    @Deserializable("BOTH") BOTH,
-    @Deserializable("SCAN") SCAN,
-    @Deserializable("UNITS") UNITS,
+    @Alias("BITS") BITS,
+    @Alias("GROUPS") GROUPS,
+    @Alias("BOTH") BOTH,
+    @Alias("SCAN") SCAN,
+    @Alias("UNITS") UNITS,
 }

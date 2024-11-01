@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum LoadProgramMode {
-    @Deserializable("add") ADD,
-    @Deserializable("replace") REPLACE,
+    @Alias("add") ADD,
+    @Alias("replace") REPLACE,
 }

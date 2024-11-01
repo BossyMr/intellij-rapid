@@ -1,28 +1,33 @@
 package com.bossymr.rapid.language.flow;
 
+import com.bossymr.rapid.RapidTestCase;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
+import com.intellij.openapi.application.ReadAction;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-public class ControlFlowTest extends BasePlatformTestCase {
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+class ControlFlowTest extends RapidTestCase {
+
+    @BeforeEach
+    void setUp() {
         ControlFlowService.getInstance().reload();
     }
 
     private void check(@NotNull String text, @NotNull String expected) {
-        myFixture.configureByText(RapidFileType.getInstance(), text);
+        getFixture().configureByText(RapidFileType.getInstance(), text);
         ControlFlowService service = ControlFlowService.getInstance();
-        Set<Block> controlFlow = service.getControlFlow(myFixture.getProject());
-        assertTextEquals(expected.replaceAll(" {4}", "\t"), ControlFlowFormatVisitor.format(controlFlow).replaceAll(" {4}", "\t"));
+        Set<Block> controlFlow = ReadAction.compute(() -> service.getControlFlow(getFixture().getProject()));
+        assertEquals(expected.replaceAll(" {4}", "\t"), ControlFlowFormatVisitor.format(controlFlow).replaceAll(" {4}", "\t"));
     }
 
-    public void testSimpleFunction() {
+    @Test
+    void simpleFunction() {
         check("""
                 MODULE foo
                     FUNC num bar()
@@ -33,7 +38,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num _0 [value];
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 2.0 * 3.0;
                 	1: return _0;
@@ -41,7 +46,8 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testIfStatement() {
+    @Test
+    void ifStatement() {
         check("""
                 MODULE foo
                     FUNC num bar()
@@ -61,28 +67,29 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	var num _0 [value];
                 	bool _1;
                 	bool _2;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 2.0 * 3.0;
                 	1: _1 := _0 > 4.0;
                 	2: if(_1) -> [true: 3, false: 4]
-                                
+                
                 	3: _0 := _0 + 1.0;
                 	   goto -> [8];
-                                
+                
                 	4: _2 := _0 > 2.0;
                 	5: if(_2) -> [true: 6, false: 7]
-                                
+                
                 	6: _0 := _0 - 1.0;
                 	   goto -> [8];
-                                
+                
                 	7: _0 := (_0 * 2.0) + 2.0;
                 	8: return _0;
                 }
                 """);
     }
 
-    public void testWhileStatement() {
+    @Test
+    void whileStatement() {
         check("""
                 MODULE foo
                     FUNC num bar()
@@ -97,21 +104,22 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 func num foo:bar() {
                 	var num _0 [value];
                 	bool _1;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 2.0 * 3.0;
                 	1: _1 := _0 > 0.0;
                 	2: if(_1) -> [true: 3, false: 4]
-                                
+                
                 	3: _0 := _0 - 1.0;
                 	   goto -> [1];
-                                
+                
                 	4: return _0;
                 }
                 """);
     }
 
-    public void testArrayExpression() {
+    @Test
+    void arrayExpression() {
         check("""
                 MODULE foo
                     FUNC num bar()
@@ -123,7 +131,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:bar() {
                 	var num{*,*} _0 [value];
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := [[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
                 	1: _0[2.0][3.0] := 6.0;
@@ -132,7 +140,8 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testGoToStatement() {
+    @Test
+    void goToStatement() {
         check("""
                 MODULE foo
                     PROC bar()
@@ -145,7 +154,7 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 proc foo:bar() {
                 	var num _0 [value];
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0.0;
                 	   goto -> [0];
@@ -153,7 +162,8 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testForStatement() {
+    @Test
+    void forStatement() {
         check("""
                 MODULE foo
                     FUNC num bar()
@@ -172,36 +182,37 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _3;
                 	bool _4;
                 	bool _5;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0.0;
                 	1: _1 := 0.0;
                 	2: _3 := _1 < 10.0;
                 	3: if(_3) -> [true: 4, false: 5]
-                                
+                
                 	4: _2 := 1;
                 	   goto -> [6];
-                                
+                
                 	5: _2 := -1;
                 	6: _5 := _2 < 0;
                 	7: if(_5) -> [true: 8, false: 9]
-                                
+                
                 	8: _4 := _1 > 10.0;
                 	   goto -> [10];
-                                
+                
                 	9: _4 := _1 < 10.0;
                 	10: if(_4) -> [true: 11, false: 13]
-                                
+                
                 	11: _0 := _0 + 1.0;
                 	12: _1 := _1 + _2;
                 		goto -> [6];
-                                
+                
                 	13: return _0;
                 }
                 """);
     }
 
-    public void testStepForStatement() {
+    @Test
+    void stepForStatement() {
         check("""
                 MODULE foo
                     FUNC num bar()
@@ -218,29 +229,30 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	num _1;
                 	bool _2;
                 	bool _3;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0.0;
                 	1: _1 := 0.0;
                 	2: _3 := 5.0 < 0;
                 	3: if(_3) -> [true: 4, false: 5]
-                                
+                
                 	4: _2 := _1 > 10.0;
                 	   goto -> [6];
-                                
+                
                 	5: _2 := _1 < 10.0;
                 	6: if(_2) -> [true: 7, false: 9]
-                                
+                
                 	7: _0 := _0 + 1.0;
                 	8: _1 := _1 + 5.0;
                 	   goto -> [2];
-                                
+                
                 	9: return _0;
                 }
                 """);
     }
 
-    public void testTestStatement() {
+    @Test
+    void testStatement() {
         check("""
                 MODULE foo
                     FUNC num bar()
@@ -265,36 +277,37 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _1;
                 	bool _2;
                 	bool _3;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0.0;
                 	1: _1 := _0 = 0.0;
                 	2: if(_1) -> [true: 3, false: 4]
-                                
+                
                 	3: return 0.0;
-                                
+                
                 	4: _2 := (_0 = 1.0) OR (_0 = 3.0);
                 	5: if(_2) -> [true: 6, false: 7]
-                                
+                
                 	6: return 1.0;
-                                
+                
                 	7: _3 := ((_0 = 4.0) OR (_0 = 5.0)) OR (_0 = 6.0);
                 	8: if(_3) -> [true: 9, false: 10]
-                                
+                
                 	9: return 3.0;
-                                
+                
                 	10: return -1.0;
                 }
                 """);
     }
 
-    public void testProcedureCall() {
+    @Test
+    void procedureCall() {
         check("""
                 MODULE foo
                     FUNC num bar()
                         return Abs(-1);
                     ENDFUNC
-                                
+                
                     FUNC num Abs(num value)
                         IF value >= 0 THEN
                             return value;
@@ -306,19 +319,19 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """, """
                 func num foo:Abs(input num _0 [value]) {
                 	bool _1;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _1 := _0 >= 0.0;
                 	1: if(_1) -> [true: 2, false: 3]
-                                
+                
                 	2: return _0;
-                                
+                
                 	3: return -_0;
                 }
-                                
+                
                 func num foo:bar() {
                 	num _0;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := foo:Abs(_0 := -1.0);
                 	1: return _0;
@@ -326,30 +339,31 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testProcedureCallWithConditionalArgument() {
+    @Test
+    void procedureCallWithConditionalArgument() {
         check("""
                 MODULE foo
                     PROC bar(\\num a)
                         conditional \\a?a;
                     ENDPROC
-                                
+                
                     PROC conditional(\\num a) ENDPROC
                 ENDMODULE
                 """, """
                 proc foo:bar(\\input num _0 [a]) {
                 	bool _1;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _1 := :Present(_0 := _0);
                 	1: if(_1) -> [true: 2, false: 3]
-                                
+                
                 	2: foo:conditional(_a := _0);
                 	   goto -> [4];
-                                
+                
                 	3: foo:conditional();
                 	4: return;
                 }
-                                
+                
                 proc foo:conditional(\\input num _0 [a]) {
                 	STATEMENT_LIST:
                 	0: return;
@@ -357,13 +371,14 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testFunctionCallExpressionWithMultipleConditionalArguments() {
+    @Test
+    void functionCallExpressionWithMultipleConditionalArguments() {
         check("""
                 MODULE foo
                     PROC bar(\\num a, \\num b)
                         conditional \\a?a, \\b?b;
                     ENDPROC
-                                
+                
                     PROC conditional(\\num a, \\num b) ENDPROC
                 ENDMODULE
                 """, """
@@ -371,30 +386,30 @@ public class ControlFlowTest extends BasePlatformTestCase {
                 	bool _2;
                 	bool _3;
                 	bool _4;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _2 := :Present(_0 := _0);
                 	1: if(_2) -> [true: 2, false: 6]
-                                
+                
                 	2: _3 := :Present(_0 := _1);
                 	3: if(_3) -> [true: 4, false: 5]
-                                
+                
                 	4: foo:conditional(_a := _0, _b := _1);
                 	   goto -> [10];
-                                
+                
                 	5: foo:conditional(_a := _0);
                 	   goto -> [10];
-                                
+                
                 	6: _4 := :Present(_0 := _1);
                 	7: if(_4) -> [true: 8, false: 9]
-                                
+                
                 	8: foo:conditional(_b := _1);
                 	   goto -> [10];
-                                
+                
                 	9: foo:conditional();
                 	10: return;
                 }
-                                
+                
                 proc foo:conditional(\\input num _0 [a], \\input num _1 [b]) {
                 	STATEMENT_LIST:
                 	0: return;

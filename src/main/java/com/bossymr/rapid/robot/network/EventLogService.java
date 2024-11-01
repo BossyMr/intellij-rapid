@@ -1,10 +1,10 @@
 package com.bossymr.rapid.robot.network;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.annotations.Argument;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Service;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,6 +29,6 @@ public interface EventLogService {
     /**
      * Clears all messages in this event log.
      */
-    @Fetch(method = FetchMethod.POST, value = "?action=clearall")
+    @Fetch(method = RequestMethod.POST, value = "?action=clearall")
   @NotNull NetworkQuery<Void> clearAll();
 }

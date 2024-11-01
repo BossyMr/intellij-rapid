@@ -1,5 +1,7 @@
 package com.bossymr.rapid.robot.api.entity;
 
+import com.bossymr.rapid.robot.api.NetworkManager;
+import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -9,6 +11,8 @@ import java.lang.reflect.Proxy;
 import java.util.Arrays;
 
 public abstract class AbstractInvocationHandler implements InvocationHandler {
+
+    protected @Nullable NetworkManager manager;
 
     public static boolean isMethod(@NotNull Method method, @NotNull Class<?> declaringClass, @NotNull String name, @NotNull Class<?>... parameters) {
         return method.getName().equals(name) &&
@@ -27,6 +31,17 @@ public abstract class AbstractInvocationHandler implements InvocationHandler {
         }
         if (isMethod(method, Object.class, "toString")) {
             return toString(proxy);
+        }
+        if (isMethod(method, NetworkProxy.class, "getNetworkManager")) {
+            return manager;
+        }
+        if (isMethod(method, NetworkProxy.class, "attach", NetworkManager.class)) {
+            this.manager = (NetworkManager) args[0];
+            return null;
+        }
+        if (isMethod(method, NetworkProxy.class, "detach", NetworkManager.class)) {
+            this.manager = null;
+            return null;
         }
         if (method.isDefault()) {
             return InvocationHandler.invokeDefault(proxy, method, args);

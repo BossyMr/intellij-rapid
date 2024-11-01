@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.SubscribableNetworkQuery;
 import com.bossymr.rapid.robot.api.annotations.*;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleEntity;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
@@ -41,20 +41,20 @@ public interface Task {
     @Fetch("/rw/rapid/tasks/{#name}/pcp")
     @NotNull NetworkQuery<List<ProgramPointer>> getProgramPointer();
 
-    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=activate")
+    @Fetch(method = RequestMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=activate")
     @NotNull NetworkQuery<Void> activate();
 
-    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=deactivate")
+    @Fetch(method = RequestMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=deactivate")
     @NotNull NetworkQuery<Void> deactivate();
 
-    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=unloadmod")
+    @Fetch(method = RequestMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=unloadmod")
     @NotNull NetworkQuery<Void> loadModule(@NotNull @Field("modulepath") String modulePath,
                                            @Field("replace") boolean replace);
 
-    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=unloadmod")
+    @Fetch(method = RequestMethod.POST, value = "/rw/rapid/tasks/{#name}", arguments = "action=unloadmod")
     @NotNull NetworkQuery<Void> unloadModule(@NotNull @Field("module") String moduleName);
 
-    @Fetch(method = FetchMethod.POST, value = "/rw/rapid/tasks/{#name}/pcp", arguments = "action=set-pp-cursor")
+    @Fetch(method = RequestMethod.POST, value = "/rw/rapid/tasks/{#name}/pcp", arguments = "action=set-pp-cursor")
     @NotNull NetworkQuery<Void> setProgramPointer(@NotNull @Field("module") String module,
                                                   @NotNull @Field("routine") String routine,
                                                   @Field("line") int row,

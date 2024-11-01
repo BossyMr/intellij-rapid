@@ -1,25 +1,28 @@
 package com.bossymr.rapid.robot.api.entity;
 
 import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.NetworkTarget;
+import com.bossymr.rapid.robot.api.NetworkType;
+import com.bossymr.rapid.robot.api.annotations.Alias;
+import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Title;
-import com.bossymr.rapid.robot.api.client.EntityModel;
 import com.bossymr.rapid.robot.api.client.RequestFactory;
-import com.bossymr.rapid.robot.api.client.ResponseModel;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
+import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
-import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
-import okhttp3.Request;
-import okhttp3.Response;
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.InvocationHandlerAdapter;
+import net.bytebuddy.matcher.ElementMatchers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -30,7 +33,6 @@ import java.util.Objects;
 public class EntityInvocationHandler extends AbstractInvocationHandler {
 
     private final @NotNull Class<?> type;
-    private final @Nullable NetworkManager manager;
     private @NotNull EntityModel model;
 
     public EntityInvocationHandler(@Nullable NetworkManager manager, @NotNull Class<?> type, @NotNull EntityModel model) {
@@ -39,31 +41,77 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         this.type = type;
     }
 
+    public static <T> @NotNull T createEntity(@Nullable NetworkManager manager, @NotNull Class<T> entityType, @NotNull EntityModel model) {
+        Class<? extends T> actualType = getEntityType(entityType, model);
+        if (actualType == null) {
+            throw new IllegalArgumentException(model.getType() + " could not be converted into " + entityType.getName());
+        }
+        Class<? extends T> virtualType = new ByteBuddy()
+                .subclass(actualType)
+                .implement(EntityProxy.class)
+                .method(ElementMatchers.any())
+                .intercept(InvocationHandlerAdapter.of(new EntityInvocationHandler(manager, actualType, model)))
+                .make()
+                .load(NetworkManager.class.getClassLoader())
+                .getLoaded();
+        try {
+            Constructor<? extends T> constructor = virtualType.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return constructor.newInstance();
+        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            throw new IllegalArgumentException("could not create entity: entity '" + entityType + "' must define a constructor with no arguments", e);
+        }
+    }
+
+    private static <T> @Nullable Class<? extends T> getEntityType(@NotNull Class<T> entityType, @NotNull EntityModel model) {
+        Map<String, Class<? extends T>> entities = getEntityGraph(entityType);
+        String type = model.getType();
+        if (type.endsWith("-li")) {
+            return entities.get(type.substring(0, type.length() - "-li".length()));
+        } else {
+            return entities.get(type);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> @NotNull Map<String, Class<? extends T>> getEntityGraph(@NotNull Class<? extends T> entityType) {
+        Map<String, Class<? extends T>> entities = new HashMap<>();
+        Entity entity = entityType.getAnnotation(Entity.class);
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity '" + entityType + "' must be annotated with Entity");
+        }
+        for (String type : entity.value()) {
+            if (entities.containsKey(type)) {
+                throw new IllegalArgumentException(entityType.getName() + " (" + type + ") is declared more than once");
+            }
+            entities.put(type, entityType);
+        }
+        for (Class<?> subtype : entity.subtype()) {
+            if (entityType.equals(subtype)) {
+                throw new IllegalArgumentException(subtype.getName() + " cannot be declared as subtype of itself");
+            }
+            if (!(entityType.isAssignableFrom(subtype))) {
+                throw new IllegalArgumentException(subtype.getName() + " does not implement supertype " + entityType.getName());
+            }
+            Map<String, Class<? extends T>> graph = getEntityGraph((Class<? extends T>) subtype);
+            entities.putAll(graph);
+        }
+        return entities;
+    }
+
     @Override
     public @Nullable Object execute(@NotNull Object proxy, @NotNull Method method, Object @NotNull [] args) throws Throwable {
-        if (isMethod(method, NetworkProxy.class, "getNetworkAction")) {
-            return manager;
-        }
-        if (isMethod(method, NetworkProxy.class, "move", NetworkManager.class)) {
-            return ((NetworkManager) args[0]).createEntity(type, model);
-        }
         if (isMethod(method, EntityProxy.class, "refresh")) {
-            if (model.reference("self") == null) {
-                throw new ProxyException("Could not refresh");
+            if (model.getLink("self") == null) {
+                throw new ProxyException("could not refresh entity: no 'self' link");
             }
             getSelf();
-        }
-        if (isMethod(method, EntityProxy.class, "getProperty", String.class)) {
-            return getProperty((String) args[0]);
-        }
-        if (isMethod(method, EntityProxy.class, "getReference", String.class)) {
-            return getReference((String) args[0]);
         }
         if (isMethod(method, EntityProxy.class, "getModel")) {
             return model;
         }
         if (method.isAnnotationPresent(Title.class)) {
-            return model.title();
+            return model.getTitle();
         }
         if (method.isAnnotationPresent(Property.class)) {
             Property property = method.getAnnotation(Property.class);
@@ -93,22 +141,21 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
             return null;
         }
         if (manager == null) {
-            throw new IllegalStateException("Entity is not managed");
+            throw new ProxyException("could not invoke method '" + method.getName() + "': entity is not managed");
         }
         return new RequestFactory(manager).createQuery(type, proxy, method, args);
     }
 
     private @NotNull Object convert(@NotNull String value, @NotNull Class<?> type) throws IllegalAccessException {
-        type = getBoxType(type);
         if (type == String.class) return value;
-        if (type == Byte.class) return Byte.parseByte(value);
-        if (type == Short.class) return Short.parseShort(value);
-        if (type == Integer.class) return Integer.parseInt(value);
-        if (type == Long.class) return Long.parseLong(value);
-        if (type == Float.class) return Float.parseFloat(value);
-        if (type == Double.class) return Double.parseDouble(value);
-        if (type == Boolean.class) return Boolean.parseBoolean(value);
-        if (type == Character.class) return value.charAt(0);
+        if (type == byte.class || type == Byte.class) return Byte.parseByte(value);
+        if (type == short.class || type == Short.class) return Short.parseShort(value);
+        if (type == int.class || type == Integer.class) return Integer.parseInt(value);
+        if (type == long.class || type == Long.class) return Long.parseLong(value);
+        if (type == float.class || type == Float.class) return Float.parseFloat(value);
+        if (type == double.class || type == Double.class) return Double.parseDouble(value);
+        if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(value);
+        if (type == char.class || type == Character.class) return value.charAt(0);
         if (type == URI.class) {
             try {
                 return URI.create(value);
@@ -134,9 +181,9 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
     }
 
     private void getField(@NotNull Field field, Map<String, Object> constants) throws IllegalAccessException {
-        Deserializable deserializable = field.getAnnotation(Deserializable.class);
-        if (deserializable != null) {
-            for (String value : deserializable.value()) {
+        Alias alias = field.getAnnotation(Alias.class);
+        if (alias != null) {
+            for (String value : alias.value()) {
                 if (constants.containsKey(value)) {
                     throw new IllegalArgumentException("Enum contains duplicate constant '" + value + "'");
                 }
@@ -151,37 +198,24 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         }
     }
 
-    private @NotNull Class<?> getBoxType(@NotNull Class<?> type) {
-        if (!(type.isPrimitive())) return type;
-        if (type == boolean.class) return Boolean.class;
-        if (type == byte.class) return Byte.class;
-        if (type == short.class) return Short.class;
-        if (type == int.class) return Integer.class;
-        if (type == long.class) return Long.class;
-        if (type == float.class) return Float.class;
-        if (type == double.class) return Double.class;
-        if (type == char.class) return Character.class;
-        return type;
-    }
-
     private @Nullable URI getReference(@NotNull String type) {
-        URI reference = model.reference(type);
+        URI reference = model.getLink(type);
         if (reference != null) {
             return reference;
         }
-        if (model.type().endsWith("-li")) {
-            return getSelf().reference(type);
+        if (model.getType().endsWith("-li")) {
+            return getSelf().getLink(type);
         }
         return null;
     }
 
     private @Nullable String getProperty(@NotNull String type) {
-        String field = model.property(type);
+        String field = model.getProperty(type);
         if (field != null) {
             return field;
         }
-        if (model.type().endsWith("-li")) {
-            return getSelf().property(type);
+        if (model.getType().endsWith("-li")) {
+            return getSelf().getProperty(type);
         }
         return null;
     }
@@ -190,20 +224,17 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
         if (manager == null) {
             throw new IllegalStateException("Entity is not managed");
         }
-        URI reference = model.reference("self");
+        URI reference = model.getLink("self");
         if (reference == null) {
             throw new ProxyException("Entity '" + model + "' has no reference to itself");
         }
-        Request httpRequest = new Request.Builder().url(reference.toString()).build();
         try {
-            ResponseModel collectionModel;
-            try (Response response = manager.getNetworkClient().send(httpRequest)) {
-                collectionModel = ResponseModel.convert(response.body().bytes());
-            }
-            if (collectionModel.entities().size() != 1) {
+            NetworkTarget<ResponseModel> target = NetworkTarget.newTarget(reference, NetworkType.modelType()).build();
+            ResponseModel collectionModel = manager.createQuery(target).get();
+            if (collectionModel.getEntities().size() != 1) {
                 throw new ProxyException("Request to self reference '" + reference + "' responded with multiple entities");
             }
-            return model = collectionModel.entities().get(0);
+            return model = collectionModel.getEntities().getFirst();
         } catch (IOException | InterruptedException e) {
             throw new ProxyException(e);
         }
@@ -211,9 +242,9 @@ public class EntityInvocationHandler extends AbstractInvocationHandler {
 
     @Override
     public boolean equals(@NotNull Object proxy, @NotNull Object obj) {
-        InvocationHandler invocationHandler = Proxy.getInvocationHandler(obj);
-        if (!(invocationHandler instanceof EntityInvocationHandler entity)) return false;
-        return entity.type.equals(type) && entity.model.equals(model) && Objects.equals(entity.manager, manager);
+        if (!(obj instanceof EntityProxy entity)) return false;
+        if (!(type.isInstance(obj))) return false;
+        return entity.getModel().equals(model) && Objects.equals(entity.getNetworkManager(), manager);
     }
 
     @Override

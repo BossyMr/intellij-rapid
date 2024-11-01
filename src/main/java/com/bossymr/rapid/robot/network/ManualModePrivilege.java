@@ -1,18 +1,18 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum ManualModePrivilege {
 
-    @Deserializable("none")
+    @Alias("none")
     NONE,
 
-    @Deserializable("pending modify")
+    @Alias("pending modify")
     PENDING_MODIFY,
 
-    @Deserializable("modify")
+    @Alias("modify")
     MODIFY,
 
-    @Deserializable("exec")
+    @Alias("exec")
     EXECUTE,
 }

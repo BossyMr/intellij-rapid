@@ -1,22 +1,22 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.task;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum ProgramExecutionState {
 
-    @Deserializable("ready")
+    @Alias("ready")
     READY,
 
 
-    @Deserializable("started")
+    @Alias("started")
     STARTED,
 
 
-    @Deserializable("stopped")
+    @Alias("stopped")
     STOPPED,
 
 
-    @Deserializable("initiated")
+    @Alias("initiated")
     INITIATED,
 
 }

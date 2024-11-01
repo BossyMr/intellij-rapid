@@ -1,36 +1,40 @@
 package com.bossymr.rapid.ide.insight.flow;
 
+import com.bossymr.rapid.RapidTestCase;
 import com.bossymr.rapid.ide.editor.insight.inspection.flow.ConstantValueInspection;
 import com.bossymr.rapid.ide.editor.insight.inspection.flow.DataFlowProblemInspection;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.flow.ControlFlowService;
 import com.bossymr.rapid.robot.RobotService;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
 
-public class ConstantValueInspectionTest extends BasePlatformTestCase {
+import static org.junit.jupiter.api.Assertions.fail;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+class ConstantValueInspectionTest extends RapidTestCase {
+
+    @BeforeEach
+    void setUp() {
         try {
             RobotService.getInstance().disconnect();
         } catch (IOException | InterruptedException e) {
             fail();
         }
-        myFixture.enableInspections(List.of(ConstantValueInspection.class, DataFlowProblemInspection.class));
+        getFixture().enableInspections(List.of(ConstantValueInspection.class, DataFlowProblemInspection.class));
         ControlFlowService.getInstance().reload();
     }
 
     private void doTest(@NotNull String text) {
-        myFixture.configureByText(RapidFileType.getInstance(), text);
-        myFixture.checkHighlighting(true, true, true, true);
+        getFixture().configureByText(RapidFileType.getInstance(), text);
+        getFixture().checkHighlighting(true, true, true, true);
     }
 
-    public void testInputVariable() {
+    @Test
+    void inputVariable() {
         doTest("""
                 MODULE foo
                     PROC bar(num x)
@@ -39,7 +43,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                         IF <warning descr="Value of expression is always true">variable = 1</warning> THEN
                         ENDIF
                     ENDPROC
-                    
+                
                     PROC Abs(VAR num value)
                         IF value < 0 THEN
                             value := -value;
@@ -49,7 +53,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testEquality() {
+    @Test
+    void equality() {
         doTest("""
                 MODULE foo
                     PROC bar(num x)
@@ -61,7 +66,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testFunctionCall() {
+    @Test
+    void functionCall() {
         doTest("""
                 MODULE foo
                     PROC bar()
@@ -70,7 +76,7 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                         IF <warning descr="Value of expression is always true">variable = 1</warning> THEN
                         ENDIF
                     ENDPROC
-                    
+                
                     FUNC num Abs(num value)
                         IF value >= 0 THEN
                             return value;
@@ -82,7 +88,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testGroupExpression() {
+    @Test
+    void groupExpression() {
         doTest("""
                 MODULE foo
                     PROC bar(bool condition)
@@ -107,7 +114,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testConditionJump() {
+    @Test
+    void conditionJump() {
         doTest("""
                 MODULE foo
                     PROC bar(num x)
@@ -122,7 +130,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testArrayVariable() {
+    @Test
+    void arrayVariable() {
         doTest("""
                 MODULE foo
                     PROC bar()
@@ -134,7 +143,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testArrayVariableLength() {
+    @Test
+    void arrayVariableLength() {
         doTest("""
                 MODULE foo
                     PROC bar()
@@ -153,7 +163,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testPureFunction() {
+    @Test
+    void pureFunction() {
         doTest("""
                 MODULE foo
                     PROC bar()
@@ -168,7 +179,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testPureFunctionWithEqualArguments() {
+    @Test
+    void pureFunctionWithEqualArguments() {
         doTest("""
                 MODULE foo
                     PROC bar(num arg1, num arg2)
@@ -188,7 +200,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
     }
 
 
-    public void testArrayVariableHistory() {
+    @Test
+    void arrayVariableHistory() {
         doTest("""
                 MODULE foo
                     PROC bar(num x)
@@ -201,14 +214,15 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testRecordVariableHistory() {
+    @Test
+    void testRecordVariableHistory() {
         doTest("""
                 MODULE foo
                     RECORD baz
                         num baz1;
                         num baz2;
                     ENDRECORD
-                                
+                
                     PROC bar(num x)
                         VAR baz variable := [1, 2];
                         IF <warning descr="Value of expression is always true">variable.baz2 = 2</warning> THEN
@@ -219,7 +233,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testMissingVariable() {
+    @Test
+    void missingVariable() {
         doTest("""
                 MODULE foo
                     PROC bar(\\num x)
@@ -236,7 +251,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testMutuallyExclusiveArgument() {
+    @Test
+    void mutuallyExclusiveArgument() {
         doTest("""
                 MODULE foo
                     PROC bar(\\num x | num y)
@@ -251,7 +267,8 @@ public class ConstantValueInspectionTest extends BasePlatformTestCase {
                 """);
     }
 
-    public void testLargeMutuallyExclusiveArguments() {
+    @Test
+    void largeMutuallyExclusiveArguments() {
         doTest("""
                 MODULE foo
                     PROC bar(\\num x | num y | num z)

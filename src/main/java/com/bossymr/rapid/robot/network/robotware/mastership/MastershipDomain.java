@@ -1,12 +1,12 @@
 package com.bossymr.rapid.robot.network.robotware.mastership;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.SubscribableNetworkQuery;
 import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Subscribable;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -67,13 +67,13 @@ public interface MastershipDomain {
     /**
      * Requests mastership for this mastership domain.
      */
-    @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=request")
+    @Fetch(method = RequestMethod.POST, value = "{@self}", arguments = "action=request")
   @NotNull NetworkQuery<Void> request();
 
     /**
      * Releases mastership for this mastership domain.
      */
-    @Fetch(method = FetchMethod.POST, value = "{@self}", arguments = "action=release")
+    @Fetch(method = RequestMethod.POST, value = "{@self}", arguments = "action=release")
   @NotNull NetworkQuery<Void> release();
 
     /**

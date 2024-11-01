@@ -1,60 +1,60 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.symbol;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 /**
  * {@code SymbolType} represents a type of symbol.
  */
 public enum SymbolType {
 
-    @Deserializable("atm")
+    @Alias("atm")
     ATOMIC,
 
-    @Deserializable("rec")
+    @Alias("rec")
     RECORD,
 
-    @Deserializable("ali")
+    @Alias("ali")
     ALIAS,
 
-    @Deserializable("rcp")
+    @Alias("rcp")
     RECORD_COMPONENT,
 
-    @Deserializable("con")
+    @Alias("con")
     CONSTANT,
 
-    @Deserializable("var")
+    @Alias("var")
     VARIABLE,
 
-    @Deserializable("per")
+    @Alias("per")
     PERSISTENT,
 
-    @Deserializable("par")
+    @Alias("par")
     PARAMETER,
 
-    @Deserializable("lab")
+    @Alias("lab")
     LABEL,
 
-    @Deserializable("for")
+    @Alias("for")
     FOR_STATEMENT,
 
-    @Deserializable("fun")
+    @Alias("fun")
     FUNCTION,
 
-    @Deserializable("prc")
+    @Alias("prc")
     PROCEDURE,
 
-    @Deserializable("trp")
+    @Alias("trp")
     TRAP,
 
-    @Deserializable("mod")
+    @Alias("mod")
     MODULE,
 
-    @Deserializable("tsk")
+    @Alias("tsk")
     TASK,
 
-    @Deserializable("any")
+    @Alias("any")
     ANY,
 
-    @Deserializable("udef")
+    @Alias("udef")
     UNDEFINED,
 }

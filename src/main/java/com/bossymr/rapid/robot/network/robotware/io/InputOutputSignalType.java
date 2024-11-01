@@ -1,12 +1,12 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum InputOutputSignalType {
-    @Deserializable("DO") DIGITAL_OUTPUT,
-    @Deserializable("DI") DIGITAL_INPUT,
-    @Deserializable("AO") ANALOGUE_OUTPUT,
-    @Deserializable("AI") ANALOGUE_INPUT,
-    @Deserializable("GO") GLOBAL_OUTPUT,
-    @Deserializable("GI") GLOBAL_INPUT,
+    @Alias("DO") DIGITAL_OUTPUT,
+    @Alias("DI") DIGITAL_INPUT,
+    @Alias("AO") ANALOGUE_OUTPUT,
+    @Alias("AI") ANALOGUE_INPUT,
+    @Alias("GO") GLOBAL_OUTPUT,
+    @Alias("GI") GLOBAL_INPUT,
 }

@@ -1,88 +1,137 @@
 package com.bossymr.rapid.robot.api.client;
 
-import com.bossymr.rapid.robot.api.ResponseStatusException;
-import com.bossymr.rapid.robot.api.SubscriptionEntity;
-import com.bossymr.rapid.robot.api.SubscriptionListener;
-import com.bossymr.rapid.robot.api.SubscriptionPriority;
+import com.bossymr.rapid.robot.api.*;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
+import com.bossymr.rapid.robot.api.client.security.Authenticator;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
-import com.bossymr.rapid.robot.api.client.security.impl.DigestAuthenticator;
-import com.intellij.openapi.diagnostic.Logger;
-import okhttp3.*;
+import com.bossymr.rapid.robot.api.client.security.DefaultAuthenticator;
+import com.bossymr.rapid.robot.api.client.security.DigestAuthenticator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.CookieManager;
 import java.net.URI;
-import java.time.Duration;
-import java.util.ArrayList;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.stream.Collectors;
 
+/**
+ * A network client.
+ * <p>
+ * A {@code NetworkClient} wraps a regular network client and adds support for authentication. It also supports
+ * subscribable events and will automatically manage a {@code WebSocket} connection.
+ */
 public class NetworkClient {
 
-    private static final Logger logger = Logger.getInstance(NetworkClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(NetworkClient.class);
+    private final Authenticator authenticator;
 
-    private final @NotNull SubscriptionGroup subscriptionGroup;
-    private final @NotNull OkHttpClient httpClient;
+    private final HttpClient client;
+    private final URI basePath;
+    private final SubscriptionGroup subscriptionGroup;
 
-    private final @NotNull URI defaultPath;
-
-    public NetworkClient(@NotNull URI defaultPath, @Nullable Credentials credentials) {
-        this.defaultPath = defaultPath;
-        CookieJar cookieJar = new CookieJar() {
-            private final HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
-
-            @Override
-            public void saveFromResponse(@NotNull HttpUrl url, @NotNull List<Cookie> cookies) {
-                cookieStore.put(url.host(), cookies);
-            }
-
-            @Override
-            public @NotNull List<Cookie> loadForRequest(@NotNull HttpUrl url) {
-                List<Cookie> cookies = cookieStore.get(url.host());
-                return cookies != null ? cookies : new ArrayList<Cookie>();
-            }
-        };
-        Dispatcher dispatcher = new Dispatcher();
-        dispatcher.setMaxRequestsPerHost(1);
-        this.httpClient = new OkHttpClient.Builder()
-                .authenticator(new DigestAuthenticator(credentials))
-                .cookieJar(cookieJar)
-                .callTimeout(Duration.ofSeconds(10))
-                .writeTimeout(Duration.ofSeconds(10))
-                .readTimeout(Duration.ofSeconds(30))
-                .addInterceptor(chain -> {
-                    Response response = chain.proceed(chain.request());
-                    logger.debug("Request {} -> {}", chain.request(), response);
-                    if(response.code() >= 300) {
-                        throw new ResponseStatusException(response, response.body().string());
-                    }
-                    return response;
-                })
-                .dispatcher(dispatcher)
+    /**
+     * Create a new {@code NetworkClient}.
+     *
+     * @param basePath the base path, to which all requests are resolved against.
+     * @param credentials the credentials to authenticate requests with or {@code null} to disable authentication.
+     */
+    public NetworkClient(@NotNull URI basePath, @Nullable Credentials credentials) {
+        this.basePath = basePath;
+        this.client = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .cookieHandler(new CookieManager())
                 .build();
-        this.subscriptionGroup = new SubscriptionGroup(this);
+        if (credentials != null) {
+            this.authenticator = new DigestAuthenticator(credentials);
+        } else {
+            // To disable authentication, we use an empty authenticator.
+            // This allows us to assume that all requests will be 'authenticated'.
+            this.authenticator = new DefaultAuthenticator();
+        }
+        this.subscriptionGroup = new SubscriptionGroup(this, client);
     }
 
-    public @NotNull URI getDefaultPath() {
-        return defaultPath;
+    public URI getBasePath() {
+        return basePath;
     }
 
-    public @NotNull OkHttpClient getHttpClient() {
-        return httpClient;
+    /**
+     * Sends a request to the specified target.
+     *
+     * @param target the target.
+     * @return the response.
+     * @throws IOException if an I/O error occurs.
+     * @throws InterruptedException if the current thread is interrupted.
+     */
+    public @NotNull HttpResponse<byte[]> send(@NotNull NetworkTarget<?> target) throws IOException, InterruptedException {
+        return send(getRequest(target));
     }
 
-    public @NotNull Response send(@NotNull NetworkRequest<?> request) throws IOException, InterruptedException {
-        return send(request.build(defaultPath));
+    private @NotNull HttpRequest getRequest(@NotNull NetworkTarget<?> target) {
+        String body = getRequestBody(target);
+        HttpRequest.BodyPublisher bodyPublisher;
+        if (body != null) {
+            bodyPublisher = HttpRequest.BodyPublishers.ofString(body);
+        } else {
+            bodyPublisher = HttpRequest.BodyPublishers.noBody();
+        }
+        URI path = basePath.resolve(target.getPath());
+        return HttpRequest.newBuilder(path)
+                .method(target.getMethod().name(), bodyPublisher)
+                .build();
     }
 
-    public @NotNull Response send(@NotNull Request request) throws IOException, InterruptedException {
-        return httpClient.newCall(request).execute();
+    private @Nullable String getRequestBody(@NotNull NetworkTarget<?> target) {
+        MultiMap<String, String> properties = target.getProperties();
+        if (properties.isEmpty()) {
+            return null;
+        }
+        return properties.entrySet().stream()
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .collect(Collectors.joining("&"));
     }
 
-    public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableEvent<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
-        logger.debug("Subscribing to '{}' with priority {}", event.getResource(), priority);
+    protected @NotNull HttpResponse<byte[]> send(@NotNull HttpRequest request) throws IOException, InterruptedException {
+        HttpResponse<byte[]> response = send(request, HttpResponse.BodyHandlers.ofByteArray());
+        if (response.statusCode() >= 300) {
+            throw new ResponseStatusException(response);
+        }
+        return response;
+    }
+
+    private <T> @NotNull HttpResponse<T> send(@NotNull HttpRequest request, @NotNull HttpResponse.BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
+        // Try to preemptively authenticate the request
+        request = authenticate(request);
+        HttpResponse<T> response = client.send(request, bodyHandler);
+        // Check if the request needs to be authenticated
+        if (response.statusCode() != 401 && response.statusCode() != 407) {
+            return response;
+        }
+        // Try to reauthenticate the request
+        request = authenticator.authenticate(response);
+        if (request != null) {
+            // The request could be authenticated
+            return client.send(request, bodyHandler);
+        }
+        return response;
+    }
+
+    private @NotNull HttpRequest authenticate(@NotNull HttpRequest request) {
+        if (authenticator == null) {
+            return request;
+        }
+        HttpRequest httpRequest = authenticator.authenticate(request);
+        return httpRequest != null ? httpRequest : request;
+    }
+
+    public @NotNull SubscriptionEntity subscribe(@NotNull SubscribableTarget<?> event, @NotNull SubscriptionPriority priority, @NotNull SubscriptionListener<EntityModel> listener) throws IOException, InterruptedException {
+        logger.debug("Subscribing to '{}' with priority {}", event.getPath(), priority);
         SubscriptionEntity entity = new SubscriptionEntity(this, event, priority) {
 
             @Override
@@ -103,7 +152,7 @@ public class NetworkClient {
             subscriptionGroup.getEntities().remove(entity);
             throw e;
         }
-        logger.debug("Subscribed to '{}' with priority {}", event.getResource(), priority);
+        logger.debug("Subscribed to '{}' with priority {}", event.getPath(), priority);
         return entity;
     }
 
@@ -128,4 +177,5 @@ public class NetworkClient {
         subscriptionGroup.getEntities().clear();
         subscriptionGroup.update();
     }
+
 }

@@ -1,8 +1,8 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum InputOutputSignalLogicalState {
-    @Deserializable("simulated") SIMULATED,
-    @Deserializable("not simulated") NOT_SIMULATED
+    @Alias("simulated") SIMULATED,
+    @Alias("not simulated") NOT_SIMULATED
 }

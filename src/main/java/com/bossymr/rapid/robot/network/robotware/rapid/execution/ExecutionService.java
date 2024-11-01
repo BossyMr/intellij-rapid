@@ -1,17 +1,15 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.SubscribableNetworkQuery;
 import com.bossymr.rapid.robot.api.annotations.*;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import com.bossymr.rapid.robot.network.Grant;
 import com.bossymr.rapid.robot.network.HoldToRunMode;
 import com.bossymr.rapid.robot.network.HoldToRunState;
 import com.bossymr.rapid.robot.network.robotware.mastership.MastershipType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-
-import java.lang.annotation.Documented;
 
 /**
  * A {@code Service} used to execute a task.
@@ -41,7 +39,7 @@ public interface ExecutionService {
      * @param taskMode the task execution mode.
      */
     @RequiresMastership(MastershipType.RAPID)
-    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=start")
+    @Fetch(method = RequestMethod.POST, value = "", arguments = "action=start")
     @NotNull NetworkQuery<Void> start(@NotNull @Field("regain") RegainMode regainMode,
                                       @NotNull @Field("execmode") ExecutionMode executionMode,
                                       @NotNull @Field("cycle") ExecutionCycle executionCycle,
@@ -56,7 +54,7 @@ public interface ExecutionService {
      * @param taskMode the task execution mode.
      */
     @RequiresMastership(MastershipType.RAPID)
-    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=stop")
+    @Fetch(method = RequestMethod.POST, value = "", arguments = "action=stop")
     default NetworkQuery<Void> stop(@NotNull @Field("stopmode") StopMode stopMode,
                                     @NotNull @Field("usetsp") TaskExecutionMode taskMode) {
         return stop(stopMode, switch (taskMode) {
@@ -66,21 +64,21 @@ public interface ExecutionService {
     }
 
     @ApiStatus.Internal
-    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=stop")
+    @Fetch(method = RequestMethod.POST, value = "", arguments = "action=stop")
     @NotNull NetworkQuery<Void> stop(@NotNull @Field("stopmode") StopMode stopMode,
                                      @NotNull @Field("usetsp") String taskMode);
 
     /**
      * Starts execution from the production entry.
      */
-    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=startprodentry")
+    @Fetch(method = RequestMethod.POST, value = "", arguments = "action=startprodentry")
     @NotNull NetworkQuery<Void> startProduction();
 
     /**
      * Resets the program pointer to the main routine.
      */
     @RequiresMastership(MastershipType.RAPID)
-    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=resetpp")
+    @Fetch(method = RequestMethod.POST, value = "", arguments = "action=resetpp")
     @NotNull NetworkQuery<Void> resetProgramPointer();
 
     /**
@@ -88,7 +86,7 @@ public interface ExecutionService {
      *
      * @param executionCycle the number of cycles.
      */
-    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=setcycle")
+    @Fetch(method = RequestMethod.POST, value = "", arguments = "action=setcycle")
     @NotNull NetworkQuery<Void> setCycles(@NotNull @Field("cycle") ExecutionCycle executionCycle);
 
     /**
@@ -123,6 +121,6 @@ public interface ExecutionService {
      *
      * @param mode the new state.
      */
-    @Fetch(method = FetchMethod.POST, value = "", arguments = "action=holdtorun-state")
+    @Fetch(method = RequestMethod.POST, value = "", arguments = "action=holdtorun-state")
     @NotNull NetworkQuery<Void> setHoldToRun(@NotNull @Field("state") HoldToRunMode mode);
 }

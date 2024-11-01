@@ -4,57 +4,88 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
+/**
+ * A {@code MultiMap} is a map which can contain multiple values for a single key. This map is similar to a
+ * {@code Map<K, List<V>>}, however, it still represents each mapping separately.
+ *
+ * @param <K> the type of keys.
+ * @param <V> the type of values.
+ */
 public class MultiMap<K, V> extends AbstractMap<K, V> {
 
-    private final @NotNull Map<K, Collection<Entry<K, V>>> delegate;
-    private final @NotNull Supplier<? extends Collection<Entry<K, V>>> supplier;
+    private final Map<K, Collection<Entry<K, V>>> delegate;
 
+    private final Supplier<? extends Collection<Entry<K, V>>> supplier;
+
+    /**
+     * Creates a new {@code MultiMap} which stores mappings in instances of {@link ArrayList}. Multiple identical
+     * mappings are supported.
+     */
     public MultiMap() {
         this(ArrayList::new);
     }
 
-    public MultiMap(@NotNull MultiMap<K, V> delegate) {
-        this(delegate, ArrayList::new);
-    }
-
-    public MultiMap(@NotNull Supplier<? extends Collection<Map.Entry<K, V>>> supplier) {
+    /**
+     * Creates a new {@code MultiMap} which stores mappings in instances of the specified supplier. The collections
+     * provided by this method must be mutable.
+     *
+     * @param supplier a supplier which returns instances of a collection.
+     */
+    public MultiMap(@NotNull Supplier<? extends Collection<Entry<K, V>>> supplier) {
         this.delegate = new HashMap<>();
         this.supplier = supplier;
     }
 
-    public MultiMap(@NotNull MultiMap<K, V> delegate, @NotNull Supplier<? extends Collection<Entry<K, V>>> supplier) {
-        this.delegate = new HashMap<>();
-        this.delegate.putAll(delegate.delegate);
-        this.supplier = supplier;
-    }
-
-    public MultiMap(@NotNull Map<K, Collection<Entry<K, V>>> delegate, @NotNull Supplier<? extends Collection<Entry<K, V>>> supplier) {
-        this.delegate = delegate;
-        this.supplier = supplier;
-    }
-
+    /**
+     * Associates the specified value with the specified key in this map. If a value is already associated with the
+     * specified key, both mappings are stored.
+     *
+     * @param key key with which the specified value is to be associated
+     * @param value value to be associated with the specified key
+     * @return {@code null}.
+     * @see #set(Object, Object)
+     */
     @Override
     public V put(K key, V value) {
-        delegate.computeIfAbsent(key, unused -> supplier.get());
-        delegate.get(key).add(new Node<>(key, value));
+        delegate.computeIfAbsent(key, k -> supplier.get()).add(new Node<>(key, value));
         return null;
     }
 
+    /**
+     * Associates the specified values with the specified key in this map. All values are stored as separate mappings.
+     *
+     * @param key key with which the specified values are to be associated.
+     * @param values values to be associated with the specified key.
+     */
     public void putAll(K key, Collection<V> values) {
-        delegate.computeIfAbsent(key, unused -> supplier.get());
-        Collection<Entry<K, V>> entries = delegate.get(key);
+        Collection<Entry<K, V>> entries = delegate.computeIfAbsent(key, k -> supplier.get());
         for (V value : values) {
             entries.add(new Node<>(key, value));
         }
     }
 
+    /**
+     * Associates the specified value with the specified key in this map. If a value is already associated with the
+     * specified key, the old value is replaced by the specified value.
+     *
+     * @param key key with which the specified value is to be associated.
+     * @param value value to be associated with the specified key.
+     * @see #put(Object, Object)
+     */
     public void set(K key, V value) {
-        delegate.computeIfAbsent(key, unused -> supplier.get());
-        delegate.get(key).clear();
-        delegate.get(key).add(new Node<>(key, value));
+        Collection<Entry<K, V>> entries = delegate.computeIfAbsent(key, unused -> supplier.get());
+        entries.clear();
+        entries.add(new Node<>(key, value));
     }
 
+    /**
+     * Returns all values associated with the specified key.
+     *
+     * @param key the key whose associated values are to be returned.
+     * @return the values associated with the specified key.
+     */
     public @NotNull Collection<V> getAll(@NotNull K key) {
         return new ValueList(key);
     }
@@ -64,7 +95,7 @@ public class MultiMap<K, V> extends AbstractMap<K, V> {
         return new EntrySet();
     }
 
-    private static final class Node<K, V> implements Map.Entry<K, V> {
+    private static final class Node<K, V> implements Entry<K, V> {
 
         private final K key;
         private V value;
@@ -85,43 +116,48 @@ public class MultiMap<K, V> extends AbstractMap<K, V> {
         }
 
         @Override
-        public V setValue(V newValue) {
-            V previousValue = value;
-            value = newValue;
+        public V setValue(V value) {
+            V previousValue = this.value;
+            this.value = value;
             return previousValue;
         }
 
         @Override
-        public boolean equals(Object object) {
-            if (this == object) return true;
-            if (object == null || getClass() != object.getClass()) return false;
-            Node<?, ?> node = (Node<?, ?>) object;
-            return Objects.equals(value, node.value);
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Node<?, ?> node = (Node<?, ?>) o;
+            return Objects.equals(key, node.key) && Objects.equals(value, node.value);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(value);
+            return Objects.hash(key, value);
+        }
+
+        @Override
+        public String toString() {
+            return key + "=" + value;
         }
     }
 
-    final class ValueList extends AbstractCollection<V> {
+    /**
+     * A {@code List} which encompasses all values mapped to a specific key.
+     */
+    private final class ValueList extends AbstractCollection<V> {
 
         private final @NotNull K key;
 
         public ValueList(@NotNull K key) {
-            delegate.computeIfAbsent(key, unused -> supplier.get());
             this.key = key;
         }
 
         @Override
         public @NotNull Iterator<V> iterator() {
-            return new EntryIterator<V>() {
-                @Override
-                protected @NotNull List<Entry<K, V>> getEntrySet() {
-                    return new ArrayList<>(delegate.get(key));
-                }
-
+            if (!delegate.containsKey(key)) {
+                return Collections.emptyIterator();
+            }
+            return new EntryIterator<V>(new ArrayList<>(delegate.get(key))) {
                 @Override
                 protected V get(@NotNull Entry<K, V> entry) {
                     return entry.getValue();
@@ -131,23 +167,24 @@ public class MultiMap<K, V> extends AbstractMap<K, V> {
 
         @Override
         public int size() {
+            if (!delegate.containsKey(key)) {
+                return 0;
+            }
             return delegate.get(key).size();
         }
     }
 
-    final class EntrySet extends AbstractSet<Map.Entry<K, V>> {
+    /**
+     * A {@code Set} which encompasses all entries in this map.
+     */
+    private final class EntrySet extends AbstractSet<Entry<K, V>> {
+
         @Override
         public @NotNull Iterator<Entry<K, V>> iterator() {
-            return new EntryIterator<Entry<K, V>>() {
-                @Override
-                protected @NotNull List<Entry<K, V>> getEntrySet() {
-                    List<Map.Entry<K, V>> entrySet = new ArrayList<>();
-                    for (Entry<K, Collection<Entry<K, V>>> entry : delegate.entrySet()) {
-                        entrySet.addAll(entry.getValue());
-                    }
-                    return entrySet;
-                }
-
+            List<Entry<K, V>> entrySet = delegate.values().stream()
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toList());
+            return new EntryIterator<Entry<K, V>>(entrySet) {
                 @Override
                 protected Entry<K, V> get(@NotNull Entry<K, V> entry) {
                     return entry;
@@ -157,37 +194,52 @@ public class MultiMap<K, V> extends AbstractMap<K, V> {
 
         @Override
         public int size() {
-            List<Map.Entry<K, V>> entrySet = new ArrayList<>();
-            for (Entry<K, Collection<Entry<K, V>>> entry : delegate.entrySet()) {
-                entrySet.addAll(entry.getValue());
-            }
-            return entrySet.size();
+            return delegate.values().stream()
+                    .mapToInt(Collection::size)
+                    .sum();
         }
     }
 
+    /**
+     * An {@code Iterator} which iterates through a subset of entries.
+     *
+     * @param <T> the return type of the iterator.
+     */
     private abstract class EntryIterator<T> implements Iterator<T> {
 
-        private final @NotNull List<Map.Entry<K, V>> entrySet;
+        private final @NotNull List<Entry<K, V>> entrySet;
 
-        private Map.Entry<K, V> current, next;
+        private Entry<K, V> current, next;
         private int index;
 
-        public EntryIterator() {
-            this.entrySet = getEntrySet();
+        /**
+         * Creates a new {@code EntryIterator} which will iterate through the specified subset.
+         *
+         * @param entrySet the subset of entries to iterate through.
+         */
+        public EntryIterator(@NotNull List<Entry<K, V>> entrySet) {
+            this.entrySet = entrySet;
             if (!(entrySet.isEmpty())) {
                 next = entrySet.get(0);
             }
         }
 
-        protected abstract @NotNull List<Map.Entry<K, V>> getEntrySet();
-
+        /**
+         * Computes the value corresponding to the current entry.
+         *
+         * @param entry the current entry.
+         * @return the value corresponding to this entry.
+         */
         protected abstract T get(@NotNull Map.Entry<K, V> entry);
 
         @Override
         public void remove() {
             if (current == null) {
+                // #next() has not been called yet or #remove() has already been called for this entry
                 throw new IllegalArgumentException();
             }
+            // We need to remove the element both from the specified entrySet, and from the actual underlying map
+            // Since the map is made up of many lists, the specified entrySet can't be the same as delegate#entrySet().
             entrySet.remove(current);
             delegate.get(current.getKey()).remove(current);
             current = null;
@@ -213,5 +265,4 @@ public class MultiMap<K, V> extends AbstractMap<K, V> {
             return get(current);
         }
     }
-
 }

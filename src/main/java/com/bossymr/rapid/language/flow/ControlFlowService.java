@@ -16,6 +16,7 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,6 +63,12 @@ public final class ControlFlowService {
         return getDataFlow(project, cache::getDataFlow, cache::getDataFlow);
     }
 
+    /**
+     * Computes the control flow for every routine in the specified project.
+     *
+     * @param project the project.
+     * @return the control flow for every routine in the specified project.
+     */
     public @NotNull Set<Block> getControlFlow(@NotNull Project project) {
         return getDataFlow(project, cache::getControlFlow, cache::getControlFLow);
     }

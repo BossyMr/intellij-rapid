@@ -4,7 +4,6 @@ import com.bossymr.rapid.language.builder.Label;
 import com.bossymr.rapid.language.builder.RapidBuilder;
 import com.bossymr.rapid.language.flow.Argument;
 import com.bossymr.rapid.language.flow.Block;
-import com.bossymr.rapid.language.flow.ControlFlowBlock;
 import com.bossymr.rapid.language.flow.debug.ControlFlowFormatVisitor;
 import com.bossymr.rapid.language.flow.expression.BinaryOperator;
 import com.bossymr.rapid.language.flow.expression.ReferenceExpression;
@@ -18,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -49,7 +47,7 @@ class ControlFlowBuilderTest {
                 proc foo:bar() {
                 	num _0;
                 	bool _1;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0;
                 	1: _1 := _0 = 0;
@@ -74,12 +72,12 @@ class ControlFlowBuilderTest {
                 proc foo:bar() {
                 	num _0;
                 	bool _1;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0;
                 	1: _1 := _0 = 0;
                 	2: if(_1) -> [true: 3, false: 4]
-                                
+                
                 	3: _0 := 1;
                 	4: _0 := -1;
                 	5: return;
@@ -104,14 +102,14 @@ class ControlFlowBuilderTest {
                 func num foo:bar() {
                 	num _0;
                 	bool _1;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0;
                 	1: _1 := _0 < 0;
                 	2: if(_1) -> [true: 3, false: 4]
-                                
+                
                 	3: return -_0;
-                                
+                
                 	4: return _0;
                 }
                 """);
@@ -130,7 +128,7 @@ class ControlFlowBuilderTest {
                                 }))), """
                 proc foo:bar() {
                     num _0;
-                                
+                
                 	STATEMENT_LIST:
                 	0: exit;
                 }
@@ -155,14 +153,14 @@ class ControlFlowBuilderTest {
                 func num foo:bar() {
                 	num _0;
                 	bool _1;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0;
                 	1: _1 := _0 < 0;
                 	2: if(_1) -> [true: 4, false: 3]
-                                                                
+                
                 	3: return _0;
-                	
+                
                 	4: return -_0;
                 }
                 """);
@@ -187,12 +185,12 @@ class ControlFlowBuilderTest {
                 func num foo:bar() {
                 	num _0;
                 	bool _1;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0;
                 	1: _1 := _0 < 0;
                 	2: if(_1) -> [true: 0, false: 3]
-                                                                
+                
                 	3: return _0;
                 }
                 """);
@@ -222,17 +220,17 @@ class ControlFlowBuilderTest {
                 	num _0;
                 	num _1;
                 	bool _2;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0;
                 	1: _1 := 5;
                 	2: _2 := _1 > 0;
                 	3: if(_2) -> [true: 4, false: 6]
-                                
+                
                 	4: _0 := _0 + 1;
                 	5: _1 := _1 - 1;
                 	   goto -> [2];
-                                
+                
                 	6: return -_0;
                 }
                 """);
@@ -261,20 +259,20 @@ class ControlFlowBuilderTest {
                                                 .withRequiredArgument(codeBuilder.literal(-1))))))), """
                 func num foo:Abs(input num _0 [x]) {
                 	bool _1;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := 0;
                 	1: _1 := _0 < 0;
                 	2: if(_1) -> [true: 3, false: 4]
-                                
+                
                 	3: return -_0;
-                                
+                
                 	4: return _0;
                 }
-                                
+                
                 func num foo:bar() {
                 	num _0;
-                                
+                
                 	STATEMENT_LIST:
                 	0: _0 := foo:Abs(_0 := -1);
                 	1: return _0;

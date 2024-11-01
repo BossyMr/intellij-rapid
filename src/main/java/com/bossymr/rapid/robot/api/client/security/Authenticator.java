@@ -7,27 +7,30 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 /**
- * An {@code Authenticator} is used to authenticate a request.
+ * An {@code Authenticator} authenticates network requests.
  */
 public interface Authenticator {
 
     /**
-     * Attempts to authenticate the specified request.
+     * Preemptively authenticates the specified request. This is called for each request.
+     * <p>
+     * The authenticator should try to authenticate the provided request.
      *
-     * @param request the request to authenticate
-     * @return the authenticated request, or {@code null} if the request could not be authenticated.
+     * @param request the request to authenticate.
+     * @return the authenticated request, or {@code null} if the request could not be preemptively authenticated.
      */
     @Nullable HttpRequest authenticate(@NotNull HttpRequest request);
 
     /**
-     * Attempts to retrieve the authentication challenge in the specified response, and reauthenticate its original
-     * request. This method is called on unsuccessful responses to requests which were authenticated by this
-     * authenticator, and should attempt to reauthenticate the request if possible (such as if a challenge is stale). If
-     * the request cannot be re-authenticated, {@code null} should be returned, in which case the unsuccessful response
-     * will be returned.
+     * Authenticate the specified response.
+     * <p>
+     * This is called the first time a response is received with a {@code 401} or {@code 407} status code. The
+     * authenticator should try to find a suitable challenge, copy the original request and attempt to authenticate it.
+     * Lastly, the authenticated request should be returned.
      *
-     * @param response the unsuccessful response.
+     * @param response the response to authenticate.
      * @return the authenticated request, or {@code null} if the request could not be authenticated.
+     * @see Challenge#getChallenges(String)
      */
     @Nullable HttpRequest authenticate(@NotNull HttpResponse<?> response);
 

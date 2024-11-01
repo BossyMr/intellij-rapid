@@ -1,11 +1,7 @@
 package com.bossymr.rapid.robot;
 
 import com.bossymr.rapid.RapidBundle;
-import com.bossymr.rapid.robot.api.GenericType;
-import com.bossymr.rapid.robot.api.NetworkAction;
-import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.ResponseStatusException;
-import com.bossymr.rapid.robot.api.client.NetworkRequest;
+import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
@@ -18,13 +14,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class RobotNetworkAction extends NetworkAction {
 
-    private final Map<String, NetworkRequest<Void>> onClose = new HashMap<>();
+    private final Map<String, NetworkQuery<Void>> onClose = new HashMap<>();
     private volatile boolean showNotifications = true;
 
     public RobotNetworkAction(@NotNull NetworkManager manager) {
@@ -32,18 +27,16 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected <T> boolean onSuccess(@NotNull NetworkRequest<T> request, @Nullable T response) {
-        URI previous = request.getPath();
+    protected <T> boolean onSuccess(@NotNull NetworkTarget<T> target, @Nullable T response) {
+        URI previous = target.getPath();
         String path = previous.getPath();
         String query = previous.getQuery();
         if (path != null && path.startsWith("/rw/mastership")) {
             if ("action=request".equals(query)) {
-                try {
-                    URI queryPath = new URI(previous.getScheme(), previous.getUserInfo(), previous.getHost(), previous.getPort(), previous.getPath(), "action=release", previous.getFragment());
-                    NetworkRequest<Void> networkRequest = new NetworkRequest<>(queryPath, GenericType.of(Void.class));
-                    networkRequest.getFields().putAll(request.getFields());
-                    onClose.put(previous.getPath(), networkRequest);
-                } catch (URISyntaxException ignored) {}
+                NetworkTarget<Void> releaseTarget = NetworkTarget.newTarget(RequestMethod.POST, target.getPath(), NetworkType.voidType())
+                        .argument("action", "release")
+                        .build();
+                onClose.put(previous.getPath(), createQuery(releaseTarget));
             }
             if ("action=release".equals(query)) {
                 onClose.remove(previous.getPath());
@@ -53,9 +46,9 @@ public class RobotNetworkAction extends NetworkAction {
     }
 
     @Override
-    protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+    protected boolean onFailure(@NotNull NetworkTarget<?> target, @NotNull Throwable throwable) throws IOException, InterruptedException {
         if (throwable instanceof ResponseStatusException exception) {
-            if (exception.getResponse().code() == 400) {
+            if (exception.getResponse().statusCode() == 400) {
                 return false;
             }
         }
@@ -69,7 +62,7 @@ public class RobotNetworkAction extends NetworkAction {
             }
         }
         if (showNotifications) {
-            showNotification(request, throwable);
+            showNotification(target);
         }
         close();
         return true;
@@ -77,23 +70,23 @@ public class RobotNetworkAction extends NetworkAction {
 
     @Override
     public void close() throws IOException, InterruptedException {
-        for (NetworkRequest<Void> value : onClose.values()) {
-            getNetworkClient().send(value).close();
+        for (NetworkQuery<Void> value : onClose.values()) {
+            value.get();
         }
         super.close();
     }
 
-    private void showNotification(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) {
+    private void showNotification(@NotNull NetworkTarget<?> target) {
         showNotifications = false;
-        URI path = getNetworkClient().getDefaultPath().resolve(request.getPath());
+        URI path = getNetworkClient().getBasePath().resolve(target.getPath());
         String presentablePath = getPresentablePath(path);
         NotificationGroupManager.getInstance()
-                                .getNotificationGroup("Robot connection errors")
-                                .createNotification(RapidBundle.message("notification.title.robot.connect.error", presentablePath), NotificationType.ERROR)
-                                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
-                                .addAction(new ConnectNotificationAction(path))
-                                .whenExpired(() -> showNotifications = true)
-                                .notify(null);
+                .getNotificationGroup("Robot connection errors")
+                .createNotification(RapidBundle.message("notification.title.robot.connect.error", presentablePath), NotificationType.ERROR)
+                .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
+                .addAction(new ConnectNotificationAction(path))
+                .whenExpired(() -> showNotifications = true)
+                .notify(null);
     }
 
     private @NotNull String getPresentablePath(@NotNull URI path) {

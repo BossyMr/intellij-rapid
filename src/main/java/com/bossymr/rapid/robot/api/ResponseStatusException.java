@@ -1,7 +1,5 @@
 package com.bossymr.rapid.robot.api;
 
-import okhttp3.Request;
-import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -9,31 +7,32 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-/**
- * A {@code ResponseStatusException} indicates an unsuccessful response was received. The exception contains information
- * on both response and the request which caused the response.
- */
 public class ResponseStatusException extends IOException {
 
-    private final Response response;
+    private final HttpResponse<byte[]> response;
 
-    public ResponseStatusException(@NotNull Response response, @NotNull String message) {
-        super(message);
+    public ResponseStatusException(HttpResponse<byte[]> response) {
         this.response = response;
     }
 
-    public @NotNull Response getResponse() {
+    public @NotNull HttpResponse<byte[]> getResponse() {
         return response;
     }
 
-    public @NotNull Request getRequest() {
+    public @NotNull HttpRequest getRequest() {
         return response.request();
+    }
+
+    public @NotNull String getMessage() {
+        // TODO: Try to parse the body as an XML object. If that fails, return the entire body content.
+        byte[] content = getResponse().body();
+        return new String(content);
     }
 
     @Override
     public @NotNull String toString() {
-        int statusCode = getResponse().code();
-        URI path = getRequest().url().uri();
+        int statusCode = response.statusCode();
+        URI path = getRequest().uri();
         return "ResponseStatusException: " + statusCode + " " + path + " '" + getMessage() + "'";
     }
 }

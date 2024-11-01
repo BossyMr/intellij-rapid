@@ -2,6 +2,8 @@ package com.bossymr.rapid.robot.api.client;
 
 import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.annotations.*;
+import com.bossymr.rapid.robot.api.client.entity.EntityModel;
+import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -25,9 +27,9 @@ class HeavyNetworkManagerTest {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(okForContentType("text/plain", "Hello, World!")));
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
-            NetworkRequest<String> request = new NetworkRequest<>(URI.create("/"), GenericType.of(String.class));
+            NetworkTarget<String> target = NetworkTarget.newTarget(URI.create("/"), NetworkType.stringType()).build();
             try (NetworkManager action = new NetworkAction(manager)) {
-                NetworkQuery<String> query = action.createQuery(request);
+                NetworkQuery<String> query = action.createQuery(target);
                 assertEquals("Hello, World!", assertDoesNotThrow(query::get));
             }
         }
@@ -36,20 +38,21 @@ class HeavyNetworkManagerTest {
     @Test
     void modelQuery(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        EntityModel entity = EntityModel.newBuilder("Hello!", "entity")
-                .setProperty("string", "Hello, World!")
-                .setProperty("integer", "1")
-                .setProperty("enum", "state")
+        EntityModel entity = EntityModel.newBuilder("entity", "Hello!")
+                .property("string", "Hello, World!")
+                .property("integer", "1")
+                .property("enum", "state")
                 .build();
-        ResponseModel model = ResponseModel.newBuilder()
-                .setEntity(entity)
+        ResponseModel model = ResponseModel.newBuilder("", "")
+                .entity(entity)
                 .build();
-        wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toText())));
+        wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toXML())));
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             try (NetworkManager action = new NetworkAction(manager)) {
-                NetworkQuery<ResponseModel> modelQuery = action.createQuery(new NetworkRequest<>(URI.create("/"), GenericType.of(ResponseModel.class)));
+                manager.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.modelType()).build());
+                NetworkQuery<ResponseModel> modelQuery = action.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.modelType()).build());
                 assertEquals(model, assertDoesNotThrow(modelQuery::get));
-                NetworkQuery<TestEntity> entityQuery = action.createQuery(new NetworkRequest<>(URI.create("/"), GenericType.of(TestEntity.class)));
+                NetworkQuery<TestEntity> entityQuery = action.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.entityType(TestEntity.class)).build());
                 TestEntity testEntity = assertDoesNotThrow(entityQuery::get);
                 assertEquals("Hello!", testEntity.getTitle());
                 assertEquals("Hello, World!", testEntity.getProperty());
@@ -63,22 +66,22 @@ class HeavyNetworkManagerTest {
     @Test
     void subtypeQuery(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        EntityModel entity = EntityModel.newBuilder("", "subtype")
-                .setProperty("string", "Hello, World!")
-                .setProperty("integer", "1")
-                .setProperty("override", "2")
-                .setProperty("custom", "Greetings, World!")
+        EntityModel entity = EntityModel.newBuilder("subtype", "")
+                .property("string", "Hello, World!")
+                .property("integer", "1")
+                .property("override", "2")
+                .property("custom", "Greetings, World!")
                 .build();
-        ResponseModel model = ResponseModel.newBuilder()
-                .setEntity(entity)
+        ResponseModel model = ResponseModel.newBuilder("", "")
+                .entity(entity)
                 .build();
-        wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toText())));
+        wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toXML())));
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             try (NetworkManager action = new NetworkAction(manager)) {
-                NetworkQuery<ResponseModel> modelQuery = action.createQuery(new NetworkRequest<>(URI.create("/"), GenericType.of(ResponseModel.class)));
+                NetworkQuery<ResponseModel> modelQuery = action.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.modelType()).build());
                 assertEquals(model, assertDoesNotThrow(modelQuery::get));
-                assertInstanceOf(TestSubType.class, assertDoesNotThrow(() -> action.createQuery(new NetworkRequest<>(URI.create("/"), GenericType.of(TestEntity.class))).get()));
-                NetworkQuery<TestSubType> entityQuery = action.createQuery(new NetworkRequest<>(URI.create("/"), GenericType.of(TestSubType.class)));
+                assertInstanceOf(TestSubType.class, assertDoesNotThrow(() -> action.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.entityType(TestEntity.class)).build())).get());
+                NetworkQuery<TestSubType> entityQuery = action.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.entityType(TestSubType.class)).build());
                 TestSubType testEntity = assertDoesNotThrow(entityQuery::get);
                 assertThrows(ProxyException.class, testEntity::getProperty);
                 assertEquals("Greetings, World!", testEntity.getCustom());
@@ -90,24 +93,25 @@ class HeavyNetworkManagerTest {
     @Test
     void modelFetch(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        EntityModel entity = EntityModel.newBuilder("", "entity")
-                .setProperty("property", "/propertyPath")
-                .setReference("self", URI.create("/selfPath"))
+        EntityModel entity = EntityModel.newBuilder("entity", "")
+                .property("property", "/propertyPath")
+                .link("self", URI.create("/selfPath"))
                 .build();
-        ResponseModel model = ResponseModel.newBuilder()
-                .setEntity(entity)
+        ResponseModel model = ResponseModel.newBuilder("", "")
+                .entity(entity)
                 .build();
         wireMock.register(get("/").willReturn(ok("Hello, World!")));
         wireMock.register(post("/selfPath/request?argument=value&arguments=values")
-                .willReturn(okForContentType("application/xhtml+xml", model.toText())));
+                .willReturn(okForContentType("application/xhtml+xml", model.toXML())));
         wireMock.register(put("/propertyPath/request")
                 .willReturn(ok()));
         wireMock.register(delete("/failPath")
                 .willReturn(badRequest()));
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
-            NetworkRequest<TestFetch> request = new NetworkRequest<>(FetchMethod.POST, URI.create("/selfPath/request"), GenericType.of(TestFetch.class))
-                    .setArgument("argument", "value")
-                    .setArgument("arguments", "values");
+            NetworkTarget<TestFetch> request = NetworkTarget.newTarget(RequestMethod.POST, URI.create("/selfPath/request"), NetworkType.entityType(TestFetch.class))
+                    .argument("argument", "value")
+                    .argument("arguments", "values")
+                    .build();
             try (NetworkManager action = new NetworkAction(manager)) {
                 NetworkQuery<TestFetch> modelQuery = action.createQuery(request);
                 TestFetch testFetch = modelQuery.get();
@@ -120,7 +124,7 @@ class HeavyNetworkManagerTest {
                     testFetch.fail("failPath").get();
                     fail();
                 } catch (ResponseStatusException e) {
-                    assertEquals(400, e.getResponse().code());
+                    assertEquals(400, e.getResponse().statusCode());
                 }
             }
         }
@@ -129,35 +133,35 @@ class HeavyNetworkManagerTest {
     @Test
     void expandTest(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        ResponseModel completeModel = ResponseModel.newBuilder()
-                .setEntity(EntityModel.newBuilder("Hello!", "entity")
-                        .setProperty("string", "Hello, World!")
-                        .setProperty("integer", "1")
-                        .setProperty("enum", "state")
-                        .setReference("self", URI.create(runtimeInfo.getHttpBaseUrl()).resolve("/complete"))
+        ResponseModel completeModel = ResponseModel.newBuilder("", "")
+                .entity("entity", "Hello!", builder -> builder
+                        .property("string", "Hello, World!")
+                        .property("integer", "1")
+                        .property("enum", "state")
+                        .link("self", URI.create(runtimeInfo.getHttpBaseUrl()).resolve("/complete"))
                         .build())
                 .build();
-        ResponseModel simpleModel = ResponseModel.newBuilder()
-                .setEntity(EntityModel.newBuilder("Hello!", "entity-li")
-                        .setProperty("string", "Hello, World!")
-                        .setReference("self", URI.create(runtimeInfo.getHttpBaseUrl()).resolve("/complete"))
+        ResponseModel simpleModel = ResponseModel.newBuilder("", "")
+                .entity("entity-li", "Hello!", builder -> builder
+                        .property("string", "Hello, World!")
+                        .link("self", URI.create(runtimeInfo.getHttpBaseUrl()).resolve("/complete"))
                         .build())
                 .build();
-        wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", simpleModel.toText())));
-        wireMock.register(get("/complete").willReturn(okForContentType("application/xhtml+xml", completeModel.toText())));
+        wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", simpleModel.toXML())));
+        wireMock.register(get("/complete").willReturn(okForContentType("application/xhtml+xml", completeModel.toXML())));
         try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             try (NetworkManager action = new NetworkAction(manager)) {
                 TestService service = action.createService(TestService.class);
                 TestEntity entity = service.getEntity().get();
                 EntityProxy proxy = assertInstanceOf(EntityProxy.class, entity);
-                assertEquals("entity-li", proxy.getType());
+                assertEquals("entity-li", proxy.getModel().getType());
                 int events = wireMock.getServeEvents().size();
                 entity.getProperty();
                 assertEquals(events, wireMock.getServeEvents().size());
-                assertEquals("entity-li", proxy.getType());
+                assertEquals("entity-li", proxy.getModel().getType());
                 entity.getInteger();
                 assertEquals(events + 1, wireMock.getServeEvents().size());
-                assertEquals("entity", proxy.getType());
+                assertEquals("entity", proxy.getModel().getType());
             }
         }
     }
@@ -194,7 +198,7 @@ class HeavyNetworkManagerTest {
 
         enum State {
 
-            @Deserializable("state")
+            @Alias("state")
             STATE,
 
         }
@@ -223,17 +227,17 @@ class HeavyNetworkManagerTest {
         @NotNull String getSelf();
 
         @NotNull
-        @Fetch(method = FetchMethod.GET, value = "/")
+        @Fetch(method = RequestMethod.GET, value = "/")
         NetworkQuery<String> withPath();
 
         @NotNull
-        @Fetch(method = FetchMethod.POST, value = "{@self}/request", arguments = {"argument=value", "arguments=values"})
+        @Fetch(method = RequestMethod.POST, value = "{@self}/request", arguments = {"argument=value", "arguments=values"})
         NetworkQuery<ResponseModel> withArguments();
 
-        @Fetch(method = FetchMethod.PUT, value = "{#property}/request")
+        @Fetch(method = RequestMethod.PUT, value = "{#property}/request")
         NetworkQuery<Void> withProperty();
 
-        @Fetch(method = FetchMethod.DELETE, value = "/{path}")
+        @Fetch(method = RequestMethod.DELETE, value = "/{path}")
         NetworkQuery<Void> fail(@NotNull @Path("path") String argument);
 
     }

@@ -1,9 +1,9 @@
 package com.bossymr.rapid.robot.network.robotware.io;
 
 import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.SubscribableNetworkQuery;
 import com.bossymr.rapid.robot.api.annotations.*;
-import com.bossymr.rapid.robot.api.client.FetchMethod;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -41,7 +41,7 @@ public interface InputOutputDevice {
     @Fetch("{@network}")
     @NotNull NetworkQuery<InputOutputNetwork> getNetwork();
 
-    @Fetch(method = FetchMethod.POST, value = "/rw/iosystem/signals?action=signal-search")
+    @Fetch(method = RequestMethod.POST, value = "/rw/iosystem/signals?action=signal-search")
     @NotNull NetworkQuery<List<InputOutputSignal>> getSignals(@Field("network") String network,
                                                               @Field("device") String device);
 
@@ -51,19 +51,19 @@ public interface InputOutputDevice {
         return getSignals(network, device);
     }
 
-    @Fetch(method = FetchMethod.POST, value = "{@self}?action=set")
+    @Fetch(method = RequestMethod.POST, value = "{@self}?action=set")
     @NotNull NetworkQuery<Void> setState(@NotNull InputOutputLogicalState logicalState);
 
     @Subscribable("{@self};state")
     @NotNull SubscribableNetworkQuery<InputOutputNetworkEvent> onState();
 
-    @Fetch(method = FetchMethod.POST, value = "{@self}?action=set-inputdata")
+    @Fetch(method = RequestMethod.POST, value = "{@self}?action=set-inputdata")
     @NotNull NetworkQuery<Void> setInputData(@Field("startbyte") int index,
                                              @Field("signaldata") byte data,
                                              @Field("datamask") byte mask);
 
 
-    @Fetch(method = FetchMethod.POST, value = "{@self}?action=set-outputdata")
+    @Fetch(method = RequestMethod.POST, value = "{@self}?action=set-outputdata")
     @NotNull NetworkQuery<Void> setOutputData(@Field("startbyte") int index,
                                               @Field("signaldata") byte data,
                                               @Field("datamask") byte mask);

@@ -2,8 +2,9 @@ package com.bossymr.rapid.ide.execution.debugger.frame;
 
 import com.bossymr.rapid.robot.api.NetworkAction;
 import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.client.NetworkRequest;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
+import com.bossymr.rapid.robot.api.NetworkQuery;
+import com.bossymr.rapid.robot.api.NetworkTarget;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.StackFrame;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskExecutionState;
@@ -23,8 +24,8 @@ public class RapidExecutionStack extends XExecutionStack {
 
     private final @NotNull Project project;
     private final @NotNull Task task;
-    private @NotNull List<RapidStackFrame> stackFrames = new ArrayList<>();
     private final @NotNull RapidDebugProcess process;
+    private @NotNull List<RapidStackFrame> stackFrames = new ArrayList<>();
 
     public RapidExecutionStack(@NotNull RapidDebugProcess process, @NotNull Project project, @NotNull Task task, @NotNull StackFrame stackFrame, boolean isAtBreakpoint, boolean current) {
         super(task.getName() + ": " + stackFrame.getExecutionLevel(), getIcon(task, isAtBreakpoint, current));
@@ -69,7 +70,7 @@ public class RapidExecutionStack extends XExecutionStack {
             stackFrames = new ArrayList<>();
             NetworkManager manager = new NetworkAction(process.getManager()) {
                 @Override
-                protected boolean onFailure(@NotNull NetworkRequest<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
+                protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
                     close();
                     container.errorOccurred(throwable.getLocalizedMessage());
                     return false;
@@ -108,7 +109,7 @@ public class RapidExecutionStack extends XExecutionStack {
     @Override
     public String toString() {
         return "RapidExecutionStack{" +
-                "task=" + task +
-                '}';
+               "task=" + task +
+               '}';
     }
 }

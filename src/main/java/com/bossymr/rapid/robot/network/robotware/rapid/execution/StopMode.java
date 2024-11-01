@@ -1,6 +1,6 @@
 package com.bossymr.rapid.robot.network.robotware.rapid.execution;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 /**
  * A {@code StopMode} determines how to stop the program.
@@ -10,24 +10,24 @@ public enum StopMode {
     /**
      * Stops execution when the current cycle is completed.
      */
-    @Deserializable("cycle")
+    @Alias("cycle")
     CYCLE,
 
     /**
      * Stops execution when the current instruction is completed.
      */
-    @Deserializable("instr")
+    @Alias("instr")
     INSTRUCTION,
 
     /**
      * Stops execution immediately.
      */
-    @Deserializable("stop")
+    @Alias("stop")
     STOP,
 
     /**
      * Quickly stops execution immediately.
      */
-    @Deserializable("qstop")
+    @Alias("qstop")
     QUICK_STOP
 }

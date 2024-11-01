@@ -1,15 +1,15 @@
 package com.bossymr.rapid.robot.network;
 
-import com.bossymr.rapid.robot.api.annotations.Deserializable;
+import com.bossymr.rapid.robot.api.annotations.Alias;
 
 public enum RequestManualModePrivilege {
 
-    @Deserializable("modify")
+    @Alias("modify")
     MODIFY,
 
-    @Deserializable("exec")
+    @Alias("exec")
     EXECUTE,
 
-    @Deserializable("deny")
+    @Alias("deny")
     DENY
 }

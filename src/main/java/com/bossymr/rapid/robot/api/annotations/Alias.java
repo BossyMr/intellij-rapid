@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface Deserializable {
+public @interface Alias {
 
     /**
      * Specifies that serialized value of this enum constant.
