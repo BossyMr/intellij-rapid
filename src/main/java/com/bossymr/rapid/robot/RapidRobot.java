@@ -1,13 +1,13 @@
 package com.bossymr.rapid.robot;
 
+import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.language.RapidFileType;
 import com.bossymr.rapid.language.symbol.RapidSymbol;
 import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
-import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.ResponseStatusException;
+import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
@@ -17,6 +17,8 @@ import com.bossymr.rapid.robot.network.ControllerService;
 import com.bossymr.rapid.robot.network.Identity;
 import com.bossymr.rapid.robot.network.LoadProgramMode;
 import com.bossymr.rapid.robot.network.robotware.rapid.RapidService;
+import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionService;
+import com.bossymr.rapid.robot.network.robotware.rapid.execution.ExecutionStatusEvent;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolModel;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolQuery;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolSearchMethod;
@@ -26,11 +28,17 @@ import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleEntity;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.module.ModuleInfo;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.program.Program;
+import com.bossymr.rapid.robot.ui.RobotConnectView;
 import com.intellij.credentialStore.CredentialAttributes;
 import com.intellij.credentialStore.CredentialAttributesKt;
 import com.intellij.credentialStore.OneTimeString;
 import com.intellij.ide.passwordSafe.PasswordSafe;
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationAction;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
 import com.intellij.openapi.Disposable;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.application.WriteAction;
@@ -71,9 +79,9 @@ public class RapidRobot implements Disposable {
         }
         setState(state);
         this.symbols = VirtualSymbolFactory.getSymbols(state.symbols.stream()
-                                                                    .map(symbol -> symbol.convert(SymbolModel.class, null))
-                                                                    .filter(Objects::nonNull)
-                                                                    .toList());
+                .map(symbol -> symbol.convert(SymbolModel.class, null))
+                .filter(Objects::nonNull)
+                .toList());
         this.tasks = getPersistedTasks();
     }
 
@@ -102,11 +110,10 @@ public class RapidRobot implements Disposable {
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         setCredentials(path, credentials);
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
-        RobotNetworkAction action = new RobotNetworkAction(manager);
-        State state = getState(path, action);
+        State state = getState(path, manager);
         RapidRobot robot = new RapidRobot(state);
         RobotEventListener.publish().onRefresh(robot, manager);
-        robot.setManager(action);
+        robot.setManager(manager);
         robot.download();
         return robot;
     }
@@ -129,8 +136,8 @@ public class RapidRobot implements Disposable {
                 .setSymbolType(SymbolType.ANY);
         List<SymbolModel> symbols = manager.createService(RapidService.class).findSymbols(query).get();
         state.symbols = symbols.stream()
-                               .map(Entity::convert)
-                               .collect(Collectors.toSet());
+                .map(Entity::convert)
+                .collect(Collectors.toSet());
         Map<String, Set<String>> states = new HashMap<>();
         for (SymbolModel symbol : symbols) {
             String title = symbol.getTitle();
@@ -248,9 +255,9 @@ public class RapidRobot implements Disposable {
 
     public @NotNull SearchScope getSearchScope(@NotNull Project project) {
         PhysicalModule[] modules = getTasks().stream()
-                                             .flatMap(task -> task.getModules(project).stream())
-                                             .toList()
-                                             .toArray(PhysicalModule[]::new);
+                .flatMap(task -> task.getModules(project).stream())
+                .toList()
+                .toArray(PhysicalModule[]::new);
         return new LocalSearchScope(modules);
     }
 
@@ -413,21 +420,20 @@ public class RapidRobot implements Disposable {
         URI path = getPath();
         Credentials credentials = getCredentials(path, null);
         NetworkManager manager = new HeavyNetworkManager(path, credentials);
-        RobotNetworkAction action = new RobotNetworkAction(manager);
-        State state = getState(path, action);
+        State state = getState(path, manager);
         Objects.requireNonNull(state.symbols);
         List<SymbolModel> models = state.symbols.stream()
-                                                .map(symbol -> symbol.convert(SymbolModel.class, manager))
-                                                .toList();
+                .map(symbol -> symbol.convert(SymbolModel.class, manager))
+                .toList();
         this.symbols = VirtualSymbolFactory.getSymbols(models);
         setState(state);
         this.tasks = getPersistedTasks();
-        RobotEventListener.publish().onRefresh(this, action);
-        setManager(action);
-        if (!(getLocalModules(tasks).equals(getRemoteModules(action)))) {
+        RobotEventListener.publish().onRefresh(this, manager);
+        setManager(manager);
+        if (!(getLocalModules(tasks).equals(getRemoteModules(manager)))) {
             download();
         }
-        return action;
+        return manager;
     }
 
     private @NotNull List<String> getLocalModules(@NotNull Set<RapidTask> tasks) {
@@ -454,8 +460,28 @@ public class RapidRobot implements Disposable {
         return modules;
     }
 
-    private void setManager(@NotNull NetworkManager manager) {
+    private void setManager(@NotNull NetworkManager manager) throws IOException, InterruptedException {
         this.manager = manager;
+        manager.createService(ExecutionService.class).onExecutionState().subscribe(SubscriptionPriority.MEDIUM, new SubscriptionListener<>() {
+            @Override
+            public void onEvent(@NotNull SubscriptionEntity entity, @NotNull ExecutionStatusEvent event) {}
+
+            @Override
+            public void onClose(@NotNull SubscriptionEntity entity) {
+                try {
+                    disconnect();
+                } catch (IOException | InterruptedException ignored) {}
+                URI path = manager.getNetworkClient().getBasePath();
+                String presentablePath = path.getHost() + (path.getPort() != 80 ? ":" + path.getPort() : "");
+                NotificationGroupManager.getInstance()
+                        .getNotificationGroup("Robot connection errors")
+                        .createNotification(RapidBundle.message("notification.title.robot.connect.error", presentablePath), NotificationType.ERROR)
+                        .setSubtitle(RapidBundle.message("notification.subtitle.robot.connect.error"))
+                        .addAction(new ConnectNotificationAction(path))
+                        .notify(null);
+            }
+        });
+
     }
 
     private @NotNull Path getDefaultPath() {
@@ -519,6 +545,25 @@ public class RapidRobot implements Disposable {
 
         void newState(@NotNull RapidRobot robot, @NotNull State state);
 
+    }
+
+    private static class ConnectNotificationAction extends NotificationAction {
+
+        private final @NotNull URI path;
+
+        public ConnectNotificationAction(@NotNull URI path) {
+            super(RapidBundle.messagePointer("notification.action.retry.connect"));
+            this.path = path;
+        }
+
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+            Project project = e.getProject();
+            if (project != null) {
+                RobotConnectView connectView = new RobotConnectView(project, path);
+                connectView.show();
+            }
+        }
     }
 
     /**

@@ -244,14 +244,8 @@ public class RapidDebugProcess extends XDebugProcess {
      * @return the asynchronous request.
      */
     public @Nullable BreakpointEntity registerBreakpoint(@NotNull String taskName, @NotNull String moduleName, int line) throws IOException, InterruptedException {
-        NetworkAction action = new NetworkAction(manager) {
-            @Override
-            protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
-                return false;
-            }
-        };
-        try (action) {
-            TaskService taskService = action.createService(TaskService.class);
+        try {
+            TaskService taskService = manager.createService(TaskService.class);
             Task task = taskService.getTask(taskName).get();
             Program program = task.getProgram().get();
             program.setBreakpoint(moduleName, line + 1, 0).get();

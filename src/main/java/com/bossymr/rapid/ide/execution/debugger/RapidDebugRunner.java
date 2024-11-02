@@ -1,11 +1,10 @@
 package com.bossymr.rapid.ide.execution.debugger;
 
-import com.bossymr.rapid.robot.RapidRobot;
-import com.bossymr.rapid.robot.api.NetworkAction;
-import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.RapidBundle;
 import com.bossymr.rapid.ide.execution.RapidRunProfileState;
 import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
+import com.bossymr.rapid.robot.RapidRobot;
+import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskActiveState;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
@@ -54,7 +53,7 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
     @Override
     public boolean canRun(@NotNull String executorId, @NotNull RunProfile profile) {
         return DefaultDebugExecutor.EXECUTOR_ID.equals(executorId) &&
-                profile instanceof RapidRunConfiguration;
+               profile instanceof RapidRunConfiguration;
     }
 
     @Override
@@ -116,19 +115,17 @@ public class RapidDebugRunner extends AsyncProgramRunner<RunnerSettings> {
      * Resets the robot to allow for a new debugging session to be executed.
      */
     private void setupExecution(@NotNull NetworkManager manager) throws IOException, InterruptedException {
-        try (NetworkManager action = new NetworkAction(manager)) {
-            TaskService taskService = action.createService(TaskService.class);
-            List<Task> tasks = taskService.getTasks().get();
-            for (Task task : tasks) {
-                if (task.getActivityState() == TaskActiveState.DISABLED) {
-                    continue;
-                }
-                Map<String, ModuleEntity> modules = getModules(task);
-                Program program = task.getProgram().get();
-                List<Breakpoint> breakpoints = program.getBreakpoints().get();
-                for (Breakpoint breakpoint : breakpoints) {
-                    removeBreakpoint(action, task, modules, breakpoint);
-                }
+        TaskService taskService = manager.createService(TaskService.class);
+        List<Task> tasks = taskService.getTasks().get();
+        for (Task task : tasks) {
+            if (task.getActivityState() == TaskActiveState.DISABLED) {
+                continue;
+            }
+            Map<String, ModuleEntity> modules = getModules(task);
+            Program program = task.getProgram().get();
+            List<Breakpoint> breakpoints = program.getBreakpoints().get();
+            for (Breakpoint breakpoint : breakpoints) {
+                removeBreakpoint(manager, task, modules, breakpoint);
             }
         }
     }

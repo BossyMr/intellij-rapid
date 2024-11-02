@@ -11,7 +11,8 @@ import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A {@code NetworkManager} is connected to a remote server, and can create and manage entities and services.
@@ -38,6 +39,22 @@ public interface NetworkManager extends AutoCloseable {
      */
     static <T> @NotNull T createLightEntity(@NotNull Class<T> entityType, @NotNull EntityModel model) throws IllegalArgumentException {
         return HeavyNetworkManager.createLightEntity(entityType, model);
+    }
+
+    /**
+     * Creates a new group. The new group is a child of this manager and will be closed if this manager is closed.
+     *
+     * @return a new group.
+     */
+    default @NotNull Group group() {
+        Group group = new Group();
+        subscribe(new Listener() {
+            @Override
+            public void onClose() throws IOException, InterruptedException {
+                group.close();
+            }
+        });
+        return group;
     }
 
     /**
@@ -124,5 +141,48 @@ public interface NetworkManager extends AutoCloseable {
          * @throws InterruptedException if the current thread is interrupted.
          */
         default void onClose() throws IOException, InterruptedException {}
+    }
+
+    /**
+     * A {@code Group} is used to group together subscriptions. A {@code Group} can be closed, which will close all
+     * grouped subscriptions.
+     */
+    class Group implements AutoCloseable {
+
+        private final List<SubscriptionEntity> subscriptions = new ArrayList<>();
+        private final List<Group> children = new ArrayList<>();
+
+        /**
+         * Collects the provided subscription into this group.
+         *
+         * @param entity a subscription.
+         */
+        public void collect(SubscriptionEntity entity) {
+            subscriptions.add(entity);
+        }
+
+        /**
+         * Creates a new group. The new group is a child of this group. As a result, if this group is closed, the new
+         * group will also be closed.
+         *
+         * @return a new group.
+         */
+        public Group group() {
+            Group group = new Group();
+            children.add(group);
+            return group;
+        }
+
+        @Override
+        public void close() throws IOException, InterruptedException {
+            for (Group group : children) {
+                group.close();
+            }
+            children.clear();
+            for (SubscriptionEntity entity : subscriptions) {
+                entity.unsubscribe();
+            }
+            subscriptions.clear();
+        }
     }
 }

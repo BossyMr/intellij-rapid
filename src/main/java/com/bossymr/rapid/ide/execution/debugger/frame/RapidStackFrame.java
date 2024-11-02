@@ -9,8 +9,6 @@ import com.bossymr.rapid.language.symbol.physical.*;
 import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.api.NetworkAction;
-import com.bossymr.rapid.robot.api.NetworkTarget;
 import com.bossymr.rapid.robot.api.ResponseStatusException;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.QueryableSymbol;
 import com.bossymr.rapid.robot.network.robotware.rapid.symbol.SymbolValue;
@@ -31,7 +29,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
@@ -98,15 +95,6 @@ public class RapidStackFrame extends XStackFrame {
         process.execute(() -> ReadAction.run(() -> {
             RapidSymbol symbol = ResolveService.getInstance(project).getRemoteSymbol(stackFrame.getRoutine());
             XValueChildrenList childrenList = new XValueChildrenList();
-            NetworkAction manager = new NetworkAction(process.getManager()) {
-                @Override
-                protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
-                    if (throwable instanceof ResponseStatusException e && e.getResponse().statusCode() == 400) {
-                        return false;
-                    }
-                    return super.onFailure(request, throwable);
-                }
-            };
             if (!(symbol instanceof PhysicalRoutine routine)) {
                 return;
             }
@@ -118,7 +106,7 @@ public class RapidStackFrame extends XStackFrame {
                 for (PhysicalParameterGroup group : parameters) {
                     for (PhysicalParameter parameter : group.getParameters()) {
                         try {
-                            QueryableSymbol queryableSymbol = RapidSymbolValue.findSymbol(manager, parameter, stackFrame);
+                            QueryableSymbol queryableSymbol = RapidSymbolValue.findSymbol(process.getManager(), parameter, stackFrame);
                             SymbolValue symbolValue = queryableSymbol.getValue().get();
                             if (!symbolValue.getValue().isEmpty()) {
                                 childrenList.add(new RapidSymbolValue(process, parameter, stackFrame));

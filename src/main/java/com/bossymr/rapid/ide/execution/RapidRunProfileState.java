@@ -9,7 +9,6 @@ import com.bossymr.rapid.language.symbol.RapidTask;
 import com.bossymr.rapid.robot.MastershipException;
 import com.bossymr.rapid.robot.RapidRobot;
 import com.bossymr.rapid.robot.RobotService;
-import com.bossymr.rapid.robot.api.NetworkAction;
 import com.bossymr.rapid.robot.api.NetworkManager;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
@@ -81,7 +80,7 @@ public class RapidRunProfileState implements RunProfileState {
                 credentials = RobotService.DEFAULT_CREDENTIALS;
             } else {
                 credentials = RapidRobot.getCredentials(path, options.getUsername());
-                if(credentials == null) {
+                if (credentials == null) {
                     credentials = RobotService.DEFAULT_CREDENTIALS;
                 }
             }
@@ -159,18 +158,16 @@ public class RapidRunProfileState implements RunProfileState {
     }
 
     private void activate(@NotNull NetworkManager manager, @NotNull TaskState taskState, @NotNull String taskName) throws IOException, InterruptedException {
-        try (NetworkManager action = new NetworkAction(manager)) {
-            Task task = action.createService(TaskService.class).getTask(taskName).get();
-            switch (task.getActivityState()) {
-                case ENABLED -> {
-                    if (!taskState.isEnabled()) {
-                        task.deactivate().get();
-                    }
+        Task task = manager.createService(TaskService.class).getTask(taskName).get();
+        switch (task.getActivityState()) {
+            case ENABLED -> {
+                if (!taskState.isEnabled()) {
+                    task.deactivate().get();
                 }
-                case DISABLED -> {
-                    if (taskState.isEnabled()) {
-                        task.activate().get();
-                    }
+            }
+            case DISABLED -> {
+                if (taskState.isEnabled()) {
+                    task.activate().get();
                 }
             }
         }

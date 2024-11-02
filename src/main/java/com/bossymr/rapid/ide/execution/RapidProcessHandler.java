@@ -2,10 +2,7 @@ package com.bossymr.rapid.ide.execution;
 
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.ide.execution.debugger.RapidDebugProcess;
-import com.bossymr.rapid.robot.api.NetworkAction;
-import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.NetworkTarget;
-import com.bossymr.rapid.robot.api.SubscriptionPriority;
+import com.bossymr.rapid.robot.api.*;
 import com.bossymr.rapid.robot.network.EventLogCategory;
 import com.bossymr.rapid.robot.network.EventLogMessage;
 import com.bossymr.rapid.robot.network.EventLogService;
@@ -29,18 +26,15 @@ public class RapidProcessHandler extends ProcessHandler {
     private static final Logger logger = Logger.getInstance(RapidProcessHandler.class);
 
     private final @NotNull CompletableFuture<NetworkManager> manager;
+    private final @NotNull CompletableFuture<NetworkManager.Group> group;
+
     private final @NotNull List<TaskState> tasks;
 
     private final @NotNull ExecutorService executorService;
 
-    public RapidProcessHandler(@NotNull CompletableFuture<NetworkManager> future, @NotNull List<TaskState> tasks, @NotNull ExecutorService executorService) {
-        this.manager = future.thenApply(manager -> new NetworkAction(manager) {
-            @Override
-            protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
-                handleException(throwable);
-                return false;
-            }
-        });
+    public RapidProcessHandler(@NotNull CompletableFuture<NetworkManager> manager, @NotNull List<TaskState> tasks, @NotNull ExecutorService executorService) {
+        this.manager = manager;
+        this.group = manager.thenApply(NetworkManager::group);
         this.tasks = tasks;
         this.executorService = executorService;
     }
@@ -68,6 +62,10 @@ public class RapidProcessHandler extends ProcessHandler {
         return manager.join();
     }
 
+    public @NotNull NetworkManager.Group getGroup() {
+        return group.join();
+    }
+
     public void setupEventLog() throws IOException, InterruptedException {
         logger.debug("Subscribing to process event log");
         EventLogService eventLogService = getNetworkManager().createService(EventLogService.class);
@@ -77,16 +75,9 @@ public class RapidProcessHandler extends ProcessHandler {
             return;
         }
         for (int i = 1; i < categories.size(); i++) {
-            NetworkManager action = new NetworkAction(getNetworkManager()) {
-                @Override
-                protected boolean onFailure(@NotNull NetworkTarget<?> request, @NotNull Throwable throwable) throws IOException, InterruptedException {
-                    close();
-                    return false;
-                }
-            };
-            EventLogCategory category = action.move(categories.get(i));
+            EventLogCategory category = getNetworkManager().move(categories.get(i));
             try {
-                category.onMessage().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+                SubscriptionEntity subscription = category.onMessage().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
                     logger.debug("Received event '" + event + "'");
                     EventLogMessage message;
                     try {
@@ -114,6 +105,7 @@ public class RapidProcessHandler extends ProcessHandler {
                         case ERROR, WARNING -> ProcessOutputType.STDERR;
                     });
                 });
+                getGroup().collect(subscription);
             } catch (IOException ignored) {}
         }
     }
@@ -128,18 +120,19 @@ public class RapidProcessHandler extends ProcessHandler {
 
     public void setupExecutionState() throws IOException, InterruptedException {
         ExecutionService executionService = getNetworkManager().createService(ExecutionService.class);
-        executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+        SubscriptionEntity subscription = executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
             if (event.getState().equals(ExecutionState.STOPPED)) {
                 logger.debug("Program stopped");
                 notifyProcessTerminated(0);
                 try {
-                    getNetworkManager().close();
+                    getGroup().close();
                 } catch (IOException ignored) {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
             }
         });
+        getGroup().collect(subscription);
         logger.debug("Subscribed to execution state");
     }
 
@@ -152,11 +145,12 @@ public class RapidProcessHandler extends ProcessHandler {
                 notifyProcessTerminated(0);
                 return;
             }
-            executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
+            SubscriptionEntity subscription = executionService.onExecutionState().subscribe(SubscriptionPriority.MEDIUM, (entity, event) -> {
                 if (event.getState() == ExecutionState.STOPPED) {
                     notifyProcessTerminated(0);
                 }
             });
+            getGroup().collect(subscription);
             executionService.stop(StopMode.STOP, TaskExecutionMode.NORMAL).get();
             Thread.sleep(100);
             ExecutionStatus laterExecutionStatus = executionService.getState().get();
@@ -176,7 +170,7 @@ public class RapidProcessHandler extends ProcessHandler {
     protected void notifyProcessTerminated(int exitCode) {
         super.notifyProcessTerminated(exitCode);
         try {
-            getNetworkManager().close();
+            getGroup().close();
             executorService.shutdownNow();
         } catch (IOException ignored) {
         } catch (InterruptedException e) {
@@ -189,7 +183,7 @@ public class RapidProcessHandler extends ProcessHandler {
         super.notifyProcessDetached();
         executorService.shutdownNow();
         try {
-            getNetworkManager().close();
+            getGroup().close();
         } catch (IOException ignored) {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
