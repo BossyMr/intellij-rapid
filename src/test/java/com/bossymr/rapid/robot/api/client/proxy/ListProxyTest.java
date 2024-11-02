@@ -6,7 +6,6 @@ import com.bossymr.rapid.robot.api.NetworkType;
 import com.bossymr.rapid.robot.api.RequestMethod;
 import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.annotations.Property;
-import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.entity.ResponseModel;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -28,7 +27,7 @@ class ListProxyTest {
     @Test
     void multiplePages(WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+        try (NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             List<EntityObject> models = setupPaging(wireMock, manager, 10, 5);
             NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), NetworkType.listType(EntityObject.class));
             List<EntityObject> proxy = manager.createQuery(target).get();
@@ -39,7 +38,7 @@ class ListProxyTest {
     @Test
     void singlePage(WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+        try (NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             List<EntityObject> models = setupPaging(wireMock, manager, 10, 1);
             NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), NetworkType.listType(EntityObject.class));
             List<EntityObject> proxy = manager.createQuery(target).get();
@@ -50,7 +49,7 @@ class ListProxyTest {
     @Test
     void lazyLoadFirstPage(WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+        try (NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             List<EntityObject> models = setupPaging(wireMock, manager, 10, 5);
             NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), NetworkType.listType(EntityObject.class));
             List<EntityObject> proxy = manager.createQuery(target).get();
@@ -69,7 +68,7 @@ class ListProxyTest {
     @Test
     void lazyLoadMiddlePage(WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
-        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+        try (NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             List<EntityObject> models = setupPaging(wireMock, manager, 10, 5);
             NetworkTarget<List<EntityObject>> target = new NetworkTarget<>(RequestMethod.GET, URI.create("/"), NetworkType.listType(EntityObject.class));
             List<EntityObject> proxy = manager.createQuery(target).get();

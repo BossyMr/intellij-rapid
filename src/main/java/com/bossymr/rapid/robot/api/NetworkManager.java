@@ -4,15 +4,24 @@ import com.bossymr.rapid.robot.api.annotations.Entity;
 import com.bossymr.rapid.robot.api.annotations.Fetch;
 import com.bossymr.rapid.robot.api.annotations.Property;
 import com.bossymr.rapid.robot.api.annotations.Service;
-import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
 import com.bossymr.rapid.robot.api.client.NetworkClient;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
+import com.bossymr.rapid.robot.api.client.proxy.NetworkProxy;
 import com.bossymr.rapid.robot.api.client.proxy.ProxyException;
+import com.bossymr.rapid.robot.api.client.security.Credentials;
+import com.bossymr.rapid.robot.api.entity.EntityInvocationHandler;
+import com.bossymr.rapid.robot.api.entity.ServiceInvocationHandler;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.lang.reflect.Proxy;
+import java.net.URI;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A {@code NetworkManager} is connected to a remote server, and can create and manage entities and services.
@@ -25,7 +34,21 @@ import java.util.List;
  * requests to the {@code NetworkManager} managing it. However, an unmanaged entity will throw a {@link ProxyException}
  * if a request is invoked.
  */
-public interface NetworkManager extends AutoCloseable {
+public class NetworkManager implements AutoCloseable {
+
+    protected final NetworkClient networkClient;
+    private final @NotNull Set<Listener> listeners = ConcurrentHashMap.newKeySet();
+    private volatile boolean closed;
+
+    /**
+     * Create a new {@code NetworkManager}.
+     *
+     * @param defaultPath the path to resolve requests with.
+     * @param credentials the credentials to authenticate requests with.
+     */
+    public NetworkManager(@NotNull URI defaultPath, @Nullable Credentials credentials) {
+        this.networkClient = new NetworkClient(defaultPath, credentials);
+    }
 
     /**
      * Creates a new unmanaged entity.
@@ -37,8 +60,8 @@ public interface NetworkManager extends AutoCloseable {
      * @throws IllegalArgumentException if the entity model could not be deserialized into the specified entity type, or
      * if the specified type is annotated as an {@link Entity entity}.
      */
-    static <T> @NotNull T createLightEntity(@NotNull Class<T> entityType, @NotNull EntityModel model) throws IllegalArgumentException {
-        return HeavyNetworkManager.createLightEntity(entityType, model);
+    public static <T> @NotNull T createLightEntity(@NotNull Class<T> entityType, @NotNull EntityModel model) throws IllegalArgumentException {
+        return EntityInvocationHandler.createEntity(null, entityType, model);
     }
 
     /**
@@ -46,7 +69,7 @@ public interface NetworkManager extends AutoCloseable {
      *
      * @return a new group.
      */
-    default @NotNull Group group() {
+    public @NotNull Group group() {
         Group group = new Group();
         subscribe(new Listener() {
             @Override
@@ -65,14 +88,22 @@ public interface NetworkManager extends AutoCloseable {
      * @return a new copy of the specified entity or service.
      * @throws IllegalArgumentException if the specified object doesn't represent an entity or service.
      */
-    <T> @NotNull T move(@NotNull T entity);
+    public <T> @NotNull T move(@NotNull T entity) {
+        if (!(entity instanceof NetworkProxy proxy)) {
+            throw new IllegalArgumentException("Argument '" + entity + "' doesn't represent an @Entity or @Service");
+        }
+        proxy.attach(this);
+        return entity;
+    }
 
     /**
      * Returns the {@code NetworkClient} used by this {@code NetworkManager} to handle network communication.
      *
      * @return the {@code NetworkClient} used by this {@code NetworkManager}.
      */
-    @NotNull NetworkClient getNetworkClient();
+    public @NotNull NetworkClient getNetworkClient() {
+        return networkClient;
+    }
 
     /**
      * Creates a new {@code NetworkQuery} that can be used to send a request to the specified target.
@@ -81,7 +112,16 @@ public interface NetworkManager extends AutoCloseable {
      * @param <T> the response type.
      * @return the query.
      */
-    <T> @NotNull NetworkQuery<T> createQuery(@NotNull NetworkTarget<T> target);
+    public @NotNull <T> NetworkQuery<T> createQuery(@NotNull NetworkTarget<T> target) {
+        if (closed) {
+            throw new IllegalArgumentException("NetworkManager is closed");
+        }
+        return () -> {
+            NetworkType<T> type = target.getType();
+            HttpResponse<byte[]> response = getNetworkClient().send(target);
+            return type.convert(this, response);
+        };
+    }
 
     /**
      * Creates a new {@code SubscribableNetworkQuery} that can be used to subscribe to the specified target.
@@ -90,7 +130,23 @@ public interface NetworkManager extends AutoCloseable {
      * @param <T> the event type.
      * @return the query
      */
-    @NotNull <T> SubscribableNetworkQuery<T> createSubscribableQuery(@NotNull SubscribableTarget<T> event);
+    public @NotNull <T> SubscribableNetworkQuery<T> createSubscribableQuery(@NotNull SubscribableTarget<T> event) {
+        if (closed) {
+            throw new IllegalArgumentException("NetworkManager is closed");
+        }
+        return (priority, listener) -> getNetworkClient().subscribe(event, priority, new SubscriptionListener<>() {
+            @Override
+            public void onEvent(@NotNull SubscriptionEntity entity, @NotNull EntityModel response) {
+                T result = createEntity(event.getType(), response);
+                listener.onEvent(entity, result);
+            }
+
+            @Override
+            public void onClose(@NotNull SubscriptionEntity entity) {
+                listener.onClose(entity);
+            }
+        });
+    }
 
     /**
      * Creates a new service managed by this {@code NetworkManager}.
@@ -100,7 +156,12 @@ public interface NetworkManager extends AutoCloseable {
      * @return the service
      * @throws IllegalArgumentException if the specified type is not annotated with {@link Service}.
      */
-    <T> @NotNull T createService(@NotNull Class<T> serviceType) throws IllegalArgumentException;
+    public <T> @NotNull T createService(@NotNull Class<T> serviceType) throws IllegalArgumentException {
+        if (closed) {
+            throw new IllegalArgumentException("NetworkManager is closed");
+        }
+        return ServiceInvocationHandler.createService(this, serviceType);
+    }
 
     /**
      * Creates a new entity managed by this {@code NetworkManager}.
@@ -112,14 +173,21 @@ public interface NetworkManager extends AutoCloseable {
      * @throws IllegalArgumentException if the provided model could not be converted into an entity of the specified
      * type, or if the specified type is not annotated with {@link Entity}.
      */
-    <T> @NotNull T createEntity(@NotNull Class<T> entityType, @NotNull EntityModel model) throws IllegalArgumentException;
+    public <T> @NotNull T createEntity(@NotNull Class<T> entityType, @NotNull EntityModel model) throws IllegalArgumentException {
+        if (closed) {
+            throw new IllegalArgumentException("NetworkManager is closed");
+        }
+        return EntityInvocationHandler.createEntity(this, entityType, model);
+    }
 
     /**
      * Subscribes to the state of this {@code NetworkManager}.
      *
      * @param listener the event listener.
      */
-    void subscribe(@NotNull Listener listener);
+    public void subscribe(@NotNull Listener listener) {
+        listeners.add(listener);
+    }
 
     /**
      * Close this {@code NetworkManager} and any ongoing subscriptions.
@@ -128,12 +196,21 @@ public interface NetworkManager extends AutoCloseable {
      * @throws InterruptedException if the current thread is interrupted.
      */
     @Override
-    void close() throws IOException, InterruptedException;
+    public void close() throws IOException, InterruptedException {
+        if (closed) {
+            return;
+        }
+        for (Listener listener : listeners) {
+            listener.onClose();
+        }
+        closed = true;
+        networkClient.close();
+    }
 
     /**
      * A listener that listens to the state of a {@code NetworkManager}.
      */
-    interface Listener {
+    public interface Listener {
         /**
          * Called when a {@code NetworkManager} is closed.
          *
@@ -147,7 +224,7 @@ public interface NetworkManager extends AutoCloseable {
      * A {@code Group} is used to group together subscriptions. A {@code Group} can be closed, which will close all
      * grouped subscriptions.
      */
-    class Group implements AutoCloseable {
+    public static class Group implements AutoCloseable {
 
         private final List<SubscriptionEntity> subscriptions = new ArrayList<>();
         private final List<Group> children = new ArrayList<>();

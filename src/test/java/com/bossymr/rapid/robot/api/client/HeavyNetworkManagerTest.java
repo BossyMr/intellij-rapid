@@ -20,13 +20,13 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @WireMockTest
-class HeavyNetworkManagerTest {
+class NetworkManagerTest {
 
     @Test
     void stringQuery(@NotNull WireMockRuntimeInfo runtimeInfo) throws IOException, InterruptedException {
         WireMock wireMock = runtimeInfo.getWireMock();
         wireMock.register(get("/").willReturn(okForContentType("text/plain", "Hello, World!")));
-        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+        try (NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             NetworkTarget<String> target = NetworkTarget.newTarget(URI.create("/"), NetworkType.stringType()).build();
             NetworkQuery<String> query = manager.createQuery(target);
             assertEquals("Hello, World!", assertDoesNotThrow(query::get));
@@ -45,7 +45,7 @@ class HeavyNetworkManagerTest {
                 .entity(entity)
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toXML())));
-        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+        try (NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             manager.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.modelType()).build());
             NetworkQuery<ResponseModel> modelQuery = manager.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.modelType()).build());
             assertEquals(model, assertDoesNotThrow(modelQuery::get));
@@ -72,7 +72,7 @@ class HeavyNetworkManagerTest {
                 .entity(entity)
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", model.toXML())));
-        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+        try (NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             NetworkQuery<ResponseModel> modelQuery = manager.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.modelType()).build());
             assertEquals(model, assertDoesNotThrow(modelQuery::get));
             assertInstanceOf(TestSubType.class, assertDoesNotThrow(() -> manager.createQuery(NetworkTarget.newTarget(URI.create("/"), NetworkType.entityType(TestEntity.class)).build())).get());
@@ -101,7 +101,7 @@ class HeavyNetworkManagerTest {
                 .willReturn(ok()));
         wireMock.register(delete("/failPath")
                 .willReturn(badRequest()));
-        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+        try (NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             NetworkTarget<TestFetch> request = NetworkTarget.newTarget(RequestMethod.POST, URI.create("/selfPath/request"), NetworkType.entityType(TestFetch.class))
                     .argument("argument", "value")
                     .argument("arguments", "values")
@@ -141,7 +141,7 @@ class HeavyNetworkManagerTest {
                 .build();
         wireMock.register(get("/").willReturn(okForContentType("application/xhtml+xml", simpleModel.toXML())));
         wireMock.register(get("/complete").willReturn(okForContentType("application/xhtml+xml", completeModel.toXML())));
-        try (NetworkManager manager = new HeavyNetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
+        try (NetworkManager manager = new NetworkManager(URI.create(runtimeInfo.getHttpBaseUrl()), null)) {
             TestService service = manager.createService(TestService.class);
             TestEntity entity = service.getEntity().get();
             EntityProxy proxy = assertInstanceOf(EntityProxy.class, entity);

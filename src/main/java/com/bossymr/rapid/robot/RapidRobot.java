@@ -8,7 +8,6 @@ import com.bossymr.rapid.language.symbol.physical.PhysicalModule;
 import com.bossymr.rapid.language.symbol.resolve.ResolveService;
 import com.bossymr.rapid.language.symbol.virtual.VirtualSymbol;
 import com.bossymr.rapid.robot.api.*;
-import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
 import com.bossymr.rapid.robot.api.client.entity.EntityModel;
 import com.bossymr.rapid.robot.api.client.proxy.EntityProxy;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
@@ -109,7 +108,7 @@ public class RapidRobot implements Disposable {
     @RequiresBackgroundThread
     public static @NotNull RapidRobot connect(@NotNull URI path, @NotNull Credentials credentials) throws IOException, InterruptedException {
         setCredentials(path, credentials);
-        NetworkManager manager = new HeavyNetworkManager(path, credentials);
+        NetworkManager manager = new NetworkManager(path, credentials);
         State state = getState(path, manager);
         RapidRobot robot = new RapidRobot(state);
         RobotEventListener.publish().onRefresh(robot, manager);
@@ -316,7 +315,7 @@ public class RapidRobot implements Disposable {
         RobotEventListener.publish().onSymbol(this, symbol);
         if (childName != null) {
             List<RapidSymbol> results = ResolveService.getChildSymbol(symbol, childName);
-            return results.isEmpty() ? null : (VirtualSymbol) results.get(0);
+            return results.isEmpty() ? null : (VirtualSymbol) results.getFirst();
         }
         return symbol;
     }
@@ -419,7 +418,7 @@ public class RapidRobot implements Disposable {
     public @NotNull NetworkManager reconnect() throws IOException, InterruptedException {
         URI path = getPath();
         Credentials credentials = getCredentials(path, null);
-        NetworkManager manager = new HeavyNetworkManager(path, credentials);
+        NetworkManager manager = new NetworkManager(path, credentials);
         State state = getState(path, manager);
         Objects.requireNonNull(state.symbols);
         List<SymbolModel> models = state.symbols.stream()

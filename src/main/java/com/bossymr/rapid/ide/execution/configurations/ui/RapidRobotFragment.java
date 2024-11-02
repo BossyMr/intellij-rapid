@@ -5,7 +5,6 @@ import com.bossymr.rapid.ide.execution.configurations.RapidRunConfiguration;
 import com.bossymr.rapid.ide.execution.configurations.TaskState;
 import com.bossymr.rapid.robot.RobotService;
 import com.bossymr.rapid.robot.api.NetworkManager;
-import com.bossymr.rapid.robot.api.client.HeavyNetworkManager;
 import com.bossymr.rapid.robot.api.client.security.Credentials;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.Task;
 import com.bossymr.rapid.robot.network.robotware.rapid.task.TaskService;
@@ -211,7 +210,7 @@ public class RapidRobotFragment extends SettingsEditorFragment<RapidRunConfigura
         String presentablePath = path.getHost() + (path.getPort() != 80 ? ":" + path.getPort() : "");
         table.getEmptyText().setText(RapidBundle.message("run.configuration.fragment.task.connecting", presentablePath));
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            try (NetworkManager manager = new HeavyNetworkManager(path, credentials)) {
+            try (NetworkManager manager = new NetworkManager(path, credentials)) {
                 TaskService taskService = manager.createService(TaskService.class);
                 List<Task> tasks = taskService.getTasks().get();
                 Map<String, TaskState> taskStates = new HashMap<>();
