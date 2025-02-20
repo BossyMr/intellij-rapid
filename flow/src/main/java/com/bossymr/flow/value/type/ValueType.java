@@ -1,13 +1,11 @@
 package com.bossymr.flow.value.type;
 
-import com.bossymr.flow.value.variable.Variable;
+import com.bossymr.flow.value.Variable;
 
-public class ValueType {
+public interface ValueType {
 
-    /**
-     * Initializes the specified
-     * @param variable
-     */
-    public void initialize(Variable variable) {
+    enum Primitive implements ValueType{
+        BOOLEAN
     }
+
 }

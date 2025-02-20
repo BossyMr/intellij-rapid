@@ -1,7 +1,7 @@
 package com.bossymr.flow;
 
 import com.bossymr.flow.instruction.Instruction;
-import com.bossymr.flow.value.variable.Variable;
+import com.bossymr.flow.value.Variable;
 
 import java.util.List;
 

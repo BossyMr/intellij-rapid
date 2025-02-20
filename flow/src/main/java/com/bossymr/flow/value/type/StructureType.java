@@ -1,4 +1,4 @@
 package com.bossymr.flow.value.type;
 
-public class StructureType extends ValueType{
+public class StructureType implements ValueType {
 }

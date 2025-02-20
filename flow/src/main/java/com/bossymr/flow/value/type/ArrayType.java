@@ -1,4 +1,4 @@
 package com.bossymr.flow.value.type;
 
-public class ArrayType extends ValueType{
+public class ArrayType implements ValueType {
 }
