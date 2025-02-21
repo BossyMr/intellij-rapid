@@ -1,4 +1,4 @@
-package com.bossymr.flow.value.type;
+package com.bossymr.flow.type;
 
 import java.util.List;
 import java.util.Objects;

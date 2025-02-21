@@ -3,11 +3,16 @@ package com.bossymr.flow.constraint;
 import com.bossymr.flow.expression.BinaryExpression;
 import com.bossymr.flow.expression.Expression;
 import com.bossymr.flow.expression.LiteralExpression;
+import com.bossymr.flow.expression.UnaryExpression;
 import com.bossymr.flow.state.MemorySnapshot;
+import com.bossymr.flow.type.*;
+import com.bossymr.flow.value.Variable;
 import io.github.cvc5.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ConstraintEngine {
 
@@ -49,10 +54,7 @@ public class ConstraintEngine {
         try {
             Solver solver = createSolver(snapshot);
             TermManager manager = solver.getTermManager();
-            Term expression = predicate.getConstraint(manager, variable -> {
-                // TODO: Implement
-                return null;
-            });
+            Term expression = createTerm(manager, new HashMap<>(), predicate);
             solver.push();
             solver.assertFormula(manager.mkTerm(manager.mkOp(Kind.EQUAL), expression, manager.mkBoolean(true)));
             Result maybeTrue = solver.checkSat();
@@ -86,10 +88,7 @@ public class ConstraintEngine {
         solver.setLogic("ALL");
         for (MemorySnapshot state : getSnapshotBranch(snapshot)) {
             for (Expression constraint : state.getConstraints()) {
-                Term expression = constraint.getConstraint(manager, variable -> {
-                    // TODO: Implement
-                    return null;
-                });
+                Term expression = createTerm(manager, new HashMap<>(), constraint);
                 solver.assertFormula(expression);
             }
         }
@@ -103,5 +102,56 @@ public class ConstraintEngine {
             snapshot = snapshot.getPredecessor();
         }
         return snapshots.reversed();
+    }
+
+    private static Term createTerm(TermManager manager, Map<Variable, Term> variables, Expression expression) {
+        return switch (expression) {
+            case UnaryExpression unary -> {
+                Term component = createTerm(manager, variables, unary.getExpression());
+                Op operator = switch (unary.getOperator()) {
+                    case NOT -> manager.mkOp(Kind.NOT);
+                    case NEGATE -> manager.mkOp(Kind.NEG);
+                };
+                yield manager.mkTerm(operator, component);
+            }
+            case BinaryExpression binary -> {
+                Term left = createTerm(manager, variables, binary.getLeft());
+                Term right = createTerm(manager, variables, binary.getRight());
+                if (binary.getLeft().getType() instanceof IntegerType && binary.getRight().getType() instanceof RealType) {
+                    // Expression: integer <operator> real
+                    // The left-most expression must be cast to a real number, so that both expressions are of the same
+                    // type. Otherwise, an exception will be thrown by the solver.
+                    left = manager.mkTerm(manager.mkOp(Kind.TO_REAL), left);
+                }
+                if (binary.getLeft().getType() instanceof RealType && binary.getRight().getType() instanceof IntegerType) {
+                    // Expression: real <operator> integer
+                    // Same as the previous check, but with the right-most expression.
+                    right = manager.mkTerm(manager.mkOp(Kind.TO_REAL), right);
+                }
+                Op operator = switch (binary.getOperator()) {
+                    case EQUAL_TO -> manager.mkOp(Kind.EQUAL);
+                    case GREATER_THAN -> manager.mkOp(Kind.GT);
+                    case LESS_THAN -> manager.mkOp(Kind.LT);
+                    case ADD -> manager.mkOp(Kind.ADD);
+                    case SUBTRACT -> manager.mkOp(Kind.SUB);
+                    case MULTIPLY -> manager.mkOp(Kind.MULT);
+                    case DIVIDE -> manager.mkOp(Kind.DIVISION);
+                    case MODULO -> manager.mkOp(Kind.INTS_MODULUS);
+                    case AND -> manager.mkOp(Kind.AND);
+                    case XOR -> manager.mkOp(Kind.XOR);
+                    case OR -> manager.mkOp(Kind.OR);
+                };
+                yield manager.mkTerm(operator, left, right);
+            }
+            case LiteralExpression literal -> switch (literal.getValue()) {
+                case Boolean value -> manager.mkBoolean(value);
+                case String value -> manager.mkString(value);
+                case Integer value -> manager.mkInteger(value);
+                case Long value -> manager.mkInteger(value);
+                case RealType.Fraction(long numerator, long denominator) -> manager.mkReal(numerator, denominator);
+                default -> throw new IllegalStateException();
+            };
+            default -> throw new IllegalStateException();
+        };
     }
 }

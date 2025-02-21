@@ -1,4 +1,4 @@
-package com.bossymr.flow.value.type;
+package com.bossymr.flow.type;
 
 /**
  * A {@code BooleanType} represents a boolean type.

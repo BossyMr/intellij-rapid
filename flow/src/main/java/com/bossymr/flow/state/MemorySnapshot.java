@@ -30,6 +30,15 @@ public class MemorySnapshot {
     }
 
     /**
+     * Create a new, empty, snapshot.
+     *
+     * @return a new snapshot.
+     */
+    public static MemorySnapshot emptyState() {
+        return new MemorySnapshot();
+    }
+
+    /**
      * Create a snapshot representing the state at the start of the specified method.
      * <p>
      * By default, all variables have an unknown value.
@@ -104,10 +113,10 @@ public class MemorySnapshot {
      */
     public void assign(Variable variable, Expression expression) {
         // TODO: Check if the expression is assignable to the variable.
-        VariableSnapshot snapshot = new VariableSnapshot(variable);
+        VariableSnapshot snapshot = new VariableSnapshot(variable.getType());
         snapshots.put(variable, snapshot);
         // TODO: Replace references to variables with their respective snapshots.
-        constraints.add(BinaryExpression.equals(snapshot, expression));
+        constraints.add(new BinaryExpression(BinaryExpression.Operator.EQUAL_TO, snapshot, expression));
     }
 
     public void require(Expression expression) {

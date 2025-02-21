@@ -1,10 +1,9 @@
-package com.bossymr.flow.value.type;
+package com.bossymr.flow.type;
 
 /**
- * A {@code RealType} perfectly represents any numeric value. Unlike a {@link FloatType} or {@link IntegerType}, a real
- * type is not fixed to a specific length.
+ * A {@code RealType} perfectly represents any numeric value.
  */
-public class RealType implements ValueType {
+public class RealType implements NumericType {
 
     @Override
     public boolean isStructure() {
@@ -30,4 +29,12 @@ public class RealType implements ValueType {
     public String toString() {
         return "real";
     }
+
+    /**
+     * A {@code Fraction} represents a real number.
+     *
+     * @param numerator the numerator.
+     * @param denominator the denominator.
+     */
+    public record Fraction(long numerator, long denominator) {}
 }
