@@ -1,9 +1,9 @@
 package com.bossymr.flow.value.type;
 
 /**
- * A {@code StringType} represents a string type.
+ * A {@code BooleanType} represents a boolean type.
  */
-public class StringType implements ValueType {
+public class BooleanType implements ValueType {
 
     @Override
     public boolean isStructure() {
@@ -17,16 +17,16 @@ public class StringType implements ValueType {
 
     @Override
     public int hashCode() {
-        return StringType.class.hashCode();
+        return BooleanType.class.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof StringType;
+        return obj instanceof BooleanType;
     }
 
     @Override
     public String toString() {
-        return "string";
+        return "boolean";
     }
 }

@@ -1,9 +1,10 @@
 package com.bossymr.flow.value.type;
 
 /**
- * A {@code StringType} represents a string type.
+ * A {@code RealType} perfectly represents any numeric value. Unlike a {@link FloatType} or {@link IntegerType}, a real
+ * type is not fixed to a specific length.
  */
-public class StringType implements ValueType {
+public class RealType implements ValueType {
 
     @Override
     public boolean isStructure() {
@@ -17,16 +18,16 @@ public class StringType implements ValueType {
 
     @Override
     public int hashCode() {
-        return StringType.class.hashCode();
+        return RealType.class.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof StringType;
+        return obj instanceof RealType;
     }
 
     @Override
     public String toString() {
-        return "string";
+        return "real";
     }
 }
