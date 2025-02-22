@@ -1,21 +1,60 @@
 package com.bossymr.flow.instruction;
 
-import com.bossymr.flow.state.MemorySnapshot;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
-public interface Instruction {
+/**
+ * An {@code Instruction} represents an instruction.
+ */
+public abstract class Instruction {
+
+    private final List<Instruction> successors = new ArrayList<>();
+    private final Instruction predecessor;
 
     /**
-     * Returns a new snapshot representing the state of the program before this instruction is executed.
+     * Create a new {@code Instruction}.
      *
-     * @return a new snapshot.
+     * @param predecessor the predecessor.
      */
-    MemorySnapshot before();
+    protected Instruction(Instruction predecessor) {
+        this.predecessor = predecessor;
+    }
 
     /**
-     * Returns a new snapshot representing the state of the program after this instruction is executed.
+     * Return the successors of this instruction.
      *
-     * @return a new snapshot.
+     * @return the successors of this instruction.
      */
-    MemorySnapshot after();
+    public List<Instruction> getSuccessors() {
+        return successors;
+    }
 
+    /**
+     * Return the predecessor of this instruction.
+     *
+     * @return the predecessor of this instruction.
+     */
+    public Instruction getPredecessor() {
+        return predecessor;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Instruction that = (Instruction) o;
+        return Objects.equals(successors, that.successors) && Objects.equals(predecessor, that.predecessor);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(successors, predecessor);
+    }
+
+    /**
+     * A {@code Builder} for a code block.
+     */
+    public static class Builder {
+
+    }
 }
