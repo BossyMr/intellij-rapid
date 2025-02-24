@@ -1,11 +1,13 @@
 package com.bossymr.flow;
 
 import com.bossymr.flow.instruction.Instruction;
+import com.bossymr.flow.state.MemorySnapshot;
 import com.bossymr.flow.value.Variable;
 import com.bossymr.flow.type.ValueType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -17,7 +19,6 @@ public class Method {
     private final String name;
     private final ValueType returnType;
     private final List<Instruction> instructions = new ArrayList<>();
-    private final List<Variable> variables = new ArrayList<>();
     private final List<Variable> parameters = new ArrayList<>();
 
     public Method(String name, ValueType returnType) {
@@ -53,15 +54,6 @@ public class Method {
     }
 
     /**
-     * Returns all variables declared in this method.
-     *
-     * @return all variables declared in this method.
-     */
-    public List<Variable> getVariables() {
-        return variables;
-    }
-
-    /**
      * Returns all instructions in this method.
      *
      * @return all instructions in this method.
@@ -70,16 +62,25 @@ public class Method {
         return instructions;
     }
 
+    /**
+     * Returns the data flow of this method.
+     *
+     * @return the data flow of this method.
+     */
+    public MemoryBlock getMemoryBlock() {
+        return null;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Method method = (Method) o;
-        return Objects.equals(name, method.name) && Objects.equals(returnType, method.returnType) && Objects.equals(instructions, method.instructions) && Objects.equals(variables, method.variables) && Objects.equals(parameters, method.parameters);
+        return Objects.equals(name, method.name) && Objects.equals(returnType, method.returnType) && Objects.equals(instructions, method.instructions) && Objects.equals(parameters, method.parameters);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, returnType, instructions, variables, parameters);
+        return Objects.hash(name, returnType, instructions, parameters);
     }
 
     @Override
@@ -88,7 +89,6 @@ public class Method {
                "name='" + name + '\'' +
                ", returnType=" + returnType +
                ", parameters=" + parameters +
-               ", variables=" + variables +
                ", instructions=" + instructions +
                '}';
     }

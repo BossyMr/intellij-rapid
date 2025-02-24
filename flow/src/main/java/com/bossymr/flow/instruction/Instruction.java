@@ -50,11 +50,4 @@ public abstract class Instruction {
     public int hashCode() {
         return Objects.hash(successors, predecessor);
     }
-
-    /**
-     * A {@code Builder} for a code block.
-     */
-    public static class Builder {
-
-    }
 }
