@@ -4,19 +4,17 @@ import com.bossymr.flow.expression.BinaryExpression;
 import com.bossymr.flow.expression.Expression;
 import com.bossymr.flow.expression.LiteralExpression;
 import com.bossymr.flow.expression.UnaryExpression;
-import com.bossymr.flow.state.MemorySnapshot;
+import com.bossymr.flow.state.FlowSnapshot;
+import com.bossymr.flow.state.Variable;
 import com.bossymr.flow.type.*;
-import com.bossymr.flow.value.Variable;
 import io.github.cvc5.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ConstraintEngine {
 
-    private ConstraintEngine() {}
+    private final Map<Variable, Term> variables = new HashMap<>();
+    private final Map<ValueType, Sort> types = new HashMap<>();
 
     /**
      * Checks whether the provided snapshot is reachable. A snapshot is reachable if all constraints are satisfiable,
@@ -26,7 +24,7 @@ public class ConstraintEngine {
      * @param snapshot the snapshot.
      * @return if the snapshot is reachable.
      */
-    public static Reachable isReachable(MemorySnapshot snapshot) {
+    public Reachable isReachable(FlowSnapshot snapshot) {
         try {
             Solver solver = createSolver(snapshot);
             Result result = solver.checkSat();
@@ -38,7 +36,7 @@ public class ConstraintEngine {
                 return Reachable.UNKNOWN;
             }
         } catch (CVC5ApiException e) {
-            return Reachable.UNKNOWN;
+            throw new IllegalArgumentException(e);
         }
     }
 
@@ -50,11 +48,11 @@ public class ConstraintEngine {
      * @return the possible values of the provided predicate.
      * @throws IllegalArgumentException if the provided expression is not a predicate.
      */
-    public static Constraint getConstraint(MemorySnapshot snapshot, Expression predicate) {
+    public Constraint getConstraint(FlowSnapshot snapshot, Expression predicate) {
         try {
             Solver solver = createSolver(snapshot);
             TermManager manager = solver.getTermManager();
-            Term expression = createTerm(manager, new HashMap<>(), predicate);
+            Term expression = createTerm(manager, predicate);
             solver.push();
             solver.assertFormula(manager.mkTerm(manager.mkOp(Kind.EQUAL), expression, manager.mkBoolean(true)));
             Result maybeTrue = solver.checkSat();
@@ -78,25 +76,25 @@ public class ConstraintEngine {
             }
             return Constraint.NO_VALUE;
         } catch (CVC5ApiException e) {
-            return Constraint.UNKNOWN;
+            throw new IllegalArgumentException(e);
         }
     }
 
-    private static Solver createSolver(MemorySnapshot snapshot) throws CVC5ApiException {
+    private Solver createSolver(FlowSnapshot snapshot) throws CVC5ApiException {
         TermManager manager = new TermManager();
         Solver solver = new Solver(manager);
         solver.setLogic("ALL");
-        for (MemorySnapshot state : getSnapshotBranch(snapshot)) {
+        for (FlowSnapshot state : getSnapshotBranch(snapshot)) {
             for (Expression constraint : state.getConstraints()) {
-                Term expression = createTerm(manager, new HashMap<>(), constraint);
+                Term expression = createTerm(manager, constraint);
                 solver.assertFormula(expression);
             }
         }
         return solver;
     }
 
-    private static List<MemorySnapshot> getSnapshotBranch(MemorySnapshot snapshot) {
-        List<MemorySnapshot> snapshots = new ArrayList<>();
+    private List<FlowSnapshot> getSnapshotBranch(FlowSnapshot snapshot) {
+        List<FlowSnapshot> snapshots = new ArrayList<>();
         while (snapshot != null) {
             snapshots.add(snapshot);
             snapshot = snapshot.getPredecessor();
@@ -104,30 +102,21 @@ public class ConstraintEngine {
         return snapshots.reversed();
     }
 
-    private static Term createTerm(TermManager manager, Map<Variable, Term> variables, Expression expression) {
+    private Term createTerm(TermManager manager, Expression expression) throws CVC5ApiException {
         return switch (expression) {
             case UnaryExpression unary -> {
-                Term component = createTerm(manager, variables, unary.getExpression());
+                Term component = createTerm(manager, unary.getExpression());
                 Op operator = switch (unary.getOperator()) {
                     case NOT -> manager.mkOp(Kind.NOT);
                     case NEGATE -> manager.mkOp(Kind.NEG);
+                    case INTEGER_TO_REAL -> manager.mkOp(Kind.TO_REAL);
+                    case REAL_TO_INTEGER -> manager.mkOp(Kind.TO_INTEGER);
                 };
                 yield manager.mkTerm(operator, component);
             }
             case BinaryExpression binary -> {
-                Term left = createTerm(manager, variables, binary.getLeft());
-                Term right = createTerm(manager, variables, binary.getRight());
-                if (binary.getLeft().getType() instanceof IntegerType && binary.getRight().getType() instanceof RealType) {
-                    // Expression: integer <operator> real
-                    // The left-most expression must be cast to a real number, so that both expressions are of the same
-                    // type. Otherwise, an exception will be thrown by the solver.
-                    left = manager.mkTerm(manager.mkOp(Kind.TO_REAL), left);
-                }
-                if (binary.getLeft().getType() instanceof RealType && binary.getRight().getType() instanceof IntegerType) {
-                    // Expression: real <operator> integer
-                    // Same as the previous check, but with the right-most expression.
-                    right = manager.mkTerm(manager.mkOp(Kind.TO_REAL), right);
-                }
+                Term left = createTerm(manager, binary.getLeft());
+                Term right = createTerm(manager, binary.getRight());
                 Op operator = switch (binary.getOperator()) {
                     case EQUAL_TO -> manager.mkOp(Kind.EQUAL);
                     case GREATER_THAN -> manager.mkOp(Kind.GT);
@@ -151,7 +140,40 @@ public class ConstraintEngine {
                 case RealType.Fraction(long numerator, long denominator) -> manager.mkReal(numerator, denominator);
                 default -> throw new IllegalStateException();
             };
+            case Variable variable -> {
+                if (variables.containsKey(variable)) {
+                    yield variables.get(variable);
+                }
+                Term term = manager.mkConst(getSort(manager, variable.getType()));
+                variables.put(variable, term);
+                yield term;
+            }
             default -> throw new IllegalStateException();
         };
+    }
+
+    private Sort getSort(TermManager manager, ValueType type) throws CVC5ApiException {
+        if (types.containsKey(type)) {
+            return types.get(type);
+        }
+        Sort sort = switch (type) {
+            case BooleanType ignored -> manager.getBooleanSort();
+            case IntegerType ignored -> manager.getIntegerSort();
+            case RealType ignored -> manager.getRealSort();
+            case StringType ignored -> manager.getStringSort();
+            case ArrayType arrayType ->
+                    manager.mkArraySort(manager.getIntegerSort(), getSort(manager, arrayType.getElementType()));
+            case StructureType structureType -> {
+                DatatypeDecl dataType = manager.mkDatatypeDecl(structureType.getName());
+                DatatypeConstructorDecl constructor = manager.mkDatatypeConstructorDecl(structureType.getName());
+                for (StructureType.Field field : structureType.getFields()) {
+                    constructor.addSelector(field.getName(), getSort(manager, field.getType()));
+                }
+                yield manager.mkDatatypeSort(dataType);
+            }
+            default -> throw new IllegalStateException("unexpected value: " + type);
+        };
+        types.put(type, sort);
+        return sort;
     }
 }

@@ -1,13 +1,11 @@
-package com.bossymr.flow.value;
+package com.bossymr.flow.state;
 
+import com.bossymr.flow.expression.Expression;
 import com.bossymr.flow.type.ValueType;
 
-import java.util.Objects;
+import java.util.function.Function;
 
-/**
- * A {@code Variable} represents a variable which can be assigned a value.
- */
-public class Variable implements Value {
+public final class Variable implements Expression {
 
     private final String name;
     private final ValueType type;
@@ -24,36 +22,39 @@ public class Variable implements Value {
     }
 
     /**
-     * Returns the name of the variable.
-     *
-     * @return the name of the variable.
+     * Returns the name of this variable.
+     * @return the name of this variable.
      */
     public String getName() {
         return name;
     }
 
-    @Override
+    /**
+     * Returns the type of this snapshot.
+     *
+     * @return the type of this snapshot.
+     */
     public ValueType getType() {
         return type;
     }
 
     @Override
+    public Expression translate(Function<Expression, Expression> mapper) {
+        return mapper.apply(this);
+    }
+
+    @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        Variable variable = (Variable) o;
-        return Objects.equals(name, variable.name) && Objects.equals(type, variable.type);
+        return super.equals(o);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, type);
+        return super.hashCode();
     }
 
     @Override
     public String toString() {
-        return "Variable{" +
-               "name='" + name + '\'' +
-               ", type=" + type +
-               '}';
+        return "{" + name + "}";
     }
 }

@@ -1,29 +1,30 @@
 package com.bossymr.flow;
 
-import com.bossymr.flow.instruction.Instruction;
-import com.bossymr.flow.state.MemorySnapshot;
-import com.bossymr.flow.value.Variable;
 import com.bossymr.flow.type.ValueType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
- * A {@code FlowMethod} represents a method and its control flow. A method isn't bound to any module or scope, and as
- * such, can be referenced by any other method.
+ * A {@code Method} represents a method. A method isn't bound to any module or scope, and as such, can be referenced by
+ * any other method.
  */
 public class Method {
 
     private final String name;
     private final ValueType returnType;
-    private final List<Instruction> instructions = new ArrayList<>();
-    private final List<Variable> parameters = new ArrayList<>();
+    private final List<Instruction> instructions;
+    private final List<ValueType> arguments;
 
-    public Method(String name, ValueType returnType) {
+    public Method(String name, ValueType returnType, List<ValueType> arguments, Consumer<CodeBuilder> code) {
         this.name = name;
         this.returnType = returnType;
+        this.arguments = List.copyOf(arguments);
+        CodeBuilder codeBuilder = new CodeBuilder(this, new ArrayList<>(arguments));
+        code.accept(codeBuilder);
+        List<Instruction> block = codeBuilder.getInstructions();
+        this.instructions = List.copyOf(block);
     }
 
     /**
@@ -45,12 +46,12 @@ public class Method {
     }
 
     /**
-     * Returns all parameters declared in this method.
+     * Returns all parameters in this method.
      *
-     * @return all parameters declared in this method.
+     * @return all parameters in this method.
      */
-    public List<Variable> getParameters() {
-        return parameters;
+    public List<ValueType> getArguments() {
+        return arguments;
     }
 
     /**
@@ -60,36 +61,5 @@ public class Method {
      */
     public List<Instruction> getInstructions() {
         return instructions;
-    }
-
-    /**
-     * Returns the data flow of this method.
-     *
-     * @return the data flow of this method.
-     */
-    public MemoryBlock getMemoryBlock() {
-        return null;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        Method method = (Method) o;
-        return Objects.equals(name, method.name) && Objects.equals(returnType, method.returnType) && Objects.equals(instructions, method.instructions) && Objects.equals(parameters, method.parameters);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(name, returnType, instructions, parameters);
-    }
-
-    @Override
-    public String toString() {
-        return "Method{" +
-               "name='" + name + '\'' +
-               ", returnType=" + returnType +
-               ", parameters=" + parameters +
-               ", instructions=" + instructions +
-               '}';
     }
 }

@@ -1,8 +1,8 @@
 package com.bossymr.flow.expression;
 
-import com.bossymr.flow.type.BooleanType;
-import com.bossymr.flow.type.NumericType;
-import com.bossymr.flow.type.ValueType;
+import com.bossymr.flow.type.*;
+
+import java.util.function.Function;
 
 /**
  * A {@code UnaryExpression} represents a unary expression.
@@ -34,6 +34,19 @@ public class UnaryExpression implements Expression {
         return type;
     }
 
+    @Override
+    public Expression translate(Function<Expression, Expression> mapper) {
+        Expression self = mapper.apply(this);
+        if (self != this) {
+            return self;
+        }
+        Expression expression = mapper.apply(this.expression);
+        if (expression != this.expression) {
+            return new UnaryExpression(operator, expression);
+        }
+        return this;
+    }
+
     /**
      * Returns the operator of this expression.
      *
@@ -50,6 +63,11 @@ public class UnaryExpression implements Expression {
      */
     public Expression getExpression() {
         return expression;
+    }
+
+    @Override
+    public String toString() {
+        return "(" + getOperator() +  " " + getExpression()  + ")";
     }
 
     /**
@@ -77,6 +95,24 @@ public class UnaryExpression implements Expression {
                     return null;
                 }
                 return type;
+            }
+        },
+        INTEGER_TO_REAL("{int -> real}") {
+            @Override
+            ValueType getType(ValueType type) {
+                if (!(type instanceof IntegerType)) {
+                    return null;
+                }
+                return ValueType.numericType();
+            }
+        },
+        REAL_TO_INTEGER("{real -> int}") {
+            @Override
+            ValueType getType(ValueType type) {
+                if (!(type instanceof RealType)) {
+                    return null;
+                }
+                return ValueType.integerType();
             }
         };
 

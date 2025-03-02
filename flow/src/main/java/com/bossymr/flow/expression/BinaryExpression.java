@@ -5,6 +5,8 @@ import com.bossymr.flow.type.IntegerType;
 import com.bossymr.flow.type.NumericType;
 import com.bossymr.flow.type.ValueType;
 
+import java.util.function.Function;
+
 /**
  * A {@code BinaryExpression} represents a binary expression.
  */
@@ -39,6 +41,20 @@ public class BinaryExpression implements Expression {
         return type;
     }
 
+    @Override
+    public Expression translate(Function<Expression, Expression> mapper) {
+        Expression self = mapper.apply(this);
+        if (self != this) {
+            return self;
+        }
+        Expression left = mapper.apply(this.left);
+        Expression right = mapper.apply(this.right);
+        if (left != this.left || right != this.right) {
+            return new BinaryExpression(operator, left, right);
+        }
+        return this;
+    }
+
     /**
      * Returns the operator of this expression.
      *
@@ -64,6 +80,11 @@ public class BinaryExpression implements Expression {
      */
     public Expression getRight() {
         return right;
+    }
+
+    @Override
+    public String toString() {
+        return "(" + getLeft() + " " + getOperator() + " " + getRight() + ")";
     }
 
     /**

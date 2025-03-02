@@ -3,6 +3,8 @@ package com.bossymr.flow.expression;
 import com.bossymr.flow.type.RealType;
 import com.bossymr.flow.type.ValueType;
 
+import java.util.function.Function;
+
 /**
  * A {@code LiteralExpression} represents a literal value.
  */
@@ -72,6 +74,11 @@ public class LiteralExpression implements Expression {
         return type;
     }
 
+    @Override
+    public Expression translate(Function<Expression, Expression> mapper) {
+        return mapper.apply(this);
+    }
+
     /**
      * Returns the literal value of this expression.
      *
@@ -79,5 +86,13 @@ public class LiteralExpression implements Expression {
      */
     public Object getValue() {
         return value;
+    }
+
+    @Override
+    public String toString() {
+        if (value instanceof String) {
+            return "\"" + value + "\"";
+        }
+        return value.toString();
     }
 }

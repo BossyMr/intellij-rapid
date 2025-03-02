@@ -9,15 +9,27 @@ import java.util.stream.Collectors;
  */
 public class StructureType implements ValueType {
 
+    private final String name;
     private final List<Field> fields;
 
     /**
      * Create a new {@code StructureType}.
      *
+     * @param name the name of the structure.
      * @param fields the fields of this structure.
      */
-    public StructureType(List<Field> fields) {
+    public StructureType(String name, List<Field> fields) {
+        this.name = name;
         this.fields = fields;
+    }
+
+    /**
+     * Returns the name of this structure.
+     *
+     * @return the name of this structure.
+     */
+    public String getName() {
+        return name;
     }
 
     /**
@@ -52,7 +64,7 @@ public class StructureType implements ValueType {
     }
 
     @Override public String toString() {
-        return "structure{" + fields.stream()
+        return "structure{" + name + ", " + fields.stream()
                 .map(Field::toString)
                 .collect(Collectors.joining(", ")) + "}";
     }

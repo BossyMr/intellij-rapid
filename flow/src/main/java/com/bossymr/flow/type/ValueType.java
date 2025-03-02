@@ -6,26 +6,12 @@ package com.bossymr.flow.type;
 public interface ValueType {
 
     /**
-     * Checks whether this type represents a structure.
+     * Returns an empty type.
      *
-     * @return whether this type represents a structure.
+     * @return an empty type.
      */
-    boolean isStructure();
-
-    /**
-     * Checks whether this type represents an array.
-     *
-     * @return whether this type represents an array.
-     */
-    boolean isArray();
-
-    /**
-     * Create a type representing an array of this type.
-     *
-     * @return a type representing an array of type.
-     */
-    default ArrayType createArrayType() {
-        return new ArrayType(this);
+    static ValueType emptyType() {
+        return new EmptyType();
     }
 
     /**
@@ -62,5 +48,28 @@ public interface ValueType {
      */
     static ValueType integerType() {
         return new IntegerType();
+    }
+
+    /**
+     * Checks whether this type represents a structure.
+     *
+     * @return whether this type represents a structure.
+     */
+    boolean isStructure();
+
+    /**
+     * Checks whether this type represents an array.
+     *
+     * @return whether this type represents an array.
+     */
+    boolean isArray();
+
+    /**
+     * Create a type representing an array of this type.
+     *
+     * @return a type representing an array of type.
+     */
+    default ArrayType createArrayType() {
+        return new ArrayType(this);
     }
 }
