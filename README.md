@@ -1,5 +1,5 @@
-![Downloads](https://img.shields.io/jetbrains/plugin/d/23764-rapid)
-![Version](https://img.shields.io/jetbrains/plugin/v/23764-rapid)
+[![Downloads][plugin-downloads-svg]][plugin-repository]
+[![Version][plugin-version-svg]][plugin-repository]
 
 # Rapid Plugin for IntelliJ IDEA
 
@@ -17,3 +17,9 @@ This plugin adds language support for the RAPID programming language to IntelliJ
 * **Robot Integration:** Integrates with a local or remote robot. Automatically fetches builtin elements from the remote
   robot as well as existing modules on the robot. Supports uploading and running a local program on the robot from
   IntelliJ. Also supports debugging programs using breakpoints as well as reading the values of variables.
+
+<!-- Shields -->
+
+[plugin-repository]: https://plugins.jetbrains.com/plugin/23764-rapid
+[plugin-version-svg]: https://img.shields.io/jetbrains/plugin/v/23764-rapid.svg
+[plugin-downloads-svg]: https://img.shields.io/jetbrains/plugin/d/23764-rapid.svg

@@ -1,6 +1,18 @@
 # Changelog
 
-## [Unreleased]
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
+
+# [Unreleased]
+
+### Added
+
+* Add support for reading the event log of a connected robot.
+
+### Changed
+
+### Fixed
+
+## [0.1.3]
 
 ### Added
 
